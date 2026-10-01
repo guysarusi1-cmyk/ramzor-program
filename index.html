@@ -770,7 +770,8 @@ async function getActiveBonusRevocations(){
 }
 async function revokeBonus(childId, bonusId){
   const { error } = await sb.from('bonus_revocations').insert({ child_id: childId, bonus_id: bonusId });
-  if(error) console.error(error);
+  if(error){ console.error(error); return false; }
+  return true;
 }
 // groups active revocations by bonus id -> array of "first+last initial" strings, e.g. {bd1:['דכ','יל']}
 function groupRevocationsByBonus(revocations){
@@ -1199,8 +1200,8 @@ function renderYellowScreen(ids){
       btn.addEventListener('click', async ()=>{
         const bonusId = btn.closest('.bonus-chip').dataset.id;
         const bonusText = btn.closest('.bonus-chip').querySelector('span').textContent;
-        await revokeBonus(selectedStaffChild, bonusId);
-        toast(`נגרע מ${displayName(child)}: ${bonusText}`);
+        const ok = await revokeBonus(selectedStaffChild, bonusId);
+        toast(ok ? `✔ נקלט במערכת — נגרע מ${displayName(child)}: ${bonusText}` : `⚠ הגריעה לא נשמרה, נסו שוב`);
       });
     });
   }
@@ -1707,7 +1708,7 @@ function showFeedbackBanner(event){
   clearTimeout(feedbackBannerTimer);
   feedbackBannerTimer = setTimeout(()=> el.classList.remove('show'), 6000);
 }
-const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7 };
+const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7, bonus:3 };
 let interruptTimer = null;
 let preInterruptIndex = null;
 
@@ -1799,8 +1800,9 @@ function startFeedbackListener(){
     .subscribe();
   bonusRevocationChannel = sb.channel('bonus_revocations_live')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bonus_revocations' }, () => {
-      // punitive, not celebratory — no banner/interrupt, just quietly refresh the bonuses board if it's on screen
-      if(carouselIndex === 3) renderBonusesSlide();
+      // client decided (2026-10-02) revocation SHOULD interrupt the carousel too, same as the celebratory
+      // star/moon/mercury events — no banner/sound though, just jump to the bonuses board and refresh it
+      interruptToSlide(EVENT_TYPE_SLIDE.bonus, renderBonusesSlide);
     })
     .subscribe();
 }
