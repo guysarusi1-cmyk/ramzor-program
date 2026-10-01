@@ -1442,6 +1442,9 @@ const MERCURY_PATH = [
   {left:47.0, top:17.0}, // 6
   {left:62.0, top:9.0}   // 7
 ];
+// persists for the page's session: child.id -> {cluster, row, col}, so a child's spot within
+// a shared step never shifts just because another child joined/left that same step
+const mercurySlots = {};
 
 // star board photo-star positions — pixel-measured from the real artwork (1920x1080) by
 // detecting the gold star centers directly, since the earlier hand-guessed values were off
@@ -1603,26 +1606,46 @@ async function renderMercuryBoard(){
   const H_SPACING = 22;
   const V_SPACING = 36;
 
-  function placeCluster(items, centerLeft, startTop, perRow){
-    const n = items.length;
-    items.forEach((item, i)=>{
-      const row = Math.floor(i / perRow);
-      const itemsInRow = Math.min(perRow, n - row*perRow);
-      const col = i - row*perRow;
-      const left = centerLeft + (col - (itemsInRow-1)/2) * H_SPACING;
-      const top = startTop - row * V_SPACING;
+  // Each child keeps a stable row/col "slot" within their current step's cluster, so when
+  // ONE child progresses (joins/leaves a cluster), everyone else already there stays put —
+  // previously slots were recomputed by array index + re-centered by current occupant count,
+  // so one child moving could shift several others sideways/up-down for no reason of their own.
+  function placeCluster(items, centerLeft, startTop, perRow, clusterKey){
+    Object.keys(mercurySlots).forEach(id=>{
+      if(mercurySlots[id].cluster === clusterKey && !items.find(it=>it.child.id === id)) delete mercurySlots[id];
+    });
+    const occupied = new Set();
+    items.forEach(item=>{
+      const slot = mercurySlots[item.child.id];
+      if(slot && slot.cluster === clusterKey) occupied.add(slot.row+':'+slot.col);
+    });
+    items.forEach(item=>{
+      let slot = mercurySlots[item.child.id];
+      if(!slot || slot.cluster !== clusterKey){
+        let row=0, col=0;
+        search: for(row=0; row<20; row++){
+          for(col=0; col<perRow; col++){
+            if(!occupied.has(row+':'+col)) break search;
+          }
+        }
+        slot = { cluster:clusterKey, row, col };
+        mercurySlots[item.child.id] = slot;
+        occupied.add(row+':'+col);
+      }
+      const left = centerLeft + (slot.col - (perRow-1)/2) * H_SPACING;
+      const top = startTop - slot.row * V_SPACING;
       positions[item.child.id] = {left, top, steps:item.steps, child:item.child};
     });
   }
 
   const baseKids = markersByStep[-1] || [];
-  if(baseKids.length) placeCluster(baseKids, 18, 93, 3);
+  if(baseKids.length) placeCluster(baseKids, 18, 93, 3, 'base');
 
   for(let s=0; s<7; s++){
     const kids = markersByStep[s] || [];
     if(!kids.length) continue;
     const base = MERCURY_PATH[s];
-    placeCluster(kids, base.left, base.top - 12, 2);
+    placeCluster(kids, base.left, base.top - 12, 2, s);
   }
 
   diffRenderMarkers(el, positions, (child, steps) => {
