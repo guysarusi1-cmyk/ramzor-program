@@ -352,6 +352,7 @@
     background:var(--gold-dim); border:1px solid var(--gold); color:var(--gold);
     border-radius:12px; padding:14px 16px; font-family:'Rubik'; font-weight:700; font-size:15px; text-align:center;
   }
+  .bonus-revoked-names{ display:block; margin-top:4px; color:#ff8a80; font-weight:600; font-size:12.5px; }
 </style>
 </head>
 <body>
@@ -754,6 +755,34 @@ async function getRoster(){
   return data.map(r => ({ id:r.id, firstName:r.first_name, lastInitial:r.last_initial, age:r.age, swName:r.sw_name, swPhone:r.sw_phone, therapyPlan:r.therapy_plan || null }));
 }
 function todayStr(){ return new Date().toLocaleDateString('en-CA'); }
+
+// ---------- BONUS SCHEDULING + REVOCATIONS ----------
+// A bonus item may carry an optional `days` array (JS Date.getDay() values: 0=Sunday ... 5=Friday, 6=Saturday).
+// No `days` field (or an empty array) means the bonus is shown every day.
+function bonusAppliesToday(b){ return !b.days || !b.days.length || b.days.includes(new Date().getDay()); }
+
+const BONUS_REVOCATION_HOURS = 5;
+async function getActiveBonusRevocations(){
+  const since = new Date(Date.now() - BONUS_REVOCATION_HOURS*60*60*1000).toISOString();
+  const { data, error } = await sb.from('bonus_revocations').select('*').gte('revoked_at', since);
+  if(error){ console.error(error); return []; }
+  return data;
+}
+async function revokeBonus(childId, bonusId){
+  const { error } = await sb.from('bonus_revocations').insert({ child_id: childId, bonus_id: bonusId });
+  if(error) console.error(error);
+}
+// groups active revocations by bonus id -> array of "first+last initial" strings, e.g. {bd1:['דכ','יל']}
+function groupRevocationsByBonus(revocations){
+  const byBonus = {};
+  revocations.forEach(r=>{
+    const child = roster.find(c=>c.id === r.child_id);
+    if(!child) return;
+    if(!byBonus[r.bonus_id]) byBonus[r.bonus_id] = [];
+    byBonus[r.bonus_id].push(initials(child));
+  });
+  return byBonus;
+}
 
 // TEMP (2026-09-30): daily one-step limit on the moon/Mercury journey is OFF for now, at the
 // client's request, to allow open testing. Set back to true before real staff use.
@@ -1161,13 +1190,16 @@ function renderYellowScreen(ids){
 
   function renderBonusChips(containerId, list, emptyMsg){
     const el = document.getElementById(containerId);
-    if(!list.length){ el.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
-    el.innerHTML = list.map(b => `
+    const todayList = list.filter(bonusAppliesToday);
+    if(!todayList.length){ el.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
+    el.innerHTML = todayList.map(b => `
       <div class="bonus-chip" data-id="${b.id}"><span>${b.text}</span><button class="revoke-bonus">גריעה</button></div>
     `).join('');
     el.querySelectorAll('.revoke-bonus').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
+      btn.addEventListener('click', async ()=>{
+        const bonusId = btn.closest('.bonus-chip').dataset.id;
         const bonusText = btn.closest('.bonus-chip').querySelector('span').textContent;
+        await revokeBonus(selectedStaffChild, bonusId);
         toast(`נגרע מ${displayName(child)}: ${bonusText}`);
       });
     });
@@ -1630,18 +1662,25 @@ function renderYellowSlide(){
 function renderGreenSlide(){
   document.getElementById('green-slide-content').innerHTML = renderProtocolCard('green');
 }
-function bonusBoardSection(title, list){
+function bonusBoardSection(title, list, revocationsByBonus){
   if(!list.length) return '';
   return `
     <h3 style="font-family:'Rubik'; font-size:14px; color:var(--gold); margin:0 0 8px;">${title}</h3>
     <div class="bonus-board-grid" style="margin-bottom:18px;">
-      ${list.map(b => `<div class="bonus-board-item">🎁 ${b.text}</div>`).join('')}
+      ${list.map(b => {
+        const revoked = revocationsByBonus[b.id];
+        const revokedHtml = revoked && revoked.length ? `<span class="bonus-revoked-names">לא היום: ${revoked.join(', ')}</span>` : '';
+        return `<div class="bonus-board-item">🎁 ${b.text}${revokedHtml}</div>`;
+      }).join('')}
     </div>`;
 }
-function renderBonusesSlide(){
+async function renderBonusesSlide(){
   const el = document.getElementById('bonuses-slide-content');
-  if(!bonusesDaily.length && !bonusesWeekly.length){ el.innerHTML = '<div class="empty">אין בונוסים מוגדרים</div>'; return; }
-  el.innerHTML = bonusBoardSection('יומיים', bonusesDaily) + bonusBoardSection('שבועיים', bonusesWeekly);
+  const todayDaily = bonusesDaily.filter(bonusAppliesToday);
+  const todayWeekly = bonusesWeekly.filter(bonusAppliesToday);
+  if(!todayDaily.length && !todayWeekly.length){ el.innerHTML = '<div class="empty">אין בונוסים מוגדרים להיום</div>'; return; }
+  const revocationsByBonus = groupRevocationsByBonus(await getActiveBonusRevocations());
+  el.innerHTML = bonusBoardSection('יומיים', todayDaily, revocationsByBonus) + bonusBoardSection('שבועיים', todayWeekly, revocationsByBonus);
 }
 
 function renderDots(){
@@ -1659,6 +1698,7 @@ async function showSlide(i){
 }
 
 let feedbackChannel = null;
+let bonusRevocationChannel = null;
 let feedbackBannerTimer = null;
 function showFeedbackBanner(event){
   const el = document.getElementById('feedback-banner');
@@ -1757,9 +1797,16 @@ function startFeedbackListener(){
       });
     })
     .subscribe();
+  bonusRevocationChannel = sb.channel('bonus_revocations_live')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bonus_revocations' }, () => {
+      // punitive, not celebratory — no banner/interrupt, just quietly refresh the bonuses board if it's on screen
+      if(carouselIndex === 3) renderBonusesSlide();
+    })
+    .subscribe();
 }
 function stopFeedbackListener(){
   if(feedbackChannel){ sb.removeChannel(feedbackChannel); feedbackChannel = null; }
+  if(bonusRevocationChannel){ sb.removeChannel(bonusRevocationChannel); bonusRevocationChannel = null; }
 }
 
 function startCarousel(){
