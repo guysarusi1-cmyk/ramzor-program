@@ -406,27 +406,62 @@
     <button class="back-btn" id="kids-quick-back-to-hub">🏠 חזרה לתפריט הראשי</button>
 
     <div id="kids-quick-pick-color">
-      <div class="card" style="text-align:center; padding:28px 16px;">
-        <h2 style="margin-bottom:20px;">בחרו רמזור</h2>
-        <div style="display:flex; justify-content:center; gap:32px;">
-          <div id="kids-quick-gold-btn" style="display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer;">
-            <div class="bulb gold" style="width:90px; height:90px; margin:0;"></div>
-            <div style="font-family:'Rubik'; font-weight:800; font-size:15px; color:var(--gold);">זהב</div>
-          </div>
-          <div id="kids-quick-yellow-btn" style="display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer;">
-            <div class="bulb yellow" style="width:90px; height:90px; margin:0;"></div>
-            <div style="font-family:'Rubik'; font-weight:800; font-size:15px; color:var(--yellow);">רמזור צהוב</div>
-          </div>
+      <div class="card" style="padding:24px 16px;">
+        <h2 style="text-align:center; margin-bottom:22px; font-size:17px;">מה תרצו לעשות?</h2>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+          <div class="bulb gold" style="width:40px; height:40px; margin:0; flex-shrink:0;"></div>
+          <div style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--gold);">זהב</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px; padding-inline-start:50px;">
+          <button class="btn ghost" id="kq-give-star-btn">⭐ הענקת כוכב</button>
+          <button class="btn ghost" id="kq-moon-journey-btn">🚀 תכנית המסע בחלל</button>
+          <button class="btn ghost" disabled style="opacity:.45; cursor:not-allowed;">🧱 בניית לבנים (בקרוב)</button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+          <div class="bulb yellow" style="width:40px; height:40px; margin:0; flex-shrink:0;"></div>
+          <div style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--yellow);">רמזור צהוב</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; padding-inline-start:50px;">
+          <button class="btn ghost" id="kq-revoke-bonus-btn">➖ גריעת בונוס</button>
         </div>
       </div>
     </div>
 
     <div id="kids-quick-pick-child" style="display:none;">
-      <button class="back-btn" id="kids-quick-back-to-color">→ חזרה לבחירת רמזור</button>
+      <button class="back-btn" id="kids-quick-back-to-color">→ חזרה</button>
       <div class="card">
-        <h2>בחרו ילד/ה</h2>
+        <h2 id="kids-quick-child-title">בחרו ילד/ה</h2>
         <div class="chip-row" id="kids-quick-roster"></div>
       </div>
+    </div>
+
+    <div id="kids-quick-moon-panel" style="display:none;">
+      <button class="back-btn" id="kids-quick-back-to-children">→ חזרה לרשימת ילדים</button>
+      <div id="kids-quick-moon-feedback"></div>
+    </div>
+
+    <div id="kids-quick-yellow-intro" style="display:none;">
+      <button class="back-btn" id="kids-quick-yellow-intro-back">→ חזרה</button>
+      <button class="btn" id="kq-pick-child-for-revoke-btn" style="width:100%; margin-bottom:14px;">מאיזה ילד לגרוע את הבונוס?</button>
+      <div id="kq-yellow-protocol"></div>
+    </div>
+
+    <div id="kids-quick-yellow-list" style="display:none;">
+      <button class="back-btn" id="kids-quick-yellow-list-back">→ חזרה לרשימת ילדים</button>
+      <div class="response-headline yellow" id="kq-yellow-title-headline"></div>
+      <div id="kq-yellow-protocol-list" style="margin-bottom:14px;"></div>
+      <h2 id="kq-yellow-childname-title"></h2>
+      <div class="note" style="margin-bottom:10px;">לחיצה על בונוס גורעת אותו מהיום.</div>
+      <h2>🎁 בונוסים יומיים</h2>
+      <div id="kq-yellow-bonus-daily-list"></div>
+      <div class="divider"></div>
+      <h2>📅 בונוסים שבועיים</h2>
+      <div id="kq-yellow-bonus-weekly-list"></div>
+      <div class="divider"></div>
+      <h2>📋 לוח תורנויות</h2>
+      <div id="kq-yellow-duty-list"></div>
     </div>
   </section>
 
@@ -1113,12 +1148,16 @@ function openRedOrangeScreen(color){
   showStaffScreen('redorange');
 }
 
-function renderYellowScreen(){
+function renderYellowScreen(ids){
+  ids = ids || {
+    title: 'yellow-title-headline', protocol: 'yellow-protocol', childTitle: 'yellow-childname-title',
+    dailyList: 'yellow-bonus-daily-list', weeklyList: 'yellow-bonus-weekly-list', dutyList: 'yellow-duty-list'
+  };
   const child = roster.find(c=>c.id===selectedStaffChild);
   if(!child) return;
-  document.getElementById('yellow-title-headline').textContent = PROGRAM.yellow.title;
-  document.getElementById('yellow-protocol').innerHTML = renderProtocolCard('yellow');
-  document.getElementById('yellow-childname-title').textContent = 'בונוסים — ' + displayName(child);
+  document.getElementById(ids.title).textContent = PROGRAM.yellow.title;
+  document.getElementById(ids.protocol).innerHTML = renderProtocolCard('yellow');
+  document.getElementById(ids.childTitle).textContent = 'בונוסים — ' + displayName(child);
 
   function renderBonusChips(containerId, list, emptyMsg){
     const el = document.getElementById(containerId);
@@ -1133,10 +1172,10 @@ function renderYellowScreen(){
       });
     });
   }
-  renderBonusChips('yellow-bonus-daily-list', bonusesDaily, 'אין בונוסים יומיים מוגדרים (הוסיפו במסך הניהול)');
-  renderBonusChips('yellow-bonus-weekly-list', bonusesWeekly, 'אין בונוסים שבועיים מוגדרים (הוסיפו במסך הניהול)');
+  renderBonusChips(ids.dailyList, bonusesDaily, 'אין בונוסים יומיים מוגדרים (הוסיפו במסך הניהול)');
+  renderBonusChips(ids.weeklyList, bonusesWeekly, 'אין בונוסים שבועיים מוגדרים (הוסיפו במסך הניהול)');
 
-  const dutyEl = document.getElementById('yellow-duty-list');
+  const dutyEl = document.getElementById(ids.dutyList);
   if(!dutyRoster.length){ dutyEl.innerHTML = '<div class="empty">אין תורנויות מוגדרות (הוסיפו במסך הניהול)</div>'; }
   else{
     dutyEl.innerHTML = dutyRoster.map(d => `
@@ -1160,20 +1199,24 @@ async function logFeedbackEvent(childId, type, message){
   if(error) console.error(error);
 }
 
-document.getElementById('star-btn').addEventListener('click', async ()=>{
-  if(!selectedStaffChild) return;
-  const state = await getChildState(selectedStaffChild);
+async function giveStar(childId){
+  const state = await getChildState(childId);
   state.stars = (state.stars || 0) + 1;
-  await setChildState(selectedStaffChild, state);
-  const child = roster.find(c=>c.id===selectedStaffChild);
+  await setChildState(childId, state);
+  const child = roster.find(c=>c.id===childId);
   toast(`⭐ כוכב נוסף ל${displayName(child)} — סה"כ ${state.stars}`);
   logFeedbackEvent(child.id, 'star', `⭐ ${displayName(child)} קיבל/ה כוכב!`);
+}
+
+document.getElementById('star-btn').addEventListener('click', async ()=>{
+  if(!selectedStaffChild) return;
+  await giveStar(selectedStaffChild);
 });
 
-async function renderMoonPanel(){
+async function renderMoonPanel(containerId = 'staff-feedback'){
   const child = roster.find(c=>c.id===selectedStaffChild);
   const state = await getChildState(selectedStaffChild);
-  const fb = document.getElementById('staff-feedback');
+  const fb = document.getElementById(containerId);
   const inStage2 = (state.moonSteps || 0) >= 7;
   const stage2Done = (state.mercurySteps || 0) >= 7;
 
@@ -1189,7 +1232,7 @@ async function renderMoonPanel(){
   const isToday = MOON_DAILY_LIMIT_ENABLED && state.moonDayDate === todayStr();
   const stageTitle = inStage2 ? '🪐 המסע לכוכב המילים' : '🚀 תכנית המסע בחלל';
   const positiveLabel = inStage2 ? 'הצליח/ה לבטא במילים (התקדמות)' : 'יום נקי (התקדמות)';
-  const negativeLabel = inStage2 ? 'לא הצליח/ה היום' : 'קילל/ה היום';
+  const negativeLabel = 'חללית מושבתת עקב קללות';
 
   let statusHtml;
   if(isToday && state.moonDayStatus === 'progressed'){
@@ -1208,11 +1251,12 @@ async function renderMoonPanel(){
         <button class="gold-btn" id="moon-clean" ${disabledAttr}>${positiveLabel}</button>
         <button class="gold-btn" id="moon-curse" ${disabledAttr}>${negativeLabel}</button>
       </div>
+      <button class="gold-btn" disabled style="margin-top:10px; width:100%; opacity:.45; cursor:not-allowed;">שדרוגים במהלך המסע (בקרוב)</button>
     </div>`;
   if(isToday) return;
   document.getElementById('moon-clean').addEventListener('click', async ()=>{
     const s = await getChildState(selectedStaffChild);
-    if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(); return; }
+    if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(containerId); return; }
     s.moonDayDate = todayStr();
     s.moonDayStatus = 'progressed';
     let msg;
@@ -1232,22 +1276,22 @@ async function renderMoonPanel(){
     await setChildState(selectedStaffChild, s);
     logFeedbackEvent(child.id, eventType, msg);
     toast(msg);
-    if(helpMilestone) await renderHelpFriendPrompt(child, s.mercurySteps);
-    else renderMoonPanel();
+    if(helpMilestone) await renderHelpFriendPrompt(child, s.mercurySteps, containerId);
+    else renderMoonPanel(containerId);
   });
   document.getElementById('moon-curse').addEventListener('click', async ()=>{
     const s = await getChildState(selectedStaffChild);
-    if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(); return; }
+    if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(containerId); return; }
     s.moonDayDate = todayStr();
     s.moonDayStatus = 'cursed';
     await setChildState(selectedStaffChild, s);
     toast(`נרשם: ${displayName(child)} לא מתקדם/ת היום. התראה נשלחה לגיא.`);
-    renderMoonPanel();
+    renderMoonPanel(containerId);
   });
 }
 
-async function renderHelpFriendPrompt(fromChild, milestoneStep){
-  const fb = document.getElementById('staff-feedback');
+async function renderHelpFriendPrompt(fromChild, milestoneStep, containerId = 'staff-feedback'){
+  const fb = document.getElementById(containerId);
   const eligible = [];
   for(const c of roster){
     if(c.id === fromChild.id) continue;
@@ -1261,7 +1305,7 @@ async function renderHelpFriendPrompt(fromChild, milestoneStep){
         <div class="light-title">🎁 ${displayName(fromChild)} הגיע/ה לצעד ${milestoneStep}!</div>
         <div class="note">כל שאר הילדים כבר סיימו את המסע — אין כרגע למי לתת את המתנה.</div>
       </div>`;
-    setTimeout(renderMoonPanel, 3000);
+    setTimeout(()=>renderMoonPanel(containerId), 3000);
     return;
   }
   fb.innerHTML = `
@@ -1293,10 +1337,10 @@ async function renderHelpFriendPrompt(fromChild, milestoneStep){
       await setChildState(targetId, ts);
       logFeedbackEvent(target.id, giftType, giftMsg);
       toast(giftMsg);
-      renderMoonPanel();
+      renderMoonPanel(containerId);
     });
   });
-  document.getElementById('help-friend-skip').addEventListener('click', renderMoonPanel);
+  document.getElementById('help-friend-skip').addEventListener('click', ()=>renderMoonPanel(containerId));
 }
 
 document.getElementById('moon-btn').addEventListener('click', async ()=>{
@@ -1523,18 +1567,29 @@ async function renderMercuryBoard(){
   });
 
   const positions = {};
+  const H_SPACING = 22;
+  const V_SPACING = 36;
+
+  function placeCluster(items, centerLeft, startTop, perRow){
+    const n = items.length;
+    items.forEach((item, i)=>{
+      const row = Math.floor(i / perRow);
+      const itemsInRow = Math.min(perRow, n - row*perRow);
+      const col = i - row*perRow;
+      const left = centerLeft + (col - (itemsInRow-1)/2) * H_SPACING;
+      const top = startTop - row * V_SPACING;
+      positions[item.child.id] = {left, top, steps:item.steps, child:item.child};
+    });
+  }
+
   const baseKids = markersByStep[-1] || [];
-  baseKids.forEach((item, i)=>{
-    const left = 6 + (i * (20 / Math.max(baseKids.length,1)));
-    positions[item.child.id] = {left, top:88, steps:item.steps, child:item.child};
-  });
+  if(baseKids.length) placeCluster(baseKids, 18, 93, 3);
+
   for(let s=0; s<7; s++){
     const kids = markersByStep[s] || [];
-    kids.forEach((item, i)=>{
-      const base = MERCURY_PATH[s];
-      const offset = (i - (kids.length-1)/2) * 6;
-      positions[item.child.id] = {left: base.left + offset, top: base.top - 6, steps:item.steps, child:item.child};
-    });
+    if(!kids.length) continue;
+    const base = MERCURY_PATH[s];
+    placeCluster(kids, base.left, base.top - 12, 2);
   }
 
   diffRenderMarkers(el, positions, (child, steps) => {
@@ -1791,28 +1846,50 @@ document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
 document.getElementById('feedback-back-to-hub').addEventListener('click', showHub);
 document.getElementById('staff-back-to-hub').addEventListener('click', showHub);
 
-// ---------- KIDS QUICK ACCESS (זהב / רמזור צהוב shortcut into the staff screens) ----------
-let kidsQuickColor = null;
+// ---------- KIDS QUICK ACCESS (הענקת כוכב / תכנית המסע בחלל / רמזור צהוב) ----------
+let kidsQuickMode = null; // 'star' | 'moon' | 'yellow'
+
+const KIDS_QUICK_TITLES = {
+  star: 'בחרו ילד/ה — הענקת כוכב',
+  moon: 'בחרו ילד/ה — תכנית המסע בחלל',
+  yellow: 'בחרו ילד/ה — רמזור צהוב',
+};
 
 function kidsQuickShowColorPicker(){
   document.getElementById('kids-quick-pick-color').style.display = 'block';
   document.getElementById('kids-quick-pick-child').style.display = 'none';
+  document.getElementById('kids-quick-moon-panel').style.display = 'none';
+  document.getElementById('kids-quick-yellow-intro').style.display = 'none';
+  document.getElementById('kids-quick-yellow-list').style.display = 'none';
 }
 
-function kidsQuickShowChildPicker(color){
-  kidsQuickColor = color;
+function kidsQuickShowChildPicker(mode){
+  kidsQuickMode = mode;
   document.getElementById('kids-quick-pick-color').style.display = 'none';
   document.getElementById('kids-quick-pick-child').style.display = 'block';
+  document.getElementById('kids-quick-moon-panel').style.display = 'none';
+  document.getElementById('kids-quick-yellow-list').style.display = 'none';
+  document.getElementById('kids-quick-child-title').textContent = KIDS_QUICK_TITLES[mode] || 'בחרו ילד/ה';
   const el = document.getElementById('kids-quick-roster');
   if(!roster.length){ el.innerHTML = '<div class="empty">אין ילדים ברשימה</div>'; return; }
   el.innerHTML = roster.map(c => `<span class="chip" data-id="${c.id}">${displayName(c)}</span>`).join('');
   el.querySelectorAll('.chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
+    chip.addEventListener('click', async ()=>{
       selectedStaffChild = chip.dataset.id;
-      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-      document.getElementById('view-staff').classList.add('active');
-      if(kidsQuickColor === 'gold') openGoldScreen();
-      else openYellowScreen();
+      if(kidsQuickMode === 'star'){
+        await giveStar(selectedStaffChild);
+      } else if(kidsQuickMode === 'moon'){
+        document.getElementById('kids-quick-pick-child').style.display = 'none';
+        document.getElementById('kids-quick-moon-panel').style.display = 'block';
+        await renderMoonPanel('kids-quick-moon-feedback');
+      } else if(kidsQuickMode === 'yellow'){
+        document.getElementById('kids-quick-pick-child').style.display = 'none';
+        document.getElementById('kids-quick-yellow-list').style.display = 'block';
+        renderYellowScreen({
+          title: 'kq-yellow-title-headline', protocol: 'kq-yellow-protocol-list', childTitle: 'kq-yellow-childname-title',
+          dailyList: 'kq-yellow-bonus-daily-list', weeklyList: 'kq-yellow-bonus-weekly-list', dutyList: 'kq-yellow-duty-list'
+        });
+      }
     });
   });
 }
@@ -1823,10 +1900,30 @@ document.getElementById('hub-kids-btn').addEventListener('click', async ()=>{
   document.getElementById('view-kids-quick').classList.add('active');
   kidsQuickShowColorPicker();
 });
-document.getElementById('kids-quick-gold-btn').addEventListener('click', ()=> kidsQuickShowChildPicker('gold'));
-document.getElementById('kids-quick-yellow-btn').addEventListener('click', ()=> kidsQuickShowChildPicker('yellow'));
-document.getElementById('kids-quick-back-to-color').addEventListener('click', kidsQuickShowColorPicker);
+document.getElementById('kq-give-star-btn').addEventListener('click', ()=> kidsQuickShowChildPicker('star'));
+document.getElementById('kq-moon-journey-btn').addEventListener('click', ()=> kidsQuickShowChildPicker('moon'));
+document.getElementById('kids-quick-back-to-color').addEventListener('click', ()=>{
+  if(kidsQuickMode === 'yellow'){
+    document.getElementById('kids-quick-pick-child').style.display = 'none';
+    document.getElementById('kids-quick-yellow-intro').style.display = 'block';
+  } else {
+    kidsQuickShowColorPicker();
+  }
+});
+document.getElementById('kids-quick-back-to-children').addEventListener('click', ()=> kidsQuickShowChildPicker(kidsQuickMode));
 document.getElementById('kids-quick-back-to-hub').addEventListener('click', showHub);
+
+document.getElementById('kq-revoke-bonus-btn').addEventListener('click', ()=>{
+  document.getElementById('kids-quick-pick-color').style.display = 'none';
+  document.getElementById('kids-quick-yellow-intro').style.display = 'block';
+  document.getElementById('kq-yellow-protocol').innerHTML = renderProtocolCard('yellow');
+});
+document.getElementById('kids-quick-yellow-intro-back').addEventListener('click', kidsQuickShowColorPicker);
+document.getElementById('kq-pick-child-for-revoke-btn').addEventListener('click', ()=>{
+  document.getElementById('kids-quick-yellow-intro').style.display = 'none';
+  kidsQuickShowChildPicker('yellow');
+});
+document.getElementById('kids-quick-yellow-list-back').addEventListener('click', ()=> kidsQuickShowChildPicker('yellow'));
 
 // ---------- INIT ----------
 (async function init(){
