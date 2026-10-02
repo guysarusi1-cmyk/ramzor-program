@@ -103,6 +103,7 @@
         <span class="home-secondary-sub">לומדים את העקרונות והכלים של התכנית</span>
       </span>
     </button>
+    <button type="button" class="home-link" id="hub-install-link" hidden>התקנה כאפליקציה על מסך הבית</button>
   </section>
 
   <!-- ============ KIDS QUICK ACCESS (זהב / רמזור צהוב) ============ -->
@@ -335,6 +336,23 @@
 
 </div>
 <div id="celebration" aria-hidden="true"></div>
+
+<div class="sheet" id="install-sheet" hidden>
+  <div class="sheet-card">
+    <h2>התקנה כאפליקציה</h2>
+    <div id="install-sheet-body"></div>
+    <button type="button" class="btn ghost" id="install-sheet-close" style="width:100%; margin-top:14px;">סגירה</button>
+  </div>
+</div>
+
+<section class="diag" id="diag-view" hidden>
+  <h1>בדיקת תאימות מסך</h1>
+  <div class="diag-device" id="diag-device"></div>
+  <div class="diag-summary" id="diag-summary">בודק...</div>
+  <div class="diag-rows" id="diag-rows"></div>
+  <button type="button" class="btn" id="diag-sound-btn">🔈 בדיקת צליל</button>
+  <div class="diag-spin" aria-hidden="true"></div>
+</section>
 
 <script>{{VENDOR_SUPABASE}}</script>
 <script>{{JS}}</script>

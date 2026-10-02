@@ -1,5 +1,6 @@
 // ---------- INIT ----------
 (async function init(){
+  if(location.hash === '#diag'){ showDiagnostics(); return; }   // device / TV check page, no login needed
   const authed = await checkAuth();
   if(authed){
     await loadApp();

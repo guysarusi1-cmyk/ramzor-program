@@ -37,6 +37,17 @@
       check('home has daily-ops and kids-screen cards', visible($('hub-daily-btn')) && visible($('hub-kids-btn')), 'cards missing');
     });
 
+    // ---- install-as-app help (phones only)
+    await step('install help', async () => {
+      const phone = innerWidth <= 700;
+      check(phone ? 'install link shows on phones' : 'install link hidden on bigger screens', visible($('hub-install-link')) === phone, 'visible=' + visible($('hub-install-link')));
+      if(!phone) return;
+      $('hub-install-link').click();
+      check('install sheet opens with steps', !$('install-sheet').hidden && $('install-sheet-body').textContent.length > 20, 'empty sheet');
+      $('install-sheet-close').click();
+      check('install sheet closes', $('install-sheet').hidden, 'still open');
+    });
+
     // ---- bottom bar (phones only)
     await step('bottom bar', async () => {
       const phone = innerWidth <= 700;
