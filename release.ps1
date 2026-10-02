@@ -50,7 +50,7 @@ Invoke-Git push origin "backup/$stamp"
 Invoke-Git checkout main
 Invoke-Git pull --ff-only origin main
 Invoke-Git merge --no-edit dev
-Copy-Item $new (Join-Path $root 'index.html') -Force
+Copy-Item (Join-Path $root 'dist\live\*') $root -Recurse -Force   # index.html + manifest + sw.js + icons
 Invoke-Git add -A
 Invoke-Git commit -m "Release: $Message"
 Invoke-Git push origin main

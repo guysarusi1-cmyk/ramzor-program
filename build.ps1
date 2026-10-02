@@ -48,10 +48,24 @@ $js  = (Get-ChildItem (Join-Path $root 'src\scripts') -Filter *.js  | Sort-Objec
 $html = Read-Text (Join-Path $root 'src\index.template.html')
 
 # String.Replace (not -replace): the payloads contain '$' characters
-$html = $html.Replace('{{CSS}}', $css).Replace('{{JS}}', $js)
+$vendor = Read-Text (Join-Path $root 'src\vendor\supabase-js-2.117.2.js')   # inlined: no CDN needed, so the app starts offline
+$html = $html.Replace('{{CSS}}', $css).Replace('{{JS}}', $js).Replace('{{VENDOR_SUPABASE}}', $vendor)
 $html = Expand-Tokens (Apply-EnvBlocks $html)
 
 if(-not $Out){ $Out = Join-Path $root "dist\$Env\index.html" }
 New-Item -ItemType Directory -Force (Split-Path $Out -Parent) | Out-Null
 [System.IO.File]::WriteAllText($Out, $html, $utf8)
-Write-Output "built [$Env] -> $Out ($($html.Length) chars)"
+
+# static files that sit next to index.html (manifest, icons, service worker). The service worker's
+# cache name carries a hash of the page, so every new release replaces the old offline copy.
+$outDir = Split-Path $Out -Parent
+$pageHash = (Get-FileHash $Out -Algorithm SHA256).Hash.Substring(0,12).ToLower()
+$pub = Join-Path $root 'src\public'
+Get-ChildItem $pub -Recurse -File | ForEach-Object {
+  $rel = $_.FullName.Substring($pub.Length + 1)
+  $dest = Join-Path $outDir $rel
+  New-Item -ItemType Directory -Force (Split-Path $dest -Parent) | Out-Null
+  if($_.Name -eq 'sw.js'){ [System.IO.File]::WriteAllText($dest, (Read-Text $_.FullName).Replace('@build@', $pageHash), $utf8) }
+  else { Copy-Item $_.FullName $dest -Force }
+}
+Write-Output "built [$Env] -> $Out ($($html.Length) chars, page $pageHash)"

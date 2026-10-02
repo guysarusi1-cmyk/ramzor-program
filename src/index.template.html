@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>תכנית הרמזור</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12172A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="הרמזור">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{{CSS}}</style>
@@ -335,7 +342,7 @@
 </div>
 <div id="feedback-banner"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>{{VENDOR_SUPABASE}}</script>
 <script>{{JS}}</script>
 <!--@TEST-ONLY-->
 <script>
