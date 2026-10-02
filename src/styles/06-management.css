@@ -52,3 +52,14 @@
   .be-times input{ flex:1; }
   .be-actions{ display:flex; gap:8px; margin-top:14px; }
   .be-actions .btn{ flex:1; }
+
+/* ---- kids-screen control: remote control of the room TV ---- */
+  .tv-remote-status{ font-size:13.5px; color:var(--muted); margin-bottom:10px; }
+  .tv-remote-status.on{ color:var(--text); }
+  .tv-remote-status.off{ color:#f5dd8a; }
+  .tv-remote-boards{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .tv-remote-board.current{ border-color:var(--gold); color:var(--gold); }
+  .tv-remote-controls{ display:grid; grid-template-columns:1fr 1.4fr 1fr; gap:8px; }
+  .tv-preview-box{ margin-top:12px; border-radius:12px; overflow:hidden; border:1px solid var(--line); aspect-ratio:16/9; background:#000; }
+  .tv-preview-box[hidden]{ display:none; }
+  .tv-preview-frame{ width:100%; height:100%; border:0; display:block; }

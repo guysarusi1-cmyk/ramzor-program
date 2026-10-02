@@ -185,6 +185,44 @@
       $('manage-back-to-hub').click();
     });
 
+    // ---- remote control of the room TV
+    await step('tv remote', async () => {
+      // TV side: commands change what is on screen (called directly, no network needed)
+      activateDisplayView(); stopCarousel();
+      await showSlide(3);
+      handleTvCommand({ cmd: 'show', slide: 5 }); await sleep(100);
+      check('remote: "show" puts the chosen board on screen and holds it', $('slide-5').classList.contains('active') && tvHeld, 'slide/held wrong');
+      handleTvCommand({ cmd: 'show', slide: 4 }); await sleep(50);
+      check('remote: a hidden board cannot be shown', !$('slide-4').classList.contains('active'), 'hidden slide shown');
+      handleTvCommand({ cmd: 'next' }); await sleep(100);
+      check('remote: "next" goes to the next visible board', $('slide-7').classList.contains('active'), 'now on ' + carouselIndex);
+      handleTvCommand({ cmd: 'prev' }); await sleep(100);
+      check('remote: "prev" goes back', $('slide-5').classList.contains('active'), 'now on ' + carouselIndex);
+      handleTvCommand({ cmd: 'resume' }); await sleep(50);
+      check('remote: "resume" releases the hold', !tvHeld && !!carouselTimer, 'held=' + tvHeld);
+      handleTvCommand({ cmd: 'pause' });
+      check('remote: "pause" stops the rotation', tvHeld && !carouselTimer, 'timer still running');
+      stopCarousel();
+      showHub();
+
+      // staff side: the card on the kids-screen control area
+      $('hub-kids-btn').click(); await sleep(300);
+      check('control area shows the "המסך בחדר" card', visible($('tv-remote-card')), 'card hidden');
+      const boards = [...document.querySelectorAll('#tv-remote-boards [data-slide]')].map(b => b.textContent);
+      check('card lists every visible board', boards.length === SLIDES.filter(s => !s.hidden).length, boards.join('|'));
+      remoteStatus = { slide: 5, label: SLIDES[5].label, held: true }; renderTvRemote();
+      check('card shows what the TV shows and offers to continue', $('tv-remote-status').textContent.includes(SLIDES[5].label) && /המשך/.test($('tv-remote-hold').textContent), $('tv-remote-status').textContent);
+      remoteStatus = null; renderTvRemote();
+      await sleep(5600);
+      // (a TV left open on the dev machine may answer; either way the card must end in a definite state)
+      check('card ends in a definite state: a TV is shown, or "not answering"', /לא עונה|המסך מציג/.test($('tv-remote-status').textContent), $('tv-remote-status').textContent);
+      $('tv-preview-toggle').click();
+      check('live preview opens a small copy of the TV', !!document.querySelector('#tv-preview-box iframe') && !$('tv-preview-box').hidden, 'no preview');
+      $('tv-preview-toggle').click();
+      check('live preview can be closed', $('tv-preview-box').hidden, 'still open');
+      showHub();
+    });
+
     // ---- celebration moment on the kids' TV
     await step('celebration', async () => {
       CELEBRATION_MS = 700;

@@ -63,6 +63,7 @@ async function showSlide(i){
   document.getElementById('slide-'+i).classList.add('active');
   document.getElementById('slide-label').textContent = SLIDES[i].label;
   renderDots();
+  announceTvStatus();
   await SLIDES[i].render();
 }
 
@@ -76,7 +77,7 @@ function pauseRotation(){
   if(carouselTimer){ clearInterval(carouselTimer); carouselTimer = null; }
 }
 function resumeRotation(){
-  if(carouselTimer) return;
+  if(carouselTimer || tvHeld || IS_TV_PREVIEW) return;   // held by staff from the control screen / the preview just follows the real TV
   carouselTimer = setInterval(()=>{
     let next = (carouselIndex + 1) % SLIDES.length;
     while(SLIDES[next].hidden) next = (next + 1) % SLIDES.length;
@@ -96,6 +97,7 @@ async function interruptToSlide(slideIndex, renderFn){
   document.getElementById('slide-'+slideIndex).classList.add('active');
   document.getElementById('slide-label').textContent = SLIDES[slideIndex].label;
   renderDots();
+  announceTvStatus();
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ renderFn(); }); });
 
   clearTimeout(interruptTimer);
@@ -195,9 +197,11 @@ function startCarousel(){
   showSlide(carouselIndex);
   resumeRotation();
   startFeedbackListener();
+  startTvControlListener();
 }
 function stopCarousel(){
   pauseRotation();
+  stopTvControlListener();
   clearTimeout(interruptTimer);
   preInterruptIndex = null;
   stopFeedbackListener();

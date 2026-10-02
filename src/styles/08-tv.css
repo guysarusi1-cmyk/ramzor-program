@@ -82,3 +82,5 @@
   @media (prefers-reduced-motion: reduce){
     .kid-marker > div:first-child, .star-dot.filled{ animation:none; }
   }
+
+  body.tv-preview .tv-exit, body.tv-preview .tv-sound-btn{ display:none; }
