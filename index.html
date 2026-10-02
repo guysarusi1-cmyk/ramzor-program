@@ -357,9 +357,9 @@
     transform: scale(1.08);
     font-size: 19px;
     padding: 20px 16px;
-    animation: bonus-border-blink 1s step-start infinite;
+    animation: bonus-bg-blink 1s step-start infinite;
   }
-  @keyframes bonus-border-blink{ 50%{ border-color: transparent; } }
+  @keyframes bonus-bg-blink{ 50%{ background: var(--gold); color:#1a1a1a; } }
 </style>
 </head>
 <body>
@@ -377,8 +377,6 @@
       <button class="btn" id="login-submit-btn" style="width:100%;">כניסה</button>
       <div id="login-error" style="color:var(--red); font-size:13px; margin-top:10px; display:none;"></div>
     </div>
-    <!-- TEMP (2026-10-02): quick link for local testing of the display screen, remove before real staff use -->
-    <button class="btn ghost" id="temp-goto-display-btn" style="width:100%; margin-top:14px;">🖥️ מסך תצוגה (זמני לבדיקה)</button>
   </div>
 </div>
 
@@ -407,8 +405,6 @@
         <button class="btn" id="hub-daily-btn" style="padding:18px; font-size:16px;">🚦 תפעול יומיומי</button>
         <button class="btn ghost" id="hub-kids-btn" style="padding:18px; font-size:16px;">🧒 מסך ילדים</button>
         <button class="btn ghost" id="hub-learn-btn" style="padding:18px; font-size:16px;">🎓 לומדת הרמזור</button>
-        <!-- TEMP (2026-10-02): quick link for local testing of the display screen, remove before real staff use -->
-        <button class="btn ghost" id="temp-goto-display-btn-hub" style="padding:14px; font-size:14px; opacity:.8;">🖥️ מסך תצוגה (זמני לבדיקה)</button>
       </div>
     </div>
   </section>
@@ -479,23 +475,7 @@
 
   <!-- ============ MANAGEMENT VIEW ============ -->
   <section class="view" id="view-manage">
-    <div class="card">
-      <h2>פרוטוקול התוכנית — לחצו על נורה</h2>
-      <div class="signal">
-        <div class="bulb-row">
-          <button class="bulb red" data-light="red"></button>
-          <button class="bulb orange" data-light="orange"></button>
-          <button class="bulb yellow" data-light="yellow"></button>
-          <button class="bulb green" data-light="green"></button>
-        </div>
-      </div>
-      <div id="manage-protocol"></div>
-    </div>
-
-    <div class="card">
-      <h2>⭐ תכנית החיזוקים (זהב)</h2>
-      <div id="gold-protocol"></div>
-    </div>
+    <button class="back-btn" id="manage-back-to-hub">🏠 חזרה לתפריט הראשי</button>
 
     <div class="card">
       <h2>ילדים במסגרת</h2>
@@ -544,6 +524,22 @@
       </div>
       <div class="note">מוצג במסך הצוות תחת הרמזור הצהוב, לצד הבונוסים היומיים.</div>
     </div>
+
+    <div class="card">
+      <h2>⚠️ איפוס לוחות</h2>
+      <div class="note" style="margin-bottom:10px;">פעולות בלתי הפיכות שמשפיעות על כל הילדים בבת אחת.</div>
+      <button class="btn ghost" id="reset-stars-btn" style="width:100%; margin-bottom:10px;">איפוס לוח הכוכבים (כל הילדים ל-0)</button>
+      <button class="btn ghost" id="reset-mercury-btn" style="width:100%;">החזרת כל החלליות למצב ההתחלתי (לפני הצעד הראשון)</button>
+    </div>
+
+    <div class="card">
+      <h2>🧪 כלי בדיקה זמניים</h2>
+      <div class="note" style="margin-bottom:10px;">להסרה לפני שימוש אמיתי של הצוות.</div>
+      <!-- TEMP (2026-10-02): quick link for local testing of the display screen, remove before real staff use -->
+      <button class="btn ghost" id="temp-goto-display-btn-manage" style="width:100%; margin-bottom:10px;">🖥️ מסך תצוגה (זמני לבדיקה)</button>
+      <!-- TEMP (2026-10-02): preview button for the bonus time-blink effect, remove before real staff use -->
+      <button class="btn ghost" id="temp-preview-bonus-blink-btn-manage" style="width:100%;">🔔 הדגמת אפקט הבונוס (זמני, 5 שניות)</button>
+    </div>
   </section>
 
   <!-- ============ STAFF VIEW ============ -->
@@ -590,8 +586,6 @@
       <button class="back-btn" data-back="overview">→ חזרה לרמזור</button>
       <div class="response-headline yellow" id="yellow-title-headline"></div>
       <div id="yellow-protocol" style="margin-bottom:14px;"></div>
-      <!-- TEMP (2026-10-02): preview button for the bonus time-blink effect, remove before real staff use -->
-      <button class="btn ghost" id="temp-preview-bonus-blink-btn" style="width:100%; margin-bottom:14px;">🔔 הדגמת הבהוב הבונוס (זמני, 5 שניות)</button>
       <h2 id="yellow-childname-title"></h2>
       <div class="note" style="margin-bottom:10px;">לחיצה על בונוס גורעת אותו מהיום.</div>
       <h2>🎁 בונוסים יומיים</h2>
@@ -833,6 +827,21 @@ async function setChildState(id, state){
   if(error) console.error(error);
 }
 
+async function resetAllStars(){
+  await Promise.all(roster.map(async c=>{
+    const s = await getChildState(c.id);
+    s.stars = 0;
+    await setChildState(c.id, s);
+  }));
+}
+async function resetAllMercuryToStart(){
+  await Promise.all(roster.map(async c=>{
+    const s = await getChildState(c.id);
+    s.mercurySteps = 0;
+    await setChildState(c.id, s);
+  }));
+}
+
 let roster = [];
 let selectedStaffChild = null;
 
@@ -892,30 +901,9 @@ function renderProtocolCard(color){
     </div>`;
 }
 
-document.querySelectorAll('.bulb').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    document.querySelectorAll('.bulb').forEach(x=>x.classList.remove('selected'));
-    b.classList.add('selected');
-    document.getElementById('manage-protocol').innerHTML = renderProtocolCard(b.dataset.light);
-  });
-});
-// default open red
-document.querySelector('.bulb.red').classList.add('selected');
-document.getElementById('manage-protocol').innerHTML = renderProtocolCard('red');
-
-// gold protocol
-function renderGoldProtocol(){
-  function block(g){
-    return `
-      <div class="protocol prot-gold" style="margin-bottom:10px;">
-        <div class="light-title">${g.title}</div>
-        <div class="field-value" style="color:var(--muted); margin-bottom:8px;">${g.subtitle}</div>
-        <ol>${g.steps.map(s=>`<li><b>${s[0]}</b> — ${s[1]}</li>`).join('')}</ol>
-      </div>`;
-  }
-  document.getElementById('gold-protocol').innerHTML = block(GOLD.stars) + block(GOLD.moon);
-}
-renderGoldProtocol();
+// note: the management screen's protocol light-switcher and gold-protocol cards were removed
+// (2026-10-02, client request) — renderProtocolCard() itself is still used elsewhere (yellow/green
+// slides, kids-quick, etc.), only the management-screen-specific wiring here was removed.
 
 // ---------- ROSTER (management) ----------
 function renderManageRoster(){
@@ -1917,6 +1905,7 @@ document.getElementById('login-submit-btn').addEventListener('click', async ()=>
   pwInput.value = '';
   await checkAuth();
   await loadApp();
+  maybeShowManageFromHash();
 });
 
 document.getElementById('login-password').addEventListener('keydown', (e)=>{
@@ -1926,12 +1915,6 @@ document.getElementById('login-password').addEventListener('keydown', (e)=>{
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
   await sb.auth.signOut();
   await checkAuth();
-});
-
-// TEMP (2026-10-02): remove this button + handler before real staff use
-document.getElementById('temp-goto-display-btn').addEventListener('click', ()=>{
-  location.hash = 'tv';
-  location.reload();
 });
 
 function activateDisplayView(){
@@ -1955,13 +1938,36 @@ document.getElementById('hub-daily-btn').addEventListener('click', ()=>{
 document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
   toast('לומדת הרמזור בקרוב! 🎓');
 });
+document.getElementById('manage-back-to-hub').addEventListener('click', ()=>{
+  location.hash = '';
+  showHub();
+});
+
+// management screen isn't shown in the regular menu (client request, 2026-10-02) — reach it by
+// adding #manage to the site's address after logging in normally with the regular staff password.
+function maybeShowManageFromHash(){
+  if(location.hash === '#manage'){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-manage').classList.add('active');
+  }
+}
+document.getElementById('reset-stars-btn').addEventListener('click', async ()=>{
+  if(!confirm('לאפס את לוח הכוכבים לכל הילדים ל-0? אי אפשר לבטל את זה.')) return;
+  await resetAllStars();
+  toast('לוח הכוכבים אופס לכולם');
+});
+document.getElementById('reset-mercury-btn').addEventListener('click', async ()=>{
+  if(!confirm('להחזיר את כל החלליות למצב ההתחלתי (לפני הצעד הראשון)? אי אפשר לבטל את זה.')) return;
+  await resetAllMercuryToStart();
+  toast('כל החלליות הוחזרו למצב ההתחלתי');
+});
 // TEMP (2026-10-02): remove this button + handler before real staff use
-document.getElementById('temp-goto-display-btn-hub').addEventListener('click', ()=>{
+// TEMP (2026-10-02): remove these buttons + handlers before real staff use
+document.getElementById('temp-goto-display-btn-manage').addEventListener('click', ()=>{
   location.hash = 'tv';
   location.reload();
 });
-// TEMP (2026-10-02): remove this button + handler before real staff use
-document.getElementById('temp-preview-bonus-blink-btn').addEventListener('click', async ()=>{
+document.getElementById('temp-preview-bonus-blink-btn-manage').addEventListener('click', async ()=>{
   activateDisplayView();
   stopCarousel();
   await showSlide(3);
@@ -2057,7 +2063,10 @@ document.getElementById('kids-quick-yellow-list-back').addEventListener('click',
 // ---------- INIT ----------
 (async function init(){
   const authed = await checkAuth();
-  if(authed) await loadApp();
+  if(authed){
+    await loadApp();
+    maybeShowManageFromHash();
+  }
 
   if(location.hash === '#tv'){
     document.getElementById('login-screen').style.display = 'none';
