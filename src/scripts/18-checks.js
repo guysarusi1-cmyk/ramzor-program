@@ -132,6 +132,20 @@
       check('star can be set back (cleanup)', ((await getChildState(id)).stars || 0) === before, 'not restored');
     });
 
+    // ---- a double tap on a child while giving a star must not give two
+    await step('star double tap', async () => {
+      showHub(); $('hub-kids-btn').click(); await sleep(200);
+      $('kq-give-star-btn').click();
+      const chip = document.querySelector('#kids-quick-roster .chip[data-id="c3"]');
+      const before = (await getChildState('c3')).stars || 0;
+      chip.click(); chip.click();
+      await sleep(1500);
+      const after = (await getChildState('c3')).stars || 0;
+      check('double tap on a child gives exactly one star', after === before + 1, before + ' -> ' + after);
+      const s = await getChildState('c3'); s.stars = before; await setChildState('c3', s);
+      showHub();
+    });
+
     // ---- management
     await step('management', async () => {
       showHub();

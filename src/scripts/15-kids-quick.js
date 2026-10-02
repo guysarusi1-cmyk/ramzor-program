@@ -1,5 +1,6 @@
 // ---------- KIDS QUICK ACCESS (הענקת כוכב / תכנית המסע בחלל / רמזור צהוב) ----------
 let kidsQuickMode = null; // 'star' | 'moon' | 'yellow'
+let starTapLocked = false;
 
 const KIDS_QUICK_TITLES = {
   star: 'בחרו ילד/ה — הענקת כוכב',
@@ -29,7 +30,11 @@ function kidsQuickShowChildPicker(mode){
     chip.addEventListener('click', async ()=>{
       selectedStaffChild = chip.dataset.id;
       if(kidsQuickMode === 'star'){
-        await giveStar(selectedStaffChild);
+        // a quick double tap must not hand out two stars (each tap would read the same old total)
+        if(starTapLocked) return;
+        starTapLocked = true;
+        try { await giveStar(selectedStaffChild); }
+        finally { setTimeout(() => { starTapLocked = false; }, 800); }
       } else if(kidsQuickMode === 'moon'){
         document.getElementById('kids-quick-pick-child').style.display = 'none';
         document.getElementById('kids-quick-moon-panel').style.display = 'block';
