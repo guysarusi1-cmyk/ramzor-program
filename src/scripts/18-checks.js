@@ -37,6 +37,26 @@
       check('home has daily-ops and kids-screen cards', visible($('hub-daily-btn')) && visible($('hub-kids-btn')), 'cards missing');
     });
 
+    // ---- bottom bar (phones only)
+    await step('bottom bar', async () => {
+      const phone = innerWidth <= 700;
+      check(phone ? 'bottom bar shows on phones' : 'bottom bar hidden on bigger screens', visible($('bottom-nav')) === phone, 'visible=' + visible($('bottom-nav')));
+      if(!phone) return;
+      const labels = [...document.querySelectorAll('#bottom-nav .bottom-nav-btn')].map(b => b.textContent.trim());
+      check('bottom bar has only "בית" and "שליטה במסך הילדים"', labels.join('|') === 'בית|שליטה במסך הילדים', labels.join('|'));
+      check('"בית" is highlighted on the home screen', $('bnav-home').classList.contains('active') && !$('bnav-kids').classList.contains('active'), 'wrong highlight');
+      $('bnav-kids').click(); await sleep(150);
+      check('bar: kids control opens', activeView() === 'view-kids-quick', activeView());
+      check('bar: kids control is highlighted', $('bnav-kids').classList.contains('active') && !$('bnav-home').classList.contains('active'), 'wrong highlight');
+      $('bnav-home').click(); await sleep(150);
+      check('bar: home opens', activeView() === 'view-hub', activeView());
+      const r = $('bottom-nav').getBoundingClientRect();
+      check('bar sits at the bottom edge', Math.abs(r.bottom - innerHeight) < 2, 'bottom ' + r.bottom + ' vs ' + innerHeight);
+      $('hub-daily-btn').click(); openGuidedScreen('red');
+      check('bar is hidden during a protocol', !visible($('bottom-nav')), 'visible');
+      showHub();
+    });
+
     // ---- daily operations: full traffic light, no child
     await step('daily ops', async () => {
       $('hub-daily-btn').click();

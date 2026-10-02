@@ -60,6 +60,18 @@
     <button id="logout-btn" class="back-btn" style="padding:6px 12px; font-size:12px; margin-bottom:0;">🔒 יציאה</button>
   </div>
 
+  <!-- bottom bar on phones: always reachable, only the two places staff really jump between -->
+  <nav class="bottom-nav" id="bottom-nav" aria-label="ניווט ראשי">
+    <button type="button" class="bottom-nav-btn" id="bnav-home" data-bnav="home">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>
+      <span>בית</span>
+    </button>
+    <button type="button" class="bottom-nav-btn" id="bnav-kids" data-bnav="kids">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="20" height="13" rx="2"/><path d="M8 21h8M12 16.5V21"/></svg>
+      <span>שליטה במסך הילדים</span>
+    </button>
+  </nav>
+
   <!-- ============ HUB (post-login landing page) ============ -->
   <section class="view active" id="view-hub">
     <div class="home-top">
