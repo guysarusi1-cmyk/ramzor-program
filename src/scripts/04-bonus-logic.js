@@ -49,15 +49,14 @@ const MOON_DAILY_LIMIT_ENABLED = (APP_ENV === 'live');
 
 async function getChildState(id){
   const { data, error } = await sb.from('child_state').select('*').eq('child_id', id).maybeSingle();
-  if(error || !data) return {stars:0, moonSteps:0, moonGifts:0, mercurySteps:0, moonDayDate:null, moonDayStatus:null, lastLight:null, lastLightTs:0};
-  return { stars:data.stars, moonSteps:data.moon_steps, moonGifts:data.moon_gifts, mercurySteps:data.mercury_steps||0, moonDayDate:data.moon_day_date, moonDayStatus:data.moon_day_status, lastLight:data.last_light, lastLightTs:Number(data.last_light_ts) };
+  if(error || !data) return {stars:0, moonSteps:0, moonGifts:0, mercurySteps:0, moonDayDate:null, moonDayStatus:null};
+  return { stars:data.stars, moonSteps:data.moon_steps, moonGifts:data.moon_gifts, mercurySteps:data.mercury_steps||0, moonDayDate:data.moon_day_date, moonDayStatus:data.moon_day_status };
 }
 async function setChildState(id, state){
   const { error } = await sb.from('child_state').upsert({
     child_id:id, stars:state.stars||0, moon_steps:state.moonSteps||0, moon_gifts:state.moonGifts||0,
     mercury_steps:state.mercurySteps||0,
-    moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null,
-    last_light:state.lastLight||null, last_light_ts:state.lastLightTs||0
+    moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null
   });
   if(error) console.error(error);
 }

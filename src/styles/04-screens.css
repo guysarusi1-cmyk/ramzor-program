@@ -5,26 +5,6 @@
     border-radius:10px; margin-bottom:14px;
   }
   .back-btn:active{ transform:scale(.97); }
-  .light-overview-row{
-    display:flex; align-items:stretch; gap:0; border-radius:12px; overflow:hidden;
-    margin-bottom:10px; cursor:pointer; border:1px solid var(--line); transition:.15s;
-  }
-  .light-overview-row:active{ transform:scale(.99); }
-  .light-overview-row .swatch{ width:10px; flex-shrink:0; }
-  .light-overview-row .col{ flex:1; padding:12px 12px; font-size:13px; line-height:1.45; }
-  .light-overview-row .col.title-col{ background:var(--panel-2); font-weight:700; }
-  .light-overview-row .col.resp-col{ background:var(--panel); color:var(--muted); }
-  .light-overview-row .col-label{ font-size:10px; text-transform:uppercase; letter-spacing:.05em; opacity:.7; display:block; margin-bottom:3px; }
-  .light-overview-row.red .swatch{ background:var(--red); }
-  .light-overview-row.orange .swatch{ background:var(--orange); }
-  .light-overview-row.yellow .swatch{ background:var(--yellow); }
-  .light-overview-row.green .swatch{ background:var(--green); }
-  .light-overview-row.gold .swatch{ background:var(--gold); }
-  .light-overview-row .light-name{ font-family:'Rubik'; font-weight:800; font-size:14px; margin-bottom:2px; display:block; }
-
-  .green-inline{ display:none; padding:12px; border-radius:0 0 12px 12px; margin-top:-10px; margin-bottom:10px; font-size:13.5px; line-height:1.5; }
-  .green-inline.open{ display:block; }
-
   .response-headline{
     font-family:'Rubik'; font-weight:800; font-size:18px; text-align:center;
     padding:16px 14px; border-radius:14px; margin-bottom:16px; line-height:1.4;
@@ -52,23 +32,9 @@
   }
   #feedback-banner.show{ opacity:1; transform:translateY(0); }
 
-  .therapy-methods-grid{ display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:4px; }
-  @media(min-width:520px){ .therapy-methods-grid{ grid-template-columns:1fr 1fr 1fr; } }
-  .therapy-method-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:12px; }
-  .therapy-method-title{ font-family:'Rubik'; font-weight:700; font-size:13.5px; color:var(--gold); margin-bottom:6px; }
-  .therapy-method-card ul{ margin:0; padding-inline-start:18px; font-size:12.5px; line-height:1.5; }
-  .therapy-method-card li{ margin-bottom:6px; }
-  .therapy-principles ul{ margin:8px 0 0; padding-inline-start:20px; font-size:13.5px; line-height:1.55; }
-  .therapy-principles li{ margin-bottom:7px; }
-
   .placeholder-box{
     border:1.5px dashed var(--line); border-radius:12px; padding:22px 14px; text-align:center;
     color:var(--muted); font-size:13px; line-height:1.6;
-  }
-  .link-btn{
-    display:block; text-align:center; background:var(--panel-2); border:1px solid var(--gold);
-    color:var(--gold); border-radius:12px; padding:13px; font-family:'Rubik'; font-weight:700;
-    text-decoration:none; margin-top:14px; font-size:14px;
   }
   .bonus-chip{
     display:flex; align-items:center; justify-content:space-between; background:var(--panel-2);

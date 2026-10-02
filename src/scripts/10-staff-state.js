@@ -1,6 +1,6 @@
 // ---------- STAFF VIEW: state machine ----------
 function showStaffScreen(name){
-  ['pick','redorange','guided','yellow','green','gold'].forEach(s=>{
+  ['pick','guided','green','gold'].forEach(s=>{
     document.getElementById('staff-screen-'+s).style.display = (s===name) ? 'block' : 'none';
   });
   // the guided red protocol is used live in front of a child on a phone, so it drops the page
@@ -81,44 +81,3 @@ function openGreenScreen(){
     : `<div class="guided-step-note">לא הוגדרו עו״סיות — ניתן להוסיף שם וטלפון במסך הניהול.</div>`;
   showStaffScreen('green');
 }
-
-function renderTherapyPlan(plan, childName){
-  if(!plan){
-    return `<div class="placeholder-box">📋 התוכנית הטיפולית של ${childName} תוצג כאן — ממתין/ה לתוכן הספציפי לילד/ה.</div>`;
-  }
-  const methodsHtml = plan.methods.map(m => `
-    <div class="therapy-method-card">
-      <div class="therapy-method-title">${m.title}</div>
-      <ul>${m.points.map(pt=>`<li>${pt}</li>`).join('')}</ul>
-    </div>`).join('');
-  return `
-    <div class="protocol prot-gold" style="margin-bottom:10px;">
-      <div class="field-label">מטרות</div>
-      <div class="field-value">${plan.goals}</div>
-    </div>
-    <div class="therapy-methods-grid">${methodsHtml}</div>
-    <div class="protocol therapy-principles" style="margin-top:10px;">
-      <div class="light-title" style="font-size:15px;">עקרונות לעבודה</div>
-      <ul>${plan.principles.map(p=>`<li>${p}</li>`).join('')}</ul>
-    </div>`;
-}
-
-function openRedOrangeScreen(color){
-  const p = PROGRAM[color];
-  const child = roster.find(c=>c.id===selectedStaffChild);
-  const ageWarning = document.getElementById('redorange-age-warning');
-  const age = parseFloat(child.age);
-  ageWarning.style.display = (!isNaN(age) && age < 5) ? 'block' : 'none';
-  const headline = document.getElementById('redorange-response-headline');
-  headline.className = `response-headline ${color}`;
-  headline.textContent = p.response;
-  document.getElementById('redorange-title').textContent = `${p.label} — דרכי פעולה`;
-  document.getElementById('redorange-therapy-plan').innerHTML = renderTherapyPlan(child.therapyPlan, displayName(child));
-  let stepsHtml = p.steps.length ? '<ol>' + p.steps.map(s=>`<li><b>${s[0]}</b> — ${s[1]}</li>`).join('') + '</ol>' : '';
-  document.getElementById('redorange-protocol').className = `protocol prot-${color}`;
-  document.getElementById('redorange-protocol').innerHTML = `
-    <div class="field-label">דרכי ויסות כלליים</div>
-    ${stepsHtml}`;
-  showStaffScreen('redorange');
-}
-

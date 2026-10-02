@@ -1,4 +1,6 @@
 // ---------- PROGRAM DATA (from Guy's actual protocol) ----------
+// the incident report form that the red/orange protocols end with
+const REPORT_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeIsCRj03j_SUxZxHmK13XGTf5to3TNvhTY53JsvloVNJuOxA/viewform';
 const PROGRAM = {
   red: {
     label: "אדום", cls: "red",

@@ -52,9 +52,9 @@ async function initMiniLists(){
   bonusesWeekly = await getMiniList('bonusesWeekly');
   dutyRoster = await getMiniList('dutyRoster');
 
-  renderBonusesDailyList = wireMiniListManager('bonuses-daily-list', ()=>bonusesDaily, async(l)=>{bonusesDaily=l; await setMiniList('bonusesDaily', l);}, 'new-bonus-daily', 'add-bonus-daily-btn', ()=>{ if(document.getElementById('yellow-bonus-daily-list')) renderYellowScreen(); });
-  renderBonusesWeeklyList = wireMiniListManager('bonuses-weekly-list', ()=>bonusesWeekly, async(l)=>{bonusesWeekly=l; await setMiniList('bonusesWeekly', l);}, 'new-bonus-weekly', 'add-bonus-weekly-btn', ()=>{ if(document.getElementById('yellow-bonus-weekly-list')) renderYellowScreen(); });
-  renderDutyRosterList = wireMiniListManager('duty-roster-list', ()=>dutyRoster, async(l)=>{dutyRoster=l; await setMiniList('dutyRoster', l);}, 'new-duty-item', 'add-duty-item-btn', ()=>{ if(document.getElementById('yellow-duty-list')) renderYellowScreen(); });
+  renderBonusesDailyList = wireMiniListManager('bonuses-daily-list', ()=>bonusesDaily, async(l)=>{bonusesDaily=l; await setMiniList('bonusesDaily', l);}, 'new-bonus-daily', 'add-bonus-daily-btn');
+  renderBonusesWeeklyList = wireMiniListManager('bonuses-weekly-list', ()=>bonusesWeekly, async(l)=>{bonusesWeekly=l; await setMiniList('bonusesWeekly', l);}, 'new-bonus-weekly', 'add-bonus-weekly-btn');
+  renderDutyRosterList = wireMiniListManager('duty-roster-list', ()=>dutyRoster, async(l)=>{dutyRoster=l; await setMiniList('dutyRoster', l);}, 'new-duty-item', 'add-duty-item-btn');
 
   renderBonusesDailyList();
   renderBonusesWeeklyList();

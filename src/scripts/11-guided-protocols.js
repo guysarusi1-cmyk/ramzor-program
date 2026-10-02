@@ -147,8 +147,7 @@ function renderGuidedStep(){
   guidedOpenCard = null;
 
   if(step.report){
-    // same form the orange screen links to — single source of truth for the URL
-    document.getElementById('guided-report-link').href = document.getElementById('report-form-link').href;
+    document.getElementById('guided-report-link').href = REPORT_FORM_URL;
   }
   const revokeBtn = document.getElementById('guided-revoke-btn');
   if(revokeBtn) revokeBtn.addEventListener('click', ()=>{
@@ -189,11 +188,8 @@ document.getElementById('guided-prev-btn').addEventListener('click', ()=>{
   if(guidedStep > 0){ guidedStep--; renderGuidedStep(); window.scrollTo({top:0}); }
 });
 
+// bonus-revoke screen of the kids-screen control area (ids of the elements to fill)
 function renderYellowScreen(ids){
-  ids = ids || {
-    title: 'yellow-title-headline', protocol: 'yellow-protocol', childTitle: 'yellow-childname-title',
-    dailyList: 'yellow-bonus-daily-list', weeklyList: 'yellow-bonus-weekly-list', dutyList: 'yellow-duty-list'
-  };
   const child = roster.find(c=>c.id===selectedStaffChild);
   if(!child) return;
   document.getElementById(ids.title).textContent = PROGRAM.yellow.title;
@@ -232,10 +228,6 @@ function renderYellowScreen(ids){
       });
     });
   }
-}
-function openYellowScreen(){
-  renderYellowScreen();
-  showStaffScreen('yellow');
 }
 
 async function logFeedbackEvent(childId, type, message){
