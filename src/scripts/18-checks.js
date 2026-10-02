@@ -236,6 +236,16 @@
         if(!kid) continue;
         const st = await getChildState(kid.id);
         check(`new child (${stage}) starts at moon step ${expectedMoon}`, st.moonSteps === expectedMoon && st.stars === 0 && st.mercurySteps === 0, JSON.stringify(st));
+        if(stage === 'moon'){
+          // a child on the first journey gets the moon board, and only the children still on that journey are drawn on it
+          await refreshJourneyBoards();
+          check('moon board joins the rotation for a child on the moon journey', SLIDES[6].hidden === false, 'still hidden');
+          activateDisplayView(); stopCarousel();
+          await showSlide(6); await sleep(300);
+          const drawn = [...document.querySelectorAll('#moon-board .kid-marker')].map(m => m.dataset.childId);
+          check('moon board draws only the child still on the moon journey', drawn.length === 1 && drawn[0] === kid.id, drawn.join());
+          stopCarousel(); showHub(); $('hub-manage-gear').click();
+        }
         document.querySelector(`.roster-row[data-id="${kid.id}"] .rm`).click();
         for(let i=0;i<20 && roster.length > 14;i++) await sleep(250);
         check(`new child (${stage}) removed again`, roster.length === 14, 'roster ' + roster.length);

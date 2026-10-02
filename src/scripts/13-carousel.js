@@ -178,7 +178,7 @@ function celebrateFeedbackEvent(ev){
     const now = type === 'star' ? (state.stars || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
     await playCelebration(type, child, now);
     if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
-    else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon, renderMoonBoard);
+    else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon, () => renderMoonBoard(childId));
     else interruptToSlide(EVENT_TYPE_SLIDE.mercury, async () => {
       // the hero flight is the only motion we want for the ship that just progressed — suppress its
       // own glide transition so it doesn't ALSO slide from its old spot underneath the flying copy

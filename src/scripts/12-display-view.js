@@ -188,7 +188,9 @@ function diffRenderMarkers(el, positions, buildInner, markerWidthPx){
   });
 }
 
-async function renderMoonBoard(){
+// children who finished the moon journey (7 steps) continue on the word-planet board, so they are not drawn
+// here — except the one who has just arrived, so the celebration can show them reaching the top
+async function renderMoonBoard(justArrivedChildId){
   const el = document.getElementById('moon-board');
   fitBoardFont(el);
   if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
@@ -197,6 +199,7 @@ async function renderMoonBoard(){
   for(const c of roster){
     const state = await getChildState(c.id);
     const steps = state.moonSteps || 0;
+    if(steps >= 7 && c.id !== justArrivedChildId) continue;
     const idx = Math.min(steps, 7) - 1; // -1 means still at base (0 steps)
     if(!markersByStep[idx]) markersByStep[idx] = [];
     markersByStep[idx].push({child:c, steps});
