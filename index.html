@@ -215,9 +215,14 @@
     background-size:cover; background-position:center;
     aspect-ratio: 2000 / 1414;
   }
-  .kid-marker{ position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; z-index:5; transition:left 1.4s ease, top 1.4s ease; }
-  .kid-marker .avatar-initials{ width:9%; aspect-ratio:1/1; font-size:1vw; border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.4); }
-  .kid-marker .ship-icon{ width:32.5%; height:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+  /* fixed width on the marker itself (not just the image) so the percentage below resolves
+     predictably against the board — previously the image's own %-width had no well-defined
+     containing block (both the marker and its wrapper div are auto/shrink-to-fit), which let
+     the browser resolve it inconsistently and threw the ship's visual center off from the
+     label centered underneath it by tens of pixels. */
+  .kid-marker{ position:absolute; width:10%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; z-index:5; transition:left 1.4s ease, top 1.4s ease; }
+  .kid-marker .avatar-initials{ width:45%; aspect-ratio:1/1; font-size:1vw; border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .kid-marker .ship-icon{ width:100%; height:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
   .kid-marker .lbl{ font-size:9.5px; color:#fff; margin-top:2px; background:rgba(0,0,0,.5); padding:1px 5px; border-radius:5px; white-space:nowrap; }
   .kid-marker .badge{ position:absolute; top:-6px; right:-6px; font-size:11px; }
 
@@ -357,9 +362,12 @@
     transform: scale(1.08);
     font-size: 19px;
     padding: 20px 16px;
-    animation: bonus-bg-blink 1s step-start infinite;
+    animation: bonus-glow-pulse 4s ease-in-out infinite;
   }
-  @keyframes bonus-bg-blink{ 50%{ background: var(--gold); color:#1a1a1a; } }
+  @keyframes bonus-glow-pulse{
+    0%, 100% { box-shadow: 0 0 8px 1px rgba(232,185,74,.35); }
+    50% { box-shadow: 0 0 20px 6px rgba(232,185,74,.7); }
+  }
 </style>
 </head>
 <body>
@@ -1544,7 +1552,7 @@ async function renderStarBoard(){
   }
 }
 
-function diffRenderMarkers(el, positions, buildInner){
+function diffRenderMarkers(el, positions, buildInner, markerWidthPx){
   const existing = {};
   el.querySelectorAll('.kid-marker').forEach(m => { existing[m.dataset.childId] = m; });
 
@@ -1553,7 +1561,7 @@ function diffRenderMarkers(el, positions, buildInner){
   });
 
   Object.keys(positions).forEach(id => {
-    const {left, top, steps, child} = positions[id];
+    const {left, top, steps, child, scale} = positions[id];
     let marker = existing[id];
     if(!marker){
       marker = document.createElement('div');
@@ -1563,7 +1571,13 @@ function diffRenderMarkers(el, positions, buildInner){
     }
     marker.style.left = left + '%';
     marker.style.top = top + '%';
-    marker.innerHTML = buildInner(child, steps);
+    // a percentage width here resolves unreliably once the marker contains an <img> with its own
+    // percentage width (the flex item's automatic min-content size falls back to the image's raw
+    // intrinsic pixel size, overriding the percentage entirely) — pass a definite pixel value
+    // instead so the ship and its label underneath are reliably centered on the same box.
+    const thisWidthPx = markerWidthPx ? Math.round(markerWidthPx * (scale || 1)) : null;
+    if(thisWidthPx) marker.style.width = thisWidthPx + 'px';
+    marker.innerHTML = buildInner(child, steps, thisWidthPx);
   });
 }
 
@@ -1620,61 +1634,86 @@ async function renderMercuryBoard(){
   });
 
   const positions = {};
-  // Consecutive path points are only ~10-17 points apart, so stacking a crowded step's overflow
-  // UPWARD by a large V_SPACING can land almost exactly on the NEXT step's own digit (this is what
-  // caused ships to appear to sit on the wrong number). Favor a wide single row (perRow=5 handles
-  // today's realistic max of 5 kids sharing one step with zero vertical stacking) over tall stacks.
-  const H_SPACING = 15;
-  const V_SPACING = 20;
+  const H_SPACING = 13;      // horizontal gap between ships sharing a row, at full (unshrunk) size
+  const DIGIT_CLEARANCE = 9; // horizontal gap from the digit's own position before the first ship
+  const SAFE_MIN = 4, SAFE_MAX = 96; // keep every ship on-canvas no matter how crowded a cluster gets
 
-  // Each child keeps a stable row/col "slot" within their current step's cluster, so when
-  // ONE child progresses (joins/leaves a cluster), everyone else already there stays put —
-  // previously slots were recomputed by array index + re-centered by current occupant count,
-  // so one child moving could shift several others sideways/up-down for no reason of their own.
-  function placeCluster(items, centerLeft, startTop, perRow, clusterKey){
-    Object.keys(mercurySlots).forEach(id=>{
-      if(mercurySlots[id].cluster === clusterKey && !items.find(it=>it.child.id === id)) delete mercurySlots[id];
-    });
-    const occupied = new Set();
+  // Every cluster is a SINGLE row — no vertical stacking at all. Consecutive path points are only
+  // ~10-17 points apart, so any row stacked above/below a digit risks landing on a DIFFERENT
+  // step's digit instead (this is what caused ships to appear on the wrong number before). Each
+  // child keeps a stable column index for as long as they're in a cluster (assigned once, reused
+  // every render — a sibling joining or leaving never moves anyone else's column). If a cluster
+  // gets too crowded to fit at full size within the safe area, every ship in THAT cluster shrinks
+  // together (same scale) so they still end up spaced apart rather than overlapping or running
+  // off-canvas — existing members' column order, and therefore their relative position, never
+  // changes because of this, only the uniform scale does.
+  function placeCluster(items, anchorLeft, anchorTop, clusterKey, mode){
+    const occupiedCols = new Set();
     items.forEach(item=>{
       const slot = mercurySlots[item.child.id];
-      if(slot && slot.cluster === clusterKey) occupied.add(slot.row+':'+slot.col);
+      if(slot && slot.cluster === clusterKey) occupiedCols.add(slot.col);
     });
     items.forEach(item=>{
       let slot = mercurySlots[item.child.id];
       if(!slot || slot.cluster !== clusterKey){
-        let row=0, col=0;
-        search: for(row=0; row<20; row++){
-          for(col=0; col<perRow; col++){
-            if(!occupied.has(row+':'+col)) break search;
-          }
-        }
-        slot = { cluster:clusterKey, row, col };
+        let col = 0;
+        while(occupiedCols.has(col)) col++;
+        slot = { cluster:clusterKey, col };
         mercurySlots[item.child.id] = slot;
-        occupied.add(row+':'+col);
+        occupiedCols.add(col);
       }
-      const left = centerLeft + (slot.col - (perRow-1)/2) * H_SPACING;
-      const top = startTop - slot.row * V_SPACING;
-      positions[item.child.id] = {left, top, steps:item.steps, child:item.child};
+    });
+    const cols = items.map(it => mercurySlots[it.child.id].col);
+    const maxCol = cols.length ? Math.max(...cols) : 0;
+    let scale = 1;
+    if(mode === 'bidirectional'){
+      const maxRank = Math.ceil((maxCol+1)/2);
+      const spanEachSide = Math.min(anchorLeft - SAFE_MIN, SAFE_MAX - anchorLeft);
+      const needed = maxRank * H_SPACING;
+      if(needed > spanEachSide) scale = spanEachSide / needed;
+    } else { // one-directional, away from a digit
+      const spanAvailable = mode === 'left' ? (anchorLeft - SAFE_MIN) : (SAFE_MAX - anchorLeft);
+      const needed = DIGIT_CLEARANCE + maxCol * H_SPACING;
+      if(needed > spanAvailable) scale = spanAvailable / needed;
+    }
+    items.forEach(item=>{
+      const col = mercurySlots[item.child.id].col;
+      let left;
+      if(mode === 'bidirectional'){
+        const side = col % 2 === 0 ? 1 : -1;
+        const rank = Math.ceil((col+1)/2);
+        left = anchorLeft + side * rank * H_SPACING * scale;
+      } else {
+        const dir = mode === 'left' ? -1 : 1;
+        left = anchorLeft + dir * (DIGIT_CLEARANCE + col * H_SPACING) * scale;
+      }
+      left = Math.max(SAFE_MIN, Math.min(SAFE_MAX, left));
+      positions[item.child.id] = {left, top:anchorTop, steps:item.steps, child:item.child, scale};
     });
   }
 
   const baseKids = markersByStep[-1] || [];
-  if(baseKids.length) placeCluster(baseKids, 18, 93, 5, 'base');
+  if(baseKids.length) placeCluster(baseKids, 50, 93, 'base', 'bidirectional');
 
   for(let s=0; s<7; s++){
     const kids = markersByStep[s] || [];
     if(!kids.length) continue;
     const base = MERCURY_PATH[s];
-    placeCluster(kids, base.left, base.top - 12, 5, s);
+    const mode = base.left < 50 ? 'right' : 'left'; // spread toward whichever side has more open room
+    placeCluster(kids, base.left, base.top, s, mode);
   }
 
-  diffRenderMarkers(el, positions, (child, steps) => {
+  const markerWidthPx = Math.round(el.clientWidth * 0.10);
+  diffRenderMarkers(el, positions, (child, steps, widthPx) => {
     const badge = steps >= 7 ? `<span class="badge">🪐</span>` : '';
     const ship = CHILD_SHIP[child.id];
-    const icon = ship ? `<img class="ship-icon" src="${ship}">` : avatarHtml(child);
-    return `<div style="position:relative;">${icon}${badge}</div><div class="lbl">${displayName(child)}</div>`;
-  });
+    // most ship artwork is landscape, but a couple (the rockets) are tall/narrow — scaled to the
+    // same WIDTH as the others they'd end up almost twice as tall, blowing out the row spacing
+    // math above. Cap height too so every marker has a similar, predictable footprint.
+    const maxHeightPx = Math.round(widthPx * 1.3);
+    const icon = ship ? `<img class="ship-icon" src="${ship}" style="max-width:${widthPx}px; max-height:${maxHeightPx}px; width:auto; height:auto;">` : avatarHtml(child);
+    return `<div style="position:relative; width:${widthPx}px; display:flex; justify-content:center;">${icon}${badge}</div><div class="lbl">${displayName(child)}</div>`;
+  }, markerWidthPx);
 }
 
 // ---------- CAROUSEL (kids display: 7 rotating slides, 15s each) ----------
@@ -1801,7 +1840,10 @@ function flyShipHero(childId, boardEl, shipSrc){
   const topPct = parseFloat(marker.style.top);
   const targetX = boardRect.left + (leftPct/100) * boardRect.width;
   const targetY = boardRect.top + (topPct/100) * boardRect.height;
-  const targetSize = boardRect.width * 0.325;
+  // match the real marker's actual current width (it carries its own px size, which may be
+  // scaled down from the usual 10% if its cluster is crowded — see placeCluster) so the hero
+  // doesn't visibly change size the instant it lands.
+  const targetSize = parseFloat(marker.style.width) || boardRect.width * 0.10;
 
   const flyer = document.createElement('img');
   flyer.src = shipSrc;
@@ -1838,8 +1880,14 @@ function startFeedbackListener(){
       if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
       else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon, renderMoonBoard);
       else if(type === 'mercury') interruptToSlide(EVENT_TYPE_SLIDE.mercury, async () => {
+        // the hero flight below is the only motion we want for the ship that just progressed —
+        // suppress its own glide transition so it doesn't ALSO slide from its old spot underneath
+        // the hero clone (was producing two visible motions at once).
+        const movingMarker = document.querySelector(`#mercury-board .kid-marker[data-child-id="${childId}"]`);
+        if(movingMarker) movingMarker.style.transition = 'none';
         await renderMercuryBoard();
         flyShipHero(childId, document.getElementById('mercury-board'), CHILD_SHIP[childId]);
+        if(movingMarker) requestAnimationFrame(()=>requestAnimationFrame(()=>{ movingMarker.style.transition = ''; }));
       });
     })
     .subscribe();
