@@ -239,7 +239,8 @@
     <div class="card">
       <h2>🧪 כלי בדיקה (סביבת בדיקות בלבד)</h2>
       <button class="btn ghost" id="temp-goto-display-btn-manage" style="width:100%; margin-bottom:10px;">🖥️ מסך תצוגה</button>
-      <button class="btn ghost" id="temp-preview-bonus-blink-btn-manage" style="width:100%;">🔔 הדגמת אפקט הבונוס (5 שניות)</button>
+      <button class="btn ghost" id="temp-preview-bonus-blink-btn-manage" style="width:100%; margin-bottom:10px;">🔔 הדגמת אפקט הבונוס (5 שניות)</button>
+      <button class="btn ghost" id="temp-celebrate-btn-manage" style="width:100%;">🎉 הדגמת חגיגה במסך הילדים (כוכב, צעד, הגעה ליעד)</button>
     </div>
 <!--@END-TEST-ONLY-->
   </section>
@@ -328,10 +329,11 @@
       <div class="dots" id="slide-dots"></div>
     </div>
     <div class="note">התצוגה מתחלפת אוטומטית כל 15 שניות. תצוגה בלבד — כל הפעולות מבוצעות ממסך הצוות.</div>
+    <button type="button" class="tv-sound-btn" id="tv-sound-btn">🔈 הפעלת קול</button>
   </section>
 
 </div>
-<div id="feedback-banner"></div>
+<div id="celebration" aria-hidden="true"></div>
 
 <script>{{VENDOR_SUPABASE}}</script>
 <script>{{JS}}</script>

@@ -19,6 +19,6 @@
     /* keep the last lines of every screen clear of the bar */
     #protected-app{ padding-bottom:96px; }
     /* no bar on the kids' TV view, nor during a protocol (the screen space and the next/back buttons matter more) */
-    #protected-app:has(#view-display.active) > .bottom-nav,
+    body:has(#view-display.active) .bottom-nav,
     #protected-app.guided-focus:has(#view-staff.active) > .bottom-nav{ display:none; }
   }

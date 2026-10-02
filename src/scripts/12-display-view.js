@@ -127,13 +127,12 @@ async function renderStarBoard(){
     if(!wantedIds.has(card.dataset.childId)) card.remove();
   });
 
-  const existing = {};
-  grid.querySelectorAll('.star-card').forEach(card => { existing[card.dataset.childId] = card; });
-
   for(const child of roster){
     const state = await getChildState(child.id);
     const stars = state.stars || 0;
-    let card = existing[child.id];
+    // looked up fresh each time: two renders can overlap (a live event arriving while the carousel draws),
+    // and a stale lookup made both of them add a card for the same child
+    let card = [...grid.querySelectorAll('.star-card')].find(c => c.dataset.childId === child.id);
     if(!card){
       card = document.createElement('div');
       card.className = 'star-card';

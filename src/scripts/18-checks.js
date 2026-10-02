@@ -182,6 +182,55 @@
       $('manage-back-to-hub').click();
     });
 
+    // ---- celebration moment on the kids' TV
+    await step('celebration', async () => {
+      CELEBRATION_MS = 700;
+      const host = $('celebration');
+      const kid = roster.find(c => c.id === 'c2');
+      check('celebration overlay is hidden at rest', !visible(host), 'visible');
+
+      const starRun = playCelebration('star', kid, 5);
+      await sleep(100);
+      check('star: overlay shows', visible(host), 'not visible');
+      check('star: shows the child (name, no age)', host.querySelector('.cel-name').textContent === displayName(kid) && !/\d/.test(host.querySelector('.cel-name').textContent), host.querySelector('.cel-name').textContent);
+      check('star: shows the child avatar', !!host.querySelector('.cel-who .avatar-initials'), 'no avatar');
+      check('star: 12 slots, exactly 5 lit, last one is the new one', host.querySelectorAll('.cel-star').length === 12 && host.querySelectorAll('.cel-star.filled').length === 5 && host.querySelectorAll('.cel-star.cel-new').length === 1, host.querySelectorAll('.cel-star.filled').length + ' lit');
+      await starRun;
+      check('star: overlay goes away afterwards', !visible(host) && host.innerHTML === '', 'still there');
+
+      const shipRun = playCelebration('mercury', kid, 4);
+      await sleep(100);
+      const track = host.querySelector('.cel-track');
+      check('journey: track goes from step 3 to step 4', track && track.dataset.from === '3' && track.dataset.to === '4', track && track.dataset.from + '->' + track.dataset.to);
+      check('journey: traveller is the child\'s own ship', !!host.querySelector('.cel-traveller .cel-ship') && host.querySelector('.cel-ship').getAttribute('src') === shipFor(kid.id), 'wrong or missing ship');
+      check('journey: 8 stops on the track (start + 7 steps)', host.querySelectorAll('.cel-node').length === 8, host.querySelectorAll('.cel-node').length);
+      await shipRun;
+
+      const lastRun = playCelebration('moon', roster[0], 7);
+      await sleep(100);
+      check('reaching step 7 adds the goal celebration', !!host.querySelector('.cel-milestone'), 'no milestone');
+      await lastRun;
+
+      // events arrive one at a time even if several come together
+      const order = [];
+      queueCelebration(async () => { order.push('a'); await sleep(50); order.push('a-done'); });
+      queueCelebration(async () => { order.push('b'); });
+      await celebrationQueue;
+      check('celebrations are queued, not overlapped', order.join() === 'a,a-done,b', order.join());
+
+      // a real event through the same handler used for live events (display view must be open)
+      activateDisplayView(); stopCarousel();
+      celebrateFeedbackEvent({ type: 'star', child_id: kid.id, message: '' });
+      await sleep(400);
+      check('live star event starts a celebration', visible(host), 'not shown');
+      await celebrationQueue;
+      await sleep(900);
+      check('after the celebration the star board is shown', $('slide-5').classList.contains('active'), 'slide 5 not active');
+      stopCarousel();
+      CELEBRATION_MS = 4800;
+      showHub();
+    });
+
     // ---- kids' TV: every visible slide renders, names without age
     await step('tv', async () => {
       activateDisplayView(); stopCarousel();

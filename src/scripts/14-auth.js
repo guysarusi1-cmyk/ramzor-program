@@ -115,6 +115,13 @@ document.getElementById('temp-preview-bonus-blink-btn-manage').addEventListener(
     await renderBonusesSlide();
   }, 5000);
 });
+document.getElementById('temp-celebrate-btn-manage').addEventListener('click', ()=>{
+  unlockTvSound();   // this click is the one touch that browsers require before any sound
+  const kid = roster.find(c => c.id === 'c2') || roster[0];
+  queueCelebration(() => playCelebration('star', kid, 5));
+  queueCelebration(() => playCelebration('mercury', kid, 4));
+  queueCelebration(() => playCelebration('mercury', kid, 7));
+});
 /*@END-TEST-ONLY*/
 document.getElementById('feedback-back-to-hub').addEventListener('click', showHub);
 document.getElementById('staff-back-to-hub').addEventListener('click', showHub);

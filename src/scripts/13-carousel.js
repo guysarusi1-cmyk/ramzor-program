@@ -66,14 +66,6 @@ async function showSlide(i){
 
 let feedbackChannel = null;
 let bonusRevocationChannel = null;
-let feedbackBannerTimer = null;
-function showFeedbackBanner(event){
-  const el = document.getElementById('feedback-banner');
-  el.textContent = event.message;
-  el.classList.add('show');
-  clearTimeout(feedbackBannerTimer);
-  feedbackBannerTimer = setTimeout(()=> el.classList.remove('show'), 6000);
-}
 const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7, bonus:3 };
 let interruptTimer = null;
 let preInterruptIndex = null;
@@ -152,25 +144,35 @@ function flyShipHero(childId, boardEl, shipSrc){
   setTimeout(()=> flyer.remove(), 1700);
 }
 
+// star / moon / mercury event: first the full-screen moment about that child, then the board it belongs
+// to (where, for the ship journeys, the ship flies from the middle of the screen to its new spot)
+function celebrateFeedbackEvent(ev){
+  if(!document.getElementById('view-display').classList.contains('active')) return;
+  const type = ev.type, childId = ev.child_id;
+  const child = roster.find(c => c.id === childId);
+  if(!(type in EVENT_TYPE_SLIDE) || type === 'bonus' || !child) return;
+  queueCelebration(async () => {
+    const state = await getChildState(childId);
+    const now = type === 'star' ? (state.stars || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
+    await playCelebration(type, child, now);
+    if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
+    else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon, renderMoonBoard);
+    else interruptToSlide(EVENT_TYPE_SLIDE.mercury, async () => {
+      // the hero flight is the only motion we want for the ship that just progressed — suppress its
+      // own glide transition so it doesn't ALSO slide from its old spot underneath the flying copy
+      const movingMarker = document.querySelector(`#mercury-board .kid-marker[data-child-id="${childId}"]`);
+      if(movingMarker) movingMarker.style.transition = 'none';
+      await renderMercuryBoard();
+      flyShipHero(childId, document.getElementById('mercury-board'), shipFor(childId));
+      if(movingMarker) requestAnimationFrame(()=>requestAnimationFrame(()=>{ movingMarker.style.transition = ''; }));
+    });
+  });
+}
 function startFeedbackListener(){
   if(feedbackChannel) return;
   feedbackChannel = sb.channel('feedback_live')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback_events' }, payload => {
-      showFeedbackBanner(payload.new);
-      const type = payload.new.type;
-      const childId = payload.new.child_id;
-      if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
-      else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon, renderMoonBoard);
-      else if(type === 'mercury') interruptToSlide(EVENT_TYPE_SLIDE.mercury, async () => {
-        // the hero flight below is the only motion we want for the ship that just progressed —
-        // suppress its own glide transition so it doesn't ALSO slide from its old spot underneath
-        // the hero clone (was producing two visible motions at once).
-        const movingMarker = document.querySelector(`#mercury-board .kid-marker[data-child-id="${childId}"]`);
-        if(movingMarker) movingMarker.style.transition = 'none';
-        await renderMercuryBoard();
-        flyShipHero(childId, document.getElementById('mercury-board'), CHILD_SHIP[childId]);
-        if(movingMarker) requestAnimationFrame(()=>requestAnimationFrame(()=>{ movingMarker.style.transition = ''; }));
-      });
+      celebrateFeedbackEvent(payload.new);
     })
     .subscribe();
   bonusRevocationChannel = sb.channel('bonus_revocations_live')
