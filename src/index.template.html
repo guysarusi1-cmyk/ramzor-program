@@ -186,8 +186,15 @@
         <input type="tel" id="new-child-swphone" placeholder="טלפון וואטסאפ (972501234567+)">
       </div>
       <div class="add-row">
+        <select id="new-child-stage" aria-label="באיזה שלב הילד/ה מתחיל/ה">
+          <option value="moon">מתחיל/ה במסע בחלל (לירח)</option>
+          <option value="mercury">מתחיל/ה במסע לכוכב המילים</option>
+        </select>
+      </div>
+      <div class="add-row">
         <button class="btn" id="add-child-btn" style="width:100%;">הוספת ילד/ה</button>
       </div>
+      <div class="note">לחיצה על החללית ליד שם הילד/ה פותחת בחירת חללית למסך הילדים.</div>
       <div class="note">שמות לדוגמה בלבד. בגרסת עבודה אמיתית יש להקפיד על אבטחת מידע מתאימה לנתוני ילדים. מספר הטלפון נדרש בפורמט בינלאומי (למשל 972501234567+) כדי שקישור הוואטסאפ יעבוד.</div>
     </div>
 
@@ -195,20 +202,20 @@
       <h2>🎁 בונוסים יומיים</h2>
       <div class="mini-list" id="bonuses-daily-list"></div>
       <div class="add-row">
-        <input type="text" id="new-bonus-daily" placeholder="למשל: אחרי ארוחת הערב — זמן טלוויזיה">
+        <input type="text" id="new-bonus-daily" placeholder="שם בונוס חדש, למשל: זמן טלוויזיה">
         <button class="btn" id="add-bonus-daily-btn">הוספה</button>
       </div>
-      <div class="note">הרשימה הזו מוצגת במסך הצוות (תחת הרמזור הצהוב) ובמסך הילדים.</div>
+      <div class="note">לחיצה על בונוס פותחת עריכה: טקסט, ימים ושעות. הרשימה מוצגת במסך הילדים ובגריעת בונוס.</div>
     </div>
 
     <div class="card">
       <h2>📅 בונוסים שבועיים</h2>
       <div class="mini-list" id="bonuses-weekly-list"></div>
       <div class="add-row">
-        <input type="text" id="new-bonus-weekly" placeholder="למשל: בשישי — אבא/אמא של שבת">
+        <input type="text" id="new-bonus-weekly" placeholder="שם בונוס שבועי חדש">
         <button class="btn" id="add-bonus-weekly-btn">הוספה</button>
       </div>
-      <div class="note">הרשימה הזו מוצגת במסך הצוות (תחת הרמזור הצהוב) ובמסך הילדים.</div>
+      <div class="note">לחיצה על בונוס פותחת עריכה: טקסט, ימים ושעות. הרשימה מוצגת במסך הילדים ובגריעת בונוס.</div>
     </div>
 
     <div class="card">
@@ -218,7 +225,7 @@
         <input type="text" id="new-duty-item" placeholder="למשל: דניאל מ' — סידור שולחן">
         <button class="btn" id="add-duty-item-btn">הוספה</button>
       </div>
-      <div class="note">מוצג במסך הצוות תחת הרמזור הצהוב, לצד הבונוסים היומיים.</div>
+      <div class="note">מוצג בגריעת בונוס, לצד הבונוסים היומיים.</div>
     </div>
 
     <div class="card">

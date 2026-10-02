@@ -1,4 +1,4 @@
-# Runs the automatic checks of the whole app in a hidden browser (phone, desktop and TV sizes).
+﻿# Runs the automatic checks of the whole app in a hidden browser (phone, desktop and TV sizes).
 # Exit code 0 = everything passed; anything else = something is broken (details are printed).
 #   .\tests\run-checks.ps1
 $ErrorActionPreference = 'Stop'
@@ -7,9 +7,11 @@ $port = 5188
 $browser = @('C:\Program Files\Google\Chrome\Application\chrome.exe','C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe','C:\Program Files\Microsoft\Edge\Application\msedge.exe') | Where-Object { Test-Path $_ } | Select-Object -First 1
 if(-not $browser){ throw 'no Chrome/Edge found' }
 
-& (Join-Path $root 'build.ps1') -Env test | Out-Null
+# own output folder, so it never clashes with the dev server that keeps dist\test up to date
+$checkDir = Join-Path $root 'dist\check'
+& (Join-Path $root 'build.ps1') -Env test -Out (Join-Path $checkDir 'index.html') | Out-Null
 $resultFile = Join-Path $env:TEMP 'ramzor-check-results.json'
-$server = Start-Process powershell -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $root 'tools\serve-folder.ps1'),'-Dir',(Join-Path $root 'dist\test'),'-Port',$port,'-ResultFile',$resultFile
+$server = Start-Process powershell -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $root 'tools\serve-folder.ps1'),'-Dir',$checkDir,'-Port',$port,'-ResultFile',$resultFile
 Start-Sleep -Seconds 2
 $allOk = $true
 try {

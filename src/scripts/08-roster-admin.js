@@ -1,10 +1,58 @@
 // ---------- ROSTER (management) ----------
+
+// Per-child settings that have no column of their own (so no change to the database is needed):
+// kept as one list in the "childSettings" row of mini_lists, [{ id:<childId>, ship:<ship key> }].
+let childSettings = {};
+async function loadChildSettings(){
+  childSettings = {};
+  (await getMiniList('childSettings')).forEach(s => { childSettings[s.id] = s; });
+}
+async function saveChildShip(childId, shipKey){
+  childSettings[childId] = Object.assign({}, childSettings[childId], { id: childId, ship: shipKey });
+  await setMiniList('childSettings', Object.values(childSettings));
+}
+// the ship picked in management, else the one the child always had before the picker existed
+function shipFor(childId){
+  const key = childSettings[childId] && childSettings[childId].ship;
+  return (key && SHIP_OPTIONS[key]) || CHILD_SHIP[childId] || null;
+}
+
+let shipPickerOpenFor = null;
 function renderManageRoster(){
   const el = document.getElementById('roster-list');
   if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
-  el.innerHTML = roster.map(c => `
-    <span class="chip">${displayNameWithAge(c)} <button class="rm" data-id="${c.id}">✕</button></span>
-  `).join('');
+  el.innerHTML = roster.map(c => {
+    const ship = shipFor(c.id);
+    const picker = c.id !== shipPickerOpenFor ? '' : `
+      <div class="ship-picker">
+        <div class="be-label">בחירת חללית ל${escapeHtml(displayName(c))}</div>
+        <div class="ship-grid">${Object.keys(SHIP_OPTIONS).map(k => `
+          <button type="button" class="ship-option${SHIP_OPTIONS[k] === ship ? ' selected' : ''}" data-ship="${k}"><img src="${SHIP_OPTIONS[k]}" alt=""></button>`).join('')}
+        </div>
+      </div>`;
+    return `
+      <div class="roster-row" data-id="${c.id}">
+        <button type="button" class="roster-ship" data-ship-for="${c.id}" aria-label="בחירת חללית">${ship ? `<img src="${ship}" alt="">` : '🚀'}</button>
+        <span class="roster-name">${escapeHtml(displayNameWithAge(c))}</span>
+        <button type="button" class="rm" data-id="${c.id}" aria-label="מחיקה">✕</button>
+      </div>${picker}`;
+  }).join('');
+
+  el.querySelectorAll('.roster-ship').forEach(btn => {
+    btn.addEventListener('click', () => {
+      shipPickerOpenFor = (shipPickerOpenFor === btn.dataset.shipFor) ? null : btn.dataset.shipFor;
+      renderManageRoster();
+    });
+  });
+  el.querySelectorAll('.ship-option').forEach(opt => {
+    opt.addEventListener('click', async () => {
+      const childId = shipPickerOpenFor;
+      shipPickerOpenFor = null;
+      await saveChildShip(childId, opt.dataset.ship);
+      renderManageRoster();
+      toast('החללית נשמרה');
+    });
+  });
   el.querySelectorAll('.rm').forEach(btn=>{
     btn.addEventListener('click', async (e)=>{
       e.stopPropagation();
@@ -25,6 +73,7 @@ document.getElementById('add-child-btn').addEventListener('click', async ()=>{
   const ageInput = document.getElementById('new-child-age');
   const swNameInput = document.getElementById('new-child-swname');
   const swPhoneInput = document.getElementById('new-child-swphone');
+  const stageInput = document.getElementById('new-child-stage');
   const firstName = nameInput.value.trim();
   const lastInitial = initInput.value.trim();
   const age = ageInput.value.trim();
@@ -36,12 +85,16 @@ document.getElementById('add-child-btn').addEventListener('click', async ()=>{
     id:newChild.id, first_name:firstName, last_initial:lastInitial, age, sw_name:swName, sw_phone:swPhone
   });
   if(error){ toast('שגיאה בהוספת ילד/ה'); console.error(error); return; }
+  // where the child starts: the moon journey from its first step, or already on the way to the word planet
+  const startsOnMercury = stageInput.value === 'mercury';
+  await setChildState(newChild.id, { stars:0, moonSteps: startsOnMercury ? 7 : 0, moonGifts:0, mercurySteps:0, moonDayDate:null, moonDayStatus:null });
   roster.push(newChild);
   nameInput.value = '';
   initInput.value = '';
   ageInput.value = '';
   swNameInput.value = '';
   swPhoneInput.value = '';
+  stageInput.value = 'moon';
   renderManageRoster();
+  toast(`${displayName(newChild)} נוסף/ה`);
 });
-

@@ -129,6 +129,59 @@
       $('manage-back-to-hub').click();
     });
 
+    // ---- management: bonus editor, ship picker, new child with a starting stage (all undone afterwards)
+    await step('management editing', async () => {
+      showHub(); $('hub-manage-gear').click();
+      window.confirm = () => true;
+
+      // bonus editor
+      const originalDaily = JSON.parse(JSON.stringify(bonusesDaily));
+      const firstId = bonusesDaily[0].id;
+      let row = () => document.querySelector(`#bonuses-daily-list .bonus-row[data-id="${firstId}"]`);
+      row().querySelector('.bonus-row-head').click();
+      check('bonus opens an editor on click', !!row().querySelector('.bonus-editor'), 'no editor');
+      row().querySelector('.be-start').value = '10:00'; row().querySelector('.be-end').value = '09:00';
+      row().querySelector('.be-save').click(); await sleep(300);
+      check('bonus: end time before start is refused', bonusesDaily[0].startTime !== '10:00', JSON.stringify(bonusesDaily[0]));
+      row().querySelectorAll('.be-days input').forEach(i => { i.checked = (i.value === '1' || i.value === '2'); });
+      row().querySelector('.be-text').value = 'בדיקת עריכה';
+      row().querySelector('.be-start').value = '10:00'; row().querySelector('.be-end').value = '11:30';
+      row().querySelector('.be-save').click(); await sleep(800);
+      const saved = bonusesDaily[0];
+      check('bonus: text, days and hours are saved', saved.text === 'בדיקת עריכה' && saved.days.join() === '1,2' && saved.startTime === '10:00' && saved.endTime === '11:30', JSON.stringify(saved));
+      const fromDb = await getMiniList('bonusesDaily');
+      check('bonus: change reached the database', fromDb[0].text === 'בדיקת עריכה' && fromDb[0].endTime === '11:30', JSON.stringify(fromDb[0]));
+      await setMiniList('bonusesDaily', originalDaily); bonusesDaily = originalDaily; renderBonusesDailyList();
+
+      // ship picker
+      const target = roster[1].id, defaultShip = shipFor(target);
+      document.querySelector(`.roster-ship[data-ship-for="${target}"]`).click();
+      check('ship picker opens', document.querySelectorAll('.ship-option').length === Object.keys(SHIP_OPTIONS).length, 'options: ' + document.querySelectorAll('.ship-option').length);
+      document.querySelector('.ship-option[data-ship="ufo_green"]').click(); await sleep(800);
+      check('ship choice is applied', shipFor(target) === SHIP_OPTIONS.ufo_green, 'ship not changed');
+      await loadChildSettings();
+      check('ship choice reached the database', shipFor(target) === SHIP_OPTIONS.ufo_green, 'lost after reload');
+      await setMiniList('childSettings', []); await loadChildSettings(); renderManageRoster();
+      check('ship choice can be undone', shipFor(target) === defaultShip, 'not restored');
+
+      // new children with each starting stage
+      for(const [stage, expectedMoon] of [['moon', 0], ['mercury', 7]]){
+        $('new-child-name').value = 'בדיקה' + stage; $('new-child-lastinit').value = 'ת'; $('new-child-age').value = '8';
+        $('new-child-stage').value = stage;
+        $('add-child-btn').click();
+        for(let i=0;i<20 && roster.length < 15;i++) await sleep(250);
+        const kid = roster.find(c => c.firstName === 'בדיקה' + stage);
+        check(`new child (${stage}) appears`, !!kid, 'not in roster');
+        if(!kid) continue;
+        const st = await getChildState(kid.id);
+        check(`new child (${stage}) starts at moon step ${expectedMoon}`, st.moonSteps === expectedMoon && st.stars === 0 && st.mercurySteps === 0, JSON.stringify(st));
+        document.querySelector(`.roster-row[data-id="${kid.id}"] .rm`).click();
+        for(let i=0;i<20 && roster.length > 14;i++) await sleep(250);
+        check(`new child (${stage}) removed again`, roster.length === 14, 'roster ' + roster.length);
+      }
+      $('manage-back-to-hub').click();
+    });
+
     // ---- kids' TV: every visible slide renders, names without age
     await step('tv', async () => {
       activateDisplayView(); stopCarousel();

@@ -36,6 +36,13 @@ const SHIP_rocket_pink = '@asset(ships/SHIP_rocket_pink.png)';
 const SHIP_rocket_bluegray = '@asset(ships/SHIP_rocket_bluegray.png)';
 const SHIP_ufo_pinkwhite = '@asset(ships/SHIP_ufo_pinkwhite.png)';
 
+// every ship a child can be given in the management screen (key -> picture)
+const SHIP_OPTIONS = {
+  ufo_watercolor: SHIP_ufo_watercolor, ufo_purple: SHIP_ufo_purple, ufo_green: SHIP_ufo_green,
+  ufo_pinkwhite: SHIP_ufo_pinkwhite, rocket_redcream: SHIP_rocket_redcream, rocket_pink: SHIP_rocket_pink,
+  rocket_bluegray: SHIP_rocket_bluegray, mia: SHIP_mia, amit: SHIP_amit
+};
+// default ships (the ones children had before ships became selectable)
 const CHILD_SHIP = {
   c2: SHIP_rocket_bluegray,
   c4: SHIP_ufo_watercolor,
@@ -306,7 +313,7 @@ async function renderMercuryBoard(){
   const markerWidthPx = Math.round(el.clientWidth * 0.10);
   diffRenderMarkers(el, positions, (child, steps, widthPx) => {
     const badge = steps >= 7 ? `<span class="badge">🪐</span>` : '';
-    const ship = CHILD_SHIP[child.id];
+    const ship = shipFor(child.id);
     // most ship artwork is landscape, but a couple (the rockets) are tall/narrow — scaled to the
     // same WIDTH as the others they'd end up almost twice as tall, blowing out the row spacing
     // math above. Cap height too so every marker has a similar, predictable footprint.
