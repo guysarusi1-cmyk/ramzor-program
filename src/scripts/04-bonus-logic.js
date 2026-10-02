@@ -43,9 +43,9 @@ function groupRevocationsByBonus(revocations){
   return byBonus;
 }
 
-// TEMP (2026-09-30): daily one-step limit on the moon/Mercury journey is OFF for now, at the
-// client's request, to allow open testing. Set back to true before real staff use.
-const MOON_DAILY_LIMIT_ENABLED = false;
+// One step per day on the moon/Mercury journey. Enforced on the live site; switched off in the
+// test environment so the journey can be clicked through freely (client decision, 2026-10-03).
+const MOON_DAILY_LIMIT_ENABLED = (APP_ENV === 'live');
 
 async function getChildState(id){
   const { data, error } = await sb.from('child_state').select('*').eq('child_id', id).maybeSingle();

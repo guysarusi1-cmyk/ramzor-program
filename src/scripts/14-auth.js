@@ -99,8 +99,7 @@ document.getElementById('reset-mercury-btn').addEventListener('click', async ()=
   await resetAllMercuryToStart();
   toast('כל החלליות הוחזרו למצב ההתחלתי');
 });
-// TEMP (2026-10-02): remove this button + handler before real staff use
-// TEMP (2026-10-02): remove these buttons + handlers before real staff use
+/*@TEST-ONLY*/
 document.getElementById('temp-goto-display-btn-manage').addEventListener('click', ()=>{
   location.hash = 'tv';
   location.reload();
@@ -116,6 +115,7 @@ document.getElementById('temp-preview-bonus-blink-btn-manage').addEventListener(
     await renderBonusesSlide();
   }, 5000);
 });
+/*@END-TEST-ONLY*/
 document.getElementById('feedback-back-to-hub').addEventListener('click', showHub);
 document.getElementById('staff-back-to-hub').addEventListener('click', showHub);
 

@@ -1,7 +1,8 @@
 
-// ---------- SUPABASE CONFIG ----------
-const SUPABASE_URL = 'https://caggcgnjwigdyzltxofj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhZ2djZ25qd2lnZHl6bHR4b2ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODk0NjUsImV4cCI6MjEwNDk2NTQ2NX0.xwoijMsiXIyANEyFbAAzseHwgzINsapy9u3SSSVWj4o';
+// ---------- ENVIRONMENT + SUPABASE CONFIG (filled in by build.ps1 from config/<env>.json) ----------
+const APP_ENV = '@env@';   // 'live' (what staff use) or 'test' (the safe sandbox)
+const SUPABASE_URL = '@config(supabaseUrl)';
+const SUPABASE_ANON_KEY = '@config(anonKey)';
 const STAFF_EMAIL = 'staff@merkaz-cherum.local';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
