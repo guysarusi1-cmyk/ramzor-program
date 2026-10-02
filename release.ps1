@@ -11,7 +11,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 $root = $PSScriptRoot
 Set-Location $root
 function Step($t){ Write-Host "`n== $t" -ForegroundColor Cyan }
-function Git { & git @args; if($LASTEXITCODE -ne 0){ throw "git $($args -join ' ') failed" } }
+function Invoke-Git { & git.exe @args; if($LASTEXITCODE -ne 0){ throw "git $($args -join ' ') failed" } }
 
 Step "1/6 working tree must be committed on dev"
 $branch = (git rev-parse --abbrev-ref HEAD).Trim()
@@ -30,7 +30,7 @@ $new = Join-Path $root 'dist\live\index.html'
 Step "4/6 backups (code tag + read-only copy of the real data)"
 $stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'
 & (Join-Path $root 'tools\backup-live-data.ps1')
-Git fetch origin main
+Invoke-Git fetch origin main
 $backupFile = "C:\dev\ramzor-backups\site_before_$stamp.html"
 cmd /c "git show origin/main:index.html > `"$backupFile`""   # cmd redirect keeps the raw bytes
 if($LASTEXITCODE -ne 0){ throw "could not save the current live site" }
@@ -45,16 +45,16 @@ if($oldHash -eq $newHash){ Write-Host "identical to what is live — nothing to 
 if(-not $Approved){ Write-Host "`nDRY RUN finished — not published (no -Approved)." -ForegroundColor Yellow; return }
 
 Step "6/6 publish"
-Git tag "backup/$stamp" origin/main
-Git push origin "backup/$stamp"
-Git checkout main
-Git pull --ff-only origin main
-Git merge --no-edit dev
+Invoke-Git tag "backup/$stamp" origin/main
+Invoke-Git push origin "backup/$stamp"
+Invoke-Git checkout main
+Invoke-Git pull --ff-only origin main
+Invoke-Git merge --no-edit dev
 Copy-Item $new (Join-Path $root 'index.html') -Force
-Git add -A
-Git commit -m "Release: $Message"
-Git push origin main
-Git checkout dev
-Git merge --ff-only main
-Git push origin dev
+Invoke-Git add -A
+Invoke-Git commit -m "Release: $Message"
+Invoke-Git push origin main
+Invoke-Git checkout dev
+Invoke-Git merge --ff-only main
+Invoke-Git push origin dev
 Write-Host "`nPUBLISHED. GitHub Pages updates within ~1-2 minutes. Rollback: tag backup/$stamp, or $backupFile" -ForegroundColor Green
