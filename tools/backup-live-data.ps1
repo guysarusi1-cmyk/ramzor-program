@@ -1,4 +1,4 @@
-# READ-ONLY backup of the live data (children, stars, progress, lists, events) to C:\dev\ramzor-backups\.
+﻿# READ-ONLY backup of the live data (children, stars, progress, lists, events) to C:\dev\ramzor-backups\.
 # Uses only the public read key — it cannot change anything. Backups stay on this computer (never in git).
 param([string]$Dir = 'C:\dev\ramzor-backups')
 $ErrorActionPreference = 'Stop'

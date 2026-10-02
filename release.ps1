@@ -1,4 +1,4 @@
-# Publishes the LIVE build to the real site. Nothing is published unless -Approved is passed — and
+﻿# Publishes the LIVE build to the real site. Nothing is published unless -Approved is passed — and
 # I only pass it after Guy says it's OK to publish.
 #   .\release.ps1 -Message "short description"            -> dry run: checks, build, backups, shows what would change
 #   .\release.ps1 -Message "short description" -Approved   -> same, then publishes (main branch -> GitHub Pages)

@@ -1,4 +1,4 @@
-# Test environment dev server: rebuilds the TEST build whenever anything in src/ or config/ changes,
+﻿# Test environment dev server: rebuilds the TEST build whenever anything in src/ or config/ changes,
 # serves it at http://localhost:5173 and tells open pages to reload (see the live-reload block in the template).
 param([int]$Port = 5173)
 $ErrorActionPreference = 'Stop'

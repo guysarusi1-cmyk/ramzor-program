@@ -1,4 +1,4 @@
-# Builds the single-file site from src/.
+﻿# Builds the single-file site from src/.
 #   .\build.ps1 -Env live   -> dist\live\index.html  (what staff use)
 #   .\build.ps1 -Env test   -> dist\test\index.html  (test environment: banner, test tools, test backend, live reload)
 param(
