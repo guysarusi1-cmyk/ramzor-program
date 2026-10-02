@@ -72,6 +72,16 @@ const mercurySlots = {};
 
 // star board photo-star positions — pixel-measured from the real artwork (1920x1080) by
 // detecting the gold star centers directly, since the earlier hand-guessed values were off
+// the journey boards size everything inside them in em, where 1em = 1% of the board's width — so
+// ships, names and badges stay in proportion on a phone, a monitor and a TV alike
+function fitBoardFont(el){ el.style.fontSize = (el.clientWidth / 100) + 'px'; }
+let tvResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(tvResizeTimer);
+  tvResizeTimer = setTimeout(() => {
+    if(document.getElementById('view-display').classList.contains('active')) showSlide(carouselIndex);
+  }, 250);
+});
 async function renderDisplay(){
   await renderStarBoard();
   await renderMoonBoard();
@@ -121,6 +131,10 @@ async function renderStarBoard(){
     el.innerHTML = '<div class="star-cards-grid"></div>';
     grid = el.querySelector('.star-cards-grid');
   }
+
+  // as few rows as fit the children: 14 children = 2 rows of 7 on a 16:9 screen (cards stay big and readable)
+  const rows = roster.length <= 6 ? 1 : roster.length <= 18 ? 2 : roster.length <= 30 ? 3 : 4;
+  grid.style.setProperty('--star-cols', Math.ceil(roster.length / rows));
 
   const wantedIds = new Set(roster.map(c=>c.id));
   grid.querySelectorAll('.star-card').forEach(card => {
@@ -181,6 +195,7 @@ function diffRenderMarkers(el, positions, buildInner, markerWidthPx){
 
 async function renderMoonBoard(){
   const el = document.getElementById('moon-board');
+  fitBoardFont(el);
   if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
 
   let markersByStep = {}; // step index 0-6 (for steps 1-7) -> array of children; base(-1) for step 0
@@ -217,6 +232,7 @@ async function renderMoonBoard(){
 
 async function renderMercuryBoard(){
   const el = document.getElementById('mercury-board');
+  fitBoardFont(el);
   const eligible = [];
   for(const c of roster){
     const state = await getChildState(c.id);

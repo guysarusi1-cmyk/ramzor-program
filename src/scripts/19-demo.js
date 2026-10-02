@@ -1,6 +1,7 @@
 /*@TEST-ONLY*/
 // ---------- DEMO MODE (test environment only) ----------
 // ?demo=star | moon | mercury | milestone  — signs in, opens the kids' TV and plays that celebration.
+// ?demo=slide3 | slide5 | slide7 ...        — opens the kids' TV on that slide.
 // Used with tools\snap.ps1 to take a screenshot of a given moment, without clicking through by hand.
 (function(){
   const m = location.search.match(/[?&]demo=(\w+)/);
@@ -16,6 +17,7 @@
     else if(what === 'moon') playCelebration('moon', kid, 3);
     else if(what === 'mercury') playCelebration('mercury', kid, 4);
     else if(what === 'milestone') playCelebration('mercury', kid, 7);
+    else if(/^slide\d$/.test(what)) showSlide(Number(what.slice(5)));
   });
 })();
 /*@END-TEST-ONLY*/

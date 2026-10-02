@@ -2,14 +2,14 @@
 const SLIDES = [
   { id:0, label:'מבט על — הרמזור', render: renderOverviewSlide, hidden:true },
   { id:1, label:'הרמזור הצהוב', render: renderYellowSlide, hidden:true },
-  { id:2, label:'לוח ההתנדבויות', render: async ()=>{} }, // static placeholder already in markup
+  { id:2, label:'לוח ההתנדבויות', render: async ()=>{}, hidden:true }, // still only a 'waiting for design' placeholder — kept out of the rotation until it is designed
   { id:3, label:'בונוסים', render: renderBonusesSlide },
   { id:4, label:'הרמזור הירוק', render: renderGreenSlide, hidden:true },
   { id:5, label:'לוח הכוכבים', render: renderStarBoard },
   { id:6, label:'לוח המסע בחלל', render: renderMoonBoard, hidden:true }, // all current kids graduated to Mercury; kept for future new kids
   { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard }
 ];
-let carouselIndex = 2; // start on the first non-hidden slide (volunteering board)
+let carouselIndex = 3; // start on the first non-hidden slide (bonuses)
 let carouselTimer = null;
 
 function renderOverviewSlide(){
@@ -47,6 +47,8 @@ async function renderBonusesSlide(){
   const todayWeekly = bonusesWeekly.filter(bonusAppliesToday);
   if(!todayDaily.length && !todayWeekly.length){ el.innerHTML = '<div class="empty">אין בונוסים מוגדרים להיום</div>'; return; }
   const revocationsByBonus = groupRevocationsByBonus(await getActiveBonusRevocations());
+  // few bonuses are shown big in one column; more than 4 switch to two columns so they all fit on the screen
+  el.dataset.layout = (todayDaily.length + todayWeekly.length) > 4 ? 'two' : 'one';
   el.innerHTML = bonusBoardSection('יומיים', todayDaily, revocationsByBonus) + bonusBoardSection('שבועיים', todayWeekly, revocationsByBonus);
 }
 

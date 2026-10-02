@@ -52,15 +52,6 @@
   }
   .mini-list .row button{ background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; }
 
-  /* ---- kids display carousel ---- */
-  .carousel-shell{ position:relative; }
-  .slide{ display:none; }
-  .slide.active{ display:block; animation:fade .3s ease; }
-  .dots{ display:flex; justify-content:center; gap:6px; margin-top:14px; }
-  .dot{ width:7px; height:7px; border-radius:50%; background:var(--line); transition:.2s; }
-  .dot.active{ background:var(--gold); width:20px; border-radius:5px; }
-  .slide-label{ text-align:center; font-family:'Rubik'; font-weight:700; font-size:13px; color:var(--muted); margin-bottom:10px; letter-spacing:.02em; }
-
   .overview-signal{ display:flex; flex-direction:column; align-items:center; gap:16px; padding:20px 10px; }
   .overview-row{ display:flex; align-items:center; gap:14px; }
   .overview-row .dot-lamp{ width:46px; height:46px; border-radius:50%; flex-shrink:0; }
@@ -85,23 +76,6 @@
   .quick-light-row .qcol .col-label{ font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); display:block; margin-bottom:2px; }
   .quick-light-row .qcol.qtitle{ font-weight:700; }
   .quick-light-row .qcol.qresp{ color:var(--muted); }
-
-  .bonus-board-grid{ display:flex; flex-direction:column; gap:10px; padding:6px 0; }
-  .bonus-board-item{
-    background:var(--gold-dim); border:1px solid var(--gold); color:var(--gold);
-    border-radius:12px; padding:14px 16px; font-family:'Rubik'; font-weight:700; font-size:15px; text-align:center;
-  }
-  .bonus-revoked-names{ display:block; margin-top:4px; color:#ff8a80; font-weight:600; font-size:12.5px; }
-  .bonus-board-item.bonus-active{
-    transform: scale(1.08);
-    font-size: 19px;
-    padding: 20px 16px;
-    animation: bonus-glow-pulse 4s ease-in-out infinite;
-  }
-  @keyframes bonus-glow-pulse{
-    0%, 100% { box-shadow: 0 0 8px 1px rgba(232,185,74,.35); }
-    50% { box-shadow: 0 0 20px 6px rgba(232,185,74,.7); }
-  }
 
   /* ---- home screen (hub) — minimal, calm, neutral palette on purpose: the program's colors
      (red/orange/yellow/green/gold) carry professional meaning, so none are used decoratively here ---- */

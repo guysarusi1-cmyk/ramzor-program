@@ -300,12 +300,12 @@
 <!-- ============ DISPLAY VIEW (no login required — runs on the fixed room screen) ============ -->
 <div class="wrap">
   <section class="view" id="view-display">
-    <div style="text-align:center; margin-bottom:10px;">
-      <button class="back-btn" id="feedback-back-to-hub" style="display:inline-flex;">🏠 חזרה לתפריט הראשי</button>
-    </div>
-    <div class="card carousel-shell">
+    <header class="tv-top">
       <div class="slide-label" id="slide-label"></div>
-
+      <div class="dots" id="slide-dots"></div>
+      <button class="tv-exit" id="feedback-back-to-hub" aria-label="חזרה">✕</button>
+    </header>
+    <div class="tv-main">
       <div class="slide" id="slide-0"><div id="overview-slide-content"></div></div>
       <div class="slide" id="slide-1"><div id="yellow-slide-content"></div></div>
       <div class="slide" id="slide-2">
@@ -313,22 +313,10 @@
       </div>
       <div class="slide" id="slide-3"><div id="bonuses-slide-content"></div></div>
       <div class="slide" id="slide-4"><div id="green-slide-content"></div></div>
-      <div class="slide" id="slide-5">
-        <h2>⭐ לוח הכוכבים</h2>
-        <div class="board-star" id="star-board"></div>
-      </div>
-      <div class="slide" id="slide-6">
-        <h2>🚀 לוח המסע בחלל</h2>
-        <div class="board-moon" id="moon-board"></div>
-      </div>
-      <div class="slide" id="slide-7">
-        <h2>🪐 המסע לכוכב המילים</h2>
-        <div class="board-mercury" id="mercury-board"></div>
-      </div>
-
-      <div class="dots" id="slide-dots"></div>
+      <div class="slide" id="slide-5"><div class="board-star" id="star-board"></div></div>
+      <div class="slide" id="slide-6"><div class="board-moon" id="moon-board"></div></div>
+      <div class="slide" id="slide-7"><div class="board-mercury" id="mercury-board"></div></div>
     </div>
-    <div class="note">התצוגה מתחלפת אוטומטית כל 15 שניות. תצוגה בלבד — כל הפעולות מבוצעות ממסך הצוות.</div>
     <button type="button" class="tv-sound-btn" id="tv-sound-btn">🔈 הפעלת קול</button>
   </section>
 

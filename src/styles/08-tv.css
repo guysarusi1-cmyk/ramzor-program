@@ -1,0 +1,84 @@
+
+/* ---- kids' TV: full-screen stage (no page chrome, everything sized for a big screen with vmin/vh/vw) ---- */
+  #view-display.active{
+    position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; animation:none;
+    background:radial-gradient(ellipse at 50% -10%, #2a3a7c 0%, #141a35 55%, #0b0f22 100%);
+    --tv-main-h:calc(100vh - 13vmin);
+  }
+  .tv-top{
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:2vmin;
+    height:13vmin; padding:0 3.5vmin; flex-shrink:0;
+  }
+  .slide-label{
+    font-family:'Rubik', sans-serif; font-weight:800; font-size:5vmin; color:#fff; letter-spacing:.01em;
+    text-shadow:0 .4vmin 2vmin rgba(232,185,74,.45); justify-self:start;
+  }
+  .dots{ display:flex; justify-content:center; gap:1vmin; }
+  .dot{ width:1.3vmin; height:1.3vmin; border-radius:50%; background:rgba(255,255,255,.25); transition:.3s; }
+  .dot.active{ background:var(--gold); width:4vmin; border-radius:1vmin; }
+  .tv-exit{
+    justify-self:end; width:6vmin; height:6vmin; border-radius:50%; background:rgba(255,255,255,.08); color:#fff;
+    border:1px solid rgba(255,255,255,.2); font-size:3vmin; cursor:pointer; opacity:.4;
+  }
+  .tv-exit:hover, .tv-exit:focus-visible{ opacity:1; }
+
+  .tv-main{ position:relative; flex:1; min-height:0; }
+  .slide{ display:none; }
+  .slide.active{ display:flex; align-items:center; justify-content:center; height:100%; animation:tv-slide-in .7s ease both; }
+  @keyframes tv-slide-in{ from{ opacity:0; transform:scale(.97); } to{ opacity:1; transform:none; } }
+  #view-display .empty{ color:rgba(255,255,255,.7); font-size:3.4vmin; padding:4vmin; }
+
+  /* star board: a big card per child, stars as glowing dots */
+  .board-star{
+    width:min(96vw, 1900px); height:var(--tv-main-h); border-radius:2vmin; padding:2.4vmin; box-sizing:border-box; overflow:hidden;
+    display:flex; align-items:center;
+  }
+  .board-star .empty{ width:100%; }
+  .star-cards-grid{
+    width:100%; display:grid; grid-template-columns:repeat(var(--star-cols, 7), minmax(0, 1fr)); gap:2vmin; align-content:center;
+  }
+  .star-card{ border-radius:2vmin; padding:2vmin 1vmin 2.2vmin; background:rgba(18,23,42,.8); }
+  .star-card .avatar-initials{ width:9vmin; height:9vmin; font-size:3.4vmin; border-width:.4vmin; }
+  .star-card-name{ font-size:2.9vmin; margin:1.2vmin 0 1.4vmin; }
+  .star-card-dots{ grid-template-columns:repeat(6, 1fr); gap:.9vmin; }
+  .star-dot{ width:2.2vmin; height:2.2vmin; border-width:.2vmin; }
+  .star-count-extra{ font-size:2.6vmin; margin-top:.6vmin; padding:.2vmin 1.2vmin; border-radius:1vmin; }
+
+  /* journey boards: fit the whole artwork on screen; sizes inside use em, where 1em = 1% of the board width (set from script) */
+  .board-moon{ width:min(96vw, calc(var(--tv-main-h) * 2.177)); border-radius:2vmin; }
+  .board-mercury{ width:min(96vw, calc(var(--tv-main-h) * 1.414)); border-radius:2vmin; }
+
+  /* bonuses */
+  #bonuses-slide-content{ width:min(92vw, 1500px); max-height:var(--tv-main-h); overflow:hidden; display:flex; flex-direction:column; justify-content:center; }
+  #bonuses-slide-content h3{ font-size:3.4vmin !important; margin:0 0 1.4vmin !important; }
+  .bonus-board-grid{ display:grid; grid-template-columns:1fr; gap:1.8vmin; padding:.6vmin 0; margin-bottom:2.4vmin !important; }
+  #bonuses-slide-content[data-layout=two] .bonus-board-grid{ grid-template-columns:1fr 1fr; }
+  #bonuses-slide-content[data-layout=two] .bonus-board-item{ font-size:3vmin; padding:2vmin 2vmin; display:flex; flex-direction:column; justify-content:center; }
+  #bonuses-slide-content[data-layout=two] .bonus-board-item.bonus-active{ font-size:3.4vmin; }
+  .bonus-board-item{
+    background:var(--gold-dim); border:.3vmin solid var(--gold); color:var(--gold);
+    border-radius:2.2vmin; padding:2.4vmin 3vmin; font-family:'Rubik', sans-serif; font-weight:700; font-size:4vmin; text-align:center;
+  }
+  .bonus-revoked-names{ display:block; margin-top:.8vmin; color:#ff8a80; font-weight:600; font-size:2.8vmin; }
+  .bonus-board-item.bonus-active{
+    transform:scale(1.05); font-size:5vmin; padding:3.2vmin 3vmin;
+    animation:bonus-glow-pulse 4s ease-in-out infinite;
+  }
+  @keyframes bonus-glow-pulse{
+    0%, 100% { box-shadow:0 0 1.6vmin .2vmin rgba(232,185,74,.35); }
+    50%      { box-shadow:0 0 4vmin 1.2vmin rgba(232,185,74,.7); }
+  }
+
+  /* a little life: ships and avatars float gently, each at its own pace */
+  .kid-marker > div:first-child{ animation:kid-bob 3.6s ease-in-out infinite; }
+  .kid-marker:nth-child(3n+1) > div:first-child{ animation-duration:3.1s; animation-delay:-.8s; }
+  .kid-marker:nth-child(3n+2) > div:first-child{ animation-duration:4.2s; animation-delay:-1.9s; }
+  @keyframes kid-bob{ 0%, 100%{ transform:translateY(0); } 50%{ transform:translateY(-.8em); } }
+  .star-dot.filled{ animation:star-twinkle 3.4s ease-in-out infinite; }
+  .star-dot.filled.pulse{ animation:star-dot-pulse .9s ease; }   /* the 'just earned' pop wins over the idle twinkle */
+  .star-card:nth-child(2n) .star-dot.filled{ animation-delay:-1.2s; }
+  .star-card:nth-child(3n) .star-dot.filled{ animation-delay:-2.1s; }
+  @keyframes star-twinkle{ 0%, 100%{ box-shadow:0 0 .6vmin .15vmin rgba(232,185,74,.6); } 50%{ box-shadow:0 0 1.5vmin .5vmin rgba(255,233,173,.95); } }
+  @media (prefers-reduced-motion: reduce){
+    .kid-marker > div:first-child, .star-dot.filled{ animation:none; }
+  }
