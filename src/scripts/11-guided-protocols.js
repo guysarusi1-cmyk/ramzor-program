@@ -238,10 +238,11 @@ async function logFeedbackEvent(childId, type, message){
 async function giveStar(childId){
   const state = await getChildState(childId);
   state.stars = (state.stars || 0) + 1;
-  await setChildState(childId, state);
   const child = roster.find(c=>c.id===childId);
+  if(!(await setChildState(childId, state))){ toast('⚠ הכוכב לא נשמר — בדקו חיבור ונסו שוב'); return false; }
   toast(`⭐ כוכב נוסף ל${displayName(child)} — סה"כ ${state.stars}`);
   logFeedbackEvent(child.id, 'star', `⭐ ${displayName(child)} קיבל/ה כוכב!`);
+  return true;
 }
 
 async function renderMoonPanel(containerId){
@@ -304,7 +305,7 @@ async function renderMoonPanel(containerId){
       msg = `🚀 ${displayName(child)} התקדם/ה צעד — סה"כ ${s.moonSteps}`;
       if(s.moonSteps === 7) msg = `🌙 ${displayName(child)} הגיע/ה ל-7 צעדים — מקבל/ת ירח זוהר מעל למיטה! מתחיל/ה עכשיו את המסע לכוכב המילים.`;
     }
-    await setChildState(selectedStaffChild, s);
+    if(!(await setChildState(selectedStaffChild, s))){ toast('⚠ ההתקדמות לא נשמרה — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
     logFeedbackEvent(child.id, eventType, msg);
     toast(msg);
     if(helpMilestone) await renderHelpFriendPrompt(child, s.mercurySteps, containerId);
@@ -315,7 +316,7 @@ async function renderMoonPanel(containerId){
     if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(containerId); return; }
     s.moonDayDate = todayStr();
     s.moonDayStatus = 'cursed';
-    await setChildState(selectedStaffChild, s);
+    if(!(await setChildState(selectedStaffChild, s))){ toast('⚠ הרישום לא נשמר — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
     toast(`נרשם: ${displayName(child)} לא מתקדם/ת היום. יש לעדכן את גיא.`);
     renderMoonPanel(containerId);
   });
@@ -365,7 +366,7 @@ async function renderHelpFriendPrompt(fromChild, milestoneStep, containerId){
         giftType = 'mercury';
         giftMsg = `🎁 ${displayName(fromChild)} עזר/ה ל${displayName(target)} להתקדם צעד לעבר כוכב המילים!`;
       }
-      await setChildState(targetId, ts);
+      if(!(await setChildState(targetId, ts))){ toast('⚠ המתנה לא נשמרה — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
       logFeedbackEvent(target.id, giftType, giftMsg);
       toast(giftMsg);
       renderMoonPanel(containerId);

@@ -59,6 +59,7 @@ async function setChildState(id, state){
     moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null
   });
   if(error) console.error(error);
+  return !error;     // callers tell staff when a change did NOT reach the database
 }
 
 async function resetAllStars(){

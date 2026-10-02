@@ -7,6 +7,9 @@ $port = 5188
 $browser = @('C:\Program Files\Google\Chrome\Application\chrome.exe','C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe','C:\Program Files\Microsoft\Edge\Application\msedge.exe') | Where-Object { Test-Path $_ } | Select-Object -First 1
 if(-not $browser){ throw 'no Chrome/Edge found' }
 
+# start from known test data (an earlier interrupted run, or a second run in parallel, may have left edits behind)
+& (Join-Path $root 'tools\reset-test-lists.ps1') | Out-Null
+
 # own output folder, so it never clashes with the dev server that keeps dist\test up to date
 $checkDir = Join-Path $root 'dist\check'
 & (Join-Path $root 'build.ps1') -Env test -Out (Join-Path $checkDir 'index.html') | Out-Null

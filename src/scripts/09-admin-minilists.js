@@ -7,6 +7,7 @@ async function getMiniList(key){
 async function setMiniList(key, list){
   const { error } = await sb.from('mini_lists').upsert({key, items:list});
   if(error) console.error(error);
+  return !error;
 }
 
 let bonusesDaily = [];
@@ -23,7 +24,7 @@ function wireMiniListManager(containerId, getList, setListFn, inputId, addBtnId)
       btn.addEventListener('click', async ()=>{
         const id = btn.closest('.row').dataset.id;
         const newList = getList().filter(x=>x.id!==id);
-        await setListFn(newList);
+        if(!(await setListFn(newList))){ toast('השמירה נכשלה — בדקו חיבור ונסו שוב'); return; }
         render();
       });
     });
@@ -33,7 +34,7 @@ function wireMiniListManager(containerId, getList, setListFn, inputId, addBtnId)
     const text = input.value.trim();
     if(!text) return;
     const newList = [...getList(), {id: uid(), text}];
-    await setListFn(newList);
+    if(!(await setListFn(newList))){ toast('השמירה נכשלה — בדקו חיבור ונסו שוב'); return; }
     input.value = '';
     render();
   };
@@ -84,8 +85,8 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
       row.querySelector('.be-cancel').addEventListener('click', () => { openId = null; render(); });
       row.querySelector('.be-delete').addEventListener('click', async () => {
         if(!confirm('למחוק את הבונוס הזה?')) return;
+        if(!(await setListFn(getList().filter(x => x.id !== id)))){ toast('המחיקה נכשלה — בדקו חיבור ונסו שוב'); return; }
         openId = null;
-        await setListFn(getList().filter(x => x.id !== id));
         render();
       });
       save.addEventListener('click', async () => {
@@ -103,8 +104,8 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
           if(startTime && endTime){ n.startTime = startTime; n.endTime = endTime; }
           return n;
         });
+        if(!(await setListFn(updated))){ toast('השמירה נכשלה — בדקו חיבור ונסו שוב'); return; }
         openId = null;
-        await setListFn(updated);
         render();
         toast('הבונוס נשמר');
       });
@@ -115,7 +116,7 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
     const text = input.value.trim();
     if(!text) return;
     const item = { id: uid(), text };
-    await setListFn([...getList(), item]);
+    if(!(await setListFn([...getList(), item]))){ toast('ההוספה נכשלה — בדקו חיבור ונסו שוב'); return; }
     input.value = '';
     openId = item.id;        // straight into the editor, to set days / hours
     render();
@@ -131,9 +132,9 @@ async function initMiniLists(){
   dutyRoster = await getMiniList('dutyRoster');
   await loadChildSettings();
 
-  renderBonusesDailyList = wireBonusEditor('bonuses-daily-list', ()=>bonusesDaily, async(l)=>{bonusesDaily=l; await setMiniList('bonusesDaily', l);}, 'new-bonus-daily', 'add-bonus-daily-btn');
-  renderBonusesWeeklyList = wireBonusEditor('bonuses-weekly-list', ()=>bonusesWeekly, async(l)=>{bonusesWeekly=l; await setMiniList('bonusesWeekly', l);}, 'new-bonus-weekly', 'add-bonus-weekly-btn');
-  renderDutyRosterList = wireMiniListManager('duty-roster-list', ()=>dutyRoster, async(l)=>{dutyRoster=l; await setMiniList('dutyRoster', l);}, 'new-duty-item', 'add-duty-item-btn');
+  renderBonusesDailyList = wireBonusEditor('bonuses-daily-list', ()=>bonusesDaily, async(l)=>{ const ok = await setMiniList('bonusesDaily', l); if(ok) bonusesDaily=l; return ok; }, 'new-bonus-daily', 'add-bonus-daily-btn');
+  renderBonusesWeeklyList = wireBonusEditor('bonuses-weekly-list', ()=>bonusesWeekly, async(l)=>{ const ok = await setMiniList('bonusesWeekly', l); if(ok) bonusesWeekly=l; return ok; }, 'new-bonus-weekly', 'add-bonus-weekly-btn');
+  renderDutyRosterList = wireMiniListManager('duty-roster-list', ()=>dutyRoster, async(l)=>{ const ok = await setMiniList('dutyRoster', l); if(ok) dutyRoster=l; return ok; }, 'new-duty-item', 'add-duty-item-btn');
 
   renderBonusesDailyList();
   renderBonusesWeeklyList();

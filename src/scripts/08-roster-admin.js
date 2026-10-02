@@ -8,8 +8,10 @@ async function loadChildSettings(){
   (await getMiniList('childSettings')).forEach(s => { childSettings[s.id] = s; });
 }
 async function saveChildShip(childId, shipKey){
-  childSettings[childId] = Object.assign({}, childSettings[childId], { id: childId, ship: shipKey });
-  await setMiniList('childSettings', Object.values(childSettings));
+  const updated = Object.assign({}, childSettings, { [childId]: Object.assign({}, childSettings[childId], { id: childId, ship: shipKey }) });
+  const ok = await setMiniList('childSettings', Object.values(updated));
+  if(ok) childSettings = updated;
+  return ok;
 }
 // the ship picked in management, else the one the child always had before the picker existed
 function shipFor(childId){
@@ -48,9 +50,9 @@ function renderManageRoster(){
     opt.addEventListener('click', async () => {
       const childId = shipPickerOpenFor;
       shipPickerOpenFor = null;
-      await saveChildShip(childId, opt.dataset.ship);
+      const ok = await saveChildShip(childId, opt.dataset.ship);
       renderManageRoster();
-      toast('החללית נשמרה');
+      toast(ok ? 'החללית נשמרה' : 'השמירה נכשלה — בדקו חיבור ונסו שוב');
     });
   });
   el.querySelectorAll('.rm').forEach(btn=>{

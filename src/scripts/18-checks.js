@@ -146,6 +146,24 @@
       showHub();
     });
 
+    // ---- a save that fails must be reported, never shown as success
+    await step('failed saves', async () => {
+      const realSet = setChildState, realToast = toast, realMini = setMiniList, messages = [];
+      toast = m => messages.push(m);
+      try {
+        setChildState = async () => false;
+        const gave = await giveStar('c3');
+        check('failed star save: returns false and warns', gave === false && messages.some(m => /לא נשמר/.test(m)) && !messages.some(m => /כוכב נוסף/.test(m)), messages.join(' | '));
+        setMiniList = async () => false;
+        messages.length = 0;
+        const shipOk = await saveChildShip('c3', 'ufo_green');
+        check('failed ship save: reported and not applied', shipOk === false && !(childSettings.c3 && childSettings.c3.ship), 'ok=' + shipOk);
+        const before = JSON.stringify(bonusesDaily);
+        const wrote = await (async l => { const ok = await setMiniList('bonusesDaily', l); if(ok) bonusesDaily = l; return ok; })([]);
+        check('failed list save: list in memory is left unchanged', wrote === false && JSON.stringify(bonusesDaily) === before, 'list changed');
+      } finally { setChildState = realSet; toast = realToast; setMiniList = realMini; }
+    });
+
     // ---- management
     await step('management', async () => {
       showHub();
