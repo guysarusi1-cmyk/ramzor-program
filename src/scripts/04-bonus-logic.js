@@ -84,9 +84,12 @@ async function initRoster(){
 }
 
 function uid(){ return 'c' + Date.now() + Math.floor(Math.random()*1000); }
+// first name + last initial only — used everywhere, including the kids' TV (age is never shown there)
 function displayName(c){
-  let n = c.lastInitial ? `${c.firstName} ${c.lastInitial}'` : c.firstName;
-  if(c.age) n += ` (${c.age})`;
-  return n;
+  return c.lastInitial ? `${c.firstName} ${c.lastInitial}'` : c.firstName;
+}
+// management screen only, where the age helps tell children apart when editing the list
+function displayNameWithAge(c){
+  return c.age ? `${displayName(c)} (${c.age})` : displayName(c);
 }
 

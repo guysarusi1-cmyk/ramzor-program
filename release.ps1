@@ -21,7 +21,7 @@ if(git status --porcelain){ throw "uncommitted changes — commit them first" }
 Step "2/6 automated checks (all screens and flows)"
 $checks = Join-Path $root 'tests\run-checks.ps1'
 if(Test-Path $checks){ & $checks; if($LASTEXITCODE -ne 0){ throw "automated checks failed — not releasing" } }
-else { Write-Host "(no check suite installed yet)" -ForegroundColor Yellow }
+else { throw "check suite missing (tests\run-checks.ps1) — not releasing" }
 
 Step "3/6 build the live file"
 & (Join-Path $root 'build.ps1') -Env live

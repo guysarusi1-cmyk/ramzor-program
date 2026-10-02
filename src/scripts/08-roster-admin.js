@@ -3,7 +3,7 @@ function renderManageRoster(){
   const el = document.getElementById('roster-list');
   if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
   el.innerHTML = roster.map(c => `
-    <span class="chip">${displayName(c)} <button class="rm" data-id="${c.id}">✕</button></span>
+    <span class="chip">${displayNameWithAge(c)} <button class="rm" data-id="${c.id}">✕</button></span>
   `).join('');
   el.querySelectorAll('.rm').forEach(btn=>{
     btn.addEventListener('click', async (e)=>{
