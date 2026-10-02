@@ -1,4 +1,4 @@
-# Generates the app icons (line-art traffic light on the app's dark navy; neutral colours on purpose —
+﻿# Generates the app icons (line-art traffic light on the app's dark navy; neutral colours on purpose —
 # the programme colours carry professional meaning, so none are used decoratively).
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing

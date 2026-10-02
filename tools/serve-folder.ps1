@@ -1,4 +1,4 @@
-param([string]$Dir, [int]$Port = 5199, [string]$ResultFile)
+﻿param([string]$Dir, [int]$Port = 5199, [string]$ResultFile)
 # Tiny static server, used to try a finished build locally and by tests\run-checks.ps1.
 # With -ResultFile it also accepts POST /__results (the in-page checks report back through that).
 $types = @{ '.html'='text/html; charset=utf-8'; '.js'='text/javascript'; '.png'='image/png'; '.webmanifest'='application/manifest+json'; '.json'='application/json' }
