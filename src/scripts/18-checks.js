@@ -132,6 +132,21 @@
       check('star can be set back (cleanup)', ((await getChildState(id)).stars || 0) === before, 'not restored');
     });
 
+    // ---- journey boards are in the rotation only when a child is on that journey
+    await step('journey boards', async () => {
+      const ids = ['a', 'b', 'c'];
+      let r = journeyBoardsNeeded([{ child_id:'a', moon_steps:7 }, { child_id:'b', moon_steps:7 }, { child_id:'c', moon_steps:9 }], ids);
+      check('everyone on Mercury: only the word-planet board', !r.moon && r.mercury, JSON.stringify(r));
+      r = journeyBoardsNeeded([{ child_id:'a', moon_steps:3 }, { child_id:'b', moon_steps:0 }, { child_id:'c', moon_steps:2 }], ids);
+      check('everyone on the moon journey: only the moon board', r.moon && !r.mercury, JSON.stringify(r));
+      r = journeyBoardsNeeded([{ child_id:'a', moon_steps:7 }], ids);
+      check('child with no data counts as just starting (moon board needed)', r.moon && r.mercury, JSON.stringify(r));
+      await refreshJourneyBoards();
+      const rows = (await sb.from('child_state').select('child_id, moon_steps')).data;
+      const expected = journeyBoardsNeeded(rows, roster.map(c => c.id));
+      check('rotation flags follow the real data', SLIDES[6].hidden === !expected.moon && SLIDES[7].hidden === !expected.mercury, `hidden6=${SLIDES[6].hidden} hidden7=${SLIDES[7].hidden}`);
+    });
+
     // ---- a double tap on a child while giving a star must not give two
     await step('star double tap', async () => {
       showHub(); $('hub-kids-btn').click(); await sleep(200);
@@ -255,10 +270,8 @@
       check('card lists every visible board', boards.length === SLIDES.filter(s => !s.hidden).length, boards.join('|'));
       remoteStatus = { slide: 5, label: SLIDES[5].label, held: true }; renderTvRemote();
       check('card shows what the TV shows and offers to continue', $('tv-remote-status').textContent.includes(SLIDES[5].label) && /המשך/.test($('tv-remote-hold').textContent), $('tv-remote-status').textContent);
-      remoteStatus = null; renderTvRemote();
-      await sleep(5600);
-      // (a TV left open on the dev machine may answer; either way the card must end in a definite state)
-      check('card ends in a definite state: a TV is shown, or "not answering"', /לא עונה|המסך מציג/.test($('tv-remote-status').textContent), $('tv-remote-status').textContent);
+      remoteStatus = null; tvRemoteGiveUp();   // what happens when no TV answers within a few seconds
+      check('with no TV answering, the card says so', /לא עונה/.test($('tv-remote-status').textContent), $('tv-remote-status').textContent);
       $('tv-preview-toggle').click();
       check('live preview opens a small copy of the TV', !!document.querySelector('#tv-preview-box iframe') && !$('tv-preview-box').hidden, 'no preview');
       $('tv-preview-toggle').click();

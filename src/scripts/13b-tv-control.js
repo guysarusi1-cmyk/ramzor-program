@@ -99,6 +99,7 @@ function renderTvRemote(){
   holdBtn.textContent = held ? '▶ המשך סבב אוטומטי' : '⏸ השהיית הסבב';
   holdBtn.dataset.action = held ? 'resume' : 'pause';
 }
+function tvRemoteGiveUp(){ if(!remoteStatus){ remoteStatus = 'none'; renderTvRemote(); } }
 function connectTvRemote(){
   if(remoteChannel) return;
   remoteStatus = null;
@@ -107,7 +108,7 @@ function connectTvRemote(){
     .subscribe(status => { if(status === 'SUBSCRIBED') sendTvCommand('hello'); });
   // no answer from any TV within a few seconds (or no connection at all) -> say so instead of searching forever
   clearTimeout(remoteHelloTimer);
-  remoteHelloTimer = setTimeout(() => { if(!remoteStatus){ remoteStatus = 'none'; renderTvRemote(); } }, 5000);
+  remoteHelloTimer = setTimeout(tvRemoteGiveUp, 5000);
   renderTvRemote();
 }
 function disconnectTvRemote(){

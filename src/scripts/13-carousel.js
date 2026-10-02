@@ -6,12 +6,29 @@ const SLIDES = [
   { id:3, label:'בונוסים', render: renderBonusesSlide },
   { id:4, label:'הרמזור הירוק', render: renderGreenSlide, hidden:true },
   { id:5, label:'לוח הכוכבים', render: renderStarBoard },
-  { id:6, label:'לוח המסע בחלל', render: renderMoonBoard, hidden:true }, // all current kids graduated to Mercury; kept for future new kids
-  { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard }
+  { id:6, label:'לוח המסע בחלל', render: renderMoonBoard, hidden:true },   // shown only while some child is on this journey (see journeyBoardsNeeded)
+  { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard }   // shown only while some child is on this journey
 ];
 let carouselIndex = 3; // start on the first non-hidden slide (bonuses)
 let carouselTimer = null;
 
+// Each journey board is in the rotation only while at least one child is on that journey, so the kids
+// never see an empty board — and a child who is added in the first (moon) stage gets a board right away.
+// rows: [{ child_id, moon_steps }]; children without a state row count as being at the start.
+function journeyBoardsNeeded(rows, childIds){
+  const byChild = {};
+  rows.forEach(r => { byChild[r.child_id] = r.moon_steps || 0; });
+  let moon = 0, mercury = 0;
+  childIds.forEach(id => { if((byChild[id] || 0) >= 7) mercury++; else moon++; });
+  return { moon: moon > 0, mercury: mercury > 0 };
+}
+async function refreshJourneyBoards(){
+  const { data, error } = await sb.from('child_state').select('child_id, moon_steps');
+  if(error || !data) return;
+  const need = journeyBoardsNeeded(data, roster.map(c => c.id));
+  SLIDES[6].hidden = !need.moon;
+  SLIDES[7].hidden = !need.mercury;
+}
 function renderOverviewSlide(){
   const el = document.getElementById('overview-slide-content');
   const colors = ['red','orange','yellow','green','gold'];
@@ -78,7 +95,8 @@ function pauseRotation(){
 }
 function resumeRotation(){
   if(carouselTimer || tvHeld || IS_TV_PREVIEW) return;   // held by staff from the control screen / the preview just follows the real TV
-  carouselTimer = setInterval(()=>{
+  carouselTimer = setInterval(async ()=>{
+    await refreshJourneyBoards();
     let next = (carouselIndex + 1) % SLIDES.length;
     while(SLIDES[next].hidden) next = (next + 1) % SLIDES.length;
     showSlide(next);
@@ -194,6 +212,7 @@ function stopFeedbackListener(){
 
 function startCarousel(){
   stopCarousel();
+  refreshJourneyBoards().then(() => renderDots());
   showSlide(carouselIndex);
   resumeRotation();
   startFeedbackListener();
