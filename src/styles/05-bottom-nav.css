@@ -16,6 +16,9 @@
     .bottom-nav-btn.active{ color:var(--text); background:var(--panel-2); }
     .bottom-nav-btn:active{ transform:scale(.97); }
     .bottom-nav-btn:focus-visible{ outline:2px solid rgba(255,255,255,.6); outline-offset:-2px; }
+    /* the bar replaces the page header and the 'back to main menu' buttons: the first thing on a screen is the content itself */
+    #shared-header, #shared-logout-row,
+    #staff-back-to-hub, #kids-quick-back-to-hub, #manage-back-to-hub{ display:none; }
     /* keep the last lines of every screen clear of the bar */
     #protected-app{ padding-bottom:96px; }
     /* no bar on the kids' TV view, nor during a protocol (the screen space and the next/back buttons matter more) */

@@ -50,6 +50,9 @@
       check('bar: kids control is highlighted', $('bnav-kids').classList.contains('active') && !$('bnav-home').classList.contains('active'), 'wrong highlight');
       $('bnav-home').click(); await sleep(150);
       check('bar: home opens', activeView() === 'view-hub', activeView());
+      $('hub-daily-btn').click();
+      check('phone: no page header above the daily-ops content', !visible($('shared-header')) && !visible($('staff-back-to-hub')), 'header still shown');
+      showHub();
       const r = $('bottom-nav').getBoundingClientRect();
       check('bar sits at the bottom edge', Math.abs(r.bottom - innerHeight) < 2, 'bottom ' + r.bottom + ' vs ' + innerHeight);
       $('hub-daily-btn').click(); openGuidedScreen('red');
