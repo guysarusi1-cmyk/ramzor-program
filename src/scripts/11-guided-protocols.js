@@ -316,7 +316,7 @@ async function renderMoonPanel(containerId){
     s.moonDayDate = todayStr();
     s.moonDayStatus = 'cursed';
     await setChildState(selectedStaffChild, s);
-    toast(`נרשם: ${displayName(child)} לא מתקדם/ת היום. התראה נשלחה לגיא.`);
+    toast(`נרשם: ${displayName(child)} לא מתקדם/ת היום. יש לעדכן את גיא.`);
     renderMoonPanel(containerId);
   });
 }

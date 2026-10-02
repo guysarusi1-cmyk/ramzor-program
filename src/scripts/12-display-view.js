@@ -70,8 +70,7 @@ const MERCURY_PATH = [
 // a shared step never shifts just because another child joined/left that same step
 const mercurySlots = {};
 
-// star board photo-star positions — pixel-measured from the real artwork (1920x1080) by
-// detecting the gold star centers directly, since the earlier hand-guessed values were off
+
 // the journey boards size everything inside them in em, where 1em = 1% of the board's width — so
 // ships, names and badges stay in proportion on a phone, a monitor and a TV alike
 function fitBoardFont(el){ el.style.fontSize = (el.clientWidth / 100) + 'px'; }
@@ -82,10 +81,6 @@ window.addEventListener('resize', () => {
     if(document.getElementById('view-display').classList.contains('active')) showSlide(carouselIndex);
   }, 250);
 });
-async function renderDisplay(){
-  await renderStarBoard();
-  await renderMoonBoard();
-}
 
 const STAR_MAX_DOTS = 12;
 

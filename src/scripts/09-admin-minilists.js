@@ -13,10 +13,7 @@ let bonusesDaily = [];
 let bonusesWeekly = [];
 let dutyRoster = [];
 
-function miniListRow(text, onRemove){
-  return `<div class="row"><span>${text}</span><button class="rm-mini">✕</button></div>`;
-}
-function wireMiniListManager(containerId, getList, setListFn, inputId, addBtnId, renderExtra){
+function wireMiniListManager(containerId, getList, setListFn, inputId, addBtnId){
   async function render(){
     const list = getList();
     const el = document.getElementById(containerId);
@@ -28,7 +25,6 @@ function wireMiniListManager(containerId, getList, setListFn, inputId, addBtnId,
         const newList = getList().filter(x=>x.id!==id);
         await setListFn(newList);
         render();
-        if(renderExtra) renderExtra();
       });
     });
   }
@@ -40,7 +36,6 @@ function wireMiniListManager(containerId, getList, setListFn, inputId, addBtnId,
     await setListFn(newList);
     input.value = '';
     render();
-    if(renderExtra) renderExtra();
   };
   return render;
 }
