@@ -1,0 +1,119 @@
+/* Traffic light signature element */
+  .signal{ display:flex; flex-direction:column; align-items:center; gap:14px; padding:20px 10px 8px; }
+  .bulb-row{ display:flex; flex-direction:column; gap:12px; align-items:center; }
+  .bulb{
+    width:64px; height:64px; border-radius:50%; cursor:pointer; border:none;
+    position:relative; transition:.2s; flex-shrink:0;
+  }
+  .bulb.red{ background:radial-gradient(circle at 35% 30%, #ff7a6e, var(--red)); }
+  .bulb.orange{ background:radial-gradient(circle at 35% 30%, #ffc38a, var(--orange)); }
+  .bulb.yellow{ background:radial-gradient(circle at 35% 30%, #fde79a, var(--yellow)); }
+  .bulb.green{ background:radial-gradient(circle at 35% 30%, #7bdba0, var(--green)); }
+  .bulb.gold{
+    background:radial-gradient(circle at 35% 30%, #ffe9ad, var(--gold));
+    position:relative; overflow:visible;
+    animation:gold-sparkle 2.2s ease-in-out infinite;
+  }
+  .bulb.gold::after{
+    content:'⭐'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:55%; filter:drop-shadow(0 0 3px rgba(255,255,255,.8));
+    animation:gold-twinkle 1.8s ease-in-out infinite;
+  }
+  @keyframes gold-sparkle{
+    0%, 100% { box-shadow:0 0 8px 1px rgba(232,185,74,.5); }
+    50% { box-shadow:0 0 18px 5px rgba(232,185,74,.85); }
+  }
+  @keyframes gold-twinkle{
+    0%, 100% { opacity:1; transform:scale(1); }
+    50% { opacity:.7; transform:scale(.88); }
+  }
+  .bulb.selected.red{ box-shadow:0 0 0 4px var(--red-dim), 0 0 28px 4px rgba(228,72,60,.7); }
+  .bulb.selected.orange{ box-shadow:0 0 0 4px var(--orange-dim), 0 0 28px 4px rgba(240,146,59,.7); }
+  .bulb.selected.yellow{ box-shadow:0 0 0 4px var(--yellow-dim), 0 0 28px 4px rgba(240,194,57,.7); }
+  .bulb.selected.green{ box-shadow:0 0 0 4px var(--green-dim), 0 0 28px 4px rgba(51,166,92,.7); }
+  .bulb.selected.gold{ box-shadow:0 0 0 4px var(--gold-dim), 0 0 28px 4px rgba(232,185,74,.7); }
+  .bulb:not(.selected){ opacity:.55; }
+  .bulb:not(.selected):hover{ opacity:.85; }
+
+  .protocol{
+    border-radius:14px; padding:16px; margin-top:6px; border:1px solid var(--line);
+  }
+  .protocol .light-title{ font-family:'Rubik'; font-weight:800; font-size:19px; margin:0 0 2px; }
+  .protocol .field-label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:14px 0 4px; font-weight:700; }
+  .protocol .field-value{ font-size:14.5px; line-height:1.55; }
+  .protocol ol{ margin:6px 0 0; padding-inline-start:20px; }
+  .protocol ol li{ margin-bottom:9px; font-size:14px; line-height:1.5; }
+  .protocol ol li b{ font-family:'Rubik'; }
+
+  .prot-red{ background:linear-gradient(180deg, var(--red-dim), var(--panel)); }
+  .prot-orange{ background:linear-gradient(180deg, var(--orange-dim), var(--panel)); }
+  .prot-yellow{ background:linear-gradient(180deg, var(--yellow-dim), var(--panel)); }
+  .prot-green{ background:linear-gradient(180deg, var(--green-dim), var(--panel)); }
+  .prot-gold{ background:linear-gradient(180deg, var(--gold-dim), var(--panel)); }
+
+  /* roster */
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:8px 14px; border-radius:999px; font-size:14px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; gap:8px;
+  }
+  .chip.selected{ background:var(--gold); color:#1a1400; border-color:var(--gold); }
+  .chip button.rm{ background:none; border:none; color:inherit; opacity:.6; cursor:pointer; font-size:13px; padding:0; }
+  .add-row{ display:flex; gap:8px; margin-top:12px; }
+  .add-row input{
+    flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 12px; color:var(--text); font-family:inherit; font-size:14px;
+  }
+  .btn{
+    background:var(--gold); color:#1a1400; border:none; border-radius:10px;
+    padding:10px 16px; font-weight:700; font-family:'Rubik'; cursor:pointer; font-size:14px;
+  }
+  .btn.ghost{ background:var(--panel-2); color:var(--text); border:1px solid var(--line); }
+
+  /* staff quick actions */
+  .light-btn-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .light-btn{
+    border:none; border-radius:14px; padding:16px 10px; font-family:'Rubik'; font-weight:800;
+    font-size:15px; cursor:pointer; color:#1a1400; text-align:center; transition:.12s;
+  }
+  .light-btn:active{ transform:scale(.97); }
+  .light-btn.red{ background:var(--red); color:#fff; }
+  .light-btn.orange{ background:var(--orange); }
+  .light-btn.yellow{ background:var(--yellow); }
+  .light-btn.green{ background:var(--green); color:#fff; }
+  .gold-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+  .gold-btn{
+    border:1px solid var(--gold); background:var(--gold-dim); color:var(--gold);
+    border-radius:14px; padding:14px 10px; font-family:'Rubik'; font-weight:800; font-size:14px; cursor:pointer;
+  }
+
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background:var(--panel-2); border:1px solid var(--line); padding:12px 20px; border-radius:12px;
+    font-size:14px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.4); z-index:50; max-width:90%;
+    text-align:center;
+  }
+
+  .empty{ color:var(--muted); font-size:14px; text-align:center; padding:20px 0; }
+
+  /* kids display */
+  .kid-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .kid-card{
+    background:var(--panel); border-radius:16px; padding:14px; text-align:center;
+    border:2px solid var(--line);
+  }
+  .kid-card .ring{
+    width:14px; height:14px; border-radius:50%; margin:0 auto 8px; background:#3a3f55;
+  }
+  .kid-card .name{ font-family:'Rubik'; font-weight:700; font-size:15px; margin-bottom:10px; }
+  .stars-row{ font-size:13px; color:var(--gold); margin-bottom:8px; }
+  .moon-track{ display:flex; justify-content:center; gap:3px; margin-top:6px; }
+  .moon-dot{ width:8px; height:8px; border-radius:50%; background:#3a3f55; }
+  .moon-dot.filled{ background:var(--gold); box-shadow:0 0 6px 1px rgba(232,185,74,.7); }
+  .moon-label{ font-size:11px; color:var(--muted); margin-top:6px; }
+
+  .note{ font-size:12.5px; color:var(--muted); line-height:1.6; margin-top:10px; }
+  .divider{ height:1px; background:var(--line); margin:16px 0; }
+
+  

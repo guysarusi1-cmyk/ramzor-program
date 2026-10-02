@@ -1,0 +1,47 @@
+/* ---- recreated star board (kraft board, columns of kids w/ star slots) ---- */
+  .board-star{
+    position:relative; border-radius:14px; overflow:hidden; min-height:280px; padding:14px;
+    background-image:url(@asset(boards/star-board.jpg));
+    background-size:cover; background-position:center;
+  }
+  .star-cards-grid{ position:relative; z-index:2; display:grid; grid-template-columns:repeat(auto-fit, minmax(96px, 1fr)); gap:10px; }
+  .star-card{ background:rgba(18,23,42,.74); border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:10px 6px 12px; display:flex; flex-direction:column; align-items:center; }
+  .star-card .avatar-initials{ width:42px; height:42px; font-size:15px; border:2px solid rgba(255,255,255,.6); box-shadow:0 2px 6px rgba(0,0,0,.35); flex-shrink:0; }
+  .star-card-name{ font-family:'Rubik'; font-weight:700; font-size:11.5px; color:#fff; margin:6px 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .star-card-dots{ display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
+  .star-dot{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.3); border:1px solid rgba(255,255,255,.55); }
+  .star-dot.filled{ background:radial-gradient(circle at 35% 30%, #ffe9ad, var(--gold)); border-color:var(--gold); box-shadow:0 0 4px 1px rgba(232,185,74,.6); }
+  @keyframes star-dot-pulse{
+    0% { transform:scale(1); box-shadow:0 0 4px 1px rgba(232,185,74,.6); }
+    40% { transform:scale(2.4); box-shadow:0 0 16px 7px rgba(255,233,173,.95); }
+    100% { transform:scale(1); box-shadow:0 0 4px 1px rgba(232,185,74,.6); }
+  }
+  .star-dot.pulse{ animation: star-dot-pulse .9s ease; }
+  .star-count-extra{ margin-top:2px; font-size:10px; font-weight:800; color:var(--gold); font-family:'Rubik'; background:rgba(0,0,0,.45); padding:1px 6px; border-radius:8px; }
+
+  /* ---- recreated moon board (night mountain w/ 7 numbered steps) ---- */
+  .board-moon{
+    position:relative; border-radius:14px; overflow:hidden; min-height:280px;
+    background-image:url(@asset(boards/moon-board.jpg));
+    background-size:cover; background-position:center;
+    aspect-ratio: 1920 / 882;
+  }
+  .board-mercury{
+    position:relative; border-radius:14px; overflow:hidden; min-height:280px;
+    background-image:url(@asset(boards/mercury-board.webp));
+    background-size:cover; background-position:center;
+    aspect-ratio: 2000 / 1414;
+  }
+  /* fixed width on the marker itself (not just the image) so the percentage below resolves
+     predictably against the board — previously the image's own %-width had no well-defined
+     containing block (both the marker and its wrapper div are auto/shrink-to-fit), which let
+     the browser resolve it inconsistently and threw the ship's visual center off from the
+     label centered underneath it by tens of pixels. */
+  .kid-marker{ position:absolute; width:10%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; z-index:5; transition:left 1.4s ease, top 1.4s ease; }
+  .kid-marker .avatar-initials{ width:45%; aspect-ratio:1/1; font-size:1vw; border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .kid-marker .ship-icon{ width:100%; height:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+  .kid-marker .lbl{ font-size:9.5px; color:#fff; margin-top:2px; background:rgba(0,0,0,.5); padding:1px 5px; border-radius:5px; white-space:nowrap; }
+  .kid-marker .badge{ position:absolute; top:-6px; right:-6px; font-size:11px; }
+
+.avatar-initials{ border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Rubik'; font-weight:800; color:#fff; flex-shrink:0; }
+  

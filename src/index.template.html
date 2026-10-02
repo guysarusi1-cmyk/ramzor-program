@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>תכנית הרמזור</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<style>{{CSS}}</style>
+</head>
+<body>
+
+<div id="login-screen" style="display:none;">
+  <div class="wrap" style="max-width:360px; padding-top:70px;">
+    <header class="top">
+      <div class="eyebrow">כניסת צוות</div>
+      <h1>🚦 תכנית הרמזור</h1>
+    </header>
+    <div class="card">
+      <h2>הזינו סיסמה</h2>
+      <input type="password" id="login-password" placeholder="סיסמה" autocomplete="current-password"
+        style="width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:12px; color:var(--text); font-size:16px; font-family:inherit; margin-bottom:12px;">
+      <button class="btn" id="login-submit-btn" style="width:100%;">כניסה</button>
+      <div id="login-error" style="color:var(--red); font-size:13px; margin-top:10px; display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="protected-app" style="display:none;">
+
+  <header class="top" id="shared-header">
+    <div class="eyebrow">מרכז חירום</div>
+    <h1>🚦 תכנית הרמזור</h1>
+    <div class="sub">"אני יכול לחשוב מה שאני רוצה, אני יכול להרגיש מה שאני רוצה, אבל לא תמיד כדאי שאתנהג איך שאני רוצה"</div>
+  </header>
+
+  <nav class="tabs" style="display:none;">
+    <button data-view="manage" style="display:none;">ניהול</button>
+    <button data-view="staff" class="active">צוות</button>
+    <button data-view="display" style="display:none;">מסך ילדים</button>
+  </nav>
+  <div id="shared-logout-row" style="text-align:left; margin:-14px 0 12px;">
+    <button id="logout-btn" class="back-btn" style="padding:6px 12px; font-size:12px; margin-bottom:0;">🔒 יציאה</button>
+  </div>
+
+  <!-- ============ HUB (post-login landing page) ============ -->
+  <section class="view active" id="view-hub">
+    <div class="home-top">
+      <button type="button" class="home-icon-btn home-gear" id="hub-manage-gear" aria-label="הגדרות וניהול">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button type="button" class="home-text-btn home-logout" id="hub-logout-link">יציאה</button>
+      <h1 class="home-title">תכנית הרמזור</h1>
+      <p class="home-slogan">"אני יכול לחשוב מה שאני רוצה, אני יכול להרגיש מה שאני רוצה, אבל לא תמיד כדאי שאתנהג איך שאני רוצה"</p>
+    </div>
+
+    <div class="home-primary">
+      <button type="button" class="home-card" id="hub-daily-btn">
+        <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7.5" y="2" width="9" height="20" rx="3"/><circle cx="12" cy="7" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="17" r="1.6"/></svg>
+        <span class="home-card-title">תפעול יומיומי</span>
+        <span class="home-card-sub">יישום הרמזור בזמן אמת</span>
+      </button>
+      <button type="button" class="home-card" id="hub-kids-btn">
+        <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="20" height="13" rx="2"/><path d="M8 21h8M12 16.5V21"/></svg>
+        <span class="home-card-title">שליטה במסך הילדים</span>
+        <span class="home-card-sub">ניהול התצוגה והפידבקים לילדים</span>
+      </button>
+    </div>
+
+    <button type="button" class="home-secondary" id="hub-learn-btn">
+      <svg class="home-secondary-icon" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
+      <span class="home-secondary-text">
+        <span class="home-secondary-title">לומדת הרמזור</span>
+        <span class="home-secondary-sub">לומדים את העקרונות והכלים של התכנית</span>
+      </span>
+    </button>
+  </section>
+
+  <!-- ============ KIDS QUICK ACCESS (זהב / רמזור צהוב) ============ -->
+  <section class="view" id="view-kids-quick">
+    <button class="back-btn" id="kids-quick-back-to-hub">🏠 חזרה לתפריט הראשי</button>
+
+    <div id="kids-quick-pick-color">
+      <div class="card" style="padding:24px 16px;">
+        <h2 style="text-align:center; margin-bottom:22px; font-size:17px;">מה תרצו לעשות?</h2>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+          <div class="bulb gold" style="width:40px; height:40px; margin:0; flex-shrink:0;"></div>
+          <div style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--gold);">זהב</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px; padding-inline-start:50px;">
+          <button class="btn ghost" id="kq-give-star-btn">⭐ הענקת כוכב</button>
+          <button class="btn ghost" id="kq-moon-journey-btn">🚀 תכנית המסע בחלל</button>
+          <button class="btn ghost" disabled style="opacity:.45; cursor:not-allowed;">🧱 בניית לבנים (בקרוב)</button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+          <div class="bulb yellow" style="width:40px; height:40px; margin:0; flex-shrink:0;"></div>
+          <div style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--yellow);">רמזור צהוב</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; padding-inline-start:50px;">
+          <button class="btn ghost" id="kq-revoke-bonus-btn">➖ גריעת בונוס</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="kids-quick-pick-child" style="display:none;">
+      <button class="back-btn" id="kids-quick-back-to-color">→ חזרה</button>
+      <div class="card">
+        <h2 id="kids-quick-child-title">בחרו ילד/ה</h2>
+        <div class="chip-row" id="kids-quick-roster"></div>
+      </div>
+    </div>
+
+    <div id="kids-quick-moon-panel" style="display:none;">
+      <button class="back-btn" id="kids-quick-back-to-children">→ חזרה לרשימת ילדים</button>
+      <div id="kids-quick-moon-feedback"></div>
+    </div>
+
+    <div id="kids-quick-yellow-intro" style="display:none;">
+      <button class="back-btn" id="kids-quick-yellow-intro-back">→ חזרה</button>
+      <button class="btn" id="kq-pick-child-for-revoke-btn" style="width:100%; margin-bottom:14px;">מאיזה ילד לגרוע את הבונוס?</button>
+      <div id="kq-yellow-protocol"></div>
+    </div>
+
+    <div id="kids-quick-yellow-list" style="display:none;">
+      <button class="back-btn" id="kids-quick-yellow-list-back">→ חזרה לרשימת ילדים</button>
+      <div class="response-headline yellow" id="kq-yellow-title-headline"></div>
+      <div id="kq-yellow-protocol-list" style="margin-bottom:14px;"></div>
+      <h2 id="kq-yellow-childname-title"></h2>
+      <div class="note" style="margin-bottom:10px;">לחיצה על בונוס גורעת אותו מהיום.</div>
+      <h2>🎁 בונוסים יומיים</h2>
+      <div id="kq-yellow-bonus-daily-list"></div>
+      <div class="divider"></div>
+      <h2>📅 בונוסים שבועיים</h2>
+      <div id="kq-yellow-bonus-weekly-list"></div>
+      <div class="divider"></div>
+      <h2>📋 לוח תורנויות</h2>
+      <div id="kq-yellow-duty-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ MANAGEMENT VIEW ============ -->
+  <section class="view" id="view-manage">
+    <button class="back-btn" id="manage-back-to-hub">🏠 חזרה לתפריט הראשי</button>
+
+    <div class="card">
+      <h2>ילדים במסגרת</h2>
+      <div class="chip-row" id="roster-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-child-name" placeholder="שם פרטי">
+        <input type="text" id="new-child-lastinit" placeholder="אות ראשונה שם משפחה" maxlength="1" style="max-width:150px;">
+        <input type="number" id="new-child-age" placeholder="גיל" min="0" max="18" style="max-width:90px;">
+      </div>
+      <div class="add-row">
+        <input type="text" id="new-child-swname" placeholder="שם העו״סית המטפלת">
+        <input type="tel" id="new-child-swphone" placeholder="טלפון וואטסאפ (972501234567+)">
+      </div>
+      <div class="add-row">
+        <button class="btn" id="add-child-btn" style="width:100%;">הוספת ילד/ה</button>
+      </div>
+      <div class="note">שמות לדוגמה בלבד. בגרסת עבודה אמיתית יש להקפיד על אבטחת מידע מתאימה לנתוני ילדים. מספר הטלפון נדרש בפורמט בינלאומי (למשל 972501234567+) כדי שקישור הוואטסאפ יעבוד.</div>
+    </div>
+
+    <div class="card">
+      <h2>🎁 בונוסים יומיים</h2>
+      <div class="mini-list" id="bonuses-daily-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-bonus-daily" placeholder="למשל: אחרי ארוחת הערב — זמן טלוויזיה">
+        <button class="btn" id="add-bonus-daily-btn">הוספה</button>
+      </div>
+      <div class="note">הרשימה הזו מוצגת במסך הצוות (תחת הרמזור הצהוב) ובמסך הילדים.</div>
+    </div>
+
+    <div class="card">
+      <h2>📅 בונוסים שבועיים</h2>
+      <div class="mini-list" id="bonuses-weekly-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-bonus-weekly" placeholder="למשל: בשישי — אבא/אמא של שבת">
+        <button class="btn" id="add-bonus-weekly-btn">הוספה</button>
+      </div>
+      <div class="note">הרשימה הזו מוצגת במסך הצוות (תחת הרמזור הצהוב) ובמסך הילדים.</div>
+    </div>
+
+    <div class="card">
+      <h2>📋 לוח תורנויות</h2>
+      <div class="mini-list" id="duty-roster-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-duty-item" placeholder="למשל: דניאל מ' — סידור שולחן">
+        <button class="btn" id="add-duty-item-btn">הוספה</button>
+      </div>
+      <div class="note">מוצג במסך הצוות תחת הרמזור הצהוב, לצד הבונוסים היומיים.</div>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ איפוס לוחות</h2>
+      <div class="note" style="margin-bottom:10px;">פעולות בלתי הפיכות שמשפיעות על כל הילדים בבת אחת.</div>
+      <button class="btn ghost" id="reset-stars-btn" style="width:100%; margin-bottom:10px;">איפוס לוח הכוכבים (כל הילדים ל-0)</button>
+      <button class="btn ghost" id="reset-mercury-btn" style="width:100%;">החזרת כל החלליות למצב ההתחלתי (לפני הצעד הראשון)</button>
+    </div>
+
+    <div class="card">
+      <h2>🧪 כלי בדיקה זמניים</h2>
+      <div class="note" style="margin-bottom:10px;">להסרה לפני שימוש אמיתי של הצוות.</div>
+      <!-- TEMP (2026-10-02): quick link for local testing of the display screen, remove before real staff use -->
+      <button class="btn ghost" id="temp-goto-display-btn-manage" style="width:100%; margin-bottom:10px;">🖥️ מסך תצוגה (זמני לבדיקה)</button>
+      <!-- TEMP (2026-10-02): preview button for the bonus time-blink effect, remove before real staff use -->
+      <button class="btn ghost" id="temp-preview-bonus-blink-btn-manage" style="width:100%;">🔔 הדגמת אפקט הבונוס (זמני, 5 שניות)</button>
+    </div>
+  </section>
+
+  <!-- ============ STAFF VIEW ============ -->
+  <section class="view" id="view-staff">
+    <button class="back-btn" id="staff-back-to-hub">🏠 חזרה לתפריט הראשי</button>
+
+    <!-- screen: the full traffic light (landing screen of daily operations — no child is chosen) -->
+    <div id="staff-screen-pick">
+      <div class="card">
+        <h2>גישה מהירה לפרוטוקול</h2>
+        <div class="note" style="margin-top:-4px; margin-bottom:10px;">לחצו על צבע כדי לפתוח את הפרוטוקול שלו.</div>
+        <div id="quick-light-rows"></div>
+      </div>
+    </div>
+
+    <!-- screen: red/orange detail -->
+    <div class="card" id="staff-screen-redorange" style="display:none;">
+      <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
+      <div class="age-warning" id="redorange-age-warning" style="display:none;">⚠️ אסור להכניס ילד מתחת לגיל 5 לחדר הרוגע לבד!</div>
+      <div class="response-headline" id="redorange-response-headline"></div>
+      <h2 id="redorange-title"></h2>
+      <div id="redorange-therapy-plan"></div>
+      <div class="protocol" id="redorange-protocol" style="margin-top:14px;"></div>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSeIsCRj03j_SUxZxHmK13XGTf5to3TNvhTY53JsvloVNJuOxA/viewform" class="link-btn" id="report-form-link" target="_blank" rel="noopener">📝 מעבר לטופס דיווח</a>
+    </div>
+
+    <!-- screen: red protocol — guided, one step at a time (the shared red/orange screen above now serves orange only) -->
+    <div class="card guided-screen" id="staff-screen-guided" style="display:none;">
+      <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
+      <div class="guided-head"><span class="guided-dot" aria-hidden="true"></span><h2 class="guided-head-title" id="guided-head-title">פרוטוקול אדום</h2></div>
+      <div id="guided-step-body"></div>
+      <div class="guided-footer">
+        <button type="button" class="guided-prev" id="guided-prev-btn">הקודם</button>
+        <button type="button" class="guided-next" id="guided-next-btn">הבא</button>
+        <div class="guided-counter" id="guided-counter"></div>
+      </div>
+    </div>
+
+    <!-- screen: yellow detail -->
+    <div class="card" id="staff-screen-yellow" style="display:none;">
+      <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
+      <div class="response-headline yellow" id="yellow-title-headline"></div>
+      <div id="yellow-protocol" style="margin-bottom:14px;"></div>
+      <h2 id="yellow-childname-title"></h2>
+      <div class="note" style="margin-bottom:10px;">לחיצה על בונוס גורעת אותו מהיום.</div>
+      <h2>🎁 בונוסים יומיים</h2>
+      <div id="yellow-bonus-daily-list"></div>
+      <div class="divider"></div>
+      <h2>📅 בונוסים שבועיים</h2>
+      <div id="yellow-bonus-weekly-list"></div>
+      <div class="divider"></div>
+      <h2>📋 לוח תורנויות</h2>
+      <div id="yellow-duty-list"></div>
+    </div>
+
+    <!-- screen: green detail -->
+    <div class="card guided-screen" id="staff-screen-green" style="display:none;">
+      <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
+      <div class="guided-head"><span class="guided-dot" style="--proto-color:var(--green);" aria-hidden="true"></span><h2 class="guided-head-title">פרוטוקול ירוק</h2></div>
+      <div class="guided-section-label">מסר</div>
+      <h3 class="guided-step-name" id="green-message"></h3>
+      <div class="guided-section-label">תגובה</div>
+      <p class="guided-step-action" id="green-response"></p>
+      <div class="guided-section-label">האם לדווח לעו״סית?</div>
+      <div id="green-sw-section"></div>
+    </div>
+
+    <!-- screen: gold detail -->
+    <div class="card guided-screen" id="staff-screen-gold" style="display:none;">
+      <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
+      <div class="guided-head"><span class="guided-dot" style="--proto-color:var(--gold);" aria-hidden="true"></span><h2 class="guided-head-title">זהב</h2></div>
+      <h3 class="guided-step-name">מה תרצו לעשות?</h3>
+      <div class="guided-actions">
+        <button type="button" class="guided-action" id="gold-give-star-btn">הענקת כוכב</button>
+        <button type="button" class="guided-action" id="gold-moon-journey-btn">תכנית המסע בחלל</button>
+        <button type="button" class="guided-action" disabled>בניית לבנים (בקרוב)</button>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+<!-- ============ DISPLAY VIEW (no login required — runs on the fixed room screen) ============ -->
+<div class="wrap">
+  <section class="view" id="view-display">
+    <div style="text-align:center; margin-bottom:10px;">
+      <button class="back-btn" id="feedback-back-to-hub" style="display:inline-flex;">🏠 חזרה לתפריט הראשי</button>
+    </div>
+    <div class="card carousel-shell">
+      <div class="slide-label" id="slide-label"></div>
+
+      <div class="slide" id="slide-0"><div id="overview-slide-content"></div></div>
+      <div class="slide" id="slide-1"><div id="yellow-slide-content"></div></div>
+      <div class="slide" id="slide-2">
+        <div class="placeholder-box">🙋 לוח ההתנדבויות יוצג כאן — ממתין לעיצוב.</div>
+      </div>
+      <div class="slide" id="slide-3"><div id="bonuses-slide-content"></div></div>
+      <div class="slide" id="slide-4"><div id="green-slide-content"></div></div>
+      <div class="slide" id="slide-5">
+        <h2>⭐ לוח הכוכבים</h2>
+        <div class="board-star" id="star-board"></div>
+      </div>
+      <div class="slide" id="slide-6">
+        <h2>🚀 לוח המסע בחלל</h2>
+        <div class="board-moon" id="moon-board"></div>
+      </div>
+      <div class="slide" id="slide-7">
+        <h2>🪐 המסע לכוכב המילים</h2>
+        <div class="board-mercury" id="mercury-board"></div>
+      </div>
+
+      <div class="dots" id="slide-dots"></div>
+    </div>
+    <div class="note">התצוגה מתחלפת אוטומטית כל 15 שניות. תצוגה בלבד — כל הפעולות מבוצעות ממסך הצוות.</div>
+  </section>
+
+</div>
+<div id="feedback-banner"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>{{JS}}</script>
+</body>
+</html>
