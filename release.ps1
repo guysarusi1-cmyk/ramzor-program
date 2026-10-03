@@ -27,6 +27,7 @@ else { throw "check suite missing (tests\run-checks.ps1) — not releasing" }
 Step "3/6 build the live file"
 & (Join-Path $root 'build.ps1') -Env live
 $new = Join-Path $root 'dist\live\index.html'
+& (Join-Path $root 'tests\live-smoke.ps1'); if($LASTEXITCODE -ne 0){ throw "live build smoke test failed — not releasing" }
 
 Step "4/6 backups (code tag + read-only copy of the real data)"
 $stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'

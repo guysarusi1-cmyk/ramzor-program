@@ -47,10 +47,27 @@ function groupRevocationsByBonus(revocations){
 // test environment so the journey can be clicked through freely (client decision, 2026-10-03).
 const MOON_DAILY_LIMIT_ENABLED = (APP_ENV === 'live');
 
-async function getChildState(id){
+const emptyChildState = () => ({ stars:0, moonSteps:0, moonGifts:0, mercurySteps:0, moonDayDate:null, moonDayStatus:null });
+const childStateFromRow = d => ({ stars:d.stars, moonSteps:d.moon_steps, moonGifts:d.moon_gifts, mercurySteps:d.mercury_steps||0, moonDayDate:d.moon_day_date, moonDayStatus:d.moon_day_status });
+
+// For changing a child's data: null when the read FAILED (never pretend the child is at zero and then
+// write that back over the real numbers); a child with no row yet starts from zero.
+async function getChildStateForUpdate(id){
   const { data, error } = await sb.from('child_state').select('*').eq('child_id', id).maybeSingle();
-  if(error || !data) return {stars:0, moonSteps:0, moonGifts:0, mercurySteps:0, moonDayDate:null, moonDayStatus:null};
-  return { stars:data.stars, moonSteps:data.moon_steps, moonGifts:data.moon_gifts, mercurySteps:data.mercury_steps||0, moonDayDate:data.moon_day_date, moonDayStatus:data.moon_day_status };
+  if(error){ console.error(error); return null; }
+  return data ? childStateFromRow(data) : emptyChildState();
+}
+// For showing on screen: a failed read shows zeros (nothing is written back from these).
+async function getChildState(id){
+  return (await getChildStateForUpdate(id)) || emptyChildState();
+}
+// Everyone at once, in one request (the boards use this). null when the read failed — keep what is on screen.
+async function getAllChildStates(){
+  const { data, error } = await sb.from('child_state').select('*');
+  if(error || !data){ console.error(error); return null; }
+  const byId = {};
+  data.forEach(d => { byId[d.child_id] = childStateFromRow(d); });
+  return { get: id => byId[id] || emptyChildState() };
 }
 async function setChildState(id, state){
   const { error } = await sb.from('child_state').upsert({
@@ -64,14 +81,16 @@ async function setChildState(id, state){
 
 async function resetAllStars(){
   await Promise.all(roster.map(async c=>{
-    const s = await getChildState(c.id);
+    const s = await getChildStateForUpdate(c.id);
+    if(!s) return;
     s.stars = 0;
     await setChildState(c.id, s);
   }));
 }
 async function resetAllMercuryToStart(){
   await Promise.all(roster.map(async c=>{
-    const s = await getChildState(c.id);
+    const s = await getChildStateForUpdate(c.id);
+    if(!s) return;
     s.mercurySteps = 0;
     await setChildState(c.id, s);
   }));

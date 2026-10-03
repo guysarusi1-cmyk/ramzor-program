@@ -134,16 +134,18 @@
       </div>
 
     <div class="card" id="tv-remote-card">
-      <h2>המסך בחדר</h2>
+      <h2 class="tv-remote-title"><button type="button" id="tv-remote-toggle" aria-expanded="false" aria-controls="tv-remote-body"><span>מה המסך מציג כרגע?</span><span class="gi-arrow" aria-hidden="true">▾</span></button></h2>
       <div class="tv-remote-status" id="tv-remote-status">מחפש את המסך בחדר...</div>
-      <div class="tv-remote-boards" id="tv-remote-boards"></div>
-      <div class="tv-remote-controls">
-        <button type="button" class="btn ghost" id="tv-remote-prev">‹ הקודם</button>
-        <button type="button" class="btn ghost" id="tv-remote-hold" data-action="pause">⏸ השהיית הסבב</button>
-        <button type="button" class="btn ghost" id="tv-remote-next">הבא ›</button>
+      <div id="tv-remote-body" hidden>
+        <div class="tv-remote-boards" id="tv-remote-boards"></div>
+        <div class="tv-remote-controls">
+          <button type="button" class="btn ghost" id="tv-remote-prev">‹ הקודם</button>
+          <button type="button" class="btn ghost" id="tv-remote-hold" data-action="pause">⏸ השהיית הסבב</button>
+          <button type="button" class="btn ghost" id="tv-remote-next">הבא ›</button>
+        </div>
+        <button type="button" class="btn ghost" id="tv-preview-toggle" style="width:100%; margin-top:10px;">הצגת תצוגה מקדימה חיה</button>
+        <div id="tv-preview-box" class="tv-preview-box" hidden></div>
       </div>
-      <button type="button" class="btn ghost" id="tv-preview-toggle" style="width:100%; margin-top:10px;">הצגת תצוגה מקדימה חיה</button>
-      <div id="tv-preview-box" class="tv-preview-box" hidden></div>
     </div>
     </div>
 
@@ -276,11 +278,21 @@
     <div class="card guided-screen" id="staff-screen-guided" style="display:none;">
       <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
       <div class="guided-head"><span class="guided-dot" aria-hidden="true"></span><h2 class="guided-head-title" id="guided-head-title">פרוטוקול אדום</h2></div>
-      <div id="guided-step-body"></div>
-      <div class="guided-footer">
-        <button type="button" class="guided-prev" id="guided-prev-btn">הקודם</button>
-        <button type="button" class="guided-next" id="guided-next-btn">הבא</button>
-        <div class="guided-counter" id="guided-counter"></div>
+      <button type="button" class="guided-legend-btn" id="guided-legend-btn">כל השלבים</button>
+      <div class="guided-layout">
+        <aside class="guided-legend" id="guided-legend" aria-label="מקרא שלבי הפרוטוקול">
+          <div class="guided-legend-title">שלבי הפרוטוקול</div>
+          <ol id="guided-legend-list"></ol>
+          <button type="button" class="btn ghost guided-legend-close" id="guided-legend-close">סגירה</button>
+        </aside>
+        <div class="guided-main">
+          <div id="guided-step-body"></div>
+          <div class="guided-footer">
+            <button type="button" class="guided-prev" id="guided-prev-btn">הקודם</button>
+            <button type="button" class="guided-next" id="guided-next-btn">הבא</button>
+            <div class="guided-counter" id="guided-counter"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -293,6 +305,15 @@
       <div class="guided-section-label">תגובה</div>
       <p class="guided-step-action" id="green-response"></p>
       <div class="guided-section-label">האם לדווח לעו״סית?</div>
+      <div class="green-involved">
+        <button type="button" class="green-involved-btn" id="green-involved-btn" aria-expanded="false" aria-controls="green-involved-panel">
+          <span>הילדים שהיו מעורבים במקרה</span><span class="gi-count" id="green-involved-count"></span><span class="gi-arrow" aria-hidden="true">▾</span>
+        </button>
+        <div class="green-involved-panel" id="green-involved-panel" hidden>
+          <div class="note">אפשר לבחור יותר מילד אחד.</div>
+          <div id="green-involved-list"></div>
+        </div>
+      </div>
       <div id="green-sw-section"></div>
     </div>
 

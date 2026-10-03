@@ -54,7 +54,13 @@
   .be-actions .btn{ flex:1; }
 
 /* ---- kids-screen control: remote control of the room TV ---- */
-  .tv-remote-status{ font-size:13.5px; color:var(--muted); margin-bottom:10px; }
+  .tv-remote-title{ margin:0 0 4px !important; text-align:center; }
+  .tv-remote-title button{ width:100%; min-height:44px; display:flex; align-items:center; justify-content:center; gap:8px; background:none; border:0; color:inherit; font:inherit; letter-spacing:inherit; cursor:pointer; }
+  .tv-remote-title .gi-arrow{ transition:transform .2s; }
+  .tv-remote-title button[aria-expanded=true] .gi-arrow{ transform:rotate(180deg); }
+  #tv-remote-body[hidden]{ display:none; }
+  #tv-remote-body{ margin-top:12px; }
+  .tv-remote-status{ font-size:13.5px; color:var(--muted); text-align:center; }
   .tv-remote-status.on{ color:var(--text); }
   .tv-remote-status.off{ color:#f5dd8a; }
   .tv-remote-boards{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }

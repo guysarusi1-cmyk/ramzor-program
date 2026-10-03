@@ -136,9 +136,10 @@ async function renderStarBoard(){
     if(!wantedIds.has(card.dataset.childId)) card.remove();
   });
 
+  const states = await getAllChildStates();     // one request for everyone
+  if(!states) return;                           // read failed: keep what is on screen
   for(const child of roster){
-    const state = await getChildState(child.id);
-    const stars = state.stars || 0;
+    const stars = states.get(child.id).stars || 0;
     // looked up fresh each time: two renders can overlap (a live event arriving while the carousel draws),
     // and a stale lookup made both of them add a card for the same child
     let card = [...grid.querySelectorAll('.star-card')].find(c => c.dataset.childId === child.id);
@@ -190,16 +191,21 @@ function diffRenderMarkers(el, positions, buildInner, markerWidthPx){
 
 // children who finished the moon journey (7 steps) continue on the word-planet board, so they are not drawn
 // here — except the one who has just arrived, so the celebration can show them reaching the top
-async function renderMoonBoard(justArrivedChildId){
+// opts (all optional): justArrivedChildId, stepsOverride {childId: steps} to draw a child where they were
+// one step ago, hideChildId to keep one child's marker invisible (the stunt flight draws it instead)
+async function renderMoonBoard(opts){
+  opts = opts || {};
   const el = document.getElementById('moon-board');
   fitBoardFont(el);
   if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
 
   let markersByStep = {}; // step index 0-6 (for steps 1-7) -> array of children; base(-1) for step 0
+  const states = await getAllChildStates();
+  if(!states) return;
   for(const c of roster){
-    const state = await getChildState(c.id);
-    const steps = state.moonSteps || 0;
-    if(steps >= 7 && c.id !== justArrivedChildId) continue;
+    const state = states.get(c.id);
+    const steps = (opts.stepsOverride && c.id in opts.stepsOverride) ? opts.stepsOverride[c.id] : (state.moonSteps || 0);
+    if(steps >= 7 && c.id !== opts.justArrivedChildId) continue;
     const idx = Math.min(steps, 7) - 1; // -1 means still at base (0 steps)
     if(!markersByStep[idx]) markersByStep[idx] = [];
     markersByStep[idx].push({child:c, steps});
@@ -226,15 +232,48 @@ async function renderMoonBoard(justArrivedChildId){
     const badge = steps >= 7 ? `<span class="badge">🌙</span>` : '';
     return `<div style="position:relative;">${avatarHtml(child)}${badge}</div><div class="lbl">${displayName(child)}</div>`;
   });
+  hideOneMarker(el, opts.hideChildId);
 }
 
-async function renderMercuryBoard(){
+// keeps exactly one child's marker invisible (or none, when no id is given)
+function hideOneMarker(boardEl, childId){
+  boardEl.querySelectorAll('.kid-marker').forEach(m => { m.style.visibility = (childId && m.dataset.childId === childId) ? 'hidden' : ''; });
+}
+
+// The Mercury planet used for the "you reached it" moments (instead of an emoji): a drawn, realistic
+// planet — grey-brown rock with a fine grain, craters lit from the upper left, and the night side
+// falling away to the lower right. (Drawn in SVG, so it is sharp at any size and needs no image file.)
+let mercuryPlanetCount = 0;   // gradient / filter ids must be unique per drawing
+function mercuryPlanetSvg(){
+  const n = ++mercuryPlanetCount;
+  const crater = (cx, cy, r) => `<g><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#mp-c${n})"/><path d="M${cx - r * .86} ${cy - r * .5}A${r} ${r} 0 0 1 ${cx + r * .3} ${cy - r * .95}" fill="none" stroke="#f3e9d4" stroke-opacity=".55" stroke-width="${Math.max(.5, r * .13)}" stroke-linecap="round"/></g>`;
+  return `<svg class="mercury-planet" viewBox="0 0 100 100" aria-hidden="true"><defs>
+    <radialGradient id="mp-g${n}" cx=".33" cy=".3" r=".9"><stop offset="0" stop-color="#d8cfc2"/><stop offset=".35" stop-color="#a69b8e"/><stop offset=".7" stop-color="#6b625b"/><stop offset="1" stop-color="#2d2a2f"/></radialGradient>
+    <radialGradient id="mp-c${n}" cx=".62" cy=".66" r=".7"><stop offset="0" stop-color="#2f2924" stop-opacity=".55"/><stop offset=".72" stop-color="#4b423b" stop-opacity=".28"/><stop offset="1" stop-color="#7d7165" stop-opacity="0"/></radialGradient>
+    <radialGradient id="mp-s${n}" cx=".3" cy=".28" r=".95"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#05060f" stop-opacity=".78"/></radialGradient>
+    <filter id="mp-f${n}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" seed="7" result="t"/><feColorMatrix in="t" type="matrix" values="0 0 0 0 .5  0 0 0 0 .46  0 0 0 0 .42  0 0 0 .55 -.12"/></filter>
+    <clipPath id="mp-k${n}"><circle cx="50" cy="50" r="46"/></clipPath></defs>
+    <circle cx="50" cy="50" r="46" fill="url(#mp-g${n})"/>
+    <g clip-path="url(#mp-k${n})">
+      <rect width="100" height="100" filter="url(#mp-f${n})" opacity=".8"/>
+      ${crater(30, 36, 11)}${crater(60, 26, 7)}${crater(69, 55, 13)}${crater(38, 67, 8)}${crater(22, 58, 5)}${crater(52, 47, 4)}${crater(78, 34, 4.5)}${crater(52, 80, 6)}
+      <path d="M12 70Q40 44 58 14M20 78Q52 52 76 22" fill="none" stroke="#e6dcc8" stroke-opacity=".06" stroke-width="2"/>
+      <circle cx="50" cy="50" r="46" fill="url(#mp-s${n})"/>
+    </g></svg>`;
+}
+async function renderMercuryBoard(opts){
+  opts = opts || {};
   const el = document.getElementById('mercury-board');
   fitBoardFont(el);
   const eligible = [];
+  const states = await getAllChildStates();
+  if(!states) return;
   for(const c of roster){
-    const state = await getChildState(c.id);
-    if((state.moonSteps || 0) >= 7) eligible.push({child:c, steps: state.mercurySteps || 0});
+    const state = states.get(c.id);
+    if((state.moonSteps || 0) >= 7){
+      const steps = (opts.stepsOverride && c.id in opts.stepsOverride) ? opts.stepsOverride[c.id] : (state.mercurySteps || 0);
+      eligible.push({child:c, steps});
+    }
   }
   if(!eligible.length){ el.innerHTML = '<div class="empty">עדיין אין ילדים שהגיעו לירח — המסע לכוכב המילים יתחיל כשיגיעו.</div>'; return; }
 
@@ -307,9 +346,9 @@ async function renderMercuryBoard(){
         left = anchorLeft + dir * (DIGIT_CLEARANCE + col * H_SPACING) * scale;
       }
       left = Math.max(SAFE_MIN, Math.min(SAFE_MAX, left));
-      // a ship + its label is up to ~19% of the board tall, so nothing may sit closer than ~10%
+      // a ship + its label is up to ~19% of the board tall, so nothing may sit closer than ~12%
       // to the top edge (step 7's digit is at 9%) or it pokes out of the board
-      positions[item.child.id] = {left, top:Math.max(anchorTop, 11), steps:item.steps, child:item.child, scale};
+      positions[item.child.id] = {left, top:Math.max(anchorTop, 12.5), steps:item.steps, child:item.child, scale};
     });
   }
 
@@ -325,7 +364,7 @@ async function renderMercuryBoard(){
 
   const markerWidthPx = Math.round(el.clientWidth * 0.10);
   diffRenderMarkers(el, positions, (child, steps, widthPx) => {
-    const badge = steps >= 7 ? `<span class="badge">🪐</span>` : '';
+    const badge = steps >= 7 ? `<span class="badge">${mercuryPlanetSvg()}</span>` : '';
     const ship = shipFor(child.id);
     // most ship artwork is landscape, but a couple (the rockets) are tall/narrow — scaled to the
     // same WIDTH as the others they'd end up almost twice as tall, blowing out the row spacing
@@ -334,5 +373,6 @@ async function renderMercuryBoard(){
     const icon = ship ? `<img class="ship-icon" src="${ship}" style="max-width:${widthPx}px; max-height:${maxHeightPx}px; width:auto; height:auto;">` : avatarHtml(child);
     return `<div style="position:relative; width:${widthPx}px; display:flex; justify-content:center;">${icon}${badge}</div><div class="lbl">${displayName(child)}</div>`;
   }, markerWidthPx);
+  hideOneMarker(el, opts.hideChildId);
 }
 

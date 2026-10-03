@@ -117,9 +117,17 @@ function disconnectTvRemote(){
   remoteStatus = null;
   const box = document.getElementById('tv-preview-box');
   if(box){ box.hidden = true; box.innerHTML = ''; }
+  const remoteBody = document.getElementById('tv-remote-body');
+  if(remoteBody){ remoteBody.hidden = true; document.getElementById('tv-remote-toggle').setAttribute('aria-expanded', 'false'); }
   const tgl = document.getElementById('tv-preview-toggle');
   if(tgl) tgl.textContent = 'הצגת תצוגה מקדימה חיה';
 }
+// the controls stay folded away until the title is tapped (the one-line status stays visible)
+document.getElementById('tv-remote-toggle').addEventListener('click', e => {
+  const body = document.getElementById('tv-remote-body');
+  body.hidden = !body.hidden;
+  e.currentTarget.setAttribute('aria-expanded', String(!body.hidden));
+});
 document.getElementById('tv-remote-hold').addEventListener('click', e => sendTvCommand(e.currentTarget.dataset.action || 'pause'));
 document.getElementById('tv-remote-prev').addEventListener('click', () => sendTvCommand('prev'));
 document.getElementById('tv-remote-next').addEventListener('click', () => sendTvCommand('next'));

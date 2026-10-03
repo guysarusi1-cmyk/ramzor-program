@@ -41,7 +41,8 @@
   .kid-marker .avatar-initials{ width:45%; aspect-ratio:1/1; font-size:1.7em; border:.25em solid #fff; box-shadow:0 .2em .8em rgba(0,0,0,.4); }
   .kid-marker .ship-icon{ width:100%; height:auto; filter:drop-shadow(0 .2em .6em rgba(0,0,0,.5)); }
   .kid-marker .lbl{ font-size:1.5em; font-weight:700; font-family:'Rubik', sans-serif; color:#fff; margin-top:.2em; background:rgba(0,0,0,.55); padding:.1em .5em; border-radius:.45em; white-space:nowrap; }
-  .kid-marker .badge{ position:absolute; top:-.6em; right:-.6em; font-size:1.8em; }
+  .kid-marker .badge{ position:absolute; top:-.6em; right:-.6em; font-size:1.8em; line-height:1; }
+  .kid-marker .badge .mercury-planet{ width:2.6em; height:2.6em; display:block; }
 
 .avatar-initials{ border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Rubik'; font-weight:800; color:#fff; flex-shrink:0; }
   

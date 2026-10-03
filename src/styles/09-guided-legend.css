@@ -1,0 +1,40 @@
+
+/* ---- protocol legend: all steps as number + action. Side column on wide screens, a sheet on phones ---- */
+  .guided-legend-btn{
+    display:block; margin:-10px auto 14px; background:none; border:1px solid var(--line); border-radius:999px; color:var(--muted);
+    font-family:inherit; font-size:13px; padding:8px 16px; cursor:pointer; min-height:36px;
+  }
+  .guided-legend-btn:hover{ color:var(--text); }
+  .guided-legend-title{ font-size:13px; color:var(--muted); font-weight:700; margin-bottom:10px; }
+  .guided-legend ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+  .guided-legend li button{
+    width:100%; display:flex; align-items:flex-start; gap:10px; text-align:start; background:none; border:0; border-radius:10px;
+    padding:8px 8px; color:var(--muted); font-family:inherit; font-size:13.5px; line-height:1.45; cursor:pointer; min-height:40px;
+  }
+  .guided-legend li button:hover{ background:rgba(255,255,255,.04); }
+  .gl-n{
+    flex-shrink:0; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); font-size:12px; font-weight:700;
+  }
+  .guided-legend li.done button{ color:var(--muted); opacity:.7; }
+  .guided-legend li.done .gl-n{ background:rgba(255,255,255,.08); }
+  .guided-legend li.current button{ background:var(--panel-2); color:var(--text); font-weight:600; }
+  .guided-legend li.current .gl-n{ border-color:var(--proto-color, var(--text)); background:var(--proto-color, var(--text)); color:#12172a; }
+  .guided-legend-close{ display:none; width:100%; margin-top:12px; }
+
+  /* wide screens: the legend sits at the side of the step */
+  @media (min-width:640px){
+    .guided-legend-btn{ display:none; }
+    .guided-layout{ display:grid; grid-template-columns:230px 1fr; gap:22px; align-items:start; }
+    .guided-legend{ border-inline-end:1px solid var(--line); padding-inline-end:16px; }
+  }
+  /* phones: the legend is a sheet that opens on demand */
+  @media (max-width:639px){
+    .guided-legend{
+      display:none; position:fixed; left:0; right:0; bottom:0; z-index:520; max-height:72vh; overflow:auto;
+      background:var(--panel); border-top:1px solid var(--line); border-radius:18px 18px 0 0;
+      padding:18px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -20px 50px rgba(0,0,0,.5);
+    }
+    #staff-screen-guided.legend-open .guided-legend{ display:block; }
+    #staff-screen-guided.legend-open .guided-legend-close{ display:block; }
+  }

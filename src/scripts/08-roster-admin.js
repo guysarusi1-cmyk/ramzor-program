@@ -19,6 +19,29 @@ function shipFor(childId){
   return (key && SHIP_OPTIONS[key]) || CHILD_SHIP[childId] || null;
 }
 
+// The social workers the roster defines (each distinct worker once), and the children each one handles.
+const digitsOnly = s => String(s || '').replace(/[^0-9]/g, '');
+function socialWorkers(){
+  const list = [];
+  roster.forEach(c => {
+    const phone = digitsOnly(c.swPhone);
+    if(c.swName && phone && !list.some(w => w.phone === phone)) list.push({ name: c.swName, phone });
+  });
+  return list;
+}
+// 972500000001 -> 050-0000001, the way it is dialled in Israel
+function formatPhone(phone){
+  const d = digitsOnly(phone);
+  const local = d.startsWith('972') ? '0' + d.slice(3) : d;
+  return local.length > 3 ? local.slice(0, 3) + '-' + local.slice(3) : local;
+}
+async function setChildSocialWorker(childId, worker){
+  const child = roster.find(c => c.id === childId);
+  const { error } = await sb.from('roster').update({ sw_name: worker ? worker.name : '', sw_phone: worker ? worker.phone : '' }).eq('id', childId);
+  if(error){ console.error(error); return false; }
+  child.swName = worker ? worker.name : ''; child.swPhone = worker ? worker.phone : '';
+  return true;
+}
 let shipPickerOpenFor = null;
 function renderManageRoster(){
   const el = document.getElementById('roster-list');
@@ -36,10 +59,22 @@ function renderManageRoster(){
       <div class="roster-row" data-id="${c.id}">
         <button type="button" class="roster-ship" data-ship-for="${c.id}" aria-label="בחירת חללית">${ship ? `<img src="${ship}" alt="">` : '🚀'}</button>
         <span class="roster-name">${escapeHtml(displayNameWithAge(c))}</span>
+        <select class="roster-sw" data-sw-for="${c.id}" aria-label="עו״סית של ${escapeHtml(displayName(c))}">
+          <option value="">ללא עו״סית</option>
+          ${socialWorkers().map(w => `<option value="${w.phone}"${digitsOnly(c.swPhone) === w.phone ? ' selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}
+        </select>
         <button type="button" class="rm" data-id="${c.id}" aria-label="מחיקה">✕</button>
       </div>${picker}`;
   }).join('');
 
+  el.querySelectorAll('.roster-sw').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const worker = socialWorkers().find(w => w.phone === sel.value) || null;
+      const ok = await setChildSocialWorker(sel.dataset.swFor, worker);
+      toast(ok ? 'העו״סית עודכנה' : 'השמירה נכשלה — בדקו חיבור ונסו שוב');
+      renderManageRoster();
+    });
+  });
   el.querySelectorAll('.roster-ship').forEach(btn => {
     btn.addEventListener('click', () => {
       shipPickerOpenFor = (shipPickerOpenFor === btn.dataset.shipFor) ? null : btn.dataset.shipFor;

@@ -71,6 +71,32 @@
       showHub();
     });
 
+    // ---- protocol legend (all steps as number + action)
+    await step('legend', async () => {
+      showHub(); $('hub-daily-btn').click();
+      const wide = innerWidth >= 640;
+      for(const [key, total] of [['red', 8], ['orange', 8], ['yellow', 5]]){
+        openGuidedScreen(key);
+        const items = [...document.querySelectorAll('#guided-legend-list li')];
+        check(`${key}: legend lists all ${total} steps`, items.length === total, items.length);
+        check(`${key}: legend shows number + action only`, items.every((li, i) => li.querySelector('.gl-n').textContent === String(i + 1) && li.querySelector('.gl-t').textContent.length > 2) && !/העמקת ההבנה|אני רואה שאתה כועס|אני אתן לך שתי אזהרות/.test($('guided-legend-list').textContent), $('guided-legend-list').textContent.slice(0, 80));
+        check(`${key}: step 1 is marked as current`, items[0].classList.contains('current') && items.filter(li => li.classList.contains('current')).length === 1, 'wrong current');
+        check(`${key}: ${wide ? 'legend is visible at the side' : 'legend button is shown, legend hidden until opened'}`, wide ? (visible($('guided-legend')) && !visible($('guided-legend-btn'))) : (visible($('guided-legend-btn')) && !visible($('guided-legend'))), 'visibility wrong');
+        if(!wide){
+          $('guided-legend-btn').click();
+          check(`${key}: legend sheet opens on a phone`, visible($('guided-legend')), 'not opened');
+        }
+        document.querySelectorAll('#guided-legend-list [data-step]')[3].click();
+        check(`${key}: tapping step 4 jumps there`, guidedStep === 3 && document.querySelector('#guided-legend-list li.current .gl-n').textContent === '4' && $('guided-counter').textContent.includes('4'), 'guidedStep=' + guidedStep);
+        check(`${key}: sheet closes after choosing`, wide || !visible($('guided-legend')), 'still open');
+        check(`${key}: earlier steps are marked done`, document.querySelectorAll('#guided-legend-list li.done').length === 3, document.querySelectorAll('#guided-legend-list li.done').length);
+      }
+      // wording the client asked to change in orange step 7
+      openGuidedScreen('orange');
+      while(guidedStep < 6) $('guided-next-btn').click();
+      check('orange step 7 says "ספציפי", not "מסוים"', /ילד ספציפי שנפגע/.test($('guided-step-body').textContent) && !/ילד מסוים/.test($('guided-step-body').textContent), $('guided-step-body').textContent.slice(0, 80));
+      showHub();
+    });
     // ---- daily operations: full traffic light, no child
     await step('daily ops', async () => {
       $('hub-daily-btn').click();
@@ -109,6 +135,24 @@
       document.querySelector('#quick-light-rows [data-quick="green"]').click();
       check('green screen opens', visible($('staff-screen-green')), 'not visible');
       check('green offers a WhatsApp link per social worker', document.querySelectorAll('#green-sw-section a[href^="https://wa.me/"]').length === 2, document.getElementById('green-sw-section').innerHTML.slice(0, 120));
+      // involved children picker + highlighted worker numbers
+      const giBtn = $('green-involved-btn'), giPanel = $('green-involved-panel');
+      check('green: "children involved" list is closed at first', giPanel.hidden && giBtn.textContent.includes('הילדים שהיו מעורבים במקרה'), giBtn.textContent);
+      giBtn.click();
+      check('green: list opens, one row per child, with a note about choosing several', !giPanel.hidden && document.querySelectorAll('#green-involved-list input').length === roster.length && /יותר מילד אחד/.test(giPanel.textContent), giPanel.textContent.slice(0, 60));
+      const sw = phone => document.querySelector(`#green-sw-section .sw-link[data-sw="${phone}"]`);
+      const dana = sw('972500000001'), ronit = sw('972500000002');
+      check('green: each social worker shows her number', /050-0000001/.test(dana.textContent) && /050-0000002/.test(ronit.textContent), dana.textContent + ' | ' + ronit.textContent);
+      check('green: nothing highlighted before choosing', !dana.classList.contains('sw-highlight') && !ronit.classList.contains('sw-highlight'), 'highlighted early');
+      const pick = (id, on) => { const cb = document.querySelector(`#green-involved-list input[value="${id}"]`); cb.checked = on; cb.dispatchEvent(new Event('change')); };
+      pick('c1', true);
+      check('green: a child of the first worker highlights only her', dana.classList.contains('sw-highlight') && !ronit.classList.contains('sw-highlight') && ronit.classList.contains('sw-dim'), dana.className + ' | ' + ronit.className);
+      check('green: highlighted number blinks gently and grows', getComputedStyle(dana).animationName !== 'none' && getComputedStyle(dana).transform !== 'none', getComputedStyle(dana).animationName);
+      check('green: count of chosen children is shown', /נבחרו 1/.test($('green-involved-count').textContent), $('green-involved-count').textContent);
+      pick('c10', true);
+      check('green: children of both workers highlight both', dana.classList.contains('sw-highlight') && ronit.classList.contains('sw-highlight') && !dana.classList.contains('sw-dim') && !ronit.classList.contains('sw-dim'), dana.className + ' | ' + ronit.className);
+      pick('c1', false); pick('c10', false);
+      check('green: clearing the choice clears the highlight', !dana.classList.contains('sw-highlight') && !ronit.classList.contains('sw-highlight') && !dana.classList.contains('sw-dim'), 'still marked');
       document.querySelector('#staff-screen-green .back-btn').click();
       document.querySelector('#quick-light-rows [data-quick="gold"]').click();
       check('gold screen opens with its 3 actions', visible($('staff-screen-gold')) && document.querySelectorAll('#staff-screen-gold .guided-action').length === 3, 'gold screen wrong');
@@ -145,6 +189,30 @@
       const rows = (await sb.from('child_state').select('child_id, moon_steps')).data;
       const expected = journeyBoardsNeeded(rows, roster.map(c => c.id));
       check('rotation flags follow the real data', SLIDES[6].hidden === !expected.moon && SLIDES[7].hidden === !expected.mercury, `hidden6=${SLIDES[6].hidden} hidden7=${SLIDES[7].hidden}`);
+    });
+
+    // ---- the ship's own stunt on the board: out to the front of the screen, then back to its new spot
+    await step('stunt flight', async () => {
+      activateDisplayView(); stopCarousel();
+      await showSlide(7); await sleep(300);
+      const kid = 'c7', now = (await getChildState(kid)).mercurySteps;   // c7 is on step 6 in the test data
+      const run = flyMarkerStunt(kid, $('mercury-board'), renderMercuryBoard, now - 1);
+      await sleep(1700);
+      const flyer = document.querySelector('body > .kid-marker');
+      check('during the show a copy of the ship is on screen', !!flyer, 'no flyer');
+      if(flyer){
+        const r = flyer.getBoundingClientRect();
+        check('the ship is at the front of the screen (big, centred)', Math.abs(r.left + r.width / 2 - innerWidth / 2) < innerWidth * 0.08 && r.width > Math.min(innerWidth, innerHeight) * 0.25, `center ${Math.round(r.left + r.width / 2)}x${Math.round(r.top + r.height / 2)} width ${Math.round(r.width)}`);
+        check('its name stays upright (only the ship turns)', !!flyer.querySelector('.lbl') && flyer.firstElementChild !== flyer.querySelector('.lbl'), 'label missing');
+      }
+      const real = document.querySelector(`#mercury-board .kid-marker[data-child-id="${kid}"]`);
+      check('the real marker waits hidden meanwhile', !!real && real.style.visibility === 'hidden', 'not hidden');
+      await run;
+      check('afterwards the copy is gone', !document.querySelector('body > .kid-marker'), 'copy left behind');
+      const after = document.querySelector(`#mercury-board .kid-marker[data-child-id="${kid}"]`);
+      check('the ship is back on the board, visible', !!after && after.style.visibility !== 'hidden', 'marker hidden/missing');
+      check('all ships are visible again', [...document.querySelectorAll('#mercury-board .kid-marker')].every(m => m.style.visibility !== 'hidden'), 'one is hidden');
+      stopCarousel(); showHub();
     });
 
     // ---- a double tap on a child while giving a star must not give two
@@ -214,6 +282,14 @@
       check('bonus: change reached the database', fromDb[0].text === 'בדיקת עריכה' && fromDb[0].endTime === '11:30', JSON.stringify(fromDb[0]));
       await setMiniList('bonusesDaily', originalDaily); bonusesDaily = originalDaily; renderBonusesDailyList();
 
+      // social worker per child
+      const sel = document.querySelector('.roster-sw[data-sw-for="c1"]');
+      check('management: each child has a social-worker choice', !!sel && sel.value === '972500000001', sel && sel.value);
+      sel.value = '972500000002'; sel.dispatchEvent(new Event('change')); await sleep(900);
+      check('management: changing a child\'s worker is applied and saved', roster.find(c => c.id === 'c1').swName === 'רונית' && ((await getRoster()).find(c => c.id === 'c1').swPhone === '972500000002'), JSON.stringify(roster.find(c => c.id === 'c1')));
+      document.querySelector('.roster-sw[data-sw-for="c1"]').value = '972500000001'; document.querySelector('.roster-sw[data-sw-for="c1"]').dispatchEvent(new Event('change')); await sleep(900);
+      check('management: worker choice can be set back', roster.find(c => c.id === 'c1').swName === 'דנה', 'not restored');
+
       // ship picker
       const target = roster[1].id, defaultShip = shipFor(target);
       document.querySelector(`.roster-ship[data-ship-for="${target}"]`).click();
@@ -275,7 +351,11 @@
 
       // staff side: the card on the kids-screen control area
       $('hub-kids-btn').click(); await sleep(300);
-      check('control area shows the "המסך בחדר" card', visible($('tv-remote-card')), 'card hidden');
+      check('control area shows the TV card, titled "מה המסך מציג כרגע?"', visible($('tv-remote-card')) && $('tv-remote-toggle').textContent.includes('מה המסך מציג כרגע?'), 'card/title wrong');
+      check('TV card: controls are folded away until the title is tapped', $('tv-remote-body').hidden && visible($('tv-remote-status')), 'body visible');
+      check('TV card: title and status are centred', getComputedStyle($('tv-remote-toggle')).justifyContent === 'center' && getComputedStyle($('tv-remote-status')).textAlign === 'center', 'not centred');
+      $('tv-remote-toggle').click();
+      check('TV card: tapping the title opens the controls on the same page', !$('tv-remote-body').hidden && visible($('tv-remote-hold')) && $('tv-remote-toggle').getAttribute('aria-expanded') === 'true', 'did not open');
       const boards = [...document.querySelectorAll('#tv-remote-boards [data-slide]')].map(b => b.textContent);
       check('card lists every visible board', boards.length === SLIDES.filter(s => !s.hidden).length, boards.join('|'));
       remoteStatus = { slide: 5, label: SLIDES[5].label, held: true }; renderTvRemote();
@@ -328,7 +408,7 @@
       // a real event through the same handler used for live events (display view must be open)
       activateDisplayView(); stopCarousel();
       celebrateFeedbackEvent({ type: 'star', child_id: kid.id, message: '' });
-      await sleep(400);
+      for(let i = 0; i < 30 && !visible(host); i++) await sleep(100);   // it first reads the child's total from the server
       check('live star event starts a celebration', visible(host), 'not shown');
       await celebrationQueue;
       await sleep(900);

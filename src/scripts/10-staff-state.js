@@ -64,20 +64,47 @@ function openKidsQuickFrom(buttonId, origin){
   kqOrigin = origin;                         // set AFTER the click: the button handlers reset it
 }
 
+// Green: report to the social worker. The instructor first marks which children were involved (any
+// number); the number of each social worker who handles one of them lights up and blinks gently, so the
+// right person is reached for without thinking. Nothing here is saved — it only guides the call.
+let greenInvolved = new Set();
 function openGreenScreen(){
   document.getElementById('green-message').textContent = PROGRAM.green.message;
   document.getElementById('green-response').textContent = PROGRAM.green.response;
+  greenInvolved = new Set();
+  document.getElementById('green-involved-panel').hidden = true;
+  document.getElementById('green-involved-btn').setAttribute('aria-expanded', 'false');
 
-  // no child is chosen here, so offer the WhatsApp report to each social worker that the roster
-  // defines (each distinct worker once) — same wa.me link as before, the instructor picks the right one
-  const workers = [];
-  roster.forEach(c => {
-    const phone = (c.swPhone || '').replace(/[^0-9]/g,'');
-    if(c.swName && phone && !workers.some(w => w.phone === phone)) workers.push({ name:c.swName, phone });
-  });
+  document.getElementById('green-involved-list').innerHTML = roster.map(c => `
+    <label class="gi-row"><input type="checkbox" value="${c.id}"><span class="gi-box" aria-hidden="true"></span><span>${escapeHtml(displayName(c))}</span></label>`).join('')
+    || '<div class="empty">אין ילדים ברשימה</div>';
+  document.querySelectorAll('#green-involved-list input').forEach(cb => cb.addEventListener('change', () => {
+    if(cb.checked) greenInvolved.add(cb.value); else greenInvolved.delete(cb.value);
+    updateGreenSocialWorkers();
+  }));
+
+  // the social workers the roster defines (each once) — same wa.me link as before
+  const workers = socialWorkers();
   const swEl = document.getElementById('green-sw-section');
   swEl.innerHTML = workers.length
-    ? workers.map(w => `<a href="https://wa.me/${w.phone}" target="_blank" rel="noopener" class="guided-secondary" style="margin-bottom:10px;">דיווח לעו״סית ${w.name} בוואטסאפ</a>`).join('')
+    ? workers.map(w => `<a href="https://wa.me/${w.phone}" target="_blank" rel="noopener" class="guided-secondary sw-link" data-sw="${w.phone}">
+        <span class="sw-name">דיווח לעו״סית ${escapeHtml(w.name)} בוואטסאפ</span><span class="sw-phone" dir="ltr">${formatPhone(w.phone)}</span></a>`).join('')
     : `<div class="guided-step-note">לא הוגדרו עו״סיות — ניתן להוסיף שם וטלפון במסך הניהול.</div>`;
+  updateGreenSocialWorkers();
   showStaffScreen('green');
 }
+function updateGreenSocialWorkers(){
+  const count = greenInvolved.size;
+  document.getElementById('green-involved-count').textContent = count ? `נבחרו ${count}` : '';
+  // which workers handle the chosen children (one child -> one worker; children of both -> both)
+  const relevant = new Set(roster.filter(c => greenInvolved.has(c.id)).map(c => digitsOnly(c.swPhone)).filter(Boolean));
+  document.querySelectorAll('#green-sw-section .sw-link').forEach(a => {
+    a.classList.toggle('sw-highlight', relevant.has(a.dataset.sw));
+    a.classList.toggle('sw-dim', relevant.size > 0 && !relevant.has(a.dataset.sw));
+  });
+}
+document.getElementById('green-involved-btn').addEventListener('click', () => {
+  const panel = document.getElementById('green-involved-panel');
+  panel.hidden = !panel.hidden;
+  document.getElementById('green-involved-btn').setAttribute('aria-expanded', String(!panel.hidden));
+});

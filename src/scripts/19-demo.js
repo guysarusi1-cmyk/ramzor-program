@@ -21,6 +21,14 @@
       else if(/^guided-/.test(what)){ const [, key, n] = what.split('-'); document.getElementById('hub-daily-btn').click(); openGuidedScreen(key); for(let i=1;i<Number(n || 1);i++) document.getElementById('guided-next-btn').click(); }
       return;
     }
+    if(what === 'planet'){   // the Mercury drawing at three sizes, for a visual check
+      document.getElementById('protected-app').style.display = 'none';
+      const box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:900;background:#141a35;display:flex;gap:6vmin;align-items:center;justify-content:center';
+      box.innerHTML = [60, 30, 12].map(s => '<div style="width:' + s + 'vmin;height:' + s + 'vmin">' + mercuryPlanetSvg().replace('class="mercury-planet"', 'style="width:100%;height:100%"') + '</div>').join('');
+      document.body.appendChild(box);
+      return;
+    }
     activateDisplayView(); stopCarousel();
     const kid = roster.find(c => c.id === 'c2') || roster[0];
     if(what === 'star') playCelebration('star', kid, 5);

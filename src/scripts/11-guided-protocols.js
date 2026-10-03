@@ -79,7 +79,7 @@ const ORANGE_STEPS = [
   RED_STEPS[4],
   RED_STEPS[5],
   { name:'תיקון', action:'ביצוע פעולת תיקון במידת הצורך.',
-    notes:['אין בהכרח ילד מסוים שנפגע.', 'למשל: איסוף מזון או חפצים שנזרקו, ארגון המרחב וכדומה.'],
+    notes:['אין בהכרח ילד ספציפי שנפגע.', 'למשל: איסוף מזון או חפצים שנזרקו, ארגון המרחב וכדומה.'],
     cards:[
       { label:'מסר', body:{ quote:'„אז תאמין שאם קלקלת, אתה יכול גם לתקן.”', by:'— אהוד בנאי' } }
     ] },
@@ -173,9 +173,32 @@ function renderGuidedStep(){
   document.getElementById('guided-prev-btn').hidden = (guidedStep === 0);
   document.getElementById('guided-next-btn').hidden = (guidedStep === total - 1);
   document.getElementById('guided-counter').textContent = `שלב ${guidedStep+1} מתוך ${total}`;
+  renderGuidedLegend();
 }
 
+// The legend ("מקרא"): every step of the protocol as number + the action itself (no message / examples),
+// the current one highlighted; tapping a step jumps to it. A side column on wide screens; on a phone it
+// opens from the "כל השלבים" button as a sheet, so it never takes room from the step in front of the child.
+function renderGuidedLegend(){
+  const steps = GUIDED_PROTOCOLS[guidedKey].steps;
+  const list = document.getElementById('guided-legend-list');
+  list.innerHTML = steps.map((s, i) => {
+    const text = s.report ? 'דיווח' : (s.action || s.name).replace(/\.$/, '');
+    const cls = i === guidedStep ? ' class="current" aria-current="step"' : (i < guidedStep ? ' class="done"' : '');
+    return `<li${cls}><button type="button" data-step="${i}"><span class="gl-n">${i + 1}</span><span class="gl-t">${text}</span></button></li>`;
+  }).join('');
+  list.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
+    guidedStep = Number(b.dataset.step);
+    closeGuidedLegend();
+    renderGuidedStep();
+    window.scrollTo({ top: 0 });
+  }));
+}
+function closeGuidedLegend(){ document.getElementById('staff-screen-guided').classList.remove('legend-open'); }
+document.getElementById('guided-legend-btn').addEventListener('click', () => document.getElementById('staff-screen-guided').classList.add('legend-open'));
+document.getElementById('guided-legend-close').addEventListener('click', closeGuidedLegend);
 function openGuidedScreen(key){
+  closeGuidedLegend();
   guidedKey = key;
   guidedStep = 0;
   renderGuidedStep();
@@ -236,7 +259,8 @@ async function logFeedbackEvent(childId, type, message){
 }
 
 async function giveStar(childId){
-  const state = await getChildState(childId);
+  const state = await getChildStateForUpdate(childId);
+  if(!state){ toast('⚠ אין חיבור — הכוכב לא נשמר, נסו שוב'); return false; }
   state.stars = (state.stars || 0) + 1;
   const child = roster.find(c=>c.id===childId);
   if(!(await setChildState(childId, state))){ toast('⚠ הכוכב לא נשמר — בדקו חיבור ונסו שוב'); return false; }
@@ -287,7 +311,8 @@ async function renderMoonPanel(containerId){
     </div>`;
   if(isToday) return;
   document.getElementById('moon-clean').addEventListener('click', async ()=>{
-    const s = await getChildState(selectedStaffChild);
+    const s = await getChildStateForUpdate(selectedStaffChild);
+    if(!s){ toast('⚠ אין חיבור — לא נשמר, נסו שוב'); return; }
     if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(containerId); return; }
     s.moonDayDate = todayStr();
     s.moonDayStatus = 'progressed';
@@ -312,7 +337,8 @@ async function renderMoonPanel(containerId){
     else renderMoonPanel(containerId);
   });
   document.getElementById('moon-curse').addEventListener('click', async ()=>{
-    const s = await getChildState(selectedStaffChild);
+    const s = await getChildStateForUpdate(selectedStaffChild);
+    if(!s){ toast('⚠ אין חיבור — לא נשמר, נסו שוב'); return; }
     if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(containerId); return; }
     s.moonDayDate = todayStr();
     s.moonDayStatus = 'cursed';
@@ -355,7 +381,8 @@ async function renderHelpFriendPrompt(fromChild, milestoneStep, containerId){
     chip.addEventListener('click', async ()=>{
       const targetId = chip.dataset.id;
       const target = roster.find(c=>c.id===targetId);
-      const ts = await getChildState(targetId);
+      const ts = await getChildStateForUpdate(targetId);
+      if(!ts){ toast('⚠ אין חיבור — המתנה לא נשמרה, נסו שוב'); return; }
       let giftMsg, giftType;
       if((ts.moonSteps||0) < 7){
         ts.moonSteps = (ts.moonSteps||0) + 1;

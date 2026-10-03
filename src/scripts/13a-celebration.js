@@ -85,7 +85,7 @@ function celebrationBody(kind, child, now){
     const cls = i <= now - 1 ? 'passed' : (i === now ? 'cel-target' : '');
     nodes += `<span class="cel-node ${cls}" style="left:${(i / CELEBRATION_TRACK_STEPS * 100).toFixed(2)}%;"></span>`;
   }
-  const goal = kind === 'mercury' ? '🪐' : '🌙';
+  const goal = kind === 'mercury' ? mercuryPlanetSvg() : '🌙';
   return `${name}
     <div class="cel-track${kind === 'mercury' ? ' mercury' : ' moon'}" data-from="${now - 1}" data-to="${now}">
       <span class="cel-line"></span>${nodes}

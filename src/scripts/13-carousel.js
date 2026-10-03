@@ -87,6 +87,7 @@ async function showSlide(i){
 let feedbackChannel = null;
 let bonusRevocationChannel = null;
 const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7, bonus:3 };
+const STUNT_BOARD_MS = 9500;   // how long a journey board stays up while the ship does its show
 let interruptTimer = null;
 let preInterruptIndex = null;
 
@@ -103,7 +104,7 @@ function resumeRotation(){
   }, 15000);
 }
 
-async function interruptToSlide(slideIndex, renderFn){
+async function interruptToSlide(slideIndex, renderFn, holdMs){
   if(!document.getElementById('view-display').classList.contains('active')) return;
   if(preInterruptIndex === null) preInterruptIndex = carouselIndex;
   pauseRotation();
@@ -124,48 +125,57 @@ async function interruptToSlide(slideIndex, renderFn){
     preInterruptIndex = null;
     await showSlide(back);
     resumeRotation();
-  }, 6500);
+  }, holdMs || 6500);
 }
 
-function flyShipHero(childId, boardEl, shipSrc){
-  if(!shipSrc) return;
+// The child's own ship (or avatar) does a little show on the journey boards: it leaves its old spot,
+// flies to the front of the screen big, loops and flips, and then flies to its new spot.
+//   renderBoard(opts) draws the board; it understands { stepsOverride, hideChildId } (see 12-display-view.js)
+async function flyMarkerStunt(childId, boardEl, renderBoard, stepsBefore){
+  if(typeof Element.prototype.animate !== 'function'){ await renderBoard({}); return; }     // very old browser: just show the new state
+  await renderBoard({ stepsOverride: { [childId]: stepsBefore } });                          // 1. the board as it was a moment ago
   const marker = boardEl.querySelector(`.kid-marker[data-child-id="${childId}"]`);
-  if(!marker) return;
-  const boardRect = boardEl.getBoundingClientRect();
-  const leftPct = parseFloat(marker.style.left);
-  const topPct = parseFloat(marker.style.top);
-  const targetX = boardRect.left + (leftPct/100) * boardRect.width;
-  const targetY = boardRect.top + (topPct/100) * boardRect.height;
-  // match the real marker's actual current width (it carries its own px size, which may be
-  // scaled down from the usual 10% if its cluster is crowded — see placeCluster) so the hero
-  // doesn't visibly change size the instant it lands.
-  const targetSize = parseFloat(marker.style.width) || boardRect.width * 0.10;
-
-  const flyer = document.createElement('img');
-  flyer.src = shipSrc;
-  Object.assign(flyer.style, {
-    position:'fixed', zIndex:200, pointerEvents:'none',
-    filter:'drop-shadow(0 8px 24px rgba(0,0,0,.6))',
-    transition:'left 1.6s cubic-bezier(.22,.9,.3,1), top 1.6s cubic-bezier(.22,.9,.3,1), width 1.6s cubic-bezier(.22,.9,.3,1), opacity .5s ease .9s',
-  });
-  const startSize = Math.min(window.innerWidth, window.innerHeight) * 0.45;
-  flyer.style.width = startSize + 'px';
-  flyer.style.left = (window.innerWidth/2 - startSize/2) + 'px';
-  flyer.style.top = (window.innerHeight/2 - startSize/2) + 'px';
-  flyer.style.opacity = '1';
+  if(!marker){ await renderBoard({}); return; }
+  const centerOf = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; };
+  const from = centerOf(marker);
+  const flyer = marker.cloneNode(true);                                                      // 2. a copy that can leave the board
+  Object.assign(flyer.style, { position:'fixed', left: from.x + 'px', top: from.y + 'px', width: marker.getBoundingClientRect().width + 'px',
+    margin:'0', zIndex:'250', pointerEvents:'none', transition:'none', fontSize: boardEl.style.fontSize, visibility:'visible' });
   document.body.appendChild(flyer);
+  marker.style.visibility = 'hidden';
+  const body = flyer.firstElementChild;                                                      // the ship/avatar part (the name stays upright)
+  const frontScale = Math.max(2, (Math.min(innerWidth, innerHeight) * 0.42) / Math.max(from.w, 40));
+  const at = (dx, dy, s) => `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(${s})`;
+  const toFront = { dx: innerWidth / 2 - from.x, dy: innerHeight / 2 - from.y };
 
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      flyer.style.left = (targetX - targetSize/2) + 'px';
-      flyer.style.top = (targetY - targetSize/2) + 'px';
-      flyer.style.width = targetSize + 'px';
-      flyer.style.opacity = '0';
-    });
-  });
-  setTimeout(()=> flyer.remove(), 1700);
+  // 3. out to the front of the screen
+  await flyer.animate([{ transform: at(0, 0, 1) }, { transform: at(toFront.dx, toFront.dy, frontScale * 1.1), offset: .75 }, { transform: at(toFront.dx, toFront.dy, frontScale) }],
+    { duration: 1000, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).finished;
+  flyer.style.transform = at(toFront.dx, toFront.dy, frontScale);
+
+  // 4. the stunt (a loop, then a flip) — while the board quietly updates underneath
+  const stunt = body.animate([
+    { transform: 'perspective(900px) rotate(0deg) rotateY(0deg) scale(1)' },
+    { transform: 'perspective(900px) rotate(-360deg) rotateY(0deg) scale(1.18)', offset: .5 },
+    { transform: 'perspective(900px) rotate(-360deg) rotateY(360deg) scale(1)' }
+  ], { duration: 1700, easing: 'ease-in-out' });
+  const updated = renderBoard({ hideChildId: childId });
+  await Promise.all([stunt.finished, updated]);
+
+  // 5. back to the new spot
+  const newMarker = boardEl.querySelector(`.kid-marker[data-child-id="${childId}"]`);
+  if(newMarker){
+    const to = centerOf(newMarker);
+    await flyer.animate([
+      { transform: at(toFront.dx, toFront.dy, frontScale) },
+      { transform: at(to.x - from.x, to.y - from.y, 1.12), offset: .85 },
+      { transform: at(to.x - from.x, to.y - from.y, 1) }
+    ], { duration: 1200, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' }).finished;
+    newMarker.style.visibility = '';
+  }
+  flyer.remove();
+  hideOneMarker(boardEl, null);
 }
-
 // star / moon / mercury event: first the full-screen moment about that child, then the board it belongs
 // to (where, for the ship journeys, the ship flies from the middle of the screen to its new spot)
 function celebrateFeedbackEvent(ev){
@@ -178,17 +188,10 @@ function celebrateFeedbackEvent(ev){
     const now = type === 'star' ? (state.stars || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
     await playCelebration(type, child, now);
     if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
-    else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon, () => renderMoonBoard(childId));
-    else interruptToSlide(EVENT_TYPE_SLIDE.mercury, async () => {
-      // the hero flight is the only motion we want for the ship that just progressed — suppress its
-      // own glide transition so it doesn't ALSO slide from its old spot underneath the flying copy
-      const movingMarker = document.querySelector(`#mercury-board .kid-marker[data-child-id="${childId}"]`);
-      if(movingMarker) movingMarker.style.transition = 'none';
-      await renderMercuryBoard();
-      flyShipHero(childId, document.getElementById('mercury-board'), shipFor(childId));
-      if(movingMarker) requestAnimationFrame(()=>requestAnimationFrame(()=>{ movingMarker.style.transition = ''; }));
-    });
-  });
+    else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,
+      () => flyMarkerStunt(childId, document.getElementById('moon-board'), o => renderMoonBoard(Object.assign({ justArrivedChildId: childId }, o)), now - 1), STUNT_BOARD_MS);
+    else interruptToSlide(EVENT_TYPE_SLIDE.mercury,
+      () => flyMarkerStunt(childId, document.getElementById('mercury-board'), renderMercuryBoard, now - 1), STUNT_BOARD_MS);  });
 }
 function startFeedbackListener(){
   if(feedbackChannel) return;
