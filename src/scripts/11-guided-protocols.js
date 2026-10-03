@@ -343,7 +343,7 @@ async function renderMoonPanel(containerId){
     s.moonDayDate = todayStr();
     s.moonDayStatus = 'cursed';
     if(!(await setChildState(selectedStaffChild, s))){ toast('⚠ הרישום לא נשמר — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
-    toast(`נרשם: ${displayName(child)} לא מתקדם/ת היום. יש לעדכן את גיא.`);
+    toast(`נרשם: ${displayName(child)} לא מתקדם/ת היום.`);
     renderMoonPanel(containerId);
   });
 }
