@@ -39,7 +39,7 @@ function renderQuickLightRows(){
           <span class="col-label">מהות</span>
           ${p.title}
         </span>
-        <span class="bulb ${color}"></span>
+        <span class="bulb ${color}">${p.label}</span>
         <span class="qcol qresp">
           <span class="col-label">תגובה</span>
           ${p.response}

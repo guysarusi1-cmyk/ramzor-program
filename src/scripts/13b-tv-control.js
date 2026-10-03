@@ -89,7 +89,7 @@ function renderTvRemote(){
     statusEl.textContent = 'המסך בחדר לא עונה — ייתכן שהוא כבוי או לא פתוח על התצוגה.';
     statusEl.className = 'tv-remote-status off';
   } else {
-    statusEl.textContent = `המסך מציג: ${remoteStatus.label} · ${remoteStatus.held ? 'מוחזק על הלוח הזה' : 'מתחלף אוטומטית'}`;
+    statusEl.textContent = `${remoteStatus.label} · ${remoteStatus.held ? 'מוחזק על הלוח הזה' : 'מתחלף אוטומטית'}`;
     statusEl.className = 'tv-remote-status on';
   }
   boardsEl.innerHTML = visibleSlideIds().map(id => `<button type="button" class="btn ghost tv-remote-board${remoteStatus && remoteStatus !== 'none' && remoteStatus.slide === id ? ' current' : ''}" data-slide="${id}">${escapeHtml(SLIDES[id].label)}</button>`).join('');

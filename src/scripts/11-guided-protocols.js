@@ -135,7 +135,7 @@ function renderGuidedStep(){
       const child = roster.find(c=>c.id===selectedStaffChild);
       // with no child chosen we can't know the age, so the reminder is always shown
       const age = child ? parseFloat(child.age) : NaN;
-      if(!child || (!isNaN(age) && age < 5)) html += `<div class="age-warning guided-under5">⚠️ אסור להכניס ילד מתחת לגיל 5 לחדר הרוגע לבד!</div>`;
+      if(!child || (!isNaN(age) && age < 5)) html += `<div class="age-warning guided-under5">אסור להכניס ילד מתחת לגיל 5 לחדר הרוגע לבד.</div>`;
     }
     if(step.revoke) html += `<button type="button" class="guided-report" id="guided-revoke-btn">גריעת בונוס</button>`;
     if(step.cards.length){

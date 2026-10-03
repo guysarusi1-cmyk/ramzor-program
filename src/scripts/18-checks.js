@@ -105,6 +105,10 @@
       check('lights are in order gold, red, orange, yellow, green', rows.join() === 'gold,red,orange,yellow,green', rows.join());
       check('no child list on this screen', !document.querySelector('#staff-screen-pick .child-chip, #staff-screen-pick #staff-child-list'), 'a child list is there');
 
+      const bulbNames = [...document.querySelectorAll('#quick-light-rows .bulb')].map(b => b.textContent.trim());
+      check('daily ops: each light carries its colour name', bulbNames.join() === ['gold','red','orange','yellow','green'].map(c => PROGRAM[c].label).join(), bulbNames.join());
+      check('daily ops: title and subtitle above the lights are centred', getComputedStyle(document.querySelector('#staff-screen-pick h2')).textAlign === 'center' && getComputedStyle(document.querySelector('#staff-screen-pick .note')).textAlign === 'center', 'not centred');
+      check('kids control: the bonus button has the candy', /🍬 גריעת בונוס/.test($('kq-revoke-bonus-btn').textContent), $('kq-revoke-bonus-btn').textContent);
       for(const [color, total] of [['red', 8], ['orange', 8], ['yellow', 5]]){
         document.querySelector(`#quick-light-rows [data-quick="${color}"]`).click();
         check(`${color}: guided screen opens`, visible($('staff-screen-guided')), 'not visible');
@@ -128,9 +132,14 @@
       }
       // red step with the under-5 warning
       openGuidedScreen('red');
-      let sawWarning = false;
-      for(let i=0;i<8;i++){ if(document.querySelector('.guided-under5')) sawWarning = true; if(!$('guided-next-btn').hidden) $('guided-next-btn').click(); }
+      let sawWarning = false, warnLook = null;
+      for(let i=0;i<8;i++){
+        const w = document.querySelector('.guided-under5');
+        if(w){ sawWarning = true; const cs = getComputedStyle(w); warnLook = { fs: parseFloat(cs.fontSize), glow: cs.boxShadow, text: w.textContent }; }
+        if(!$('guided-next-btn').hidden) $('guided-next-btn').click();
+      }
       check('red: under-5 warning shows when no child is chosen', sawWarning, 'never shown');
+      check('under-5 reminder is small and quiet (no glow, no alarm emoji)', !!warnLook && warnLook.fs <= 14 && warnLook.glow === 'none' && !/⚠/.test(warnLook.text), JSON.stringify(warnLook));
 
       document.querySelector('#quick-light-rows [data-quick="green"]').click();
       check('green screen opens', visible($('staff-screen-green')), 'not visible');
@@ -365,7 +374,7 @@
       const boards = [...document.querySelectorAll('#tv-remote-boards [data-slide]')].map(b => b.textContent);
       check('card lists every visible board', boards.length === SLIDES.filter(s => !s.hidden).length, boards.join('|'));
       remoteStatus = { slide: 5, label: SLIDES[5].label, held: true }; renderTvRemote();
-      check('card shows what the TV shows and offers to continue', $('tv-remote-status').textContent.includes(SLIDES[5].label) && /המשך/.test($('tv-remote-hold').textContent), $('tv-remote-status').textContent);
+      check('card shows just what the TV shows (no "מציג" prefix) and offers to continue', $('tv-remote-status').textContent.includes(SLIDES[5].label) && !/המסך מציג/.test($('tv-remote-status').textContent) && /המשך/.test($('tv-remote-hold').textContent), $('tv-remote-status').textContent);
       remoteStatus = null; tvRemoteGiveUp();   // what happens when no TV answers within a few seconds
       check('with no TV answering, the card says so', /לא עונה/.test($('tv-remote-status').textContent), $('tv-remote-status').textContent);
       $('tv-preview-toggle').click();
