@@ -176,6 +176,12 @@
       check('star can be set back (cleanup)', ((await getChildState(id)).stars || 0) === before, 'not restored');
     });
 
+    // ---- ships chosen by the client for two children
+    await step('assigned ships', async () => {
+      check('child 1 has the teal UFO and child 3 the sky-blue UFO', shipFor('c1') === SHIP_ufo_green && shipFor('c3') === SHIP_ufo_sky, 'wrong ships');
+      check('the sky-blue UFO can be picked for any child', SHIP_OPTIONS.ufo_sky === SHIP_ufo_sky && SHIP_ufo_sky.startsWith('data:image/svg+xml'), 'not offered');
+    });
+
     // ---- journey boards are in the rotation only when a child is on that journey
     await step('journey boards', async () => {
       const ids = ['a', 'b', 'c'];

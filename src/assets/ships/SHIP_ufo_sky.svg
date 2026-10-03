@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 165" width="220" height="165">
+  <defs>
+    <linearGradient id="dome" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6eff1"/><stop offset=".6" stop-color="#c9dadf"/><stop offset="1" stop-color="#aec4cb"/></linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9bec7"/><stop offset=".55" stop-color="#8ca5b2"/><stop offset="1" stop-color="#6d8695"/></linearGradient>
+    <radialGradient id="rose" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".7" stop-color="#f1c453"/><stop offset="1" stop-color="#d49a2a"/></radialGradient>
+  </defs>
+  <!-- legs -->
+  <g stroke="#3f4350" stroke-width="2.6" stroke-linecap="round" fill="none">
+    <path d="M82 106 L62 134"/><path d="M118 112 L122 138"/><path d="M150 106 L176 130"/>
+  </g>
+  <g fill="#2f3340"><circle cx="60" cy="137" r="4.2"/><circle cx="122" cy="141" r="4.2"/><circle cx="178" cy="133" r="4.2"/></g>
+  <!-- dome -->
+  <path d="M58 66 C58 30 86 12 112 12 C138 12 166 30 166 66 Z" fill="url(#dome)"/>
+  <path d="M70 58 C72 38 88 24 104 21" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="5" stroke-linecap="round"/>
+  <!-- saucer -->
+  <path d="M6 84 C28 66 70 60 112 60 C154 60 196 66 216 84 C196 106 152 114 112 114 C70 114 28 106 6 84 Z" fill="url(#body)"/>
+  <path d="M10 82 C32 68 72 63 112 63 C152 63 192 68 212 82" fill="none" stroke="#c4d5dc" stroke-width="2.5" stroke-linecap="round"/>
+  <g fill="#4c698a" stroke="#3b526e" stroke-width="1.2"><circle cx="56" cy="90" r="6.5"/><circle cx="98" cy="95" r="6.5"/><circle cx="138" cy="95" r="6.5"/><circle cx="178" cy="89" r="6.5"/></g>
+  <g fill="#ffffff" fill-opacity=".35"><circle cx="54" cy="88" r="2"/><circle cx="96" cy="93" r="2"/><circle cx="136" cy="93" r="2"/><circle cx="176" cy="87" r="2"/></g>
+  <!-- "moon keeper" rosette -->
+  <g transform="translate(164 101)">
+    <path d="M-9 12 L-17 33 L-8 28 L-3 36 L2 14 Z" fill="#e0a93a"/><path d="M9 12 L17 33 L8 28 L3 36 L-2 14 Z" fill="#c98f26"/>
+    <circle r="21" fill="url(#rose)" stroke="#c98f26" stroke-width="2" stroke-dasharray="3 2.2"/>
+    <circle r="16" fill="#fff4cf" stroke="#d49a2a" stroke-width="1.2"/>
+    <text x="0" y="-1.5" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#7a4a10">שומר</text>
+    <text x="0" y="9" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#7a4a10">הירח</text>
+  </g>
+</svg>

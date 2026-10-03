@@ -21,6 +21,14 @@
       else if(/^guided-/.test(what)){ const [, key, n] = what.split('-'); document.getElementById('hub-daily-btn').click(); openGuidedScreen(key); for(let i=1;i<Number(n || 1);i++) document.getElementById('guided-next-btn').click(); }
       return;
     }
+    if(what === 'ships'){   // every ship, for a visual check
+      document.getElementById('protected-app').style.display = 'none';
+      const box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:900;background:#141a35;display:flex;flex-wrap:wrap;gap:3vmin;align-items:center;justify-content:center;padding:4vmin';
+      box.innerHTML = Object.values(SHIP_OPTIONS).map(s => '<img src="' + s + '" style="width:26vmin">').join('');
+      document.body.appendChild(box);
+      return;
+    }
     if(what === 'planet'){   // the Mercury drawing at three sizes, for a visual check
       document.getElementById('protected-app').style.display = 'none';
       const box = document.createElement('div');

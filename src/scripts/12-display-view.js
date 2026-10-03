@@ -35,15 +35,18 @@ const SHIP_amit = '@asset(ships/SHIP_amit.png)';
 const SHIP_rocket_pink = '@asset(ships/SHIP_rocket_pink.png)';
 const SHIP_rocket_bluegray = '@asset(ships/SHIP_rocket_bluegray.png)';
 const SHIP_ufo_pinkwhite = '@asset(ships/SHIP_ufo_pinkwhite.png)';
+const SHIP_ufo_sky = '@asset(ships/SHIP_ufo_sky.svg)';
 
 // every ship a child can be given in the management screen (key -> picture)
 const SHIP_OPTIONS = {
   ufo_watercolor: SHIP_ufo_watercolor, ufo_purple: SHIP_ufo_purple, ufo_green: SHIP_ufo_green,
   ufo_pinkwhite: SHIP_ufo_pinkwhite, rocket_redcream: SHIP_rocket_redcream, rocket_pink: SHIP_rocket_pink,
-  rocket_bluegray: SHIP_rocket_bluegray, mia: SHIP_mia, amit: SHIP_amit
+  rocket_bluegray: SHIP_rocket_bluegray, mia: SHIP_mia, amit: SHIP_amit, ufo_sky: SHIP_ufo_sky
 };
 // default ships (the ones children had before ships became selectable)
 const CHILD_SHIP = {
+  c1: SHIP_ufo_green,        // (set 2026-10-03 at the client's request)
+  c3: SHIP_ufo_sky,
   c2: SHIP_rocket_bluegray,
   c4: SHIP_ufo_watercolor,
   c5: SHIP_amit,
