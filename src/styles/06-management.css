@@ -91,3 +91,33 @@
   #diag-sound-btn{ margin-top:3vmin; font-size:3vmin; padding:1.6vmin 4vmin; }
   .diag-spin{ width:8vmin; height:8vmin; margin:3vmin 0; border-radius:1.4vmin; background:var(--gold); animation:diag-rot 2.4s linear infinite; }
   @keyframes diag-rot{ to{ transform:rotate(360deg); } }
+/* ---- messages that can be undone, confirmation sheets ---- */
+  .toast{ z-index:700; }
+  @media (max-width:700px){ .toast{ bottom:92px; } }            /* above the bottom bar, not on top of it */
+  .toast-undo{ display:flex; align-items:center; gap:14px; padding:8px 8px 8px 16px; }
+  .toast-undo-btn{
+    flex-shrink:0; min-height:44px; min-width:76px; padding:0 14px; border-radius:10px; cursor:pointer;
+    background:var(--text); color:#12172a; border:0; font-family:'Rubik', sans-serif; font-weight:800; font-size:14px;
+  }
+  .toast-undo-btn:disabled{ opacity:.6; }
+  .confirm-sheet{ align-items:center; z-index:650; }
+  .confirm-sheet .sheet-card{ border-radius:18px; margin:0 16px; }
+  .confirm-text{ margin:0 0 14px; color:var(--text); font-size:15px; line-height:1.6; }
+  .confirm-input{
+    width:100%; min-height:48px; box-sizing:border-box; padding:10px 12px; margin-bottom:14px; background:var(--panel-2); color:var(--text);
+    border:1px solid var(--line); border-radius:10px; font-family:'Rubik', sans-serif; font-size:16px; text-align:center;
+  }
+  .confirm-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .confirm-actions .btn{ min-height:50px; }
+  .btn.danger{ background:#b73a30; color:#fff; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+/* ---- moon journey panel: one big everyday action, the serious one small and apart ---- */
+  .moon-main{ display:block; width:100%; min-height:62px; margin-top:16px; font-size:16px; }
+  .moon-alt{ margin-top:38px; padding-top:16px; border-top:1px dashed var(--line); text-align:center; }
+  .moon-curse-btn{
+    min-height:44px; padding:0 18px; background:none; color:var(--muted); border:1px solid var(--line); border-radius:10px;
+    font-family:'Rubik', sans-serif; font-size:13px; cursor:pointer;
+  }
+  .moon-curse-btn:disabled, .moon-main:disabled{ opacity:.45; cursor:not-allowed; }
+  .bonus-chip.revoked{ opacity:.6; }
+  .bonus-chip.revoked span{ text-decoration:line-through; }

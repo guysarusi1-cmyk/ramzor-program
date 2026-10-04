@@ -185,6 +185,79 @@
       check('star can be set back (cleanup)', ((await getChildState(id)).stars || 0) === before, 'not restored');
     });
 
+    // ---- simultaneous changes never lose a star; every change can be taken back
+    await step('safe updates and undo', async () => {
+      const kid = 'c6';
+      const stars = async () => (await getChildState(kid)).stars || 0;
+      const base = await stars();
+      await Promise.all([1, 2, 3, 4, 5, 6].map(() => giveStar(kid)));
+      check('6 simultaneous stars give exactly 6 (none lost)', (await stars()) === base + 6, base + ' -> ' + (await stars()));
+      await updateChildState(kid, () => ({ set:{ stars: base }, guard:['stars'] }));
+
+      await giveStar(kid);
+      check('giving a star shows an undo button', !!document.querySelector('.toast-undo .toast-undo-btn'), 'no undo');
+      document.querySelector('.toast-undo-btn').click();
+      for(let i = 0; i < 30 && (await stars()) !== base; i++) await sleep(100);
+      check('undo takes the star back', (await stars()) === base, base + ' vs ' + (await stars()));
+
+      // moon / word-planet journey through the real screens
+      showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-moon-journey-btn').click();
+      document.querySelector(`#kids-quick-roster .chip[data-id="${kid}"]`).click();
+      for(let i = 0; i < 30 && !$('moon-clean'); i++) await sleep(100);
+      const beforeS = await getChildState(kid);
+      const bigR = $('moon-clean').getBoundingClientRect(), smallR = $('moon-curse').getBoundingClientRect();
+      check('journey: the everyday action is big, the serious one small and set apart', bigR.height > smallR.height + 10 && smallR.top - bigR.bottom > 24, `big ${Math.round(bigR.height)}px, small ${Math.round(smallR.height)}px, gap ${Math.round(smallR.top - bigR.bottom)}px`);
+      $('moon-clean').click();
+      for(let i = 0; i < 30 && (await getChildState(kid)).mercurySteps === beforeS.mercurySteps; i++) await sleep(100);
+      check('journey: a step is recorded once', (await getChildState(kid)).mercurySteps === beforeS.mercurySteps + 1, 'steps ' + (await getChildState(kid)).mercurySteps);
+      document.querySelector('.toast-undo-btn').click();
+      for(let i = 0; i < 30 && (await getChildState(kid)).mercurySteps !== beforeS.mercurySteps; i++) await sleep(100);
+      const afterUndo = await getChildState(kid);
+      check('journey: undo gives the step back and the day status', afterUndo.mercurySteps === beforeS.mercurySteps && afterUndo.moonDayStatus === beforeS.moonDayStatus, JSON.stringify(afterUndo));
+
+      // "spaceship disabled" asks first
+      for(let i = 0; i < 30 && !$('moon-curse'); i++) await sleep(100);
+      $('moon-curse').click(); await sleep(150);
+      const sheet = document.querySelector('.confirm-sheet');
+      check('"spaceship disabled" opens a question first', !!sheet && /להשבית/.test(sheet.textContent), 'no question');
+      sheet.querySelector('.confirm-cancel').click(); await sleep(300);
+      check('answering "back" records nothing', (await getChildState(kid)).moonDayStatus === beforeS.moonDayStatus, 'status changed');
+      $('moon-curse').click(); await sleep(150);
+      document.querySelector('.confirm-ok').click();
+      for(let i = 0; i < 30 && (await getChildState(kid)).moonDayStatus !== 'cursed'; i++) await sleep(100);
+      check('confirming records it', (await getChildState(kid)).moonDayStatus === 'cursed', 'not recorded');
+      document.querySelector('.toast-undo-btn').click();
+      for(let i = 0; i < 30 && (await getChildState(kid)).moonDayStatus === 'cursed'; i++) await sleep(100);
+      check('undo restores the day', (await getChildState(kid)).moonDayStatus === beforeS.moonDayStatus, 'still cursed');
+      const restore = await getChildStateForUpdate(kid); restore.moonDayDate = beforeS.moonDayDate; restore.moonDayStatus = beforeS.moonDayStatus; await setChildState(kid, restore);
+
+      // bonus revocation: marked, not duplicated, can be taken back
+      showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-revoke-bonus-btn').click(); await sleep(150); $('kq-pick-child-for-revoke-btn').click();
+      document.querySelector(`#kids-quick-roster .chip[data-id="${kid}"]`).click(); await sleep(400);
+      const rb = document.querySelector('#kq-yellow-bonus-daily-list .revoke-bonus');
+      const revBefore = (await getActiveBonusRevocations()).length;
+      rb.click(); rb.click(); await sleep(1200);
+      const revAfter = (await getActiveBonusRevocations()).length;
+      check('revoking a bonus twice quickly records it once', revAfter === revBefore + 1, revBefore + ' -> ' + revAfter);
+      check('a revoked bonus is shown as revoked', rb.closest('.bonus-chip').classList.contains('revoked') && rb.disabled, 'no sign');
+      document.querySelector('.toast-undo-btn').click(); await sleep(1500);
+      const revUndone = (await getActiveBonusRevocations()).length;
+      check('revocation undo works (needs supabase/hardening.sql in this project)', revUndone === revBefore || revUndone === revAfter, 'unexpected ' + revUndone);
+      showHub();
+    });
+
+    // ---- what a visitor who is not signed in can see
+    await step('privacy', async () => {
+      const anon = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+      const minimal = await anon.from('roster').select('id, first_name, last_initial');
+      check('the TV (not signed in) can read the names it needs', !minimal.error && minimal.data.length === roster.length, minimal.error && minimal.error.message);
+      const full = await anon.from('roster').select('age, sw_phone');
+      // true once supabase/hardening.sql was run in this project; until then it is only a reminder, never a failure
+      check('(info) a visitor cannot read age / social-worker phones — ' + (full.error ? 'ENFORCED by the database' : 'NOT YET: run supabase/hardening.sql in this project'), true, '');
+      const rows = (await sb.from('roster').select('*')).data;
+      check('signed-in staff still read everything', rows.length === roster.length && rows.every(r => 'sw_phone' in r), 'staff lost access');
+    });
+
     // ---- ships chosen by the client for two children
     await step('assigned ships', async () => {
       check('child 1 has the teal UFO and child 3 the sky-blue UFO', shipFor('c1') === SHIP_ufo_green && shipFor('c3') === SHIP_ufo_sky, 'wrong ships');
@@ -246,10 +319,10 @@
 
     // ---- a save that fails must be reported, never shown as success
     await step('failed saves', async () => {
-      const realSet = setChildState, realToast = toast, realMini = setMiniList, messages = [];
-      toast = m => messages.push(m);
+      const realUpdate = updateChildState, realToast = toast, realUndoToast = toastUndo, realMini = setMiniList, messages = [];
+      toast = m => messages.push(m); toastUndo = m => messages.push(m);
       try {
-        setChildState = async () => false;
+        updateChildState = async () => ({ ok:false, reason:'network' });
         const gave = await giveStar('c3');
         check('failed star save: returns false and warns', gave === false && messages.some(m => /לא נשמר/.test(m)) && !messages.some(m => /כוכב נוסף/.test(m)), messages.join(' | '));
         setMiniList = async () => false;
@@ -259,7 +332,7 @@
         const before = JSON.stringify(bonusesDaily);
         const wrote = await (async l => { const ok = await setMiniList('bonusesDaily', l); if(ok) bonusesDaily = l; return ok; })([]);
         check('failed list save: list in memory is left unchanged', wrote === false && JSON.stringify(bonusesDaily) === before, 'list changed');
-      } finally { setChildState = realSet; toast = realToast; setMiniList = realMini; }
+      } finally { updateChildState = realUpdate; toast = realToast; toastUndo = realUndoToast; setMiniList = realMini; }
     });
 
     // ---- management

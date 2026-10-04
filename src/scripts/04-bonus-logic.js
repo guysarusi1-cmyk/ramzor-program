@@ -26,10 +26,17 @@ async function getActiveBonusRevocations(){
   if(error){ console.error(error); return []; }
   return data;
 }
+// returns the new revocation (so it can be taken back), or null when it was not saved
 async function revokeBonus(childId, bonusId){
-  const { error } = await sb.from('bonus_revocations').insert({ child_id: childId, bonus_id: bonusId });
+  const { data, error } = await sb.from('bonus_revocations').insert({ child_id: childId, bonus_id: bonusId }).select();
+  if(error || !data || !data.length){ console.error(error); return null; }
+  return data[0];
+}
+// undo: the staff took the revocation back (needs the delete permission from supabase\hardening.sql)
+async function undoRevokeBonus(revocationId){
+  const { data, error } = await sb.from('bonus_revocations').delete().eq('id', revocationId).select();
   if(error){ console.error(error); return false; }
-  return true;
+  return !!(data && data.length);
 }
 // groups active revocations by bonus id -> array of "first+last initial" strings, e.g. {bd1:['דכ','יל']}
 function groupRevocationsByBonus(revocations){
@@ -68,6 +75,36 @@ async function getAllChildStates(){
   const byId = {};
   data.forEach(d => { byId[d.child_id] = childStateFromRow(d); });
   return { get: id => byId[id] || emptyChildState() };
+}
+// Changing one child's numbers while several instructors work at the same time (or one taps twice):
+// the new value is written ONLY if the row is still exactly as it was read ("compare and set"), otherwise
+// it is read again and redone — so no star or step is ever lost to a simultaneous change.
+//   compute(before) -> { set:{ stars: 5, ... }, guard:['stars', ...] }   or null to stop (nothing to do)
+//   resolves to { ok:true, before, after } | { ok:false, reason:'network'|'declined'|'busy' }
+const STATE_COLUMNS = { stars:'stars', moonSteps:'moon_steps', moonGifts:'moon_gifts', mercurySteps:'mercury_steps', moonDayDate:'moon_day_date', moonDayStatus:'moon_day_status' };
+async function updateChildState(childId, compute){
+  for(let attempt = 0; attempt < 8; attempt++){
+    const { data: row, error } = await sb.from('child_state').select('*').eq('child_id', childId).maybeSingle();
+    if(error){ console.error(error); return { ok:false, reason:'network' }; }
+    const before = row ? childStateFromRow(row) : emptyChildState();
+    const change = compute(before);
+    if(!change) return { ok:false, reason:'declined', before };
+    const dbSet = {};
+    Object.keys(change.set).forEach(k => { dbSet[STATE_COLUMNS[k]] = change.set[k]; });
+    if(!row){
+      const { data, error: e2 } = await sb.from('child_state').insert(Object.assign({ child_id: childId }, dbSet)).select();
+      if(!e2 && data && data.length) return { ok:true, before, after: childStateFromRow(data[0]) };
+      if(e2 && e2.code !== '23505'){ console.error(e2); return { ok:false, reason:'network' }; }
+      continue;                                   // somebody created the row at the same moment: read again
+    }
+    let q = sb.from('child_state').update(dbSet).eq('child_id', childId);
+    (change.guard || []).forEach(k => { const col = STATE_COLUMNS[k]; q = (row[col] === null || row[col] === undefined) ? q.is(col, null) : q.eq(col, row[col]); });
+    const { data: upd, error: e3 } = await q.select();
+    if(e3){ console.error(e3); return { ok:false, reason:'network' }; }
+    if(upd && upd.length) return { ok:true, before, after: childStateFromRow(upd[0]) };
+    // no row matched: another device changed it in between — read again and redo
+  }
+  return { ok:false, reason:'busy' };
 }
 async function setChildState(id, state){
   const { error } = await sb.from('child_state').upsert({

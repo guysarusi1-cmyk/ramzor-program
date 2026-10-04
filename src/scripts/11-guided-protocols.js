@@ -228,10 +228,18 @@ function renderYellowScreen(ids){
     `).join('');
     el.querySelectorAll('.revoke-bonus').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
-        const bonusId = btn.closest('.bonus-chip').dataset.id;
-        const bonusText = btn.closest('.bonus-chip').querySelector('span').textContent;
-        const ok = await revokeBonus(selectedStaffChild, bonusId);
-        toast(ok ? `✔ נקלט במערכת — נגרע מ${displayName(child)}: ${bonusText}` : `⚠ הגריעה לא נשמרה, נסו שוב`);
+        const chip = btn.closest('.bonus-chip');
+        const bonusId = chip.dataset.id;
+        const bonusText = chip.querySelector('span').textContent;
+        btn.disabled = true;                                   // one tap, one revocation
+        const saved = await revokeBonus(selectedStaffChild, bonusId);
+        if(!saved){ btn.disabled = false; toast('⚠ הגריעה לא נשמרה, נסו שוב'); return; }
+        chip.classList.add('revoked'); btn.textContent = 'נגרע ✓';
+        toastUndo(`✔ נקלט במערכת — נגרע מ${displayName(child)}: ${bonusText}`, async () => {
+          const ok = await undoRevokeBonus(saved.id);
+          if(ok){ chip.classList.remove('revoked'); btn.textContent = 'גריעה'; btn.disabled = false; }
+          return ok;
+        });
       });
     });
   }
@@ -258,14 +266,16 @@ async function logFeedbackEvent(childId, type, message){
   if(error) console.error(error);
 }
 
+// Stars, steps and gifts: written safely even if two instructors act at once (see updateChildState), and
+// every one of them can be taken back for a few seconds from the message that confirms it.
+const decrement = (field) => s => ({ set:{ [field]: Math.max(0, (s[field] || 0) - 1) }, guard:[field] });
+
 async function giveStar(childId){
-  const state = await getChildStateForUpdate(childId);
-  if(!state){ toast('⚠ אין חיבור — הכוכב לא נשמר, נסו שוב'); return false; }
-  state.stars = (state.stars || 0) + 1;
   const child = roster.find(c=>c.id===childId);
-  if(!(await setChildState(childId, state))){ toast('⚠ הכוכב לא נשמר — בדקו חיבור ונסו שוב'); return false; }
-  toast(`⭐ כוכב נוסף ל${displayName(child)} — סה"כ ${state.stars}`);
+  const r = await updateChildState(childId, s => ({ set:{ stars:(s.stars || 0) + 1 }, guard:['stars'] }));
+  if(!r.ok){ toast('⚠ הכוכב לא נשמר — בדקו חיבור ונסו שוב'); return false; }
   logFeedbackEvent(child.id, 'star', `⭐ ${displayName(child)} קיבל/ה כוכב!`);
+  toastUndo(`⭐ כוכב נוסף ל${displayName(child)} — סה"כ ${r.after.stars}`, async () => (await updateChildState(childId, decrement('stars'))).ok);
   return true;
 }
 
@@ -298,65 +308,77 @@ async function renderMoonPanel(containerId){
   } else {
     statusHtml = `<div class="note">היום עדיין לא נרשמה החלטה עבור ${displayName(child)}.</div>`;
   }
-  const disabledAttr = isToday ? 'disabled style="opacity:.5; cursor:not-allowed;"' : '';
+  const disabledAttr = isToday ? 'disabled' : '';
+  // the everyday action is big; the rare, serious one is small and set apart, and asks before it counts
   fb.innerHTML = `
     <div class="protocol prot-gold" style="margin-top:14px;">
       <div class="light-title">${stageTitle} — ${displayName(child)}</div>
       ${statusHtml}
-      <div class="gold-actions" style="margin-top:10px;">
-        <button class="gold-btn" id="moon-clean" ${disabledAttr}>${positiveLabel}</button>
-        <button class="gold-btn" id="moon-curse" ${disabledAttr}>${negativeLabel}</button>
-      </div>
-      <button class="gold-btn" disabled style="margin-top:10px; width:100%; opacity:.45; cursor:not-allowed;">שדרוגים במהלך המסע (בקרוב)</button>
+      <button class="gold-btn moon-main" id="moon-clean" ${disabledAttr}>${positiveLabel}</button>
+      <div class="moon-alt"><button type="button" class="moon-curse-btn" id="moon-curse" ${disabledAttr}>${negativeLabel}</button></div>
     </div>`;
   if(isToday) return;
-  document.getElementById('moon-clean').addEventListener('click', async ()=>{
-    const s = await getChildStateForUpdate(selectedStaffChild);
-    if(!s){ toast('⚠ אין חיבור — לא נשמר, נסו שוב'); return; }
-    if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(containerId); return; }
-    s.moonDayDate = todayStr();
-    s.moonDayStatus = 'progressed';
-    let msg;
-    let eventType = 'moon';
-    let helpMilestone = false;
-    if((s.moonSteps || 0) >= 7){
-      s.mercurySteps = (s.mercurySteps || 0) + 1;
+
+  document.getElementById('moon-clean').addEventListener('click', async (e)=>{
+    e.currentTarget.disabled = true;                         // one tap, one step
+    const field = (state.moonSteps || 0) >= 7 ? 'mercurySteps' : 'moonSteps';
+    const r = await updateChildState(selectedStaffChild, s => {
+      if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()) return null;            // someone already decided for today
+      const f = (s.moonSteps || 0) >= 7 ? 'mercurySteps' : 'moonSteps';
+      return { set:{ moonDayDate: todayStr(), moonDayStatus: 'progressed', [f]: (s[f] || 0) + 1 }, guard:['moonDayDate', 'moonSteps', f] };
+    });
+    if(r.reason === 'declined'){ toast('כבר נרשמה היום החלטה לילד/ה הזה'); renderMoonPanel(containerId); return; }
+    if(!r.ok){ toast('⚠ ההתקדמות לא נשמרה — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
+    const s = r.after, before = r.before;
+    const stage2 = (before.moonSteps || 0) >= 7;
+    const usedField = stage2 ? 'mercurySteps' : 'moonSteps';
+    let msg, eventType, helpMilestone = false;
+    if(stage2){
       eventType = 'mercury';
       msg = `🪐 ${displayName(child)} התקדם/ה צעד לעבר כוכב המילים — סה"כ ${s.mercurySteps}`;
       if(s.mercurySteps === 7) msg = `🪐✨ ${displayName(child)} הגיע/ה לכוכב המילים!`;
       if([2,4,6].includes(s.mercurySteps)) helpMilestone = true;
     } else {
-      s.moonSteps = (s.moonSteps || 0) + 1;
+      eventType = 'moon';
       msg = `🚀 ${displayName(child)} התקדם/ה צעד — סה"כ ${s.moonSteps}`;
       if(s.moonSteps === 7) msg = `🌙 ${displayName(child)} הגיע/ה ל-7 צעדים — מקבל/ת ירח זוהר מעל למיטה! מתחיל/ה עכשיו את המסע לכוכב המילים.`;
     }
-    if(!(await setChildState(selectedStaffChild, s))){ toast('⚠ ההתקדמות לא נשמרה — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
     logFeedbackEvent(child.id, eventType, msg);
-    toast(msg);
+    const childId = selectedStaffChild;
+    toastUndo(msg, async () => (await updateChildState(childId, cur => ({
+      set:{ [usedField]: Math.max(0, (cur[usedField] || 0) - 1), moonDayDate: before.moonDayDate, moonDayStatus: before.moonDayStatus }, guard:[usedField, 'moonDayDate'] }))).ok);
     if(helpMilestone) await renderHelpFriendPrompt(child, s.mercurySteps, containerId);
     else renderMoonPanel(containerId);
   });
+
   document.getElementById('moon-curse').addEventListener('click', async ()=>{
-    const s = await getChildStateForUpdate(selectedStaffChild);
-    if(!s){ toast('⚠ אין חיבור — לא נשמר, נסו שוב'); return; }
-    if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()){ renderMoonPanel(containerId); return; }
-    s.moonDayDate = todayStr();
-    s.moonDayStatus = 'cursed';
-    if(!(await setChildState(selectedStaffChild, s))){ toast('⚠ הרישום לא נשמר — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
-    toast(`נרשם: ${displayName(child)} לא מתקדם/ת היום.`);
+    const sure = await confirmSheet({
+      title: `להשבית את החללית של ${displayName(child)} להיום?`,
+      text: `זו החלטה ליום שלם: ${displayName(child)} לא יתקדם/תתקדם היום. אם נלחץ בטעות — לחצו "חזרה".`,
+      okLabel: 'כן, להשבית להיום', cancelLabel: 'חזרה', danger: true
+    });
+    if(!sure) return;
+    const childId = selectedStaffChild;
+    const r = await updateChildState(childId, s => {
+      if(MOON_DAILY_LIMIT_ENABLED && s.moonDayDate === todayStr()) return null;
+      return { set:{ moonDayDate: todayStr(), moonDayStatus: 'cursed' }, guard:['moonDayDate'] };
+    });
+    if(r.reason === 'declined'){ toast('כבר נרשמה היום החלטה לילד/ה הזה'); renderMoonPanel(containerId); return; }
+    if(!r.ok){ toast('⚠ הרישום לא נשמר — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
+    const before = r.before;
+    toastUndo(`נרשם: ${displayName(child)} לא מתקדם/ת היום.`, async () => (await updateChildState(childId, () => ({ set:{ moonDayDate: before.moonDayDate, moonDayStatus: before.moonDayStatus }, guard:['moonDayDate'] }))).ok);
     renderMoonPanel(containerId);
   });
 }
 
 async function renderHelpFriendPrompt(fromChild, milestoneStep, containerId){
   const fb = document.getElementById(containerId);
-  const eligible = [];
-  for(const c of roster){
-    if(c.id === fromChild.id) continue;
-    const st = await getChildState(c.id);
-    const finished = (st.moonSteps||0) >= 7 && (st.mercurySteps||0) >= 7;
-    if(!finished) eligible.push(c);
-  }
+  const states = await getAllChildStates();
+  const eligible = roster.filter(c => {
+    if(c.id === fromChild.id) return false;
+    const st = states ? states.get(c.id) : emptyChildState();
+    return !((st.moonSteps||0) >= 7 && (st.mercurySteps||0) >= 7);
+  });
   if(!eligible.length){
     fb.innerHTML = `
       <div class="protocol prot-gold" style="margin-top:14px;">
@@ -381,24 +403,21 @@ async function renderHelpFriendPrompt(fromChild, milestoneStep, containerId){
     chip.addEventListener('click', async ()=>{
       const targetId = chip.dataset.id;
       const target = roster.find(c=>c.id===targetId);
-      const ts = await getChildStateForUpdate(targetId);
-      if(!ts){ toast('⚠ אין חיבור — המתנה לא נשמרה, נסו שוב'); return; }
-      let giftMsg, giftType;
-      if((ts.moonSteps||0) < 7){
-        ts.moonSteps = (ts.moonSteps||0) + 1;
-        giftType = 'moon';
-        giftMsg = `🎁 ${displayName(fromChild)} עזר/ה ל${displayName(target)} להתקדם צעד במסע לירח!`;
-      } else {
-        ts.mercurySteps = (ts.mercurySteps||0) + 1;
-        giftType = 'mercury';
-        giftMsg = `🎁 ${displayName(fromChild)} עזר/ה ל${displayName(target)} להתקדם צעד לעבר כוכב המילים!`;
-      }
-      if(!(await setChildState(targetId, ts))){ toast('⚠ המתנה לא נשמרה — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
+      document.querySelectorAll('#help-friend-chips .chip').forEach(c => c.style.pointerEvents = 'none');   // one gift per child
+      const r = await updateChildState(targetId, ts => {
+        const f = (ts.moonSteps || 0) < 7 ? 'moonSteps' : 'mercurySteps';
+        return { set:{ [f]: (ts[f] || 0) + 1 }, guard:[f, 'moonSteps'] };
+      });
+      if(!r.ok){ toast('⚠ המתנה לא נשמרה — בדקו חיבור ונסו שוב'); renderMoonPanel(containerId); return; }
+      const toMoon = (r.before.moonSteps || 0) < 7;
+      const giftType = toMoon ? 'moon' : 'mercury', field = toMoon ? 'moonSteps' : 'mercurySteps';
+      const giftMsg = toMoon
+        ? `🎁 ${displayName(fromChild)} עזר/ה ל${displayName(target)} להתקדם צעד במסע לירח!`
+        : `🎁 ${displayName(fromChild)} עזר/ה ל${displayName(target)} להתקדם צעד לעבר כוכב המילים!`;
       logFeedbackEvent(target.id, giftType, giftMsg);
-      toast(giftMsg);
+      toastUndo(giftMsg, async () => (await updateChildState(targetId, decrement(field))).ok);
       renderMoonPanel(containerId);
     });
   });
   document.getElementById('help-friend-skip').addEventListener('click', ()=>renderMoonPanel(containerId));
 }
-
