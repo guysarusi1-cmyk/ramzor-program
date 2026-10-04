@@ -14,8 +14,9 @@
     const acc = location.search.match(/[?&]a11y=([\w,]+)/);                  // e.g. &a11y=xl,contrast
     if(acc){ a11y = { size: /xl/.test(acc[1]) ? 'xl' : /\bl\b/.test(acc[1]) ? 'l' : 'm', contrast: /contrast/.test(acc[1]), motion: /motion/.test(acc[1]) }; applyA11y(); }
     // staff-side screens (shown instead of the kids' TV)
-    if(what === 'hub' || what === 'daily' || what === 'kids' || what === 'manage' || what === 'green' || what === 'gold' || /^guided-/.test(what)){
-      if(what === 'daily') document.getElementById('hub-daily-btn').click();
+    if(what === 'moon' || what === 'curse' || what === 'hub' || what === 'daily' || what === 'kids' || what === 'manage' || what === 'green' || what === 'gold' || /^guided-/.test(what)){
+      if(what === 'moon' || what === 'curse'){ document.getElementById('hub-kids-btn').click(); await new Promise(r => setTimeout(r, 300)); document.getElementById('kq-moon-journey-btn').click(); document.querySelector('#kids-quick-roster .chip[data-id="c6"]').click(); for(let i=0;i<30 && !document.getElementById('moon-curse');i++) await new Promise(r => setTimeout(r, 150)); if(what === 'curse') document.getElementById('moon-curse').click(); }
+      else if(what === 'daily') document.getElementById('hub-daily-btn').click();
       else if(what === 'kids') document.getElementById('hub-kids-btn').click();
       else if(what === 'manage') document.getElementById('hub-manage-gear').click();
       else if(what === 'green'){ document.getElementById('hub-daily-btn').click(); openLightFlow('green'); }
