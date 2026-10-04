@@ -315,13 +315,14 @@ async function giveStar(childId){
 }
 
 // A brick for the child's wall (the wall project): one at a time, up to WALL_BRICKS; the kids' TV celebrates it.
-async function giveBrick(childId){
+async function giveBrick(childId, strength){
   const child = roster.find(c=>c.id===childId);
   const r = await updateChildState(childId, s => (s.bricks || 0) >= WALL_BRICKS ? null : { set:{ bricks:(s.bricks || 0) + 1 }, guard:['bricks'] });
   if(r.reason === 'declined'){ toast(`הקיר של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
   if(!r.ok){ toast('⚠ הלבנה לא נשמרה — בדקו חיבור ונסו שוב'); return false; }
   const n = r.after.bricks || 0;
-  const msg = n >= WALL_BRICKS ? `🧱🎉 ${displayName(child)} סיים/ה לבנות את הקיר!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`;
+  const why = cleanStrength(strength);                     // the strength the instructor saw (shown on the TV, kept in the log)
+  const msg = (n >= WALL_BRICKS ? `🧱🎉 ${displayName(child)} סיים/ה לבנות את הקיר!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`) + (why ? ` · כוח: ${why}` : '');
   logFeedbackEvent(child.id, 'bricks', msg);
   toast(msg);
   return true;
@@ -344,6 +345,7 @@ async function renderMoonPanel(containerId){
   }
 
   const isToday = MOON_DAILY_LIMIT_ENABLED && state.moonDayDate === todayStr();
+  const criterion = inStage2 ? '<div class="proj-criterion">האם הילד/ה מצא/ה מילים ברגע של קושי?</div>' : '';       // one glance: does this moment fit the journey?
   const stageTitle = inStage2 ? '🪐 המסע לכוכב המילים' : '🚀 תכנית המסע בחלל';
   const positiveLabel = inStage2 ? 'הצליח/ה לבטא במילים (התקדמות)' : 'יום נקי (התקדמות)';
   const negativeLabel = 'חללית מושבתת עקב קללות';
@@ -362,6 +364,7 @@ async function renderMoonPanel(containerId){
     <div class="protocol prot-gold" style="margin-top:14px;">
       <div class="light-title">${stageTitle} — ${displayName(child)}</div>
       ${statusHtml}
+      ${criterion}
       <button class="gold-btn moon-main" id="moon-clean" ${disabledAttr}>${positiveLabel}</button>
       <div class="moon-alt"><button type="button" class="moon-curse-btn" id="moon-curse" ${disabledAttr}>${negativeLabel}</button></div>
     </div>`;

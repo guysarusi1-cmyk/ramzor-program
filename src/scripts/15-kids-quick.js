@@ -4,8 +4,8 @@ let starTapLocked = false;
 
 const KIDS_QUICK_TITLES = {
   star: 'בחרו ילד/ה — הענקת כוכב',
-  moon: 'בחרו ילד/ה — תכנית המסע בחלל',
-  brick: 'בחרו ילד/ה — בניית לבנים',
+  moon: 'בחרו ילד/ה — המסע בחלל',
+  brick: 'בחרו ילד/ה — המקדש שלי',
   yellow: 'בחרו ילד/ה — רמזור צהוב',
 };
 
@@ -38,8 +38,11 @@ function kidsQuickShowChildPicker(mode){
         finally { setTimeout(() => { starTapLocked = false; }, 800); }
       } else if(kidsQuickMode === 'brick'){
         if(starTapLocked) return;                      // one tap, one brick
+        const kid = roster.find(c => c.id === selectedStaffChild);
+        const strength = await askBrickStrength(kid);  // first: which strength did you see? (null = changed their mind)
+        if(strength === null || starTapLocked) return;
         starTapLocked = true;
-        try { await giveBrick(selectedStaffChild); }
+        try { await giveBrick(selectedStaffChild, strength); }
         finally { setTimeout(() => { starTapLocked = false; }, 800); }
       } else if(kidsQuickMode === 'moon'){
         document.getElementById('kids-quick-pick-child').style.display = 'none';

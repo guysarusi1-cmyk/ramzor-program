@@ -8,7 +8,7 @@ const SLIDES = [
   { id:5, label:'לוח הכוכבים', render: renderStarBoard },
   { id:6, label:'לוח המסע בחלל', render: renderMoonBoard, hidden:true },   // shown only while some child is on this journey (see journeyBoardsNeeded)
   { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard },   // shown only while some child is on this journey
-  { id:8, label:'קירות הלבנים', render: renderWallsBoard, hidden:true }       // shown only once somebody has a brick (see refreshJourneyBoards)
+  { id:8, label:'המקדשים שלנו', render: renderWallsBoard, hidden:true }       // shown only once somebody has a brick (see refreshJourneyBoards)
 ];
 let carouselIndex = 3; // start on the first non-hidden slide (bonuses)
 let carouselTimer = null;
@@ -193,7 +193,8 @@ function celebrateFeedbackEvent(ev){
   queueCelebration(async () => {
     const state = await getChildState(childId);
     const now = type === 'star' ? (state.stars || 0) : type === 'bricks' ? (state.bricks || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
-    await playCelebration(type, child, now);
+    const why = type === 'bricks' ? ((ev.message || '').match(/ · כוח: (.+)$/) || [])[1] || '' : '';        // the strength the instructor named
+    await playCelebration(type, child, now, why);
     if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
     else if(type === 'bricks') interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard);
     else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,

@@ -94,6 +94,37 @@
 
   @keyframes wall-done-pop{ from{ opacity:0; transform:translate(-50%, -50%) scale(.4); } to{ opacity:1; transform:translate(-50%, -50%) scale(1); } }
 
+
+  /* telling the two projects apart (gold screen + kids control): a question that decides, one short line under it */
+  .project-choice{ flex-direction:column; gap:3px; height:auto; text-align:center; line-height:1.35; border-inline-start-width:5px; }
+  .project-choice .pc-title{ display:block; font-size:18px; font-weight:800; }
+  .project-choice .pc-q{ display:block; font-size:15px; font-weight:600; color:var(--text); }
+  .project-choice .pc-sub{ display:block; font-size:12.5px; font-weight:400; color:var(--muted); }
+  .project-choice.proj-space{ border-inline-start-color:#6ea8ff; }
+  .project-choice.proj-temple{ border-inline-start-color:#d9b46a; }
+  .project-hint{ margin:10px auto 0; max-width:420px; text-align:center; font-size:12.5px; line-height:1.6; color:var(--muted); }
+  .proj-criterion{ margin:10px 0 4px; padding:8px 12px; border-radius:10px; text-align:center; font-size:14.5px; font-weight:700; color:#bcd6ff; background:rgba(110,168,255,.12); border:1px solid rgba(110,168,255,.3); }
+
+  /* the strength sheet of "המקדש שלי" */
+  .strength-sheet .sheet-card{ max-width:520px; }
+  .strength-chips{ display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+  .strength-chip{
+    flex:1 1 calc(33% - 10px); min-width:96px; min-height:54px; padding:10px 8px; border-radius:14px; cursor:pointer;
+    font-family:inherit; font-size:17px; font-weight:700; color:var(--text); background:var(--panel-2); border:1px solid #d9b46a66;
+  }
+  .strength-chip:hover, .strength-chip:focus-visible{ border-color:#d9b46a; outline:none; background:#d9b46a22; }
+  .strength-other{ display:flex; gap:10px; margin-bottom:10px; }
+  .strength-other[hidden]{ display:none; }
+  .strength-other .confirm-input{ flex:1; margin:0; }
+  .strength-actions{ grid-template-columns:1fr; }
+  /* the strength shown on the wall on the kids' TV */
+  .wall-strength{
+    position:absolute; left:50%; top:2.4%; transform:translateX(-50%); z-index:6; padding:.05em 1em .1em; border-radius:2em; white-space:nowrap;
+    font-family:'Rubik', sans-serif; font-weight:900; font-size:3.4em; line-height:1.2; color:#4a3010;
+    background:linear-gradient(#fbe596, #d4a634); border:.08em solid #8d6618; box-shadow:0 .2em .6em rgba(60,40,5,.5);
+    animation:wall-strength-in .7s 2.4s cubic-bezier(.2,1.5,.4,1) both;
+  }
+  @keyframes wall-strength-in{ from{ opacity:0; transform:translateX(-50%) scale(.5); } to{ opacity:1; transform:translateX(-50%) scale(1); } }
   /* the board with every child's wall */
   .board-walls{
     width:min(96vw, 1900px); height:var(--tv-main-h); box-sizing:border-box; padding:2.2vmin;
@@ -116,4 +147,4 @@
     min-width:5vmin; text-align:center; padding:.2vmin 1.2vmin; border-radius:2vmin;
   }
   .mini-wall-card.done{ box-shadow:0 0 0 .5vmin #f2cf6a, 0 0 3vmin rgba(242,207,106,.8); animation:star-twinkle 3.4s ease-in-out infinite; }
-  @media (prefers-reduced-motion: reduce){ .brick.new, .wall-done, .mini-wall-card.done{ animation:none; } }
+  @media (prefers-reduced-motion: reduce){ .brick.new, .wall-done, .wall-strength, .mini-wall-card.done{ animation:none; } }

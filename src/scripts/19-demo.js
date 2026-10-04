@@ -14,8 +14,10 @@
     const acc = location.search.match(/[?&]a11y=([\w,]+)/);                  // e.g. &a11y=xl,contrast
     if(acc){ a11y = { size: /xl/.test(acc[1]) ? 'xl' : /\bl\b/.test(acc[1]) ? 'l' : 'm', contrast: /contrast/.test(acc[1]), motion: /motion/.test(acc[1]) }; applyA11y(); }
     // staff-side screens (shown instead of the kids' TV)
-    if(what === 'moon' || what === 'curse' || what === 'hub' || what === 'daily' || what === 'kids' || what === 'manage' || what === 'green' || what === 'gold' || /^guided-/.test(what)){
+    if(what === 'moon' || what === 'curse' || what === 'hub' || what === 'daily' || what === 'kids' || what === 'manage' || what === 'green' || what === 'gold' || what === 'strength' || what === 'words' || /^guided-/.test(what)){
       if(what === 'moon' || what === 'curse'){ document.getElementById('hub-kids-btn').click(); await new Promise(r => setTimeout(r, 300)); document.getElementById('kq-moon-journey-btn').click(); document.querySelector('#kids-quick-roster .chip[data-id="c6"]').click(); for(let i=0;i<30 && !document.getElementById('moon-curse');i++) await new Promise(r => setTimeout(r, 150)); if(what === 'curse') document.getElementById('moon-curse').click(); }
+      else if(what === 'strength'){ document.getElementById('hub-kids-btn').click(); await new Promise(r => setTimeout(r, 300)); document.getElementById('kq-brick-btn').click(); document.querySelector('#kids-quick-roster .chip[data-id="c6"]').click(); }
+      else if(what === 'words'){ const real = getChildState; getChildState = async id => Object.assign(await real(id), { moonSteps: 7, mercurySteps: 3 }); document.getElementById('hub-kids-btn').click(); await new Promise(r => setTimeout(r, 300)); document.getElementById('kq-moon-journey-btn').click(); document.querySelector('#kids-quick-roster .chip[data-id="c6"]').click(); }
       else if(what === 'daily') document.getElementById('hub-daily-btn').click();
       else if(what === 'kids') document.getElementById('hub-kids-btn').click();
       else if(what === 'manage') document.getElementById('hub-manage-gear').click();
@@ -46,7 +48,7 @@
     else if(what === 'moon') playCelebration('moon', kid, 3);
     else if(what === 'mercury') playCelebration('mercury', kid, 4);
     else if(what === 'milestone') playCelebration('mercury', kid, 7);
-    else if(what === 'bricks' || what === 'bricks100') playCelebration('bricks', kid, what === 'bricks' ? 37 : 100);
+    else if(what === 'bricks' || what === 'bricks100') playCelebration('bricks', kid, what === 'bricks' ? 37 : 100, what === 'bricks' ? 'אומץ' : '');
     else if(what === 'walls'){   // the board with a small wall for every child, with made-up numbers
       const fake = [12, 100, 37, 64, 5, 88, 23, 51, 0, 76, 41, 9, 99, 30];
       getAllChildStates = async () => ({ get: id => Object.assign(emptyChildState(), { bricks: fake[roster.findIndex(c => c.id === id) % fake.length] }) });

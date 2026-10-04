@@ -794,6 +794,45 @@
       check('the walls board is in the TV rotation, hidden while nobody has a brick', !!SLIDES.find(s => s.id === 8) && EVENT_TYPE_SLIDE.bricks === 8, 'missing');
       check('a brick has no "ביטול" button (the manager fixes mistakes)', !document.querySelector('.toast-undo'), 'undo shown');
 
+      // telling the projects apart: names, the deciding question, the strength question, the Mercury reminder
+      const goldText = $('staff-screen-gold').textContent;
+      check('gold screen: "🚀 המסע בחלל" and "🧱 המקדש שלי" with the deciding question under each', /המסע בחלל/.test(goldText) && /המקדש שלי/.test(goldText) && /תרגל\/ה מיומנות שהוגדרה מראש/.test(goldText) && /זיהית עכשיו כוח/.test(goldText) && /מתלבטים\?/.test(goldText), goldText.replace(/\s+/g, ' ').slice(0, 160));
+      check('the old name "בניית לבנים" is nowhere in the app', !/בניית לבנים/.test((() => { const b = document.body.cloneNode(true); b.querySelectorAll('script, style').forEach(n => n.remove()); return b.textContent; })()) && !SLIDES.some(s => /לבנים/.test(s.label)), 'old name found');
+      const kidT = 'c6';
+      const bricksT = async () => (await getChildState(kidT)).bricks || 0;
+      const baseT = await bricksT();
+      const openTemple = async () => { showHub(); $('hub-kids-btn').click(); await sleep(250); $('kq-brick-btn').click(); document.querySelector(`#kids-quick-roster .chip[data-id="${kidT}"]`).click(); await sleep(250); return document.querySelector('.strength-sheet'); };
+      let sh = await openTemple();
+      check('temple: before a brick the instructor is asked which strength they saw', !!sh && /איזה כוח ראית/.test(sh.textContent) && ['אומץ', 'התמדה', 'גמישות', 'בקשת עזרה', 'סבלנות', 'נדיבות', 'קבלה', 'אחר'].every(n => [...sh.querySelectorAll('.strength-chip')].some(b => b.textContent === n)), sh ? sh.textContent : 'no sheet');
+      check('temple: nothing is added while the question is open', (await bricksT()) === baseT, 'brick added early');
+      sh.querySelector('.strength-cancel').click(); await sleep(300);
+      check('temple: going back adds no brick', !document.querySelector('.strength-sheet') && (await bricksT()) === baseT, 'brick added');
+      sh = await openTemple();
+      check('temple: the free-text box for "אחר" is hidden until "אחר" is pressed', sh.querySelector('.strength-other').hidden === true, 'visible');
+      [...sh.querySelectorAll('.strength-chip')].find(b => b.textContent === 'אומץ').click();
+      for(let i = 0; i < 30 && (await bricksT()) === baseT; i++) await sleep(100);
+      check('temple: choosing a strength gives the brick and names it in the message', (await bricksT()) === baseT + 1 && /כוח: אומץ/.test([...document.querySelectorAll('.toast')].pop().textContent), String(await bricksT()));
+      await sleep(900);
+      sh = await openTemple();
+      sh.querySelector('.strength-other-btn').click();
+      const box = sh.querySelector('.strength-other'); check('temple: "אחר" opens an optional box', !box.hidden, 'still hidden');
+      sh.querySelector('.strength-input').value = 'סקרנות'; sh.querySelector('.strength-ok').click();
+      for(let i = 0; i < 30 && (await bricksT()) === baseT + 1; i++) await sleep(100);
+      check('temple: a free-text strength is named in the message', (await bricksT()) === baseT + 2 && /כוח: סקרנות/.test([...document.querySelectorAll('.toast')].pop().textContent), String(await bricksT()));
+      await updateChildState(kidT, () => ({ set:{ bricks: baseT }, guard:['bricks'] }));
+      await sleep(900);
+      const tvPill = bigWallHtml(kidA, 5, 5, 'אומץ'); const holder = document.createElement('div'); holder.innerHTML = tvPill;
+      check('TV: the named strength is shown on the wall', holder.querySelector('.wall-strength') && holder.querySelector('.wall-strength').textContent === 'אומץ', 'missing');
+
+      // Mercury: a one-line reminder of the criterion (only in the words stage)
+      const before2 = await getChildStateForUpdate(kidT); const keepMoon = before2.moonSteps, keepMerc = before2.mercurySteps;
+      before2.moonSteps = 7; before2.mercurySteps = 2; await setChildState(kidT, before2);
+      showHub(); $('hub-kids-btn').click(); await sleep(250); $('kq-moon-journey-btn').click();
+      document.querySelector(`#kids-quick-roster .chip[data-id="${kidT}"]`).click();
+      for(let i = 0; i < 30 && !$('moon-clean'); i++) await sleep(100);
+      check('Mercury: the screen asks "האם הילד/ה מצא/ה מילים ברגע של קושי?"', !!document.querySelector('.proj-criterion') && /מצא\/ה מילים ברגע של קושי/.test(document.querySelector('.proj-criterion').textContent), 'no reminder');
+      const back2 = await getChildStateForUpdate(kidT); back2.moonSteps = keepMoon; back2.mercurySteps = keepMerc; await setChildState(kidT, back2);
+      showHub();
       // the real thing against the test project (needs the `bricks` column: supabase/roles.sql)
       const kid = 'c6';
       const bricks = async () => (await getChildState(kid)).bricks || 0;
