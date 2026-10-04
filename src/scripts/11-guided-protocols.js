@@ -297,6 +297,10 @@ async function logFeedbackEvent(childId, type, message){
 
 // Stars, steps and gifts: written safely even if two instructors act at once (see updateChildState), and
 // every one of them can be taken back for a few seconds from the message that confirms it.
+// The 'ביטול' button on the star message is switched off for now (it was in the way); set to true to bring it back.
+const STAR_UNDO_ENABLED = false;
+// Same for a step in the space journey (and the gift step for a friend).
+const STEP_UNDO_ENABLED = false;
 const decrement = (field) => s => ({ set:{ [field]: Math.max(0, (s[field] || 0) - 1) }, guard:[field] });
 
 async function giveStar(childId){
@@ -304,7 +308,9 @@ async function giveStar(childId){
   const r = await updateChildState(childId, s => ({ set:{ stars:(s.stars || 0) + 1 }, guard:['stars'] }));
   if(!r.ok){ toast('⚠ הכוכב לא נשמר — בדקו חיבור ונסו שוב'); return false; }
   logFeedbackEvent(child.id, 'star', `⭐ ${displayName(child)} קיבל/ה כוכב!`);
-  toastUndo(`⭐ כוכב נוסף ל${displayName(child)} — סה"כ ${r.after.stars}`, async () => (await updateChildState(childId, decrement('stars'))).ok);
+  const starMsg = `⭐ כוכב נוסף ל${displayName(child)} — סה"כ ${r.after.stars}`;
+  if(STAR_UNDO_ENABLED) toastUndo(starMsg, async () => (await updateChildState(childId, decrement('stars'))).ok);
+  else toast(starMsg);
   return true;
 }
 
@@ -374,8 +380,9 @@ async function renderMoonPanel(containerId){
     }
     logFeedbackEvent(child.id, eventType, msg);
     const childId = selectedStaffChild;
-    toastUndo(msg, async () => (await updateChildState(childId, cur => ({
+    if(STEP_UNDO_ENABLED) toastUndo(msg, async () => (await updateChildState(childId, cur => ({
       set:{ [usedField]: Math.max(0, (cur[usedField] || 0) - 1), moonDayDate: before.moonDayDate, moonDayStatus: before.moonDayStatus }, guard:[usedField, 'moonDayDate'] }))).ok);
+    else toast(msg);
     if(helpMilestone) await renderHelpFriendPrompt(child, s.mercurySteps, containerId);
     else renderMoonPanel(containerId);
   });
@@ -444,7 +451,8 @@ async function renderHelpFriendPrompt(fromChild, milestoneStep, containerId){
         ? `🎁 ${displayName(fromChild)} עזר/ה ל${displayName(target)} להתקדם צעד במסע לירח!`
         : `🎁 ${displayName(fromChild)} עזר/ה ל${displayName(target)} להתקדם צעד לעבר כוכב המילים!`;
       logFeedbackEvent(target.id, giftType, giftMsg);
-      toastUndo(giftMsg, async () => (await updateChildState(targetId, decrement(field))).ok);
+      if(STEP_UNDO_ENABLED) toastUndo(giftMsg, async () => (await updateChildState(targetId, decrement(field))).ok);
+      else toast(giftMsg);
       renderMoonPanel(containerId);
     });
   });

@@ -206,10 +206,9 @@
       await updateChildState(kid, () => ({ set:{ stars: base }, guard:['stars'] }));
 
       await giveStar(kid);
-      check('giving a star shows an undo button', !!document.querySelector('.toast-undo .toast-undo-btn'), 'no undo');
-      document.querySelector('.toast-undo-btn').click();
-      for(let i = 0; i < 30 && (await stars()) !== base; i++) await sleep(100);
-      check('undo takes the star back', (await stars()) === base, base + ' vs ' + (await stars()));
+      check('the star message has no "ביטול" button (switched off for now)', !document.querySelector('.toast-undo') && STAR_UNDO_ENABLED === false && !!document.querySelector('.toast'), 'undo still shown');
+      check('the star itself is recorded', (await stars()) === base + 1, base + ' vs ' + (await stars()));
+      await updateChildState(kid, () => ({ set:{ stars: base }, guard:['stars'] }));
 
       // moon / word-planet journey through the real screens
       showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-moon-journey-btn').click();
@@ -221,10 +220,8 @@
       $('moon-clean').click();
       for(let i = 0; i < 30 && (await getChildState(kid)).mercurySteps === beforeS.mercurySteps; i++) await sleep(100);
       check('journey: a step is recorded once', (await getChildState(kid)).mercurySteps === beforeS.mercurySteps + 1, 'steps ' + (await getChildState(kid)).mercurySteps);
-      document.querySelector('.toast-undo-btn').click();
-      for(let i = 0; i < 30 && (await getChildState(kid)).mercurySteps !== beforeS.mercurySteps; i++) await sleep(100);
-      const afterUndo = await getChildState(kid);
-      check('journey: undo gives the step back and the day status', afterUndo.mercurySteps === beforeS.mercurySteps && afterUndo.moonDayStatus === beforeS.moonDayStatus, JSON.stringify(afterUndo));
+      check('journey: the step message has no "ביטול" button (switched off for now)', !document.querySelector('.toast-undo') && STEP_UNDO_ENABLED === false, 'undo still shown');
+      const keep = await getChildStateForUpdate(kid); keep.mercurySteps = beforeS.mercurySteps; keep.moonDayDate = beforeS.moonDayDate; keep.moonDayStatus = beforeS.moonDayStatus; await setChildState(kid, keep);   // (put the test child back)
 
       // "spaceship disabled" asks first
       for(let i = 0; i < 30 && !$('moon-curse'); i++) await sleep(100);
