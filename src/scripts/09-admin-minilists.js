@@ -5,7 +5,9 @@ async function getMiniList(key){
   return data.items;
 }
 async function setMiniList(key, list){
-  const { error } = await sb.from('mini_lists').upsert({key, items:list});
+  const client = await adminClient();
+  if(!client) return false;                                 // no manager password given
+  const { error } = await client.from('mini_lists').upsert({key, items:list});
   if(error) console.error(error);
   return !error;
 }

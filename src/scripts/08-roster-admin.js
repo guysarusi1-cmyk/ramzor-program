@@ -37,7 +37,8 @@ function formatPhone(phone){
 }
 async function setChildSocialWorker(childId, worker){
   const child = roster.find(c => c.id === childId);
-  const { error } = await sb.from('roster').update({ sw_name: worker ? worker.name : '', sw_phone: worker ? worker.phone : '' }).eq('id', childId);
+  const client = await adminClient(); if(!client) return false;
+  const { error } = await client.from('roster').update({ sw_name: worker ? worker.name : '', sw_phone: worker ? worker.phone : '' }).eq('id', childId);
   if(error){ console.error(error); return false; }
   child.swName = worker ? worker.name : ''; child.swPhone = worker ? worker.phone : '';
   return true;
@@ -96,7 +97,8 @@ function renderManageRoster(){
       const child = roster.find(c => c.id === btn.dataset.id);
       const ok = await confirmSheet({ title:`למחוק את ${child ? displayName(child) : 'הילד/ה'}?`, text:'הפעולה תמחק גם את הנתונים של הילד/ה (כוכבים, התקדמות בירח) ואי אפשר לבטל אותה.', typeWord:'מחיקה', okLabel:'למחוק', danger:true });
       if(!ok) return;
-      const { error } = await sb.from('roster').delete().eq('id', btn.dataset.id);
+      const client = await adminClient(); if(!client){ toast('נדרשת סיסמת מנהל'); return; }
+      const { error } = await client.from('roster').delete().eq('id', btn.dataset.id);
       if(error){ toast('שגיאה במחיקה'); console.error(error); return; }
       roster = roster.filter(c => c.id !== btn.dataset.id);
       renderManageRoster();
@@ -118,7 +120,8 @@ document.getElementById('add-child-btn').addEventListener('click', async ()=>{
   const swPhone = swPhoneInput.value.trim();
   if(!firstName){ toast('כתבו קודם שם פרטי'); nameInput.focus(); return; }
   const newChild = {id: uid(), firstName, lastInitial, age, swName, swPhone};
-  const { error } = await sb.from('roster').insert({
+  const client = await adminClient(); if(!client){ toast('נדרשת סיסמת מנהל'); return; }
+  const { error } = await client.from('roster').insert({
     id:newChild.id, first_name:firstName, last_initial:lastInitial, age, sw_name:swName, sw_phone:swPhone
   });
   if(error){ toast('שגיאה בהוספת ילד/ה'); console.error(error); return; }

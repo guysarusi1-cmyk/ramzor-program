@@ -139,7 +139,9 @@ async function updateChildState(childId, compute){
   return { ok:false, reason:'busy' };
 }
 async function setChildState(id, state){
-  const { error } = await sb.from('child_state').upsert({
+  const client = await adminClient();                      // (used by management: a new child's start, resetting the boards)
+  if(!client) return false;
+  const { error } = await client.from('child_state').upsert({
     child_id:id, stars:state.stars||0, moon_steps:state.moonSteps||0, moon_gifts:state.moonGifts||0,
     mercury_steps:state.mercurySteps||0,
     moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null

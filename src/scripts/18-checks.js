@@ -23,6 +23,15 @@
     s.querySelector('.confirm-ok').click(); await sleep(80); return true;
   }
 
+  // opens management; when the manager login is on, types the manager's TEST password into the question that appears
+  const MANAGER_TEST_PASSWORD = '@config(testManagerPassword)';
+  async function gear(){
+    $('hub-manage-gear').click();
+    if(!MANAGER_LOGIN) return;
+    for(let i = 0; i < 12 && !document.querySelector('.code-input'); i++) await sleep(100);
+    const inp = document.querySelector('.code-input');
+    if(inp){ inp.value = MANAGER_TEST_PASSWORD; document.querySelector('.confirm-ok').click(); }
+  }
   async function step(name, fn){
     try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || e); }
   }
@@ -348,7 +357,7 @@
     // ---- management
     await step('management', async () => {
       showHub();
-      $('hub-manage-gear').click();
+      gear();
       for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
       check('gear opens the management screen', activeView() === 'view-manage', activeView());
       check('management lists all children', document.querySelectorAll('#roster-list > *').length === 14, 'children not listed');
@@ -425,7 +434,7 @@
       activateDisplayView(); stopCarousel(); await showSlide(3); await sleep(500);
       const tiles = [...document.querySelectorAll('#bonuses-slide-content .bonus-board-item')];
       check('every bonus tile on the TV starts with a big picture', tiles.length > 0 && tiles.every(t => t.querySelector('.bb-icon') && parseFloat(getComputedStyle(t.querySelector('.bb-icon')).fontSize) > parseFloat(getComputedStyle(t.querySelector('.bb-text')).fontSize) * 2), 'tiles ' + tiles.length);
-      stopCarousel(); showHub(); $('hub-manage-gear').click();
+      stopCarousel(); showHub(); gear();
       for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
       const original = JSON.parse(JSON.stringify(bonusesDaily));
       const id = bonusesDaily[1].id;
@@ -452,7 +461,7 @@
       openGuidedScreen('yellow'); for(let i = 0; i < 4; i++) $('guided-next-btn').click();
       check('yellow last step: the button no longer repeats the title', $('guided-revoke-btn').textContent.trim() !== document.querySelector('.guided-step-name').textContent.trim(), $('guided-revoke-btn').textContent);
 
-      showHub(); $('hub-manage-gear').click();
+      showHub(); gear();
       for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
       $('add-child-btn').click(); await sleep(150);
       check('adding a child without a name says what is missing', [...document.querySelectorAll('.toast')].some(t => /שם פרטי/.test(t.textContent)), 'silent');
@@ -520,8 +529,54 @@
       showHub();
     });
 
+    // ---- the manager's own login: the database itself refuses management actions from instructors
+    await step('manager login', async () => {
+      if(!MANAGER_LOGIN) return;
+      await sbAdmin.auth.signOut(); managementOpenUntil = 0;
+      showHub(); $('hub-manage-gear').click();
+      for(let i = 0; i < 30 && !document.querySelector('.code-input'); i++) await sleep(100);
+      check('the gear asks for the manager password', !!document.querySelector('.code-input') && activeView() === 'view-hub', 'no question');
+      let inp = document.querySelector('.code-input'); inp.value = 'not-the-password'; document.querySelector('.confirm-ok').click();
+      for(let i = 0; i < 50 && !(document.querySelector('.confirm-text') && /שגויה/.test(document.querySelector('.confirm-text').textContent)); i++) await sleep(100);
+      check('a wrong password is refused and asked again', activeView() === 'view-hub' && /שגויה/.test(document.querySelector('.confirm-text').textContent), activeView());
+      inp = document.querySelector('.code-input'); inp.value = MANAGER_TEST_PASSWORD; document.querySelector('.confirm-ok').click();
+      for(let i = 0; i < 50 && activeView() !== 'view-manage'; i++) await sleep(100);
+      check('the manager password opens management', activeView() === 'view-manage', activeView());
+
+      // an instructor (the ordinary login) is refused by the database
+      const kid = 'c6';
+      const noChild = await sb.from('roster').insert({ id:'zz-nope', first_name:'x', last_initial:'', age:'', sw_name:'', sw_phone:'' });
+      check('database: an instructor cannot add a child', !!noChild.error, 'allowed!');
+      const noList = await sb.from('mini_lists').upsert({ key:'zz-nope', items:[] });
+      check('database: an instructor cannot change the lists', !!noList.error, 'allowed!');
+      const keep = await getChildStateForUpdate(kid);
+      await sbAdmin.from('child_state').update({ stars: 5 }).eq('child_id', kid);
+      const noReset = await sb.from('child_state').update({ stars: 0 }).eq('child_id', kid);
+      check('database: an instructor cannot reset a board', !!noReset.error && (await getChildState(kid)).stars === 5, noReset.error ? 'blocked but stars=' + (await getChildState(kid)).stars : 'allowed!');
+      const plus = await updateChildState(kid, s => ({ set:{ stars: (s.stars || 0) + 1 }, guard:['stars'] }));
+      check('database: an instructor can still give a star', plus.ok && (await getChildState(kid)).stars === 6, JSON.stringify(plus.reason));
+      const back1 = await sb.from('child_state').update({ stars: 5 }).eq('child_id', kid);
+      check('database: an instructor can take back one star', !back1.error, back1.error && back1.error.message);
+      await sbAdmin.from('child_state').update({ stars: keep.stars || 0 }).eq('child_id', kid);
+      check('database: the manager can reset', (await getChildState(kid)).stars === (keep.stars || 0), 'not restored');
+
+      // the manager can do all of it, through the screens
+      $('new-child-name').value = 'בדיקת מנהל'; $('add-child-btn').click();
+      for(let i = 0; i < 30 && !roster.find(c => c.firstName === 'בדיקת מנהל'); i++) await sleep(150);
+      const made = roster.find(c => c.firstName === 'בדיקת מנהל');
+      check('the manager can add a child', !!made, 'not added');
+      if(made){
+        document.querySelector(`.roster-row[data-id="${made.id}"] .rm`).click();
+        await answerSheet('מחיקה');
+        for(let i = 0; i < 30 && roster.find(c => c.id === made.id); i++) await sleep(150);
+        check('the manager can delete a child', !roster.find(c => c.id === made.id), 'still there');
+      }
+      showHub();
+    });
+
     // ---- management code and typed confirmations
     await step('management lock', async () => {
+      if(MANAGER_LOGIN) return;       // (with the manager login on, the manager steps below apply instead)
       showHub(); $('hub-manage-gear').click();
       for(let i = 0; i < 30 && !(activeView() === 'view-manage' && $('mgmt-lock-card').classList.contains('unset')); i++) await sleep(100);
       check('with no code set, management opens (and says a code is missing)', activeView() === 'view-manage' && $('mgmt-lock-card').classList.contains('unset') && /לא הוגדר קוד/.test($('mgmt-lock-status').textContent), activeView());
@@ -552,7 +607,7 @@
 
     // ---- management: bonus editor, ship picker, new child with a starting stage (all undone afterwards)
     await step('management editing', async () => {
-      showHub(); $('hub-manage-gear').click();
+      showHub(); gear();
 
       // bonus editor
       const originalDaily = JSON.parse(JSON.stringify(bonusesDaily));
@@ -611,7 +666,7 @@
           await showSlide(6); await sleep(300);
           const drawn = [...document.querySelectorAll('#moon-board .kid-marker')].map(m => m.dataset.childId);
           check('moon board draws only the child still on the moon journey', drawn.length === 1 && drawn[0] === kid.id, drawn.join());
-          stopCarousel(); showHub(); $('hub-manage-gear').click();
+          stopCarousel(); showHub(); gear();
         }
         document.querySelector(`.roster-row[data-id="${kid.id}"] .rm`).click();
         await answerSheet('מחיקה');

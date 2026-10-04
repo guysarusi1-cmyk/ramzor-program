@@ -9,3 +9,10 @@ const SUPABASE_ANON_KEY = '@config(anonKey)';
 const STAFF_EMAIL = 'staff@merkaz-cherum.local';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// The manager has a login of his own (see supabase/roles.sql). Management screens write through this second
+// connection, which holds the manager's session only in memory for a few minutes — instructors can never
+// delete children, reset the boards or edit the lists, because the DATABASE refuses it.
+const MANAGER_LOGIN = '@config(managerLogin)' === 'True';     // switched on in config/<env>.json once roles.sql was run in that project
+const MANAGER_EMAIL = 'manager@merkaz-cherum.local';
+const sbAdmin = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:false, autoRefreshToken:true, detectSessionInUrl:false, storageKey:'ramzor-manager-auth' } });
+

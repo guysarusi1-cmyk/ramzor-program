@@ -28,13 +28,13 @@ async function checkManagementCode(code){
 }
 
 // a small sheet that asks for a code (digits or letters); resolves with the text, or null on cancel
-function askCode({ title, text, okLabel }){
+function askCode({ title, text, okLabel, password }){
   return new Promise(resolve => {
     const wrap = document.createElement('div');
     wrap.className = 'sheet confirm-sheet';
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
     wrap.innerHTML = `<div class="sheet-card"><h2></h2><p class="confirm-text"></p>
-      <input type="password" class="confirm-input code-input" inputmode="numeric" autocomplete="off" aria-label="קוד">
+      <input type="password" class="confirm-input code-input" ${password ? `autocomplete="current-password"` : `inputmode="numeric" autocomplete="off"`} aria-label="${password ? `סיסמה` : `קוד`}">
       <div class="code-error" role="alert" hidden></div>
       <div class="confirm-actions"><button type="button" class="btn ghost confirm-cancel">ביטול</button><button type="button" class="btn confirm-ok"></button></div></div>`;
     wrap.querySelector('h2').textContent = title; wrap.querySelector('.confirm-text').textContent = text || '';
@@ -52,13 +52,17 @@ function askCode({ title, text, okLabel }){
 
 // the only way into the management screen (home gear, #manage address)
 async function openManagement(){
-  const lock = await getManagementLock();
-  if(lock && Date.now() > managementOpenUntil){
-    for(let tries = 0; tries < 5; tries++){
-      const code = await askCode({ title:'קוד ניהול', text: tries ? 'הקוד שגוי, נסו שוב.' : 'מסך הניהול מוגן בקוד.', okLabel:'כניסה' });
-      if(code === null) return false;
-      if(await checkManagementCode(code)){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; break; }
-      if(tries === 4){ toast('הקוד שגוי. נסו שוב מאוחר יותר.'); return false; }
+  if(MANAGER_LOGIN){
+    if(!(await adminClient())) return false;                 // asks for the manager's password when needed
+  } else {
+    const lock = await getManagementLock();
+    if(lock && Date.now() > managementOpenUntil){
+      for(let tries = 0; tries < 5; tries++){
+        const code = await askCode({ title:'קוד ניהול', text: tries ? 'הקוד שגוי, נסו שוב.' : 'מסך הניהול מוגן בקוד.', okLabel:'כניסה' });
+        if(code === null) return false;
+        if(await checkManagementCode(code)){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; break; }
+        if(tries === 4){ toast('הקוד שגוי. נסו שוב מאוחר יותר.'); return false; }
+      }
     }
   }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -68,6 +72,28 @@ async function openManagement(){
   return true;
 }
 
+// ---- the manager's own login (when MANAGER_LOGIN is on)
+async function managerSessionValid(){
+  const { data: { session } } = await sbAdmin.auth.getSession();
+  return !!session && Date.now() <= managementOpenUntil;
+}
+async function signInAsManager(){
+  for(let tries = 0; tries < 5; tries++){
+    const pw = await askCode({ title:'סיסמת מנהל', text: tries ? 'הסיסמה שגויה, נסו שוב.' : 'הפעולה הזו מיועדת למנהל. הקלידו את סיסמת המנהל.', okLabel:'כניסה', password:true });
+    if(pw === null) return false;
+    const { error } = await sbAdmin.auth.signInWithPassword({ email: MANAGER_EMAIL, password: pw });
+    if(!error){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return true; }
+    if(tries === 4) toast('הסיסמה שגויה. נסו שוב מאוחר יותר.');
+  }
+  return false;
+}
+// the connection that management actions write through: the manager's (after his password, valid for a few
+// minutes of use) — or, before the manager login exists in a project, the ordinary one
+async function adminClient(){
+  if(!MANAGER_LOGIN) return sb;
+  if(await managerSessionValid()){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return sbAdmin; }
+  return (await signInAsManager()) ? sbAdmin : null;
+}
 // the kids' screen address, ready to copy
 function renderTvAddress(){
   const url = location.origin + location.pathname + '#tv';
@@ -81,6 +107,13 @@ document.getElementById('tv-address-copy').addEventListener('click', async () =>
 
 // the "קוד ניהול" card at the top of the management screen
 async function renderManagementLockCard(){
+  if(MANAGER_LOGIN){                                             // the manager's own login: nothing to configure here
+    document.getElementById('mgmt-lock-status').textContent = 'מסך הניהול מוגן בסיסמת מנהל נפרדת, והשרת מאפשר רק למנהל להוסיף ולמחוק ילדים, לאפס לוחות ולערוך רשימות.';
+    document.getElementById('mgmt-lock-card').classList.remove('unset');
+    document.getElementById('mgmt-lock-btn').textContent = 'יציאת מנהל (נעילה עכשיו)';
+    document.getElementById('mgmt-lock-off-btn').hidden = true;
+    return;
+  }
   const lock = await getManagementLock();
   document.getElementById('mgmt-lock-status').textContent = lock
     ? 'מסך הניהול מוגן בקוד.'
@@ -102,6 +135,10 @@ async function chooseNewCode(){
   renderManagementLockCard();
 }
 document.getElementById('mgmt-lock-btn').addEventListener('click', async () => {
+  if(MANAGER_LOGIN){                                             // lock now: forget the manager's session and go home
+    await sbAdmin.auth.signOut(); managementOpenUntil = 0; showHub(); toast('מצב מנהל נעול');
+    return;
+  }
   const lock = await getManagementLock();
   if(lock){
     const current = await askCode({ title:'הקוד הנוכחי', text:'כדי לשנות את הקוד, הקלידו קודם את הקוד הנוכחי.', okLabel:'המשך' });

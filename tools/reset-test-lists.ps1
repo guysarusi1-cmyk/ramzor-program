@@ -7,7 +7,9 @@ $cfg = Get-Content (Join-Path $root 'config\test.json') -Raw -Encoding UTF8 | Co
 if($cfg.env -ne 'test'){ throw 'config\test.json is not a test config' }
 $sql = [IO.File]::ReadAllText((Join-Path $root 'supabase\test-project-setup.sql'), [Text.Encoding]::UTF8)
 
-$login = Invoke-RestMethod -Method Post -Uri "$($cfg.supabaseUrl)/auth/v1/token?grant_type=password" -Headers @{ apikey = $cfg.anonKey } -ContentType 'application/json' -Body (@{ email = 'staff@merkaz-cherum.local'; password = $cfg.testPassword } | ConvertTo-Json)
+# once the test project has the manager role (supabase\roles.sql) the lists and children can only be written by the manager
+$who = if($cfg.managerLogin -and $cfg.testManagerPassword){ @{ email = 'manager@merkaz-cherum.local'; password = $cfg.testManagerPassword } } else { @{ email = 'staff@merkaz-cherum.local'; password = $cfg.testPassword } }
+$login = Invoke-RestMethod -Method Post -Uri "$($cfg.supabaseUrl)/auth/v1/token?grant_type=password" -Headers @{ apikey = $cfg.anonKey } -ContentType 'application/json' -Body ($who | ConvertTo-Json)
 $h = @{ apikey = $cfg.anonKey; Authorization = "Bearer $($login.access_token)"; Prefer = 'resolution=merge-duplicates' }
 
 foreach($m in [regex]::Matches($sql, "\('(bonusesDaily|bonusesWeekly|dutyRoster)',\s*'(.*?)'::jsonb\)", 'Singleline')){
