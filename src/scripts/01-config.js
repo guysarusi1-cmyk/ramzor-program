@@ -1,3 +1,6 @@
+// short alias for typing on a TV remote: ...#t opens the kids' screen like ...#tv
+if(location.hash === '#t') history.replaceState(null, '', location.pathname + location.search + '#tv');
+
 
 // ---------- ENVIRONMENT + SUPABASE CONFIG (filled in by build.ps1 from config/<env>.json) ----------
 const APP_ENV = '@env@';   // 'live' (what staff use) or 'test' (the safe sandbox)

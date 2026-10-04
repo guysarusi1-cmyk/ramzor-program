@@ -64,8 +64,20 @@ async function openManagement(){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-manage').classList.add('active');
   renderManagementLockCard();
+  renderTvAddress();
   return true;
 }
+
+// the kids' screen address, ready to copy
+function renderTvAddress(){
+  const url = location.origin + location.pathname + '#tv';
+  document.getElementById('tv-address').textContent = url;
+  document.getElementById('tv-address-open').href = url;
+}
+document.getElementById('tv-address-copy').addEventListener('click', async () => {
+  const url = document.getElementById('tv-address').textContent;
+  try { await navigator.clipboard.writeText(url); toast('הכתובת הועתקה'); } catch(e){ toast('לא הצלחנו להעתיק — אפשר לסמן את הכתובת ולהעתיק ידנית'); }
+});
 
 // the "קוד ניהול" card at the top of the management screen
 async function renderManagementLockCard(){

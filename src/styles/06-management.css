@@ -143,3 +143,11 @@
   .proto-reminder > summary{ min-height:48px; display:flex; align-items:center; cursor:pointer; color:var(--muted); font-size:14px; list-style:none; }
   .proto-reminder > summary::-webkit-details-marker{ display:none; }
   .proto-reminder[open] > summary{ border-bottom:1px solid var(--line); margin-bottom:12px; }
+
+/* ---- bonus picture picker ---- */
+  .be-icons{ display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; }
+  .be-icons button{ min-height:46px; background:var(--panel); border:1.5px solid var(--line); border-radius:10px; font-size:22px; cursor:pointer; color:var(--text); font-family:inherit; }
+  .be-icons button[data-icon=''] { grid-column:span 6; font-size:14px; }
+  .be-icons button.sel{ border-color:var(--text); box-shadow:inset 0 0 0 1px var(--text); }
+
+  .tv-address{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:13px; word-break:break-all; margin-bottom:8px; user-select:all; }

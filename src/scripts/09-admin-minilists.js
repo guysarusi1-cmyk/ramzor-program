@@ -61,6 +61,11 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
         <div class="bonus-editor">
           <label class="be-label">טקסט הבונוס</label>
           <input type="text" class="be-text" value="${escapeHtml(b.text)}">
+          <label class="be-label">תמונה למסך הילדים (הילדים עוד לא קוראים)</label>
+          <div class="be-icons" role="group" aria-label="תמונה">
+            <button type="button" data-icon="" class="${b.icon ? '' : 'sel'}" aria-pressed="${!b.icon}">אוטומטי ${bonusIcon({ text: b.text })}</button>
+            ${BONUS_ICONS.map(i => `<button type="button" data-icon="${i}" class="${b.icon === i ? 'sel' : ''}" aria-pressed="${b.icon === i}">${i}</button>`).join('')}
+          </div>
           <label class="be-label">באילו ימים (בלי סימון = כל יום)</label>
           <div class="be-days">${DAY_LETTERS.map(d => `<label class="be-day"><input type="checkbox" value="${d[1]}"${(b.days||[]).includes(d[1]) ? ' checked' : ''}><span>${d[0]}</span></label>`).join('')}</div>
           <label class="be-label">שעות (המסך יבליט את הבונוס בזמן הזה; בלי שעות — בלי הדגשה)</label>
@@ -73,13 +78,17 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
         </div>`;
       return `<div class="bonus-row${open ? ' open' : ''}" data-id="${b.id}">
         <button type="button" class="bonus-row-head">
-          <span class="bonus-row-text">${escapeHtml(b.text)}</span>
+          <span class="bonus-row-text">${bonusIcon(b)} ${escapeHtml(b.text)}</span>
           <span class="bonus-row-sub">${bonusSummary(b)}</span>
         </button>${editor}</div>`;
     }).join('');
     el.querySelectorAll('.bonus-row').forEach(row => {
       const id = row.dataset.id;
       row.querySelector('.bonus-row-head').addEventListener('click', () => { openId = (openId === id) ? null : id; render(); });
+      row.querySelectorAll('.be-icons button').forEach(ib => ib.addEventListener('click', () => {
+        row.querySelectorAll('.be-icons button').forEach(x => { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
+        ib.classList.add('sel'); ib.setAttribute('aria-pressed', 'true');
+      }));
       const save = row.querySelector('.be-save');
       if(!save) return;
       row.querySelector('.be-cancel').addEventListener('click', () => { openId = null; render(); });
@@ -92,6 +101,8 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
       save.addEventListener('click', async () => {
         const text = row.querySelector('.be-text').value.trim();
         const days = [...row.querySelectorAll('.be-days input:checked')].map(i => Number(i.value));
+        const chosenIcon = row.querySelector('.be-icons .sel');
+        const icon = chosenIcon ? chosenIcon.dataset.icon : '';
         const startTime = row.querySelector('.be-start').value;
         const endTime = row.querySelector('.be-end').value;
         if(!text){ toast('חסר טקסט לבונוס'); return; }
@@ -101,6 +112,7 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
           if(x.id !== id) return x;
           const n = { id: x.id, text };
           if(days.length) n.days = days;
+          if(icon) n.icon = icon;
           if(startTime && endTime){ n.startTime = startTime; n.endTime = endTime; }
           return n;
         });

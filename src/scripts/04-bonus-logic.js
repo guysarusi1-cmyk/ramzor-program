@@ -19,6 +19,20 @@ function isBonusTimeActive(b){
   return nowMinutes >= toMinutes(b.startTime) && nowMinutes < toMinutes(b.endTime);
 }
 
+// A picture for every bonus on the kids' TV (children aged 2-7 do not read the sentences). The staff can pick
+// one in the bonus editor; without a choice one is guessed from the words, and a gift is the fallback.
+const BONUS_ICONS = ['🧃', '🍬', '🍵', '📺', '🌳', '🧁', '🍎', '🎈', '⚽', '🎨', '🛁', '🎉', '🍪', '🧹', '🕯️', '🎁'];
+const BONUS_ICON_WORDS = [
+  [/מיץ|פטל|שתייה|משקה/, '🧃'], [/שלוק|גלידה|קרטיב/, '🍧'], [/מתוק|ממתק|סוכרי/, '🍬'], [/תה|נענע|קמומיל/, '🍵'],
+  [/טלוויזיה|טלויזיה|סרט|מסך/, '📺'], [/פארק|גינה|חצר|טיול/, '🌳'], [/אפייה|עוגה|עוגי|מאפה/, '🧁'], [/פרי|תפוח/, '🍎'],
+  [/כדור|משחק|מגרש/, '⚽'], [/ציור|יצירה|צבע/, '🎨'], [/מקלחת|אמבט/, '🛁'], [/שבת|נר/, '🕯️'], [/תורנו/, '🎉'], [/ניקי|סידור|ניקיון/, '🧹'], [/ארוחת? ארבע|עוגי/, '🍪']
+];
+function bonusIcon(b){
+  if(b.icon) return b.icon;
+  const hit = BONUS_ICON_WORDS.find(([re]) => re.test(b.text || ''));
+  return hit ? hit[1] : '🎁';
+}
+
 const BONUS_REVOCATION_HOURS = 5;
 async function getActiveBonusRevocations(){
   const since = new Date(Date.now() - BONUS_REVOCATION_HOURS*60*60*1000).toISOString();
@@ -45,7 +59,8 @@ function groupRevocationsByBonus(revocations){
     const child = roster.find(c=>c.id === r.child_id);
     if(!child) return;
     if(!byBonus[r.bonus_id]) byBonus[r.bonus_id] = [];
-    byBonus[r.bonus_id].push(initials(child).split('').join('.'));
+    const who = initials(child).split('').join('.');
+    if(!byBonus[r.bonus_id].includes(who)) byBonus[r.bonus_id].push(who);      // a child loses a bonus once, however many times it was recorded
   });
   return byBonus;
 }

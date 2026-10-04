@@ -18,6 +18,12 @@ if(-not $html.Contains(([Uri]$liveCfg.supabaseUrl).Host)){ Write-Host 'live buil
 if(-not $html.Contains("const APP_ENV = 'live'")){ Write-Host 'live build is not marked as live' -ForegroundColor Red; exit 1 }
 Write-Host 'no test-only text in the live build; it points at the live project' -ForegroundColor Green
 
+# 1b. privacy of the live database (a warning, not a blocker: the app works both ways, the SQL is what closes it)
+try {
+  $probe = Invoke-RestMethod -Uri "$($liveCfg.supabaseUrl)/rest/v1/roster?select=sw_phone&limit=1" -Headers @{ apikey = $liveCfg.anonKey }
+  if(@($probe).Count -gt 0){ Write-Host 'LIVE PRIVACY WARNING: someone who is not signed in can still read the children''s social-worker phones. Run supabase\hardening.sql in the LIVE project.' -ForegroundColor Yellow }
+  else { Write-Host 'live privacy: nothing readable from the roster without signing in' -ForegroundColor Green }
+} catch { Write-Host 'live privacy: the social-worker phones are NOT readable without signing in (hardening is on)' -ForegroundColor Green }
 # 2. it opens and shows the children (reads only)
 $browser = @('C:\Program Files\Google\Chrome\Application\chrome.exe','C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe') | Where-Object { Test-Path $_ } | Select-Object -First 1
 $server = Start-Process powershell -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $root 'tools\serve-folder.ps1'),'-Dir',$live,'-Port',$port

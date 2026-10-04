@@ -51,7 +51,8 @@ const SOUND_STAR     = [[784, 0, .25], [988, .12, .25], [1319, .24, .45]];      
 const SOUND_HOP      = [[392, 0, .14], [523, .1, .14], [659, .2, .3]];                                      // quick hop up
 const SOUND_FANFARE  = [[523, 0, .2], [659, .15, .2], [784, .3, .2], [1047, .45, .6, 'triangle', .2]];      // reaching 7
 document.getElementById('tv-sound-btn').addEventListener('click', unlockTvSound);
-document.getElementById('view-display').addEventListener('click', unlockTvSound);
+// the first press of ANY kind on the TV (a remote's button, a touch, a click) turns the sound on
+['keydown', 'pointerdown', 'touchstart', 'click'].forEach(type => document.addEventListener(type, () => { if(!tvSoundReady() && document.getElementById('view-display').classList.contains('active')) unlockTvSound(); }, { passive:true }));
 
 // ---- the moment itself
 function celebrationSparkles(n){

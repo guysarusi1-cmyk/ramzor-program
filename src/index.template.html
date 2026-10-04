@@ -124,7 +124,7 @@
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px; padding-inline-start:50px;">
           <button class="btn ghost" id="kq-give-star-btn">⭐ הענקת כוכב</button>
           <button class="btn ghost" id="kq-moon-journey-btn">🚀 תכנית המסע בחלל</button>
-          <button class="btn ghost" disabled style="opacity:.45; cursor:not-allowed;">🧱 בניית לבנים (בקרוב)</button>
+
         </div>
 
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
@@ -198,6 +198,14 @@
       <button class="btn ghost" id="mgmt-lock-btn" style="width:100%;">הגדרת קוד ניהול</button>
       <button class="btn ghost" id="mgmt-lock-off-btn" style="width:100%; margin-top:8px;" hidden>הסרת הקוד</button>
       <div class="note">הקוד מונע כניסה בטעות למסך שמוחק ילדים ומאפס לוחות. הוא לא מחליף משתמשים נפרדים בשרת.</div>
+    </div>
+
+    <div class="card" id="tv-address-card">
+      <h2>כתובת מסך הילדים</h2>
+      <div class="note" style="margin-bottom:8px;">את הכתובת הזו פותחים בדפדפן של הטלוויזיה בחדר (בשלט אפשר להקליד גם רק <b dir="ltr">#t</b> בסוף הכתובת).</div>
+      <div class="tv-address" id="tv-address" dir="ltr"></div>
+      <div class="add-row"><button class="btn ghost" id="tv-address-copy" style="flex:1;">העתקת הכתובת</button><a class="btn ghost" id="tv-address-open" target="_blank" rel="noopener" style="flex:1; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">פתיחה</a></div>
+      <div class="note">לבדיקת התאמה של טלוויזיה: אותה כתובת עם <b dir="ltr">#diag</b> בסוף.</div>
     </div>
 
     <div class="card">
@@ -336,7 +344,6 @@
       <div class="guided-actions">
         <button type="button" class="guided-action" id="gold-give-star-btn">הענקת כוכב</button>
         <button type="button" class="guided-action" id="gold-moon-journey-btn">תכנית המסע בחלל</button>
-        <button type="button" class="guided-action" disabled>בניית לבנים (בקרוב)</button>
       </div>
     </div>
 
@@ -363,7 +370,7 @@
       <div class="slide" id="slide-6"><div class="board-moon" id="moon-board"></div></div>
       <div class="slide" id="slide-7"><div class="board-mercury" id="mercury-board"></div></div>
     </div>
-    <button type="button" class="tv-sound-btn" id="tv-sound-btn">🔈 הפעלת קול</button>
+    <button type="button" class="tv-sound-btn" id="tv-sound-btn" aria-label="הפעלת קול (לחצו על כל כפתור בשלט)" title="הפעלת קול">🔈</button>
   </section>
 
 </div>

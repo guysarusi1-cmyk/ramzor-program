@@ -54,7 +54,7 @@ function bonusBoardSection(title, list, revocationsByBonus){
         const revoked = revocationsByBonus[b.id];
         const revokedHtml = revoked && revoked.length ? `<span class="bonus-revoked-names">לא היום: ${revoked.join(', ')}</span>` : '';
         const activeClass = isBonusTimeActive(b) ? ' bonus-active' : '';
-        return `<div class="bonus-board-item${activeClass}">🎁 ${b.text}${revokedHtml}</div>`;
+        return `<div class="bonus-board-item${activeClass}"><span class="bb-icon">${bonusIcon(b)}</span><span class="bb-body"><span class="bb-text">${b.text}</span>${revokedHtml}</span></div>`;
       }).join('')}
     </div>`;
 }
@@ -132,49 +132,54 @@ async function interruptToSlide(slideIndex, renderFn, holdMs){
 // flies to the front of the screen big, loops and flips, and then flies to its new spot.
 //   renderBoard(opts) draws the board; it understands { stepsOverride, hideChildId } (see 12-display-view.js)
 async function flyMarkerStunt(childId, boardEl, renderBoard, stepsBefore){
+  document.querySelectorAll('body > .stunt-flyer').forEach(f => f.remove());                // never leave an old copy behind
   if(typeof Element.prototype.animate !== 'function'){ await renderBoard({}); return; }     // very old browser: just show the new state
-  await renderBoard({ stepsOverride: { [childId]: stepsBefore } });                          // 1. the board as it was a moment ago
-  const marker = boardEl.querySelector(`.kid-marker[data-child-id="${childId}"]`);
-  if(!marker){ await renderBoard({}); return; }
-  const centerOf = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; };
-  const from = centerOf(marker);
-  const flyer = marker.cloneNode(true);                                                      // 2. a copy that can leave the board
-  Object.assign(flyer.style, { position:'fixed', left: from.x + 'px', top: from.y + 'px', width: marker.getBoundingClientRect().width + 'px',
-    margin:'0', zIndex:'250', pointerEvents:'none', transition:'none', fontSize: boardEl.style.fontSize, visibility:'visible' });
-  document.body.appendChild(flyer);
-  marker.style.visibility = 'hidden';
-  const body = flyer.firstElementChild;                                                      // the ship/avatar part (the name stays upright)
-  const frontScale = Math.max(2, (Math.min(innerWidth, innerHeight) * 0.42) / Math.max(from.w, 40));
-  const at = (dx, dy, s) => `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(${s})`;
-  const toFront = { dx: innerWidth / 2 - from.x, dy: innerHeight / 2 - from.y };
+  let flyer = null;
+  try {
+    await renderBoard({ stepsOverride: { [childId]: stepsBefore } });                        // 1. the board as it was a moment ago
+    const marker = boardEl.querySelector(`.kid-marker[data-child-id="${childId}"]`);
+    if(!marker){ await renderBoard({}); return; }
+    const centerOf = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; };
+    const from = centerOf(marker);
+    flyer = marker.cloneNode(true);                                                          // 2. a copy that can leave the board
+    flyer.classList.add('stunt-flyer');
+    Object.assign(flyer.style, { position:'fixed', left: from.x + 'px', top: from.y + 'px', width: marker.getBoundingClientRect().width + 'px',
+      margin:'0', zIndex:'250', pointerEvents:'none', transition:'none', fontSize: boardEl.style.fontSize, visibility:'visible' });
+    document.body.appendChild(flyer);
+    marker.style.visibility = 'hidden';
+    const body = flyer.firstElementChild;                                                    // the ship/avatar part (the name stays upright)
+    const frontScale = Math.max(2, (Math.min(innerWidth, innerHeight) * 0.42) / Math.max(from.w, 40));
+    const at = (dx, dy, s) => `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(${s})`;
+    const toFront = { dx: innerWidth / 2 - from.x, dy: innerHeight / 2 - from.y };
+    // a step of the show; the timer guarantees it ends even if the browser has stopped drawing frames
+    const play = (el, frames, opts) => Promise.race([el.animate(frames, opts).finished.catch(() => {}), waitMs(opts.duration + 1500)]);
 
-  // 3. out to the front of the screen
-  await flyer.animate([{ transform: at(0, 0, 1) }, { transform: at(toFront.dx, toFront.dy, frontScale * 1.1), offset: .75 }, { transform: at(toFront.dx, toFront.dy, frontScale) }],
-    { duration: 1000, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).finished;
-  flyer.style.transform = at(toFront.dx, toFront.dy, frontScale);
+    await play(flyer, [{ transform: at(0, 0, 1) }, { transform: at(toFront.dx, toFront.dy, frontScale * 1.1), offset: .75 }, { transform: at(toFront.dx, toFront.dy, frontScale) }],
+      { duration: 1000, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });            // 3. out to the front of the screen
+    flyer.style.transform = at(toFront.dx, toFront.dy, frontScale);
 
-  // 4. the stunt (a loop, then a flip) — while the board quietly updates underneath
-  const stunt = body.animate([
-    { transform: 'perspective(900px) rotate(0deg) rotateY(0deg) scale(1)' },
-    { transform: 'perspective(900px) rotate(-360deg) rotateY(0deg) scale(1.18)', offset: .5 },
-    { transform: 'perspective(900px) rotate(-360deg) rotateY(360deg) scale(1)' }
-  ], { duration: 1700, easing: 'ease-in-out' });
-  const updated = renderBoard({ hideChildId: childId });
-  await Promise.all([stunt.finished, updated]);
+    const stunt = play(body, [                                                               // 4. the stunt (a loop, then a flip) — the board updates underneath meanwhile
+      { transform: 'perspective(900px) rotate(0deg) rotateY(0deg) scale(1)' },
+      { transform: 'perspective(900px) rotate(-360deg) rotateY(0deg) scale(1.18)', offset: .5 },
+      { transform: 'perspective(900px) rotate(-360deg) rotateY(360deg) scale(1)' }
+    ], { duration: 1700, easing: 'ease-in-out' });
+    await Promise.all([stunt, renderBoard({ hideChildId: childId })]);
 
-  // 5. back to the new spot
-  const newMarker = boardEl.querySelector(`.kid-marker[data-child-id="${childId}"]`);
-  if(newMarker){
-    const to = centerOf(newMarker);
-    await flyer.animate([
-      { transform: at(toFront.dx, toFront.dy, frontScale) },
-      { transform: at(to.x - from.x, to.y - from.y, 1.12), offset: .85 },
-      { transform: at(to.x - from.x, to.y - from.y, 1) }
-    ], { duration: 1200, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' }).finished;
-    newMarker.style.visibility = '';
+    const newMarker = boardEl.querySelector(`.kid-marker[data-child-id="${childId}"]`);       // 5. back to the new spot
+    if(newMarker){
+      const to = centerOf(newMarker);
+      await play(flyer, [
+        { transform: at(toFront.dx, toFront.dy, frontScale) },
+        { transform: at(to.x - from.x, to.y - from.y, 1.12), offset: .85 },
+        { transform: at(to.x - from.x, to.y - from.y, 1) }
+      ], { duration: 1200, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' });
+    }
+  } catch(err){
+    console.error(err);
+  } finally {                                                                                // whatever happened: no copy on screen, every ship visible
+    if(flyer) flyer.remove();
+    hideOneMarker(boardEl, null);
   }
-  flyer.remove();
-  hideOneMarker(boardEl, null);
 }
 // star / moon / mercury event: first the full-screen moment about that child, then the board it belongs
 // to (where, for the ship journeys, the ship flies from the middle of the screen to its new spot)
@@ -215,6 +220,7 @@ function stopFeedbackListener(){
 
 function startCarousel(){
   stopCarousel();
+  if(!IS_TV_PREVIEW) unlockTvSound();       // works at once where the browser allows it (kiosk / TV modes); otherwise the first button press does
   refreshJourneyBoards().then(() => renderDots());
   showSlide(carouselIndex);
   resumeRotation();

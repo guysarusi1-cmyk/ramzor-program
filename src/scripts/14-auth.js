@@ -70,8 +70,9 @@ document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
 // home screen's gear icon -> the existing management screen (same view the #manage route opens)
 document.getElementById('hub-manage-gear').addEventListener('click', openManagement);
 // home screen's quiet "logout" link just triggers the existing logout button (hidden on this screen)
-document.getElementById('hub-logout-link').addEventListener('click', ()=>{
-  document.getElementById('logout-btn').click();
+document.getElementById('hub-logout-link').addEventListener('click', async ()=>{
+  // signing out means typing the password again, which nobody wants in the middle of an incident
+  if(await confirmSheet({ title:'לצאת מהמערכת?', text:'כדי להיכנס שוב יהיה צריך להקליד את הסיסמה.', okLabel:'כן, לצאת', cancelLabel:'להישאר' })) document.getElementById('logout-btn').click();
 });
 document.getElementById('manage-back-to-hub').addEventListener('click', ()=>{
   location.hash = '';

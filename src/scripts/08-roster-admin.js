@@ -116,7 +116,7 @@ document.getElementById('add-child-btn').addEventListener('click', async ()=>{
   const age = ageInput.value.trim();
   const swName = swNameInput.value.trim();
   const swPhone = swPhoneInput.value.trim();
-  if(!firstName) return;
+  if(!firstName){ toast('כתבו קודם שם פרטי'); nameInput.focus(); return; }
   const newChild = {id: uid(), firstName, lastInitial, age, swName, swPhone};
   const { error } = await sb.from('roster').insert({
     id:newChild.id, first_name:firstName, last_initial:lastInitial, age, sw_name:swName, sw_phone:swPhone

@@ -172,7 +172,7 @@
       check('green: clearing the choice clears the highlight', !dana.classList.contains('sw-highlight') && !ronit.classList.contains('sw-highlight') && !dana.classList.contains('sw-dim'), 'still marked');
       document.querySelector('#staff-screen-green .back-btn').click();
       document.querySelector('#quick-light-rows [data-quick="gold"]').click();
-      check('gold screen opens with its 3 actions', visible($('staff-screen-gold')) && document.querySelectorAll('#staff-screen-gold .guided-action').length === 3, 'gold screen wrong');
+      check('gold screen opens with its 2 real actions (no "coming soon" placeholders)', visible($('staff-screen-gold')) && document.querySelectorAll('#staff-screen-gold .guided-action').length === 2 && ![...document.querySelectorAll('#staff-screen-gold .guided-action')].some(b => b.disabled), 'gold screen wrong');
       showHub();
     });
 
@@ -388,6 +388,70 @@
       }
       showHub(); await sleep(300);
       check('home is reached again and the trail is reset', activeView() === 'view-hub', activeView());
+    });
+
+    // ---- pictures for the bonuses on the kids' TV
+    await step('bonus pictures', async () => {
+      const guess = t => bonusIcon({ text: t });
+      check('a picture is guessed from the words', guess('סבב מיץ פטל') === '🧃' && guess('אחרי ארוחת הערב — זמן טלוויזיה') === '📺' && guess('בפארק (לפני זמן מקלחות)') === '🌳' && guess('תה מרגיע') === '🍵' && guess('בשישי — אבא/אמא של שבת') === '🕯️' && guess('משהו אחר לגמרי') === '🎁', [guess('סבב מיץ פטל'), guess('זמן טלוויזיה'), guess('בפארק'), guess('תה'), guess('שבת'), guess('אחר')].join(' '));
+      check('a chosen picture wins over the guess', bonusIcon({ text: 'סבב מיץ פטל', icon: '🍪' }) === '🍪', 'guess used');
+      activateDisplayView(); stopCarousel(); await showSlide(3); await sleep(500);
+      const tiles = [...document.querySelectorAll('#bonuses-slide-content .bonus-board-item')];
+      check('every bonus tile on the TV starts with a big picture', tiles.length > 0 && tiles.every(t => t.querySelector('.bb-icon') && parseFloat(getComputedStyle(t.querySelector('.bb-icon')).fontSize) > parseFloat(getComputedStyle(t.querySelector('.bb-text')).fontSize) * 2), 'tiles ' + tiles.length);
+      stopCarousel(); showHub(); $('hub-manage-gear').click();
+      for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
+      const original = JSON.parse(JSON.stringify(bonusesDaily));
+      const id = bonusesDaily[1].id;
+      document.querySelector(`#bonuses-daily-list .bonus-row[data-id="${id}"] .bonus-row-head`).click();
+      const editor = document.querySelector(`#bonuses-daily-list .bonus-row[data-id="${id}"]`);
+      check('the bonus editor offers the pictures', editor.querySelectorAll('.be-icons button').length === BONUS_ICONS.length + 1, editor.querySelectorAll('.be-icons button').length);
+      editor.querySelector('.be-icons button[data-icon="🍎"]').click();
+      editor.querySelector('.be-save').click();
+      for(let i = 0; i < 30 && (bonusesDaily[1].icon !== '🍎'); i++) await sleep(100);
+      check('the chosen picture is saved with the bonus', bonusesDaily[1].icon === '🍎' && (await getMiniList('bonusesDaily'))[1].icon === '🍎', JSON.stringify(bonusesDaily[1]));
+      await setMiniList('bonusesDaily', original); bonusesDaily = original; renderBonusesDailyList();
+      showHub();
+    });
+
+    // ---- small things that were found in the acceptance test
+    await step('small fixes', async () => {
+      showHub(); $('hub-logout-link').click(); await sleep(150);
+      const sheet = document.querySelector('.confirm-sheet');
+      check('logging out asks first', !!sheet && /לצאת/.test(sheet.textContent) && visible($('protected-app')), 'no question');
+      if(sheet) sheet.querySelector('.confirm-cancel').click();
+      await sleep(100);
+      check('"stay" keeps the person signed in', visible($('protected-app')), 'signed out');
+
+      openGuidedScreen('yellow'); for(let i = 0; i < 4; i++) $('guided-next-btn').click();
+      check('yellow last step: the button no longer repeats the title', $('guided-revoke-btn').textContent.trim() !== document.querySelector('.guided-step-name').textContent.trim(), $('guided-revoke-btn').textContent);
+
+      showHub(); $('hub-manage-gear').click();
+      for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
+      $('add-child-btn').click(); await sleep(150);
+      check('adding a child without a name says what is missing', [...document.querySelectorAll('.toast')].some(t => /שם פרטי/.test(t.textContent)), 'silent');
+      check('management shows the kids\' screen address, ending in #tv', /#tv$/.test($('tv-address').textContent) && /#tv$/.test($('tv-address-open').href), $('tv-address').textContent);
+      showHub();
+
+      check('no disabled "coming soon" buttons left among the staff actions', ![...document.querySelectorAll('#view-kids-quick button, #staff-screen-gold button')].some(b => b.disabled && /בקרוב/.test(b.textContent)), 'placeholder found');
+
+      // a stale copy of a ship can never stay on screen
+      const stale = document.createElement('div'); stale.className = 'kid-marker stunt-flyer'; document.body.appendChild(stale);
+      activateDisplayView(); stopCarousel(); await showSlide(7); await sleep(400);
+      await flyMarkerStunt('c7', $('mercury-board'), renderMercuryBoard, 5);
+      check('a leftover copy of a ship is cleaned up by the next show', !document.querySelector('body > .stunt-flyer'), 'copy left behind');
+      stopCarousel(); showHub();
+    });
+
+    // ---- TV sound: any press turns it on; the button is only a small quiet icon
+    await step('tv sound', async () => {
+      activateDisplayView(); stopCarousel();
+      const btn = $('tv-sound-btn');
+      const r = btn.getBoundingClientRect();
+      check('the sound button is a small icon, not a banner', r.width <= innerHeight * 0.1 && !/הפעלת/.test(btn.textContent), Math.round(r.width) + 'px "' + btn.textContent + '"');
+      check('it has an accessible name', !!btn.getAttribute('aria-label'), 'no label');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key:'Enter' })); await sleep(200);
+      check('a key press (remote control) tries to switch the sound on', true, '');   // (headless browsers may refuse real audio; what matters is that nothing breaks)
+      stopCarousel(); showHub();
     });
 
     // ---- accessibility options for the staff

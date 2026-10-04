@@ -137,7 +137,7 @@ function renderGuidedStep(){
       const age = child ? parseFloat(child.age) : NaN;
       if(!child || (!isNaN(age) && age < 5)) html += `<div class="age-warning guided-under5">אסור להכניס ילד מתחת לגיל 5 לחדר הרוגע לבד.</div>`;
     }
-    if(step.revoke) html += `<button type="button" class="guided-report" id="guided-revoke-btn">גריעת בונוס</button>`;
+    if(step.revoke) html += `<button type="button" class="guided-report" id="guided-revoke-btn">בחירת הבונוס לגריעה</button>`;
     if(step.cards.length){
       html += `<div class="guided-tabs">${step.cards.map((c,i)=>`<button type="button" class="guided-tab" data-card="${i}" aria-expanded="false">${c.label}</button>`).join('')}</div>`;
       html += `<div id="guided-panel-slot"></div>`;
@@ -204,10 +204,15 @@ function openGuidedScreen(key){
   renderGuidedStep();
   showStaffScreen('guided');
 }
-document.getElementById('guided-next-btn').addEventListener('click', ()=>{
+// two quick taps must not skip a step: taps closer than this are one
+let lastGuidedTap = 0;
+const guidedTapTooSoon = e => { if(!e.isTrusted) return false; const now = Date.now(); const soon = now - lastGuidedTap < 380; lastGuidedTap = now; return soon; };   // (real finger/mouse taps only)
+document.getElementById('guided-next-btn').addEventListener('click', e=>{
+  if(guidedTapTooSoon(e)) return;
   if(guidedStep < GUIDED_PROTOCOLS[guidedKey].steps.length - 1){ guidedStep++; renderGuidedStep(); window.scrollTo({top:0}); }
 });
-document.getElementById('guided-prev-btn').addEventListener('click', ()=>{
+document.getElementById('guided-prev-btn').addEventListener('click', e=>{
+  if(guidedTapTooSoon(e)) return;
   if(guidedStep > 0){ guidedStep--; renderGuidedStep(); window.scrollTo({top:0}); }
 });
 
