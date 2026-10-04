@@ -46,6 +46,12 @@
     else if(what === 'moon') playCelebration('moon', kid, 3);
     else if(what === 'mercury') playCelebration('mercury', kid, 4);
     else if(what === 'milestone') playCelebration('mercury', kid, 7);
+    else if(what === 'bricks' || what === 'bricks100') playCelebration('bricks', kid, what === 'bricks' ? 37 : 100);
+    else if(what === 'walls'){   // the board with a small wall for every child, with made-up numbers
+      const fake = [12, 100, 37, 64, 5, 88, 23, 51, 0, 76, 41, 9, 99, 30];
+      getAllChildStates = async () => ({ get: id => Object.assign(emptyChildState(), { bricks: fake[roster.findIndex(c => c.id === id) % fake.length] }) });
+      SLIDES[8].hidden = false; showSlide(8);
+    }
     else if(/^slide\d$/.test(what)) showSlide(Number(what.slice(5)));
   });
 })();

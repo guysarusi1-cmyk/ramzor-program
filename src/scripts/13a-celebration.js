@@ -49,6 +49,7 @@ function playTones(tones){
 }
 const SOUND_STAR     = [[784, 0, .25], [988, .12, .25], [1319, .24, .45]];                                  // bright "ding-ding-ding"
 const SOUND_HOP      = [[392, 0, .14], [523, .1, .14], [659, .2, .3]];                                      // quick hop up
+const SOUND_BRICK    = [[110, 0, .35, 'triangle', .3], [82, 0, .4, 'sine', .3], [659, .18, .25, 'triangle', .12], [988, .3, .35, 'triangle', .12]];     // a stone thud, then a small chime
 const SOUND_FANFARE  = [[523, 0, .2], [659, .15, .2], [784, .3, .2], [1047, .45, .6, 'triangle', .2]];      // reaching 7
 document.getElementById('tv-sound-btn').addEventListener('click', unlockTvSound);
 // the first press of ANY kind on the TV (a remote's button, a touch, a click) turns the sound on
@@ -66,6 +67,7 @@ function celebrationSparkles(n){
 }
 
 function celebrationBody(kind, child, now){
+  if(kind === 'bricks') return bigWallHtml(child, now, now);      // (finishing the wall adds the message inside the wall)
   const milestone = kind !== 'star' && now >= CELEBRATION_TRACK_STEPS;
   const name = `<div class="cel-name">${escapeHtml(displayName(child))}</div>`;
   if(kind === 'star'){
@@ -98,15 +100,20 @@ function celebrationBody(kind, child, now){
 async function playCelebration(kind, child, now){
   const host = document.getElementById('celebration');
   if(!host || !child) return;
-  const milestone = kind !== 'star' && now >= CELEBRATION_TRACK_STEPS;
-  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone ? 34 : 18)}<div class="cel-inner">${celebrationBody(kind, child, now)}</div>`;
+  const wallDone = kind === 'bricks' && now >= WALL_BRICKS;
+  const milestone = (kind === 'moon' || kind === 'mercury') && now >= CELEBRATION_TRACK_STEPS;
+  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone || wallDone ? 34 : 18)}<div class="cel-inner${kind === 'bricks' ? ' cel-wall' : ''}">${celebrationBody(kind, child, now)}</div>`;
   host.classList.remove('leaving');
   host.classList.add('show');
   host.setAttribute('aria-hidden', 'false');
   updateTvSoundButton();
+  const scene = host.querySelector('.wall-scene'); if(scene) fitBoardFont(scene);        // (measured once it is on screen) 1em = 1% of the wall's width
 
   if(kind === 'star'){
     setTimeout(() => playTones(SOUND_STAR), 1200);
+  } else if(kind === 'bricks'){
+    setTimeout(() => playTones(SOUND_BRICK), 1700);                    // the brick lands
+    if(wallDone) setTimeout(() => playTones(SOUND_FANFARE), 2900);
   } else {
     // one frame later, so the traveller visibly moves from the previous step to the new one
     setTimeout(() => {
@@ -116,7 +123,8 @@ async function playCelebration(kind, child, now){
       playTones(milestone ? SOUND_FANFARE : SOUND_HOP);
     }, 1200);
   }
-  await waitMs(CELEBRATION_MS);
+  // a wall brick takes a little longer (it drops in); finishing the wall longer still (the whole message must be readable)
+  await waitMs(kind === 'bricks' && CELEBRATION_MS > 1000 ? (wallDone ? 9500 : 5600) : CELEBRATION_MS);
   host.classList.add('leaving');
   await waitMs(450);
   host.classList.remove('show', 'leaving');

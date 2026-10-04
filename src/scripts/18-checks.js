@@ -184,7 +184,7 @@
       check('green: clearing the choice clears the highlight', !dana.classList.contains('sw-highlight') && !ronit.classList.contains('sw-highlight') && !dana.classList.contains('sw-dim'), 'still marked');
       document.querySelector('#staff-screen-green .back-btn').click();
       document.querySelector('#quick-light-rows [data-quick="gold"]').click();
-      check('gold screen opens with its 2 real actions (no "coming soon" placeholders)', visible($('staff-screen-gold')) && document.querySelectorAll('#staff-screen-gold .guided-action').length === 2 && ![...document.querySelectorAll('#staff-screen-gold .guided-action')].some(b => b.disabled), 'gold screen wrong');
+      check('gold screen opens with its 3 real actions (no "coming soon" placeholders)', visible($('staff-screen-gold')) && document.querySelectorAll('#staff-screen-gold .guided-action').length === 3 && ![...document.querySelectorAll('#staff-screen-gold .guided-action')].some(b => b.disabled), 'gold screen wrong');
       showHub();
     });
 
@@ -762,6 +762,52 @@
       check('after the celebration the star board is shown', $('slide-5').classList.contains('active'), 'slide 5 not active');
       stopCarousel();
       CELEBRATION_MS = 4800;
+      showHub();
+    });
+
+    // ---- the wall project: 100 bricks per child, a colour per child, a message at the 100th brick
+    await step('wall project', async () => {
+      const host = $('celebration');
+      const kidA = roster.find(c => c.id === 'c2'), kidB = roster.find(c => c.id === 'c3');
+      const scene = document.createElement('div');
+      scene.innerHTML = bigWallHtml(kidA, 37, 37);
+      check('wall: 100 numbered bricks, exactly 37 built, one of them new', scene.querySelectorAll('.brick').length === 100 && scene.querySelectorAll('.brick.built').length === 37 && scene.querySelectorAll('.brick.new').length === 1, scene.querySelectorAll('.brick.built').length + ' built');
+      check('wall: the name of the child is on it', scene.querySelector('.wall-base').textContent.trim() === displayName(kidA), scene.querySelector('.wall-base').textContent);
+      check('wall: no finish message before the 100th brick', !scene.querySelector('.wall-done'), 'message shown');
+      const hueA = scene.querySelector('.wall-scene').style.getPropertyValue('--h');
+      scene.innerHTML = bigWallHtml(kidB, 10, 10);
+      check('wall: every child has a different colour', hueA !== '' && hueA !== scene.querySelector('.wall-scene').style.getPropertyValue('--h'), hueA);
+      scene.innerHTML = bigWallHtml(kidA, 100, 100);
+      check('wall: the 100th brick brings "finished building the wall"', !!scene.querySelector('.wall-done') && /סיים\/ה לבנות את הקיר/.test(scene.querySelector('.wall-done').textContent), 'no message');
+
+      CELEBRATION_MS = 700;
+      const run = playCelebration('bricks', kidA, 12);
+      await sleep(150);
+      check('wall celebration shows the wall on the TV', visible(host) && host.querySelectorAll('.brick').length === 100 && !host.querySelector('.wall-done'), 'not shown');
+      await run;
+      const runDone = playCelebration('bricks', kidA, 100);
+      await sleep(150);
+      check('wall celebration at 100 shows the message', !!host.querySelector('.wall-done'), 'no message');
+      await runDone;
+      CELEBRATION_MS = 4800;
+
+      check('the walls board is in the TV rotation, hidden while nobody has a brick', !!SLIDES.find(s => s.id === 8) && EVENT_TYPE_SLIDE.bricks === 8, 'missing');
+      check('a brick has no "ביטול" button (the manager fixes mistakes)', !document.querySelector('.toast-undo'), 'undo shown');
+
+      // the real thing against the test project (needs the `bricks` column: supabase/roles.sql)
+      const kid = 'c6';
+      const bricks = async () => (await getChildState(kid)).bricks || 0;
+      const base = await bricks();
+      const ok = await giveBrick(kid);
+      check('giving a brick adds exactly one (needs the "bricks" column in this project)', ok && (await bricks()) === base + 1, base + ' -> ' + (await bricks()));
+      await Promise.all([1, 2, 3, 4].map(() => giveBrick(kid)));
+      check('4 simultaneous bricks give exactly 4 (none lost)', (await bricks()) === base + 5, base + ' -> ' + (await bricks()));
+      await updateChildState(kid, () => ({ set:{ bricks: 99 }, guard:['bricks'] }));
+      await giveBrick(kid);
+      check('the 100th brick is recorded', (await bricks()) === 100, String(await bricks()));
+      const more = await giveBrick(kid);
+      check('a 101st brick is refused, the wall stays at 100', more === false && (await bricks()) === 100 && /כבר הושלם/.test(document.querySelector('.toast').textContent), String(await bricks()));
+      await updateChildState(kid, () => ({ set:{ bricks: base }, guard:['bricks'] }));
       showHub();
     });
 

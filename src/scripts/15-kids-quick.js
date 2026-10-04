@@ -5,6 +5,7 @@ let starTapLocked = false;
 const KIDS_QUICK_TITLES = {
   star: 'בחרו ילד/ה — הענקת כוכב',
   moon: 'בחרו ילד/ה — תכנית המסע בחלל',
+  brick: 'בחרו ילד/ה — בניית לבנים',
   yellow: 'בחרו ילד/ה — רמזור צהוב',
 };
 
@@ -35,6 +36,11 @@ function kidsQuickShowChildPicker(mode){
         starTapLocked = true;
         try { await giveStar(selectedStaffChild); }
         finally { setTimeout(() => { starTapLocked = false; }, 800); }
+      } else if(kidsQuickMode === 'brick'){
+        if(starTapLocked) return;                      // one tap, one brick
+        starTapLocked = true;
+        try { await giveBrick(selectedStaffChild); }
+        finally { setTimeout(() => { starTapLocked = false; }, 800); }
       } else if(kidsQuickMode === 'moon'){
         document.getElementById('kids-quick-pick-child').style.display = 'none';
         document.getElementById('kids-quick-moon-panel').style.display = 'block';
@@ -59,9 +65,11 @@ document.getElementById('hub-kids-btn').addEventListener('click', async ()=>{
 });
 document.getElementById('kq-give-star-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('star'); });
 document.getElementById('kq-moon-journey-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('moon'); });
+document.getElementById('kq-brick-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('brick'); });
 // the daily-operations gold screen reaches those same two buttons (see openKidsQuickFrom)
 document.getElementById('gold-give-star-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-give-star-btn', 'gold'));
 document.getElementById('gold-moon-journey-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-moon-journey-btn', 'gold'));
+document.getElementById('gold-brick-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-brick-btn', 'gold'));
 document.getElementById('kids-quick-back-to-color').addEventListener('click', ()=>{
   if(kidsQuickMode === 'yellow'){
     document.getElementById('kids-quick-pick-child').style.display = 'none';

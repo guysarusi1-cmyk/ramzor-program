@@ -7,7 +7,8 @@ const SLIDES = [
   { id:4, label:'הרמזור הירוק', render: renderGreenSlide, hidden:true },
   { id:5, label:'לוח הכוכבים', render: renderStarBoard },
   { id:6, label:'לוח המסע בחלל', render: renderMoonBoard, hidden:true },   // shown only while some child is on this journey (see journeyBoardsNeeded)
-  { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard }   // shown only while some child is on this journey
+  { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard },   // shown only while some child is on this journey
+  { id:8, label:'קירות הלבנים', render: renderWallsBoard, hidden:true }       // shown only once somebody has a brick (see refreshJourneyBoards)
 ];
 let carouselIndex = 3; // start on the first non-hidden slide (bonuses)
 let carouselTimer = null;
@@ -23,11 +24,12 @@ function journeyBoardsNeeded(rows, childIds){
   return { moon: moon > 0, mercury: mercury > 0 };
 }
 async function refreshJourneyBoards(){
-  const { data, error } = await sb.from('child_state').select('child_id, moon_steps');
+  const { data, error } = await sb.from('child_state').select('*');
   if(error || !data) return;
   const need = journeyBoardsNeeded(data, roster.map(c => c.id));
   SLIDES[6].hidden = !need.moon;
   SLIDES[7].hidden = !need.mercury;
+  SLIDES[8].hidden = !data.some(r => (r.bricks || 0) > 0);        // the walls board, once anybody has a brick
 }
 function renderOverviewSlide(){
   const el = document.getElementById('overview-slide-content');
@@ -86,7 +88,7 @@ async function showSlide(i){
 
 let feedbackChannel = null;
 let bonusRevocationChannel = null;
-const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7, bonus:3 };
+const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7, bonus:3, bricks:8 };
 const STUNT_BOARD_MS = 9500;   // how long a journey board stays up while the ship does its show
 let interruptTimer = null;
 let preInterruptIndex = null;
@@ -190,9 +192,10 @@ function celebrateFeedbackEvent(ev){
   if(!(type in EVENT_TYPE_SLIDE) || type === 'bonus' || !child) return;
   queueCelebration(async () => {
     const state = await getChildState(childId);
-    const now = type === 'star' ? (state.stars || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
+    const now = type === 'star' ? (state.stars || 0) : type === 'bricks' ? (state.bricks || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
     await playCelebration(type, child, now);
     if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
+    else if(type === 'bricks') interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard);
     else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,
       () => flyMarkerStunt(childId, document.getElementById('moon-board'), o => renderMoonBoard(Object.assign({ justArrivedChildId: childId }, o)), now - 1), STUNT_BOARD_MS);
     else interruptToSlide(EVENT_TYPE_SLIDE.mercury,

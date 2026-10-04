@@ -314,6 +314,19 @@ async function giveStar(childId){
   return true;
 }
 
+// A brick for the child's wall (the wall project): one at a time, up to WALL_BRICKS; the kids' TV celebrates it.
+async function giveBrick(childId){
+  const child = roster.find(c=>c.id===childId);
+  const r = await updateChildState(childId, s => (s.bricks || 0) >= WALL_BRICKS ? null : { set:{ bricks:(s.bricks || 0) + 1 }, guard:['bricks'] });
+  if(r.reason === 'declined'){ toast(`הקיר של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
+  if(!r.ok){ toast('⚠ הלבנה לא נשמרה — בדקו חיבור ונסו שוב'); return false; }
+  const n = r.after.bricks || 0;
+  const msg = n >= WALL_BRICKS ? `🧱🎉 ${displayName(child)} סיים/ה לבנות את הקיר!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`;
+  logFeedbackEvent(child.id, 'bricks', msg);
+  toast(msg);
+  return true;
+}
+
 async function renderMoonPanel(containerId){
   const child = roster.find(c=>c.id===selectedStaffChild);
   const state = await getChildState(selectedStaffChild);

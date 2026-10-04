@@ -4,11 +4,14 @@ function initials(child){
   const last = (child.lastInitial || '').trim()[0] || '';
   return (first + last) || '?';
 }
-function nameColor(name){
+// every child has one colour (from the first name): the avatar, and the child's wall in the wall project
+function nameHue(name){
   let h = 0;
   for(let i=0;i<name.length;i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  const hue = Math.abs(h) % 360;
-  return `hsl(${hue}, 55%, 45%)`;
+  return Math.abs(h) % 360;
+}
+function nameColor(name){
+  return `hsl(${nameHue(name)}, 55%, 45%)`;
 }
 function avatarHtml(child, sizeClass){
   return `<div class="avatar-initials" style="background:${nameColor(child.firstName)}">${initials(child)}</div>`;

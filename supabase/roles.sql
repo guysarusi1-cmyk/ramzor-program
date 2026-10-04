@@ -15,6 +15,9 @@
 --   * The kids' TV (not signed in) still reads what it shows — nothing else changed for it.
 -- ================================================================
 
+-- the wall project (פרויקט הלבנים): every child builds a wall of 100 bricks; the instructors add the bricks
+alter table public.child_state add column if not exists bricks int not null default 0;
+
 -- who is who (taken from the signed login, which cannot be forged)
 create or replace function public.is_staff() returns boolean language sql stable as $$
   select coalesce(auth.jwt() ->> 'email', '') in ('staff@merkaz-cherum.local', 'manager@merkaz-cherum.local')
@@ -76,7 +79,7 @@ begin
     return coalesce(new, old);                         -- the SQL editor / the manager
   end if;
   if tg_op = 'UPDATE' and (new.stars < old.stars - 1 or new.moon_steps < old.moon_steps - 1
-                           or new.mercury_steps < old.mercury_steps - 1 or new.moon_gifts < old.moon_gifts - 1) then
+                           or new.mercury_steps < old.mercury_steps - 1 or new.moon_gifts < old.moon_gifts - 1 or new.bricks < old.bricks - 1) then
     raise exception 'only the manager may reset the boards';
   end if;
   return new;

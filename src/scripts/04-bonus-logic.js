@@ -87,7 +87,9 @@ function groupRevocationsByBonus(revocations){
 const MOON_DAILY_LIMIT_ENABLED = (APP_ENV === 'live');
 
 const emptyChildState = () => ({ stars:0, moonSteps:0, moonGifts:0, mercurySteps:0, moonDayDate:null, moonDayStatus:null });
-const childStateFromRow = d => ({ stars:d.stars, moonSteps:d.moon_steps, moonGifts:d.moon_gifts, mercurySteps:d.mercury_steps||0, moonDayDate:d.moon_day_date, moonDayStatus:d.moon_day_status });
+// bricks (the wall project) is a newer column: while a project's database does not have it yet, it stays undefined
+// (read it as (s.bricks || 0)) and is never written, so nothing breaks before supabase\roles.sql was run there
+const childStateFromRow = d => ({ stars:d.stars, moonSteps:d.moon_steps, moonGifts:d.moon_gifts, mercurySteps:d.mercury_steps||0, moonDayDate:d.moon_day_date, moonDayStatus:d.moon_day_status, bricks: ('bricks' in d) ? (d.bricks || 0) : undefined });
 
 // For changing a child's data: null when the read FAILED (never pretend the child is at zero and then
 // write that back over the real numbers); a child with no row yet starts from zero.
@@ -113,7 +115,7 @@ async function getAllChildStates(){
 // it is read again and redone — so no star or step is ever lost to a simultaneous change.
 //   compute(before) -> { set:{ stars: 5, ... }, guard:['stars', ...] }   or null to stop (nothing to do)
 //   resolves to { ok:true, before, after } | { ok:false, reason:'network'|'declined'|'busy' }
-const STATE_COLUMNS = { stars:'stars', moonSteps:'moon_steps', moonGifts:'moon_gifts', mercurySteps:'mercury_steps', moonDayDate:'moon_day_date', moonDayStatus:'moon_day_status' };
+const STATE_COLUMNS = { stars:'stars', moonSteps:'moon_steps', moonGifts:'moon_gifts', mercurySteps:'mercury_steps', moonDayDate:'moon_day_date', moonDayStatus:'moon_day_status', bricks:'bricks' };
 async function updateChildState(childId, compute){
   for(let attempt = 0; attempt < 8; attempt++){
     const { data: row, error } = await sb.from('child_state').select('*').eq('child_id', childId).maybeSingle();
@@ -144,7 +146,8 @@ async function setChildState(id, state){
   const { error } = await client.from('child_state').upsert({
     child_id:id, stars:state.stars||0, moon_steps:state.moonSteps||0, moon_gifts:state.moonGifts||0,
     mercury_steps:state.mercurySteps||0,
-    moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null
+    moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null,
+    ...(state.bricks !== undefined ? { bricks: state.bricks } : {})        // only where the database has the column
   });
   if(error) console.error(error);
   return !error;     // callers tell staff when a change did NOT reach the database
