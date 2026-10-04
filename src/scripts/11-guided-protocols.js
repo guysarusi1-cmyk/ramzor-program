@@ -318,11 +318,11 @@ async function giveStar(childId){
 async function giveBrick(childId, strength){
   const child = roster.find(c=>c.id===childId);
   const r = await updateChildState(childId, s => (s.bricks || 0) >= WALL_BRICKS ? null : { set:{ bricks:(s.bricks || 0) + 1 }, guard:['bricks'] });
-  if(r.reason === 'declined'){ toast(`הקיר של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
+  if(r.reason === 'declined'){ toast(`המקדש של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
   if(!r.ok){ toast('⚠ הלבנה לא נשמרה — בדקו חיבור ונסו שוב'); return false; }
   const n = r.after.bricks || 0;
   const why = cleanStrength(strength);                     // the strength the instructor saw (shown on the TV, kept in the log)
-  const msg = (n >= WALL_BRICKS ? `🧱🎉 ${displayName(child)} סיים/ה לבנות את הקיר!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`) + (why ? ` · כוח: ${why}` : '');
+  const msg = (n >= WALL_BRICKS ? `🧱🎉 המקדש של ${displayName(child)} הושלם!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`) + (why ? ` · כוח: ${why}` : '');
   logFeedbackEvent(child.id, 'bricks', msg);
   toast(msg);
   return true;

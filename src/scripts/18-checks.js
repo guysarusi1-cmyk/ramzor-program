@@ -778,7 +778,7 @@
       scene.innerHTML = bigWallHtml(kidB, 10, 10);
       check('wall: every child has a different colour', hueA !== '' && hueA !== scene.querySelector('.wall-scene').style.getPropertyValue('--h'), hueA);
       scene.innerHTML = bigWallHtml(kidA, 100, 100);
-      check('wall: the 100th brick brings "finished building the wall"', !!scene.querySelector('.wall-done') && /סיים\/ה לבנות את הקיר/.test(scene.querySelector('.wall-done').textContent), 'no message');
+      check('wall: the 100th brick brings "המקדש הושלם"', !!scene.querySelector('.wall-done') && /המקדש של .*הושלם/.test(scene.querySelector('.wall-done').textContent), 'no message');
 
       CELEBRATION_MS = 700;
       const run = playCelebration('bricks', kidA, 12);

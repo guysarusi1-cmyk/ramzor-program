@@ -21,7 +21,7 @@ function bigWallHtml(child, count, newBrick, strength){
         <div class="wall-base"><span>${escapeHtml(displayName(child))}</span></div>
       </div>
       ${strength ? `<div class="wall-strength">${escapeHtml(strength)}</div>` : ''}
-      ${count >= WALL_BRICKS && newBrick ? `<div class="wall-done">${escapeHtml(displayName(child))}<br>סיים/ה לבנות את הקיר!</div>` : ''}
+      ${count >= WALL_BRICKS && newBrick ? `<div class="wall-done">המקדש של ${escapeHtml(displayName(child))}<br>הושלם!</div>` : ''}
     </div>`;
 }
 
