@@ -910,6 +910,125 @@
     .quick-light-row{ flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:22px; }
     .quick-light-row .qcol{ flex:none; width:100%; }
   }
+
+/* ---- the wall project: a limestone wall of 100 bricks in the child's colour ---- */
+  /* sizes inside the scene use em, where 1em = 1% of the scene's width (set from script, see fitBoardFont) */
+  .wall-scene{
+    position:relative; width:min(94vw, calc((100vh - 9vmin) * 1.5)); aspect-ratio:3 / 2; border-radius:1.4em; overflow:hidden;
+    background:
+      radial-gradient(ellipse 9% 5% at 16% 16%, rgba(255,255,255,.95) 0 55%, transparent 60%),
+      radial-gradient(ellipse 11% 6% at 84% 24%, rgba(255,255,255,.9) 0 55%, transparent 60%),
+      linear-gradient(#4a96f0 0%, #9fcbff 55%, #efe3c4 56%, #e2d2ac 100%);
+    box-shadow:0 1.4em 4em rgba(0,0,0,.55);
+  }
+  .wall-col{
+    position:absolute; top:0; bottom:0; width:5.6%;
+    background:linear-gradient(90deg, #cfbf9b, #f1e6cb 30%, #f6eed8 55%, #cdbd97),
+      repeating-linear-gradient(90deg, rgba(120,100,60,.16) 0 .5em, transparent .5em 1.5em);
+    background-blend-mode:multiply;
+  }
+  .wall-col::before{ content:''; position:absolute; left:-12%; right:-12%; top:12%; height:8%; border-radius:.5em; background:linear-gradient(#f3d77c, #c99a2e 55%, #e8c45a); box-shadow:0 .2em .5em rgba(0,0,0,.35); }
+  .wall-col::after{ content:''; position:absolute; left:-10%; right:-10%; bottom:3%; height:7%; background:linear-gradient(#f3d77c, #b98a26); border-radius:.4em; }
+  .wall-col-l{ left:0; } .wall-col-r{ right:0; }
+  .wall{
+    position:absolute; left:6%; right:6%; top:1.6%; bottom:2.4%; display:flex; flex-direction:column;
+    background:linear-gradient(#e9dcc0, #d8c7a2); border-radius:.5em .5em .2em .2em; box-shadow:0 .3em 1.2em rgba(70,50,10,.45);
+  }
+  .wall-cornice{ height:4.2%; background:linear-gradient(#f4ead2, #cdbb94); border-radius:.5em .5em 0 0; box-shadow:0 .2em .4em rgba(70,50,10,.35); }
+  .wall-frieze{
+    height:5.6%; margin:0 1.4%; background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 30' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23fbe596'/><stop offset='.55' stop-color='%23d4a634'/><stop offset='1' stop-color='%23a67816'/></linearGradient></defs><path d='M10 1 C15 8 17 18 10 29 C3 18 5 8 10 1Z' fill='url(%23g)' stroke='%237a5710' stroke-width='.6'/></svg>") repeat-x center / 1.9% 100%,
+      linear-gradient(#e6cf86, #b98a26);
+    border-top:.15em solid #f6e6a8; border-bottom:.15em solid #8d6618;
+  }
+  .wall-body{
+    flex:1; display:grid; grid-template-columns:repeat(10, 1fr); grid-template-rows:repeat(10, 1fr); gap:.42em;
+    margin:.5% 2.2% 0; padding:.6em .45em; background:linear-gradient(#5e5240, #463c2d); border-radius:.3em; direction:ltr;     /* numbers run 1..10 from the left, like the picture */
+    box-shadow:inset 0 .2em .8em rgba(0,0,0,.4);
+  }
+  .brick{
+    position:relative; display:flex; align-items:center; justify-content:center; border-radius:.45em;
+    font-family:'Frank Ruhl Libre', 'David Libre', Georgia, 'Times New Roman', serif; font-size:2.3em; line-height:1;
+    background:rgba(45,32,14,.34); color:rgba(255,238,205,.36); box-shadow:inset 0 .12em .5em rgba(0,0,0,.5);
+  }
+  /* Jerusalem stone (as on a real wall): warm golden limestone, a rough hand-dressed face with real relief (light from
+     the top-left: raised facets, hollows, sharp chisel creases), thin dark cracks, shaded joints; every stone is dressed
+     differently (three relief patterns, different tones and heights). A light tint of the child's colour. */
+  .wall-scene{ --relief-a:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='r' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.013 .02' numOctaves='4' seed='3' result='n'/><feDiffuseLighting in='n' surfaceScale='7' diffuseConstant='.68' lighting-color='%23fff2d0'><feDistantLight azimuth='235' elevation='48'/></feDiffuseLighting></filter><rect width='220' height='150' filter='url(%23r)'/></svg>"); --relief-b:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='r' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.013 .02' numOctaves='4' seed='17' result='n'/><feDiffuseLighting in='n' surfaceScale='7' diffuseConstant='.68' lighting-color='%23fff2d0'><feDistantLight azimuth='235' elevation='48'/></feDiffuseLighting></filter><rect width='220' height='150' filter='url(%23r)'/></svg>"); --relief-c:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='r' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.013 .02' numOctaves='4' seed='29' result='n'/><feDiffuseLighting in='n' surfaceScale='7' diffuseConstant='.68' lighting-color='%23fff2d0'><feDistantLight azimuth='235' elevation='48'/></feDiffuseLighting></filter><rect width='220' height='150' filter='url(%23r)'/></svg>"); --crack-a:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='c' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.016 .024' numOctaves='3' seed='5' result='n'/><feColorMatrix in='n' type='matrix' values='0 0 0 0 .38  0 0 0 0 .27  0 0 0 0 .14  -26 0 0 0 3.0'/></filter><rect width='220' height='150' filter='url(%23c)'/></svg>"); --crack-b:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='c' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.016 .024' numOctaves='3' seed='21' result='n'/><feColorMatrix in='n' type='matrix' values='0 0 0 0 .38  0 0 0 0 .27  0 0 0 0 .14  -26 0 0 0 3.0'/></filter><rect width='220' height='150' filter='url(%23c)'/></svg>"); --crack-c:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='c' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.016 .024' numOctaves='3' seed='33' result='n'/><feColorMatrix in='n' type='matrix' values='0 0 0 0 .38  0 0 0 0 .27  0 0 0 0 .14  -26 0 0 0 3.0'/></filter><rect width='220' height='150' filter='url(%23c)'/></svg>"); }
+  .brick span{ position:relative; z-index:3; }
+  .brick.built{
+    background:
+      linear-gradient(hsl(var(--h) 55% 60% / .13), hsl(var(--h) 55% 52% / .17)),
+      linear-gradient(155deg, #f3e2b8, #e3c98f 50%, #cdae72);
+    color:#3d2a10; font-weight:700; text-shadow:0 0 .22em #fff6dc, 0 0 .42em #fff6dc, 0 .05em 0 rgba(255,250,235,.9);
+    box-shadow:
+      inset .13em .13em .12em rgba(255,255,240,.9), inset -.16em -.2em .22em rgba(90,60,25,.55),
+      inset 0 0 0 .06em rgba(120,90,50,.45), 0 .18em .22em rgba(40,26,6,.7);
+  }
+  .brick.built::after{        /* the relief of the rough face */
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:hard-light; opacity:.9;
+    background:var(--relief-a) center / 100% 100%;
+  }
+  .brick.built::before{       /* the cracks and chisel marks */
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:multiply; opacity:.7; z-index:2;
+    background:var(--crack-a) center / 100% 100%;
+  }
+  .brick.built:nth-child(3n+2)::after{ background-image:var(--relief-b); background-position:30% 70%; }
+  .brick.built:nth-child(3n)::after{ background-image:var(--relief-c); background-position:80% 20%; }
+  .brick.built:nth-child(4n+1)::before{ background-image:var(--crack-b); background-position:20% 80%; }
+  .brick.built:nth-child(4n+3)::before{ background-image:var(--crack-c); background-position:70% 30%; }
+  /* stones stand a little higher or lower than their neighbours, and differ in tone */
+  .brick.built:nth-child(5n+1){ transform:translateY(-.1em); box-shadow:inset .13em .13em .12em rgba(255,255,240,.9), inset -.22em -.3em .3em rgba(90,60,25,.6), inset 0 0 0 .06em rgba(120,90,50,.45), 0 .3em .3em rgba(40,26,6,.75); }
+  .brick.built:nth-child(7n+3){ transform:translateY(.06em); filter:brightness(.93) saturate(1.08); }
+  .brick.built:nth-child(4n){ filter:brightness(1.05) saturate(.9); }
+  .brick.built:nth-child(6n+5){ filter:brightness(.96) sepia(.12); }
+  .brick.new{ z-index:5; animation:brick-drop 1.3s .8s cubic-bezier(.3,1.35,.5,1) both, brick-glow 1.6s 2s ease-in-out 2 both; }
+  .brick.new span{ font-weight:900; }
+  @keyframes brick-drop{
+    0%   { transform:translateY(-420%) rotate(-14deg) scale(1.9); opacity:0; }
+    18%  { opacity:1; }
+    72%  { transform:translateY(0) rotate(2deg) scale(1.22); }
+    100% { transform:none; }
+  }
+  @keyframes brick-glow{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,214,102,0), inset 0 0 0 .07em rgba(255,255,255,.4); } 50%{ box-shadow:0 0 2.2em .8em rgba(255,214,102,.95), inset 0 0 0 .1em #fff6c9; } }
+  .wall-base{
+    height:6%; margin-top:.5%; display:flex; align-items:center; justify-content:center; border-radius:0 0 .2em .2em;
+    background:linear-gradient(#cdbb94, #b8a578); box-shadow:0 .2em .5em rgba(70,50,10,.4);
+  }
+  .wall-base span{ font-family:'Rubik', sans-serif; font-weight:800; font-size:2.6em; color:#fff2c4; letter-spacing:.04em; text-shadow:0 .08em .25em rgba(70,45,5,.75), 0 0 .5em rgba(214,160,40,.6); }
+  .cel-wall{ width:auto; gap:0; }
+  .wall-done{
+    position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); z-index:20; text-align:center; direction:rtl;
+    font-family:'Rubik', sans-serif; font-weight:900; font-size:4.2em; line-height:1.2; white-space:nowrap; color:#fff7d0; padding:.5em .8em;
+    background:rgba(60,35,5,.82); border:.12em solid #f2cf6a; border-radius:.5em; box-shadow:0 0 3em rgba(255,214,102,.85);
+    animation:wall-done-pop .9s 2.6s cubic-bezier(.2,1.6,.4,1) both; text-shadow:0 .05em .2em rgba(0,0,0,.6);
+  }
+
+  @keyframes wall-done-pop{ from{ opacity:0; transform:translate(-50%, -50%) scale(.4); } to{ opacity:1; transform:translate(-50%, -50%) scale(1); } }
+
+  /* the board with every child's wall */
+  .board-walls{
+    width:min(96vw, 1900px); height:var(--tv-main-h); box-sizing:border-box; padding:2.2vmin;
+    display:grid; grid-template-columns:repeat(var(--wall-cols, 7), minmax(0, 1fr)); gap:2vmin; align-content:center;
+    border-radius:2vmin; background:linear-gradient(#3f86e0, #a9d1ff 62%, #e8dcb9 63%);
+  }
+  .mini-wall-card{
+    display:flex; flex-direction:column; align-items:center; gap:.8vmin; padding:1.4vmin 1vmin 1.2vmin; border-radius:1.6vmin;
+    background:rgba(255,248,226,.86); box-shadow:0 .8vmin 2vmin rgba(40,30,10,.35); position:relative;
+  }
+  .mini-wall{
+    width:100%; display:grid; grid-template-columns:repeat(10, 1fr); gap:.35vmin; padding:.8vmin; box-sizing:border-box;
+    background:linear-gradient(#85775f, #6a5e4b); border-radius:.8vmin; border:.35vmin solid #d4a634; direction:ltr; box-shadow:inset 0 .3vmin .8vmin rgba(0,0,0,.4);
+  }
+  .mini-wall i{ aspect-ratio:1.5 / 1; border-radius:.25vmin; background:rgba(45,32,14,.4); box-shadow:inset 0 .15vmin .3vmin rgba(0,0,0,.4); }
+  .mini-wall i.on{ background:linear-gradient(hsl(var(--h) 55% 56% / .2), hsl(var(--h) 55% 50% / .24)), linear-gradient(150deg, #f1e3c4, #cdb78a); box-shadow:inset .12vmin .12vmin 0 rgba(255,255,245,.8), inset -.12vmin -.12vmin 0 rgba(110,80,40,.4); }
+  .mini-wall-name{ font-family:'Rubik', sans-serif; font-weight:800; font-size:2.7vmin; color:#4a3418; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+  .mini-wall-count{
+    font-family:'Rubik', sans-serif; font-weight:800; font-size:2.4vmin; color:#fff; background:hsl(var(--h) 50% 40%);
+    min-width:5vmin; text-align:center; padding:.2vmin 1.2vmin; border-radius:2vmin;
+  }
+  .mini-wall-card.done{ box-shadow:0 0 0 .5vmin #f2cf6a, 0 0 3vmin rgba(242,207,106,.8); animation:star-twinkle 3.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .brick.new, .wall-done, .mini-wall-card.done{ animation:none; } }
 </style>
 </head>
 <body>
@@ -1011,6 +1130,7 @@
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px; padding-inline-start:50px;">
           <button class="btn ghost" id="kq-give-star-btn">⭐ הענקת כוכב</button>
           <button class="btn ghost" id="kq-moon-journey-btn">🚀 תכנית המסע בחלל</button>
+          <button class="btn ghost" id="kq-brick-btn">🧱 בניית לבנים</button>
 
         </div>
 
@@ -1222,6 +1342,7 @@
       <div class="guided-actions">
         <button type="button" class="guided-action" id="gold-give-star-btn">הענקת כוכב</button>
         <button type="button" class="guided-action" id="gold-moon-journey-btn">תכנית המסע בחלל</button>
+        <button type="button" class="guided-action" id="gold-brick-btn">בניית לבנים</button>
       </div>
     </div>
 
@@ -1247,6 +1368,7 @@
       <div class="slide" id="slide-5"><div class="board-star" id="star-board"></div></div>
       <div class="slide" id="slide-6"><div class="board-moon" id="moon-board"></div></div>
       <div class="slide" id="slide-7"><div class="board-mercury" id="mercury-board"></div></div>
+      <div class="slide" id="slide-8"><div class="board-walls" id="walls-board"></div></div>
     </div>
     <button type="button" class="tv-sound-btn" id="tv-sound-btn" aria-label="הפעלת קול (לחצו על כל כפתור בשלט)" title="הפעלת קול">🔈</button>
   </section>
@@ -1312,6 +1434,13 @@ const SUPABASE_URL = 'https://caggcgnjwigdyzltxofj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhZ2djZ25qd2lnZHl6bHR4b2ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODk0NjUsImV4cCI6MjEwNDk2NTQ2NX0.xwoijMsiXIyANEyFbAAzseHwgzINsapy9u3SSSVWj4o';
 const STAFF_EMAIL = 'staff@merkaz-cherum.local';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// The manager has a login of his own (see supabase/roles.sql). Management screens write through this second
+// connection, which holds the manager's session only in memory for a few minutes — instructors can never
+// delete children, reset the boards or edit the lists, because the DATABASE refuses it.
+const MANAGER_LOGIN = 'False' === 'True';     // switched on in config/<env>.json once roles.sql was run in that project
+const MANAGER_EMAIL = 'manager@merkaz-cherum.local';
+const sbAdmin = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:false, autoRefreshToken:true, detectSessionInUrl:false, storageKey:'ramzor-manager-auth' } });
 
 // ---------- PROGRAM DATA (from Guy's actual protocol) ----------
 // the incident report form that the red/orange protocols end with
@@ -1506,7 +1635,9 @@ function groupRevocationsByBonus(revocations){
 const MOON_DAILY_LIMIT_ENABLED = (APP_ENV === 'live');
 
 const emptyChildState = () => ({ stars:0, moonSteps:0, moonGifts:0, mercurySteps:0, moonDayDate:null, moonDayStatus:null });
-const childStateFromRow = d => ({ stars:d.stars, moonSteps:d.moon_steps, moonGifts:d.moon_gifts, mercurySteps:d.mercury_steps||0, moonDayDate:d.moon_day_date, moonDayStatus:d.moon_day_status });
+// bricks (the wall project) is a newer column: while a project's database does not have it yet, it stays undefined
+// (read it as (s.bricks || 0)) and is never written, so nothing breaks before supabase\roles.sql was run there
+const childStateFromRow = d => ({ stars:d.stars, moonSteps:d.moon_steps, moonGifts:d.moon_gifts, mercurySteps:d.mercury_steps||0, moonDayDate:d.moon_day_date, moonDayStatus:d.moon_day_status, bricks: ('bricks' in d) ? (d.bricks || 0) : undefined });
 
 // For changing a child's data: null when the read FAILED (never pretend the child is at zero and then
 // write that back over the real numbers); a child with no row yet starts from zero.
@@ -1532,7 +1663,7 @@ async function getAllChildStates(){
 // it is read again and redone — so no star or step is ever lost to a simultaneous change.
 //   compute(before) -> { set:{ stars: 5, ... }, guard:['stars', ...] }   or null to stop (nothing to do)
 //   resolves to { ok:true, before, after } | { ok:false, reason:'network'|'declined'|'busy' }
-const STATE_COLUMNS = { stars:'stars', moonSteps:'moon_steps', moonGifts:'moon_gifts', mercurySteps:'mercury_steps', moonDayDate:'moon_day_date', moonDayStatus:'moon_day_status' };
+const STATE_COLUMNS = { stars:'stars', moonSteps:'moon_steps', moonGifts:'moon_gifts', mercurySteps:'mercury_steps', moonDayDate:'moon_day_date', moonDayStatus:'moon_day_status', bricks:'bricks' };
 async function updateChildState(childId, compute){
   for(let attempt = 0; attempt < 8; attempt++){
     const { data: row, error } = await sb.from('child_state').select('*').eq('child_id', childId).maybeSingle();
@@ -1558,10 +1689,13 @@ async function updateChildState(childId, compute){
   return { ok:false, reason:'busy' };
 }
 async function setChildState(id, state){
-  const { error } = await sb.from('child_state').upsert({
+  const client = await adminClient();                      // (used by management: a new child's start, resetting the boards)
+  if(!client) return false;
+  const { error } = await client.from('child_state').upsert({
     child_id:id, stars:state.stars||0, moon_steps:state.moonSteps||0, moon_gifts:state.moonGifts||0,
     mercury_steps:state.mercurySteps||0,
-    moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null
+    moon_day_date:state.moonDayDate||null, moon_day_status:state.moonDayStatus||null,
+    ...(state.bricks !== undefined ? { bricks: state.bricks } : {})        // only where the database has the column
   });
   if(error) console.error(error);
   return !error;     // callers tell staff when a change did NOT reach the database
@@ -1741,7 +1875,8 @@ function formatPhone(phone){
 }
 async function setChildSocialWorker(childId, worker){
   const child = roster.find(c => c.id === childId);
-  const { error } = await sb.from('roster').update({ sw_name: worker ? worker.name : '', sw_phone: worker ? worker.phone : '' }).eq('id', childId);
+  const client = await adminClient(); if(!client) return false;
+  const { error } = await client.from('roster').update({ sw_name: worker ? worker.name : '', sw_phone: worker ? worker.phone : '' }).eq('id', childId);
   if(error){ console.error(error); return false; }
   child.swName = worker ? worker.name : ''; child.swPhone = worker ? worker.phone : '';
   return true;
@@ -1800,7 +1935,8 @@ function renderManageRoster(){
       const child = roster.find(c => c.id === btn.dataset.id);
       const ok = await confirmSheet({ title:`למחוק את ${child ? displayName(child) : 'הילד/ה'}?`, text:'הפעולה תמחק גם את הנתונים של הילד/ה (כוכבים, התקדמות בירח) ואי אפשר לבטל אותה.', typeWord:'מחיקה', okLabel:'למחוק', danger:true });
       if(!ok) return;
-      const { error } = await sb.from('roster').delete().eq('id', btn.dataset.id);
+      const client = await adminClient(); if(!client){ toast('נדרשת סיסמת מנהל'); return; }
+      const { error } = await client.from('roster').delete().eq('id', btn.dataset.id);
       if(error){ toast('שגיאה במחיקה'); console.error(error); return; }
       roster = roster.filter(c => c.id !== btn.dataset.id);
       renderManageRoster();
@@ -1822,7 +1958,8 @@ document.getElementById('add-child-btn').addEventListener('click', async ()=>{
   const swPhone = swPhoneInput.value.trim();
   if(!firstName){ toast('כתבו קודם שם פרטי'); nameInput.focus(); return; }
   const newChild = {id: uid(), firstName, lastInitial, age, swName, swPhone};
-  const { error } = await sb.from('roster').insert({
+  const client = await adminClient(); if(!client){ toast('נדרשת סיסמת מנהל'); return; }
+  const { error } = await client.from('roster').insert({
     id:newChild.id, first_name:firstName, last_initial:lastInitial, age, sw_name:swName, sw_phone:swPhone
   });
   if(error){ toast('שגיאה בהוספת ילד/ה'); console.error(error); return; }
@@ -1846,7 +1983,9 @@ async function getMiniList(key){
   return data.items;
 }
 async function setMiniList(key, list){
-  const { error } = await sb.from('mini_lists').upsert({key, items:list});
+  const client = await adminClient();
+  if(!client) return false;                                 // no manager password given
+  const { error } = await client.from('mini_lists').upsert({key, items:list});
   if(error) console.error(error);
   return !error;
 }
@@ -2024,13 +2163,13 @@ async function checkManagementCode(code){
 }
 
 // a small sheet that asks for a code (digits or letters); resolves with the text, or null on cancel
-function askCode({ title, text, okLabel }){
+function askCode({ title, text, okLabel, password }){
   return new Promise(resolve => {
     const wrap = document.createElement('div');
     wrap.className = 'sheet confirm-sheet';
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
     wrap.innerHTML = `<div class="sheet-card"><h2></h2><p class="confirm-text"></p>
-      <input type="password" class="confirm-input code-input" inputmode="numeric" autocomplete="off" aria-label="קוד">
+      <input type="password" class="confirm-input code-input" ${password ? `autocomplete="current-password"` : `inputmode="numeric" autocomplete="off"`} aria-label="${password ? `סיסמה` : `קוד`}">
       <div class="code-error" role="alert" hidden></div>
       <div class="confirm-actions"><button type="button" class="btn ghost confirm-cancel">ביטול</button><button type="button" class="btn confirm-ok"></button></div></div>`;
     wrap.querySelector('h2').textContent = title; wrap.querySelector('.confirm-text').textContent = text || '';
@@ -2048,13 +2187,17 @@ function askCode({ title, text, okLabel }){
 
 // the only way into the management screen (home gear, #manage address)
 async function openManagement(){
-  const lock = await getManagementLock();
-  if(lock && Date.now() > managementOpenUntil){
-    for(let tries = 0; tries < 5; tries++){
-      const code = await askCode({ title:'קוד ניהול', text: tries ? 'הקוד שגוי, נסו שוב.' : 'מסך הניהול מוגן בקוד.', okLabel:'כניסה' });
-      if(code === null) return false;
-      if(await checkManagementCode(code)){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; break; }
-      if(tries === 4){ toast('הקוד שגוי. נסו שוב מאוחר יותר.'); return false; }
+  if(MANAGER_LOGIN){
+    if(!(await adminClient())) return false;                 // asks for the manager's password when needed
+  } else {
+    const lock = await getManagementLock();
+    if(lock && Date.now() > managementOpenUntil){
+      for(let tries = 0; tries < 5; tries++){
+        const code = await askCode({ title:'קוד ניהול', text: tries ? 'הקוד שגוי, נסו שוב.' : 'מסך הניהול מוגן בקוד.', okLabel:'כניסה' });
+        if(code === null) return false;
+        if(await checkManagementCode(code)){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; break; }
+        if(tries === 4){ toast('הקוד שגוי. נסו שוב מאוחר יותר.'); return false; }
+      }
     }
   }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -2064,6 +2207,28 @@ async function openManagement(){
   return true;
 }
 
+// ---- the manager's own login (when MANAGER_LOGIN is on)
+async function managerSessionValid(){
+  const { data: { session } } = await sbAdmin.auth.getSession();
+  return !!session && Date.now() <= managementOpenUntil;
+}
+async function signInAsManager(){
+  for(let tries = 0; tries < 5; tries++){
+    const pw = await askCode({ title:'סיסמת מנהל', text: tries ? 'הסיסמה שגויה, נסו שוב.' : 'הפעולה הזו מיועדת למנהל. הקלידו את סיסמת המנהל.', okLabel:'כניסה', password:true });
+    if(pw === null) return false;
+    const { error } = await sbAdmin.auth.signInWithPassword({ email: MANAGER_EMAIL, password: pw });
+    if(!error){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return true; }
+    if(tries === 4) toast('הסיסמה שגויה. נסו שוב מאוחר יותר.');
+  }
+  return false;
+}
+// the connection that management actions write through: the manager's (after his password, valid for a few
+// minutes of use) — or, before the manager login exists in a project, the ordinary one
+async function adminClient(){
+  if(!MANAGER_LOGIN) return sb;
+  if(await managerSessionValid()){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return sbAdmin; }
+  return (await signInAsManager()) ? sbAdmin : null;
+}
 // the kids' screen address, ready to copy
 function renderTvAddress(){
   const url = location.origin + location.pathname + '#tv';
@@ -2077,6 +2242,13 @@ document.getElementById('tv-address-copy').addEventListener('click', async () =>
 
 // the "קוד ניהול" card at the top of the management screen
 async function renderManagementLockCard(){
+  if(MANAGER_LOGIN){                                             // the manager's own login: nothing to configure here
+    document.getElementById('mgmt-lock-status').textContent = 'מסך הניהול מוגן בסיסמת מנהל נפרדת, והשרת מאפשר רק למנהל להוסיף ולמחוק ילדים, לאפס לוחות ולערוך רשימות.';
+    document.getElementById('mgmt-lock-card').classList.remove('unset');
+    document.getElementById('mgmt-lock-btn').textContent = 'יציאת מנהל (נעילה עכשיו)';
+    document.getElementById('mgmt-lock-off-btn').hidden = true;
+    return;
+  }
   const lock = await getManagementLock();
   document.getElementById('mgmt-lock-status').textContent = lock
     ? 'מסך הניהול מוגן בקוד.'
@@ -2098,6 +2270,10 @@ async function chooseNewCode(){
   renderManagementLockCard();
 }
 document.getElementById('mgmt-lock-btn').addEventListener('click', async () => {
+  if(MANAGER_LOGIN){                                             // lock now: forget the manager's session and go home
+    await sbAdmin.auth.signOut(); managementOpenUntil = 0; showHub(); toast('מצב מנהל נעול');
+    return;
+  }
   const lock = await getManagementLock();
   if(lock){
     const current = await askCode({ title:'הקוד הנוכחי', text:'כדי לשנות את הקוד, הקלידו קודם את הקוד הנוכחי.', okLabel:'המשך' });
@@ -2539,6 +2715,19 @@ async function giveStar(childId){
   return true;
 }
 
+// A brick for the child's wall (the wall project): one at a time, up to WALL_BRICKS; the kids' TV celebrates it.
+async function giveBrick(childId){
+  const child = roster.find(c=>c.id===childId);
+  const r = await updateChildState(childId, s => (s.bricks || 0) >= WALL_BRICKS ? null : { set:{ bricks:(s.bricks || 0) + 1 }, guard:['bricks'] });
+  if(r.reason === 'declined'){ toast(`הקיר של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
+  if(!r.ok){ toast('⚠ הלבנה לא נשמרה — בדקו חיבור ונסו שוב'); return false; }
+  const n = r.after.bricks || 0;
+  const msg = n >= WALL_BRICKS ? `🧱🎉 ${displayName(child)} סיים/ה לבנות את הקיר!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`;
+  logFeedbackEvent(child.id, 'bricks', msg);
+  toast(msg);
+  return true;
+}
+
 async function renderMoonPanel(containerId){
   const child = roster.find(c=>c.id===selectedStaffChild);
   const state = await getChildState(selectedStaffChild);
@@ -2682,17 +2871,67 @@ async function renderHelpFriendPrompt(fromChild, milestoneStep, containerId){
     });
   });
   document.getElementById('help-friend-skip').addEventListener('click', ()=>renderMoonPanel(containerId));
-}// ---------- DISPLAY VIEW ----------
+}
+// ---------- THE WALL PROJECT (פרויקט הלבנים) ----------
+// Every child builds a wall of 100 numbered stone bricks in the colour of their avatar. The instructors add the
+// bricks (one at a time); the kids' TV shows the whole wall of a child when a brick is added (the new brick
+// drops in and lights up), and one board with a small wall for every child.
+const WALL_BRICKS = 100;
+
+// the big wall (a limestone wall with a golden frieze, columns at the sides, blue sky) — built bricks are
+// tinted with the child's colour, the ones still to come are dark empty slots; `newBrick` is the one just added
+function bigWallHtml(child, count, newBrick){
+  let bricks = '';
+  for(let i = 1; i <= WALL_BRICKS; i++){
+    const cls = i <= count ? (i === newBrick ? 'built new' : 'built') : '';
+    bricks += `<div class="brick ${cls}"><span>${i}</span></div>`;
+  }
+  return `<div class="wall-scene" style="--h:${nameHue(child.firstName)};">
+      <div class="wall-col wall-col-l"></div><div class="wall-col wall-col-r"></div>
+      <div class="wall">
+        <div class="wall-cornice"></div><div class="wall-frieze"></div>
+        <div class="wall-body">${bricks}</div>
+        <div class="wall-base"><span>${escapeHtml(displayName(child))}</span></div>
+      </div>
+      ${count >= WALL_BRICKS && newBrick ? `<div class="wall-done">${escapeHtml(displayName(child))}<br>סיים/ה לבנות את הקיר!</div>` : ''}
+    </div>`;
+}
+
+function miniWallHtml(child, count){
+  let cells = '';
+  for(let i = 1; i <= WALL_BRICKS; i++) cells += `<i class="${i <= count ? 'on' : ''}"></i>`;
+  const done = count >= WALL_BRICKS;
+  return `<div class="mini-wall-card${done ? ' done' : ''}" style="--h:${nameHue(child.firstName)};" data-child-id="${child.id}">
+      <div class="mini-wall">${cells}</div>
+      <div class="mini-wall-name">${escapeHtml(displayName(child))}</div>
+      <div class="mini-wall-count">${done ? '✓' : count}</div>
+    </div>`;
+}
+
+// the board with every child's wall, in the rotation of the kids' TV while anybody has a brick
+async function renderWallsBoard(){
+  const el = document.getElementById('walls-board');
+  if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
+  const states = await getAllChildStates();
+  if(!states) return;                                      // read failed: keep what is on screen
+  const rows = roster.length <= 6 ? 1 : roster.length <= 18 ? 2 : roster.length <= 30 ? 3 : 4;
+  el.style.setProperty('--wall-cols', Math.ceil(roster.length / rows));
+  el.innerHTML = roster.map(c => miniWallHtml(c, Math.min(WALL_BRICKS, states.get(c.id).bricks || 0))).join('');
+}
+// ---------- DISPLAY VIEW ----------
 function initials(child){
   const first = (child.firstName || '').trim()[0] || '';
   const last = (child.lastInitial || '').trim()[0] || '';
   return (first + last) || '?';
 }
-function nameColor(name){
+// every child has one colour (from the first name): the avatar, and the child's wall in the wall project
+function nameHue(name){
   let h = 0;
   for(let i=0;i<name.length;i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  const hue = Math.abs(h) % 360;
-  return `hsl(${hue}, 55%, 45%)`;
+  return Math.abs(h) % 360;
+}
+function nameColor(name){
+  return `hsl(${nameHue(name)}, 55%, 45%)`;
 }
 function avatarHtml(child, sizeClass){
   return `<div class="avatar-initials" style="background:${nameColor(child.firstName)}">${initials(child)}</div>`;
@@ -3114,6 +3353,7 @@ function playTones(tones){
 }
 const SOUND_STAR     = [[784, 0, .25], [988, .12, .25], [1319, .24, .45]];                                  // bright "ding-ding-ding"
 const SOUND_HOP      = [[392, 0, .14], [523, .1, .14], [659, .2, .3]];                                      // quick hop up
+const SOUND_BRICK    = [[110, 0, .35, 'triangle', .3], [82, 0, .4, 'sine', .3], [659, .18, .25, 'triangle', .12], [988, .3, .35, 'triangle', .12]];     // a stone thud, then a small chime
 const SOUND_FANFARE  = [[523, 0, .2], [659, .15, .2], [784, .3, .2], [1047, .45, .6, 'triangle', .2]];      // reaching 7
 document.getElementById('tv-sound-btn').addEventListener('click', unlockTvSound);
 // the first press of ANY kind on the TV (a remote's button, a touch, a click) turns the sound on
@@ -3131,6 +3371,7 @@ function celebrationSparkles(n){
 }
 
 function celebrationBody(kind, child, now){
+  if(kind === 'bricks') return bigWallHtml(child, now, now);      // (finishing the wall adds the message inside the wall)
   const milestone = kind !== 'star' && now >= CELEBRATION_TRACK_STEPS;
   const name = `<div class="cel-name">${escapeHtml(displayName(child))}</div>`;
   if(kind === 'star'){
@@ -3163,15 +3404,20 @@ function celebrationBody(kind, child, now){
 async function playCelebration(kind, child, now){
   const host = document.getElementById('celebration');
   if(!host || !child) return;
-  const milestone = kind !== 'star' && now >= CELEBRATION_TRACK_STEPS;
-  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone ? 34 : 18)}<div class="cel-inner">${celebrationBody(kind, child, now)}</div>`;
+  const wallDone = kind === 'bricks' && now >= WALL_BRICKS;
+  const milestone = (kind === 'moon' || kind === 'mercury') && now >= CELEBRATION_TRACK_STEPS;
+  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone || wallDone ? 34 : 18)}<div class="cel-inner${kind === 'bricks' ? ' cel-wall' : ''}">${celebrationBody(kind, child, now)}</div>`;
   host.classList.remove('leaving');
   host.classList.add('show');
   host.setAttribute('aria-hidden', 'false');
   updateTvSoundButton();
+  const scene = host.querySelector('.wall-scene'); if(scene) fitBoardFont(scene);        // (measured once it is on screen) 1em = 1% of the wall's width
 
   if(kind === 'star'){
     setTimeout(() => playTones(SOUND_STAR), 1200);
+  } else if(kind === 'bricks'){
+    setTimeout(() => playTones(SOUND_BRICK), 1700);                    // the brick lands
+    if(wallDone) setTimeout(() => playTones(SOUND_FANFARE), 2900);
   } else {
     // one frame later, so the traveller visibly moves from the previous step to the new one
     setTimeout(() => {
@@ -3181,7 +3427,8 @@ async function playCelebration(kind, child, now){
       playTones(milestone ? SOUND_FANFARE : SOUND_HOP);
     }, 1200);
   }
-  await waitMs(CELEBRATION_MS);
+  // a wall brick takes a little longer (it drops in); finishing the wall longer still (the whole message must be readable)
+  await waitMs(kind === 'bricks' && CELEBRATION_MS > 1000 ? (wallDone ? 9500 : 5600) : CELEBRATION_MS);
   host.classList.add('leaving');
   await waitMs(450);
   host.classList.remove('show', 'leaving');
@@ -3346,7 +3593,8 @@ const SLIDES = [
   { id:4, label:'הרמזור הירוק', render: renderGreenSlide, hidden:true },
   { id:5, label:'לוח הכוכבים', render: renderStarBoard },
   { id:6, label:'לוח המסע בחלל', render: renderMoonBoard, hidden:true },   // shown only while some child is on this journey (see journeyBoardsNeeded)
-  { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard }   // shown only while some child is on this journey
+  { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard },   // shown only while some child is on this journey
+  { id:8, label:'קירות הלבנים', render: renderWallsBoard, hidden:true }       // shown only once somebody has a brick (see refreshJourneyBoards)
 ];
 let carouselIndex = 3; // start on the first non-hidden slide (bonuses)
 let carouselTimer = null;
@@ -3362,11 +3610,12 @@ function journeyBoardsNeeded(rows, childIds){
   return { moon: moon > 0, mercury: mercury > 0 };
 }
 async function refreshJourneyBoards(){
-  const { data, error } = await sb.from('child_state').select('child_id, moon_steps');
+  const { data, error } = await sb.from('child_state').select('*');
   if(error || !data) return;
   const need = journeyBoardsNeeded(data, roster.map(c => c.id));
   SLIDES[6].hidden = !need.moon;
   SLIDES[7].hidden = !need.mercury;
+  SLIDES[8].hidden = !data.some(r => (r.bricks || 0) > 0);        // the walls board, once anybody has a brick
 }
 function renderOverviewSlide(){
   const el = document.getElementById('overview-slide-content');
@@ -3425,7 +3674,7 @@ async function showSlide(i){
 
 let feedbackChannel = null;
 let bonusRevocationChannel = null;
-const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7, bonus:3 };
+const EVENT_TYPE_SLIDE = { star:5, moon:6, mercury:7, bonus:3, bricks:8 };
 const STUNT_BOARD_MS = 9500;   // how long a journey board stays up while the ship does its show
 let interruptTimer = null;
 let preInterruptIndex = null;
@@ -3529,9 +3778,10 @@ function celebrateFeedbackEvent(ev){
   if(!(type in EVENT_TYPE_SLIDE) || type === 'bonus' || !child) return;
   queueCelebration(async () => {
     const state = await getChildState(childId);
-    const now = type === 'star' ? (state.stars || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
+    const now = type === 'star' ? (state.stars || 0) : type === 'bricks' ? (state.bricks || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
     await playCelebration(type, child, now);
     if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
+    else if(type === 'bricks') interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard);
     else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,
       () => flyMarkerStunt(childId, document.getElementById('moon-board'), o => renderMoonBoard(Object.assign({ justArrivedChildId: childId }, o)), now - 1), STUNT_BOARD_MS);
     else interruptToSlide(EVENT_TYPE_SLIDE.mercury,
@@ -3802,6 +4052,7 @@ let starTapLocked = false;
 const KIDS_QUICK_TITLES = {
   star: 'בחרו ילד/ה — הענקת כוכב',
   moon: 'בחרו ילד/ה — תכנית המסע בחלל',
+  brick: 'בחרו ילד/ה — בניית לבנים',
   yellow: 'בחרו ילד/ה — רמזור צהוב',
 };
 
@@ -3832,6 +4083,11 @@ function kidsQuickShowChildPicker(mode){
         starTapLocked = true;
         try { await giveStar(selectedStaffChild); }
         finally { setTimeout(() => { starTapLocked = false; }, 800); }
+      } else if(kidsQuickMode === 'brick'){
+        if(starTapLocked) return;                      // one tap, one brick
+        starTapLocked = true;
+        try { await giveBrick(selectedStaffChild); }
+        finally { setTimeout(() => { starTapLocked = false; }, 800); }
       } else if(kidsQuickMode === 'moon'){
         document.getElementById('kids-quick-pick-child').style.display = 'none';
         document.getElementById('kids-quick-moon-panel').style.display = 'block';
@@ -3856,9 +4112,11 @@ document.getElementById('hub-kids-btn').addEventListener('click', async ()=>{
 });
 document.getElementById('kq-give-star-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('star'); });
 document.getElementById('kq-moon-journey-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('moon'); });
+document.getElementById('kq-brick-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('brick'); });
 // the daily-operations gold screen reaches those same two buttons (see openKidsQuickFrom)
 document.getElementById('gold-give-star-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-give-star-btn', 'gold'));
 document.getElementById('gold-moon-journey-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-moon-journey-btn', 'gold'));
+document.getElementById('gold-brick-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-brick-btn', 'gold'));
 document.getElementById('kids-quick-back-to-color').addEventListener('click', ()=>{
   if(kidsQuickMode === 'yellow'){
     document.getElementById('kids-quick-pick-child').style.display = 'none';
