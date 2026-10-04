@@ -31,7 +31,7 @@
   }
   .wall-body{
     flex:1; display:grid; grid-template-columns:repeat(10, 1fr); grid-template-rows:repeat(10, 1fr); gap:.42em;
-    margin:.5% 2.2% 0; padding:.6em .45em; background:linear-gradient(#8a7c66, #6f6350); border-radius:.3em; direction:ltr;     /* numbers run 1..10 from the left, like the picture */
+    margin:.5% 2.2% 0; padding:.6em .45em; background:linear-gradient(#5e5240, #463c2d); border-radius:.3em; direction:ltr;     /* numbers run 1..10 from the left, like the picture */
     box-shadow:inset 0 .2em .8em rgba(0,0,0,.4);
   }
   .brick{
@@ -39,30 +39,38 @@
     font-family:'Frank Ruhl Libre', 'David Libre', Georgia, 'Times New Roman', serif; font-size:2.3em; line-height:1;
     background:rgba(45,32,14,.34); color:rgba(255,238,205,.36); box-shadow:inset 0 .12em .5em rgba(0,0,0,.5);
   }
-  /* Jerusalem stone: pale warm limestone (a hint of the child's colour), a rough hand-dressed face with a chiselled
-     edge (light on the top-left, shade on the bottom-right), soft mottling, fine pits and a few faint veins */
+  /* Jerusalem stone (as on a real wall): warm golden limestone, a rough hand-dressed face with real relief (light from
+     the top-left: raised facets, hollows, sharp chisel creases), thin dark cracks, shaded joints; every stone is dressed
+     differently (three relief patterns, different tones and heights). A light tint of the child's colour. */
+  .wall-scene{ --relief-a:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='r' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.013 .02' numOctaves='4' seed='3' result='n'/><feDiffuseLighting in='n' surfaceScale='7' diffuseConstant='.68' lighting-color='%23fff2d0'><feDistantLight azimuth='235' elevation='48'/></feDiffuseLighting></filter><rect width='220' height='150' filter='url(%23r)'/></svg>"); --relief-b:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='r' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.013 .02' numOctaves='4' seed='17' result='n'/><feDiffuseLighting in='n' surfaceScale='7' diffuseConstant='.68' lighting-color='%23fff2d0'><feDistantLight azimuth='235' elevation='48'/></feDiffuseLighting></filter><rect width='220' height='150' filter='url(%23r)'/></svg>"); --relief-c:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='r' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.013 .02' numOctaves='4' seed='29' result='n'/><feDiffuseLighting in='n' surfaceScale='7' diffuseConstant='.68' lighting-color='%23fff2d0'><feDistantLight azimuth='235' elevation='48'/></feDiffuseLighting></filter><rect width='220' height='150' filter='url(%23r)'/></svg>"); --crack-a:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='c' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.016 .024' numOctaves='3' seed='5' result='n'/><feColorMatrix in='n' type='matrix' values='0 0 0 0 .38  0 0 0 0 .27  0 0 0 0 .14  -26 0 0 0 3.0'/></filter><rect width='220' height='150' filter='url(%23c)'/></svg>"); --crack-b:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='c' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.016 .024' numOctaves='3' seed='21' result='n'/><feColorMatrix in='n' type='matrix' values='0 0 0 0 .38  0 0 0 0 .27  0 0 0 0 .14  -26 0 0 0 3.0'/></filter><rect width='220' height='150' filter='url(%23c)'/></svg>"); --crack-c:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='150'><filter id='c' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feTurbulence type='turbulence' baseFrequency='.016 .024' numOctaves='3' seed='33' result='n'/><feColorMatrix in='n' type='matrix' values='0 0 0 0 .38  0 0 0 0 .27  0 0 0 0 .14  -26 0 0 0 3.0'/></filter><rect width='220' height='150' filter='url(%23c)'/></svg>"); }
+  .brick span{ position:relative; z-index:3; }
   .brick.built{
     background:
-      radial-gradient(ellipse 70% 55% at 30% 28%, rgba(255,252,240,.65), transparent 70%),
-      linear-gradient(hsl(var(--h) 55% 60% / .13), hsl(var(--h) 55% 52% / .17)),         /* only a tint of the child's colour: the stone stays stone */
-      linear-gradient(155deg, #f3e6c8, #e6d3a6 55%, #d2bb8c);
-    color:#5a4326; text-shadow:0 .04em 0 rgba(255,250,235,.7);
+      linear-gradient(hsl(var(--h) 55% 60% / .13), hsl(var(--h) 55% 52% / .17)),
+      linear-gradient(155deg, #f3e2b8, #e3c98f 50%, #cdae72);
+    color:#3d2a10; font-weight:700; text-shadow:0 0 .22em #fff6dc, 0 0 .42em #fff6dc, 0 .05em 0 rgba(255,250,235,.9);
     box-shadow:
-      inset .11em .11em .14em rgba(255,255,248,.85), inset -.12em -.14em .2em rgba(110,80,40,.42),
-      inset 0 0 0 .05em rgba(150,120,75,.35), 0 .16em .24em rgba(55,38,10,.5);
+      inset .13em .13em .12em rgba(255,255,240,.9), inset -.16em -.2em .22em rgba(90,60,25,.55),
+      inset 0 0 0 .06em rgba(120,90,50,.45), 0 .18em .22em rgba(40,26,6,.7);
   }
-  .brick.built::after{        /* the stone surface: mottling + grain + pits + veins */
-    content:''; position:absolute; inset:.06em; border-radius:inherit; pointer-events:none; mix-blend-mode:multiply; opacity:.8;
-    background:
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='110'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='.045 .07' numOctaves='3' seed='11'/><feColorMatrix values='0 0 0 0 .62  0 0 0 0 .5  0 0 0 0 .34  0 0 0 .75 -.18'/></filter><rect width='160' height='110' filter='url(%23m)'/></svg>") center / 100% 100%,
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='100'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .36  0 0 0 0 .24  0 0 0 .9 -.28'/></filter><rect width='140' height='100' filter='url(%23g)'/></svg>") center / 100% 100%,
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='100' viewBox='0 0 160 100'><g fill='none' stroke='%238a6c3c' stroke-opacity='.28' stroke-width='.7' stroke-linecap='round'><path d='M6 70 C30 58 50 80 82 66 S130 56 154 68'/><path d='M20 24 C44 18 62 34 96 26'/></g></svg>") center / 100% 100% no-repeat;
+  .brick.built::after{        /* the relief of the rough face */
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:hard-light; opacity:.9;
+    background:var(--relief-a) center / 100% 100%;
   }
-  /* each stone is dressed a little differently, as in a real wall */
-  .brick.built:nth-child(3n+1)::after{ background-position:12% 30%, 40% 10%, center; }
-  .brick.built:nth-child(3n+2)::after{ background-position:70% 60%, 10% 80%, center; }
-  .brick.built:nth-child(4n){ filter:brightness(1.04) saturate(.92); }
-  .brick.built:nth-child(5n+2){ filter:brightness(.97) saturate(1.06); }  .brick.new{ z-index:5; animation:brick-drop 1.3s .8s cubic-bezier(.3,1.35,.5,1) both, brick-glow 1.6s 2s ease-in-out 2 both; }
+  .brick.built::before{       /* the cracks and chisel marks */
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:multiply; opacity:.7; z-index:2;
+    background:var(--crack-a) center / 100% 100%;
+  }
+  .brick.built:nth-child(3n+2)::after{ background-image:var(--relief-b); background-position:30% 70%; }
+  .brick.built:nth-child(3n)::after{ background-image:var(--relief-c); background-position:80% 20%; }
+  .brick.built:nth-child(4n+1)::before{ background-image:var(--crack-b); background-position:20% 80%; }
+  .brick.built:nth-child(4n+3)::before{ background-image:var(--crack-c); background-position:70% 30%; }
+  /* stones stand a little higher or lower than their neighbours, and differ in tone */
+  .brick.built:nth-child(5n+1){ transform:translateY(-.1em); box-shadow:inset .13em .13em .12em rgba(255,255,240,.9), inset -.22em -.3em .3em rgba(90,60,25,.6), inset 0 0 0 .06em rgba(120,90,50,.45), 0 .3em .3em rgba(40,26,6,.75); }
+  .brick.built:nth-child(7n+3){ transform:translateY(.06em); filter:brightness(.93) saturate(1.08); }
+  .brick.built:nth-child(4n){ filter:brightness(1.05) saturate(.9); }
+  .brick.built:nth-child(6n+5){ filter:brightness(.96) sepia(.12); }
+  .brick.new{ z-index:5; animation:brick-drop 1.3s .8s cubic-bezier(.3,1.35,.5,1) both, brick-glow 1.6s 2s ease-in-out 2 both; }
   .brick.new span{ font-weight:900; }
   @keyframes brick-drop{
     0%   { transform:translateY(-420%) rotate(-14deg) scale(1.9); opacity:0; }
