@@ -1006,6 +1006,38 @@
 
   @keyframes wall-done-pop{ from{ opacity:0; transform:translate(-50%, -50%) scale(.4); } to{ opacity:1; transform:translate(-50%, -50%) scale(1); } }
 
+
+  /* telling the two projects apart (gold screen + kids control): a question that decides, one short line under it */
+  .project-choice{ flex-direction:column; gap:3px; height:auto; text-align:center; line-height:1.35; border-inline-start-width:5px; }
+  .project-choice .pc-title{ display:block; font-size:18px; font-weight:800; }
+  .project-choice .pc-q{ display:block; font-size:15px; font-weight:600; color:var(--text); }
+  .project-choice .pc-sub{ display:block; font-size:12.5px; font-weight:400; color:var(--muted); }
+  .btn.project-choice.proj-space, .guided-action.project-choice.proj-space{ border-inline-start:5px solid #6ea8ff; }
+  .btn.project-choice.proj-temple, .guided-action.project-choice.proj-temple{ border-inline-start:5px solid #9a7b57; }       /* the colour of old stone */
+  .btn.project-choice.proj-star, .guided-action.project-choice.proj-star{ border-inline-start:5px solid #f2cf6a; }
+  .project-hint{ margin:10px auto 0; max-width:420px; text-align:center; font-size:12.5px; line-height:1.6; color:var(--muted); }
+  .proj-criterion{ margin:10px 0 4px; padding:8px 12px; border-radius:10px; text-align:center; font-size:14.5px; font-weight:700; color:#bcd6ff; background:rgba(110,168,255,.12); border:1px solid rgba(110,168,255,.3); }
+
+  /* the strength sheet of "המקדש שלי" */
+  .strength-sheet .sheet-card{ max-width:520px; }
+  .strength-chips{ display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+  .strength-chip{
+    flex:1 1 calc(33% - 10px); min-width:96px; min-height:54px; padding:10px 8px; border-radius:14px; cursor:pointer;
+    font-family:inherit; font-size:17px; font-weight:700; color:var(--text); background:var(--panel-2); border:1px solid #d9b46a66;
+  }
+  .strength-chip:hover, .strength-chip:focus-visible{ border-color:#d9b46a; outline:none; background:#d9b46a22; }
+  .strength-other{ display:flex; gap:10px; margin-bottom:10px; }
+  .strength-other[hidden]{ display:none; }
+  .strength-other .confirm-input{ flex:1; margin:0; }
+  .strength-actions{ grid-template-columns:1fr; }
+  /* the strength shown on the wall on the kids' TV */
+  .wall-strength{
+    position:absolute; left:50%; top:2.4%; transform:translateX(-50%); z-index:6; padding:.05em 1em .1em; border-radius:2em; white-space:nowrap;
+    font-family:'Rubik', sans-serif; font-weight:900; font-size:3.4em; line-height:1.2; color:#4a3010;
+    background:linear-gradient(#fbe596, #d4a634); border:.08em solid #8d6618; box-shadow:0 .2em .6em rgba(60,40,5,.5);
+    animation:wall-strength-in .7s 2.4s cubic-bezier(.2,1.5,.4,1) both;
+  }
+  @keyframes wall-strength-in{ from{ opacity:0; transform:translateX(-50%) scale(.5); } to{ opacity:1; transform:translateX(-50%) scale(1); } }
   /* the board with every child's wall */
   .board-walls{
     width:min(96vw, 1900px); height:var(--tv-main-h); box-sizing:border-box; padding:2.2vmin;
@@ -1028,7 +1060,7 @@
     min-width:5vmin; text-align:center; padding:.2vmin 1.2vmin; border-radius:2vmin;
   }
   .mini-wall-card.done{ box-shadow:0 0 0 .5vmin #f2cf6a, 0 0 3vmin rgba(242,207,106,.8); animation:star-twinkle 3.4s ease-in-out infinite; }
-  @media (prefers-reduced-motion: reduce){ .brick.new, .wall-done, .mini-wall-card.done{ animation:none; } }
+  @media (prefers-reduced-motion: reduce){ .brick.new, .wall-done, .wall-strength, .mini-wall-card.done{ animation:none; } }
 </style>
 </head>
 <body>
@@ -1128,9 +1160,10 @@
           <div style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--gold);">זהב</div>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px; padding-inline-start:50px;">
-          <button class="btn ghost" id="kq-give-star-btn">⭐ הענקת כוכב</button>
-          <button class="btn ghost" id="kq-moon-journey-btn">🚀 תכנית המסע בחלל</button>
-          <button class="btn ghost" id="kq-brick-btn">🧱 בניית לבנים</button>
+          <button class="btn ghost project-choice proj-star" id="kq-give-star-btn"><span class="pc-title">⭐ הענקת כוכב</span><span class="pc-q">הילד/ה עשה/תה עכשיו משהו טוב שרציתי לעודד?</span><span class="pc-sub">כל הכבוד על מה שעשית.</span></button>
+          <button class="btn ghost project-choice proj-space" id="kq-moon-journey-btn"><span class="pc-title">🚀 המסע בחלל</span><span class="pc-q">הילד/ה תרגל/ה מיומנות שהוגדרה מראש?</span><span class="pc-sub">התקדמות לעבר מטרה שהילד/ה עובד/ת עליה.</span></button>
+          <button class="btn ghost project-choice proj-temple" id="kq-brick-btn"><span class="pc-title">🧱 המקדש שלי</span><span class="pc-q">זיהית עכשיו כוח שהילד/ה גילה?</span><span class="pc-sub">הוספת לבנה שמייצגת כוח שראית בילד/ה.</span></button>
+          <p class="project-hint">כוכבים מחזקים התנהגות חיובית שראינו, המסע מתרגל מיומנות שהגדרנו מראש, והמקדש שלי מחזק כוח פנימי שהילד/ה הפגינ/ה.</p>
 
         </div>
 
@@ -1340,10 +1373,11 @@
       <div class="guided-head"><span class="guided-dot" style="--proto-color:var(--gold);" aria-hidden="true"></span><h2 class="guided-head-title">זהב</h2></div>
       <h3 class="guided-step-name">מה תרצו לעשות?</h3>
       <div class="guided-actions">
-        <button type="button" class="guided-action" id="gold-give-star-btn">הענקת כוכב</button>
-        <button type="button" class="guided-action" id="gold-moon-journey-btn">תכנית המסע בחלל</button>
-        <button type="button" class="guided-action" id="gold-brick-btn">בניית לבנים</button>
+        <button type="button" class="guided-action project-choice proj-star" id="gold-give-star-btn"><span class="pc-title">⭐ הענקת כוכב</span><span class="pc-q">הילד/ה עשה/תה עכשיו משהו טוב שרציתי לעודד?</span><span class="pc-sub">כל הכבוד על מה שעשית.</span></button>
+        <button type="button" class="guided-action project-choice proj-space" id="gold-moon-journey-btn"><span class="pc-title">🚀 המסע בחלל</span><span class="pc-q">הילד/ה תרגל/ה מיומנות שהוגדרה מראש?</span><span class="pc-sub">התקדמות לעבר מטרה שהילד/ה עובד/ת עליה.</span></button>
+        <button type="button" class="guided-action project-choice proj-temple" id="gold-brick-btn"><span class="pc-title">🧱 המקדש שלי</span><span class="pc-q">זיהית עכשיו כוח שהילד/ה גילה?</span><span class="pc-sub">הוספת לבנה שמייצגת כוח שראית בילד/ה.</span></button>
       </div>
+      <p class="project-hint">כוכבים מחזקים התנהגות חיובית שראינו, המסע מתרגל מיומנות שהגדרנו מראש, והמקדש שלי מחזק כוח פנימי שהילד/ה הפגינ/ה.</p>
     </div>
 
   </section>
@@ -2716,13 +2750,14 @@ async function giveStar(childId){
 }
 
 // A brick for the child's wall (the wall project): one at a time, up to WALL_BRICKS; the kids' TV celebrates it.
-async function giveBrick(childId){
+async function giveBrick(childId, strength){
   const child = roster.find(c=>c.id===childId);
   const r = await updateChildState(childId, s => (s.bricks || 0) >= WALL_BRICKS ? null : { set:{ bricks:(s.bricks || 0) + 1 }, guard:['bricks'] });
-  if(r.reason === 'declined'){ toast(`הקיר של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
+  if(r.reason === 'declined'){ toast(`המקדש של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
   if(!r.ok){ toast('⚠ הלבנה לא נשמרה — בדקו חיבור ונסו שוב'); return false; }
   const n = r.after.bricks || 0;
-  const msg = n >= WALL_BRICKS ? `🧱🎉 ${displayName(child)} סיים/ה לבנות את הקיר!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`;
+  const why = cleanStrength(strength);                     // the strength the instructor saw (shown on the TV, kept in the log)
+  const msg = (n >= WALL_BRICKS ? `🧱🎉 המקדש של ${displayName(child)} הושלם!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`) + (why ? ` · כוח: ${why}` : '');
   logFeedbackEvent(child.id, 'bricks', msg);
   toast(msg);
   return true;
@@ -2745,6 +2780,7 @@ async function renderMoonPanel(containerId){
   }
 
   const isToday = MOON_DAILY_LIMIT_ENABLED && state.moonDayDate === todayStr();
+  const criterion = inStage2 ? '<div class="proj-criterion">האם הילד/ה מצא/ה מילים ברגע של קושי?</div>' : '';       // one glance: does this moment fit the journey?
   const stageTitle = inStage2 ? '🪐 המסע לכוכב המילים' : '🚀 תכנית המסע בחלל';
   const positiveLabel = inStage2 ? 'הצליח/ה לבטא במילים (התקדמות)' : 'יום נקי (התקדמות)';
   const negativeLabel = 'חללית מושבתת עקב קללות';
@@ -2763,6 +2799,7 @@ async function renderMoonPanel(containerId){
     <div class="protocol prot-gold" style="margin-top:14px;">
       <div class="light-title">${stageTitle} — ${displayName(child)}</div>
       ${statusHtml}
+      ${criterion}
       <button class="gold-btn moon-main" id="moon-clean" ${disabledAttr}>${positiveLabel}</button>
       <div class="moon-alt"><button type="button" class="moon-curse-btn" id="moon-curse" ${disabledAttr}>${negativeLabel}</button></div>
     </div>`;
@@ -2880,7 +2917,7 @@ const WALL_BRICKS = 100;
 
 // the big wall (a limestone wall with a golden frieze, columns at the sides, blue sky) — built bricks are
 // tinted with the child's colour, the ones still to come are dark empty slots; `newBrick` is the one just added
-function bigWallHtml(child, count, newBrick){
+function bigWallHtml(child, count, newBrick, strength){
   let bricks = '';
   for(let i = 1; i <= WALL_BRICKS; i++){
     const cls = i <= count ? (i === newBrick ? 'built new' : 'built') : '';
@@ -2893,7 +2930,8 @@ function bigWallHtml(child, count, newBrick){
         <div class="wall-body">${bricks}</div>
         <div class="wall-base"><span>${escapeHtml(displayName(child))}</span></div>
       </div>
-      ${count >= WALL_BRICKS && newBrick ? `<div class="wall-done">${escapeHtml(displayName(child))}<br>סיים/ה לבנות את הקיר!</div>` : ''}
+      ${strength ? `<div class="wall-strength">${escapeHtml(strength)}</div>` : ''}
+      ${count >= WALL_BRICKS && newBrick ? `<div class="wall-done">המקדש של ${escapeHtml(displayName(child))}<br>הושלם!</div>` : ''}
     </div>`;
 }
 
@@ -2918,7 +2956,34 @@ async function renderWallsBoard(){
   el.style.setProperty('--wall-cols', Math.ceil(roster.length / rows));
   el.innerHTML = roster.map(c => miniWallHtml(c, Math.min(WALL_BRICKS, states.get(c.id).bricks || 0))).join('');
 }
-// ---------- DISPLAY VIEW ----------
+
+// ---- the instructor names the strength before a brick is given: "איזה כוח ראית בו עכשיו?" (one quick tap)
+const BRICK_STRENGTHS = ['אומץ', 'התמדה', 'גמישות', 'בקשת עזרה', 'סבלנות', 'נדיבות', 'קבלה'];
+const cleanStrength = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+// resolves to the strength's name ('' is never returned: "אחר" without text gives 'אחר'), or null if they went back
+function askBrickStrength(child){
+  return new Promise(resolve => {
+    const wrap = document.createElement('div');
+    wrap.className = 'sheet strength-sheet';
+    wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
+    wrap.innerHTML = `<div class="sheet-card">
+        <h2></h2>
+        <div class="strength-chips">${BRICK_STRENGTHS.map(s => `<button type="button" class="strength-chip" data-s="${s}">${s}</button>`).join('')}<button type="button" class="strength-chip strength-other-btn">אחר</button></div>
+        <div class="strength-other" hidden><input type="text" class="confirm-input strength-input" maxlength="20" autocomplete="off" placeholder="איזה כוח? (לא חובה)" aria-label="כוח אחר"><button type="button" class="btn strength-ok">הוספת לבנה</button></div>
+        <div class="confirm-actions strength-actions"><button type="button" class="btn ghost strength-cancel">חזרה</button></div>
+      </div>`;
+    wrap.querySelector('h2').textContent = `איזה כוח ראית ב${displayName(child)} עכשיו?`;
+    const done = v => { wrap.remove(); resolve(v); };
+    wrap.querySelectorAll('.strength-chip[data-s]').forEach(b => b.addEventListener('click', () => done(b.dataset.s)));
+    const box = wrap.querySelector('.strength-other'), input = wrap.querySelector('.strength-input');
+    wrap.querySelector('.strength-other-btn').addEventListener('click', () => { box.hidden = false; input.focus(); });
+    wrap.querySelector('.strength-ok').addEventListener('click', () => done(cleanStrength(input.value) || 'אחר'));
+    input.addEventListener('keydown', e => { if(e.key === 'Enter') done(cleanStrength(input.value) || 'אחר'); });
+    wrap.querySelector('.strength-cancel').addEventListener('click', () => done(null));
+    wrap.addEventListener('click', e => { if(e.target === wrap) done(null); });
+    document.body.appendChild(wrap);
+  });
+}// ---------- DISPLAY VIEW ----------
 function initials(child){
   const first = (child.firstName || '').trim()[0] || '';
   const last = (child.lastInitial || '').trim()[0] || '';
@@ -3370,8 +3435,8 @@ function celebrationSparkles(n){
   return html;
 }
 
-function celebrationBody(kind, child, now){
-  if(kind === 'bricks') return bigWallHtml(child, now, now);      // (finishing the wall adds the message inside the wall)
+function celebrationBody(kind, child, now, extra){
+  if(kind === 'bricks') return bigWallHtml(child, now, now, extra);      // (finishing the wall adds the message inside the wall)
   const milestone = kind !== 'star' && now >= CELEBRATION_TRACK_STEPS;
   const name = `<div class="cel-name">${escapeHtml(displayName(child))}</div>`;
   if(kind === 'star'){
@@ -3401,12 +3466,12 @@ function celebrationBody(kind, child, now){
     </div>${milestone ? `<div class="cel-extra cel-milestone">${goal}</div>` : ''}`;
 }
 
-async function playCelebration(kind, child, now){
+async function playCelebration(kind, child, now, extra){
   const host = document.getElementById('celebration');
   if(!host || !child) return;
   const wallDone = kind === 'bricks' && now >= WALL_BRICKS;
   const milestone = (kind === 'moon' || kind === 'mercury') && now >= CELEBRATION_TRACK_STEPS;
-  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone || wallDone ? 34 : 18)}<div class="cel-inner${kind === 'bricks' ? ' cel-wall' : ''}">${celebrationBody(kind, child, now)}</div>`;
+  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone || wallDone ? 34 : 18)}<div class="cel-inner${kind === 'bricks' ? ' cel-wall' : ''}">${celebrationBody(kind, child, now, extra)}</div>`;
   host.classList.remove('leaving');
   host.classList.add('show');
   host.setAttribute('aria-hidden', 'false');
@@ -3594,7 +3659,7 @@ const SLIDES = [
   { id:5, label:'לוח הכוכבים', render: renderStarBoard },
   { id:6, label:'לוח המסע בחלל', render: renderMoonBoard, hidden:true },   // shown only while some child is on this journey (see journeyBoardsNeeded)
   { id:7, label:'המסע לכוכב המילים', render: renderMercuryBoard },   // shown only while some child is on this journey
-  { id:8, label:'קירות הלבנים', render: renderWallsBoard, hidden:true }       // shown only once somebody has a brick (see refreshJourneyBoards)
+  { id:8, label:'המקדשים שלנו', render: renderWallsBoard, hidden:true }       // shown only once somebody has a brick (see refreshJourneyBoards)
 ];
 let carouselIndex = 3; // start on the first non-hidden slide (bonuses)
 let carouselTimer = null;
@@ -3779,7 +3844,8 @@ function celebrateFeedbackEvent(ev){
   queueCelebration(async () => {
     const state = await getChildState(childId);
     const now = type === 'star' ? (state.stars || 0) : type === 'bricks' ? (state.bricks || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
-    await playCelebration(type, child, now);
+    const why = type === 'bricks' ? ((ev.message || '').match(/ · כוח: (.+)$/) || [])[1] || '' : '';        // the strength the instructor named
+    await playCelebration(type, child, now, why);
     if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
     else if(type === 'bricks') interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard);
     else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,
@@ -4051,8 +4117,8 @@ let starTapLocked = false;
 
 const KIDS_QUICK_TITLES = {
   star: 'בחרו ילד/ה — הענקת כוכב',
-  moon: 'בחרו ילד/ה — תכנית המסע בחלל',
-  brick: 'בחרו ילד/ה — בניית לבנים',
+  moon: 'בחרו ילד/ה — המסע בחלל',
+  brick: 'בחרו ילד/ה — המקדש שלי',
   yellow: 'בחרו ילד/ה — רמזור צהוב',
 };
 
@@ -4085,8 +4151,11 @@ function kidsQuickShowChildPicker(mode){
         finally { setTimeout(() => { starTapLocked = false; }, 800); }
       } else if(kidsQuickMode === 'brick'){
         if(starTapLocked) return;                      // one tap, one brick
+        const kid = roster.find(c => c.id === selectedStaffChild);
+        const strength = await askBrickStrength(kid);  // first: which strength did you see? (null = changed their mind)
+        if(strength === null || starTapLocked) return;
         starTapLocked = true;
-        try { await giveBrick(selectedStaffChild); }
+        try { await giveBrick(selectedStaffChild, strength); }
         finally { setTimeout(() => { starTapLocked = false; }, 800); }
       } else if(kidsQuickMode === 'moon'){
         document.getElementById('kids-quick-pick-child').style.display = 'none';
