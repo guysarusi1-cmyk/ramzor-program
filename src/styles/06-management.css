@@ -121,3 +121,25 @@
   .moon-curse-btn:disabled, .moon-main:disabled{ opacity:.45; cursor:not-allowed; }
   .bonus-chip.revoked{ opacity:.6; }
   .bonus-chip.revoked span{ text-decoration:line-through; }
+/* ---- management code ---- */
+  .code-error{ color:#f5b4ad; font-size:14px; margin:-6px 0 12px; text-align:center; }
+  .code-error[hidden]{ display:none; }
+  #mgmt-lock-card.unset{ border-color:rgba(240,194,57,.55); }
+  #mgmt-lock-card.unset #mgmt-lock-status{ color:#f5dd8a; }
+
+/* ---- management on a phone: nothing wider than the screen, selects in the app's own look ---- */
+  #view-manage .add-row{ flex-wrap:wrap; }
+  #view-manage .add-row input, #view-manage .add-row select{ min-width:0; flex:1 1 120px; }
+  #view-manage .add-row input[type=number]{ flex:0 1 90px; }
+  .roster-sw{
+    flex:0 0 auto; width:104px; min-height:44px; padding:0 8px; background:var(--panel); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; font-family:'Rubik', sans-serif; font-size:13px; cursor:pointer;
+  }
+  .roster-row{ flex-wrap:nowrap; }
+  .roster-name{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---- folded protocol reminder ---- */
+  .proto-reminder{ border:1px solid var(--line); border-radius:12px; padding:0 12px; background:var(--panel); }
+  .proto-reminder > summary{ min-height:48px; display:flex; align-items:center; cursor:pointer; color:var(--muted); font-size:14px; list-style:none; }
+  .proto-reminder > summary::-webkit-details-marker{ display:none; }
+  .proto-reminder[open] > summary{ border-bottom:1px solid var(--line); margin-bottom:12px; }

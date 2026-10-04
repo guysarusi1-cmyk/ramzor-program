@@ -25,3 +25,8 @@ function renderProtocolCard(color){
 // (2026-10-02, client request) — renderProtocolCard() itself is still used elsewhere (yellow/green
 // slides, kids-quick, etc.), only the management-screen-specific wiring here was removed.
 
+
+// the full wording of the yellow protocol, folded away: the screens that need it for a decision show the action first
+function yellowReminderHtml(){
+  return `<details class="proto-reminder"><summary>תזכורת: נוסח הפרוטוקול הצהוב</summary>${renderProtocolCard('yellow')}</details>`;
+}

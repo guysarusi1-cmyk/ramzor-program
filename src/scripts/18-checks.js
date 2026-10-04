@@ -15,6 +15,14 @@
   window.addEventListener('error', e => errors.push('error: ' + e.message));
   window.addEventListener('unhandledrejection', e => errors.push('promise: ' + (e.reason && e.reason.message || e.reason)));
 
+  // answers the question sheet that replaced the browser's confirm box (typing the word when one is asked for)
+  async function answerSheet(word){
+    for(let i = 0; i < 30 && !document.querySelector('.confirm-sheet'); i++) await sleep(100);
+    const s = document.querySelector('.confirm-sheet'); if(!s) return false;
+    const inp = s.querySelector('.confirm-input'); if(inp && word){ inp.value = word; inp.dispatchEvent(new Event('input')); }
+    s.querySelector('.confirm-ok').click(); await sleep(80); return true;
+  }
+
   async function step(name, fn){
     try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || e); }
   }
@@ -235,6 +243,8 @@
       showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-revoke-bonus-btn').click(); await sleep(150); $('kq-pick-child-for-revoke-btn').click();
       document.querySelector(`#kids-quick-roster .chip[data-id="${kid}"]`).click(); await sleep(400);
       const rb = document.querySelector('#kq-yellow-bonus-daily-list .revoke-bonus');
+      window.scrollTo(0, 0);
+      check('bonus screen: the bonuses are on the first screen, the protocol text is folded away', rb.getBoundingClientRect().top < innerHeight - 40 && !!document.querySelector('#kq-yellow-protocol-list details.proto-reminder:not([open])'), 'bonus at ' + Math.round(rb.getBoundingClientRect().top) + 'px of ' + innerHeight);
       const revBefore = (await getActiveBonusRevocations()).length;
       rb.click(); rb.click(); await sleep(1200);
       const revAfter = (await getActiveBonusRevocations()).length;
@@ -339,6 +349,7 @@
     await step('management', async () => {
       showHub();
       $('hub-manage-gear').click();
+      for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
       check('gear opens the management screen', activeView() === 'view-manage', activeView());
       check('management lists all children', document.querySelectorAll('#roster-list > *').length === 14, 'children not listed');
       check('manual reset buttons exist', !!$('reset-stars-btn') && !!$('reset-mercury-btn'), 'missing');
@@ -346,10 +357,111 @@
       $('manage-back-to-hub').click();
     });
 
+    // ---- the phone's Back button walks up one level at a time instead of leaving the app
+    await step('back button', async () => {
+      const pressBack = async () => { history.back(); await sleep(350); };
+      showHub(); await sleep(150);
+      $('hub-daily-btn').click(); await sleep(100);
+      openLightFlow('red'); await sleep(100);
+      for(let i = 0; i < 2; i++) $('guided-next-btn').click();
+      await sleep(100);
+      check('each new screen adds a history entry', history.state && history.state.entry === 2, JSON.stringify(history.state));
+      check('(setup) protocol is on step 3', guidedStep === 2, 'step ' + (guidedStep + 1));
+      await pressBack(); check('Back: previous step of the protocol', visible($('staff-screen-guided')) && guidedStep === 1, 'step ' + (guidedStep + 1));
+      await pressBack(); check('Back again: step 1', visible($('staff-screen-guided')) && guidedStep === 0, 'step ' + (guidedStep + 1));
+      await pressBack(); check('Back at step 1: the traffic light list', visible($('staff-screen-pick')) && !visible($('staff-screen-guided')), 'screen wrong');
+      await pressBack(); check('Back from the list: home', activeView() === 'view-hub', activeView());
+      // kids control: child picker -> back -> kids control -> back -> home
+      $('hub-kids-btn').click(); await sleep(200); $('kq-give-star-btn').click(); await sleep(150);
+      check('(setup) child picker is open', visible($('kids-quick-pick-child')), 'picker closed');
+      await pressBack(); check('Back from the child picker: kids control', visible($('kids-quick-pick-color')) && activeView() === 'view-kids-quick', 'wrong screen');
+      await pressBack(); check('Back from kids control: home', activeView() === 'view-hub', activeView());
+      // an open sheet closes first
+      $('hub-daily-btn').click(); await sleep(100);
+      document.querySelector('[data-quick="red"]').click(); await sleep(100);
+      $('guided-legend-btn').click();
+      check('(setup) the step list is open (phone) or side column (wide)', true, '');
+      if(innerWidth < 640){
+        check('(setup) legend sheet open', $('staff-screen-guided').classList.contains('legend-open'), 'not open');
+        await pressBack();
+        check('Back closes the step list first, the protocol stays', !$('staff-screen-guided').classList.contains('legend-open') && visible($('staff-screen-guided')), 'wrong');
+      }
+      showHub(); await sleep(300);
+      check('home is reached again and the trail is reset', activeView() === 'view-hub', activeView());
+    });
+
+    // ---- accessibility options for the staff
+    await step('accessibility', async () => {
+      showHub();
+      check('home has an accessibility button', visible($('hub-a11y-btn')), 'missing');
+      $('hub-a11y-btn').click();
+      check('accessibility sheet opens with text size, contrast and motion', !$('a11y-sheet').hidden && document.querySelectorAll('#a11y-sheet [data-size]').length === 3 && !!$('a11y-contrast') && !!$('a11y-motion'), 'sheet wrong');
+      const fs = () => document.querySelector('.home-title').getBoundingClientRect().height;   // (the size on screen; computed font-size ignores zoom)
+      const base = fs();
+      document.querySelector('#a11y-sheet [data-size="xl"]').click(); await sleep(100);
+      check('"very large" text really enlarges the staff screens', fs() > base * 1.3, base + ' -> ' + fs());
+      check('the setting is remembered on this device', JSON.parse(localStorage.getItem('ramzor-a11y')).size === 'xl', localStorage.getItem('ramzor-a11y'));
+      // nothing gets wider than the screen, with the biggest text, on the main staff screens
+      const wide = [];
+      const widthOk = name => { if(document.documentElement.scrollWidth > innerWidth + 1) wide.push(name + ' ' + document.documentElement.scrollWidth); };
+      $('a11y-close').click(); widthOk('home');
+      $('hub-daily-btn').click(); widthOk('daily ops');
+      openGuidedScreen('red'); widthOk('red step 1');
+      for(let i = 0; i < 3; i++) $('guided-next-btn').click();
+      document.querySelectorAll('.guided-tab')[1].click(); widthOk('red step 4 with card');
+      openLightFlow('green'); widthOk('green');
+      showHub(); $('hub-kids-btn').click(); await sleep(250); widthOk('kids control');
+      check('biggest text: no staff screen scrolls sideways', wide.length === 0, wide.join(' | '));
+      showHub(); $('hub-a11y-btn').click();
+      const c0 = getComputedStyle($('hub-daily-btn')).borderTopWidth;
+      $('a11y-contrast').click(); await sleep(100);
+      check('high contrast: text is brighter and borders stronger', document.documentElement.getAttribute('data-contrast') === 'high' && parseFloat(getComputedStyle($('hub-daily-btn')).borderTopWidth) >= parseFloat(c0) * 1.9 && getComputedStyle(document.querySelector('.home-card-sub')).color !== 'rgb(163, 171, 198)', c0 + ' -> ' + getComputedStyle($('hub-daily-btn')).borderTopWidth);
+      $('a11y-motion').click(); await sleep(100);
+      check('"no motion" switches the staff animations off', document.documentElement.getAttribute('data-motion') === 'off', 'not set');
+      $('a11y-reset').click(); await sleep(100);
+      check('reset brings everything back', !document.documentElement.hasAttribute('data-text') && !document.documentElement.hasAttribute('data-contrast') && !document.documentElement.hasAttribute('data-motion'), 'still set');
+      $('a11y-close').click();
+      // the kids' TV is never changed by these options
+      $('a11y-contrast') && (a11y = { size:'xl', contrast:true, motion:true }); applyA11y();
+      const tvSize = parseFloat(getComputedStyle(document.querySelector('.slide-label')).fontSize);
+      a11y = Object.assign({}, A11Y_DEFAULTS); saveA11y();
+      check('the kids\' TV ignores the staff accessibility options', Math.abs(tvSize - parseFloat(getComputedStyle(document.querySelector('.slide-label')).fontSize)) < 0.5, 'TV changed');
+      showHub();
+    });
+
+    // ---- management code and typed confirmations
+    await step('management lock', async () => {
+      showHub(); $('hub-manage-gear').click();
+      for(let i = 0; i < 30 && !(activeView() === 'view-manage' && $('mgmt-lock-card').classList.contains('unset')); i++) await sleep(100);
+      check('with no code set, management opens (and says a code is missing)', activeView() === 'view-manage' && $('mgmt-lock-card').classList.contains('unset') && /לא הוגדר קוד/.test($('mgmt-lock-status').textContent), activeView());
+      check('a code can be set', await setManagementCode('2468'), 'not saved');
+      managementOpenUntil = 0; showHub(); $('hub-manage-gear').click();
+      for(let i = 0; i < 30 && !document.querySelector('.code-input'); i++) await sleep(100);
+      check('with a code set, the gear asks for it first', !!document.querySelector('.code-input') && activeView() === 'view-hub', 'no question: ' + activeView());
+      let inp = document.querySelector('.code-input'); inp.value = '1111'; document.querySelector('.confirm-ok').click();
+      for(let i = 0; i < 40 && !(document.querySelector('.confirm-text') && /שגוי/.test(document.querySelector('.confirm-text').textContent)); i++) await sleep(100);
+      check('a wrong code is refused and asked again', activeView() === 'view-hub' && /שגוי/.test(document.querySelector('.confirm-text').textContent), activeView());
+      inp = document.querySelector('.code-input'); inp.value = '2468'; document.querySelector('.confirm-ok').click();
+      for(let i = 0; i < 40 && activeView() !== 'view-manage'; i++) await sleep(100);
+      check('the right code opens management', activeView() === 'view-manage', activeView());
+      check('the code is kept as a hash, not as text', JSON.stringify(await getMiniList('managerLock')).indexOf('2468') < 0, 'plain code stored');
+
+      // risky buttons ask for a typed word
+      $('reset-stars-btn').click(); await sleep(150);
+      const sheet = document.querySelector('.confirm-sheet');
+      check('resetting stars needs the word typed', !!sheet && sheet.querySelector('.confirm-ok').disabled === true, 'no typed confirmation');
+      sheet.querySelector('.confirm-input').value = 'איפוס'; sheet.querySelector('.confirm-input').dispatchEvent(new Event('input'));
+      check('the button opens only after the word is typed', sheet.querySelector('.confirm-ok').disabled === false, 'still disabled');
+      sheet.querySelector('.confirm-cancel').click(); await sleep(100);
+      check('"back" leaves everything as it was', !document.querySelector('.confirm-sheet'), 'sheet still there');
+
+      await setManagementCode(''); managementOpenUntil = 0;
+      showHub();
+    });
+
     // ---- management: bonus editor, ship picker, new child with a starting stage (all undone afterwards)
     await step('management editing', async () => {
       showHub(); $('hub-manage-gear').click();
-      window.confirm = () => true;
 
       // bonus editor
       const originalDaily = JSON.parse(JSON.stringify(bonusesDaily));
@@ -411,6 +523,7 @@
           stopCarousel(); showHub(); $('hub-manage-gear').click();
         }
         document.querySelector(`.roster-row[data-id="${kid.id}"] .rm`).click();
+        await answerSheet('מחיקה');
         for(let i=0;i<20 && roster.length > 14;i++) await sleep(250);
         check(`new child (${stage}) removed again`, roster.length === 14, 'roster ' + roster.length);
       }

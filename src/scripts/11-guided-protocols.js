@@ -216,7 +216,7 @@ function renderYellowScreen(ids){
   const child = roster.find(c=>c.id===selectedStaffChild);
   if(!child) return;
   document.getElementById(ids.title).textContent = PROGRAM.yellow.title;
-  document.getElementById(ids.protocol).innerHTML = renderProtocolCard('yellow');
+  document.getElementById(ids.protocol).innerHTML = yellowReminderHtml();
   document.getElementById(ids.childTitle).textContent = 'בונוסים — ' + displayName(child);
 
   function renderBonusChips(containerId, list, emptyMsg){

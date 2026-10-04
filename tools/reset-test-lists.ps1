@@ -19,6 +19,9 @@ foreach($m in [regex]::Matches($sql, "\('(bonusesDaily|bonusesWeekly|dutyRoster)
 $body = [Text.Encoding]::UTF8.GetBytes('{"key":"childSettings","items":[]}')
 Invoke-RestMethod -Method Post -Uri "$($cfg.supabaseUrl)/rest/v1/mini_lists" -Headers $h -ContentType 'application/json; charset=utf-8' -Body $body | Out-Null
 Write-Host 'reset list: childSettings (empty)'
+$body = [Text.Encoding]::UTF8.GetBytes('{"key":"managerLock","items":[]}')
+Invoke-RestMethod -Method Post -Uri "$($cfg.supabaseUrl)/rest/v1/mini_lists" -Headers $h -ContentType 'application/json; charset=utf-8' -Body $body | Out-Null
+Write-Host 'reset list: managerLock (no code)'
 # children added by an interrupted check run
 $roster = Invoke-RestMethod -Uri "$($cfg.supabaseUrl)/rest/v1/roster?select=id" -Headers $h
 foreach($r in $roster){ if($r.id -notmatch '^c([1-9]|1[0-4])$'){ Invoke-RestMethod -Method Delete -Uri "$($cfg.supabaseUrl)/rest/v1/roster?id=eq.$($r.id)" -Headers $h | Out-Null; Write-Host "removed stray child $($r.id)" } }

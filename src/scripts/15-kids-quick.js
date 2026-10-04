@@ -84,7 +84,7 @@ let kqOrigin = null; // 'protocol' when entered from the guided yellow protocol 
 function kidsQuickOpenRevokeIntro(){
   document.getElementById('kids-quick-pick-color').style.display = 'none';
   document.getElementById('kids-quick-yellow-intro').style.display = 'block';
-  document.getElementById('kq-yellow-protocol').innerHTML = renderProtocolCard('yellow');
+  document.getElementById('kq-yellow-protocol').innerHTML = yellowReminderHtml();
 }
 document.getElementById('kq-revoke-bonus-btn').addEventListener('click', ()=>{
   kqOrigin = null;

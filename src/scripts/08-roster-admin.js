@@ -94,7 +94,7 @@ function renderManageRoster(){
     btn.addEventListener('click', async (e)=>{
       e.stopPropagation();
       const child = roster.find(c => c.id === btn.dataset.id);
-      const ok = confirm(`למחוק את ${child ? displayName(child) : 'הילד/ה'}? הפעולה תמחק גם את הנתונים שלו/ה (כוכבים, התקדמות בירח).`);
+      const ok = await confirmSheet({ title:`למחוק את ${child ? displayName(child) : 'הילד/ה'}?`, text:'הפעולה תמחק גם את הנתונים של הילד/ה (כוכבים, התקדמות בירח) ואי אפשר לבטל אותה.', typeWord:'מחיקה', okLabel:'למחוק', danger:true });
       if(!ok) return;
       const { error } = await sb.from('roster').delete().eq('id', btn.dataset.id);
       if(error){ toast('שגיאה במחיקה'); console.error(error); return; }

@@ -1,0 +1,41 @@
+
+/* ---- staff accessibility: sheet, text size, high contrast, no motion (never applied to the kids' TV) ---- */
+  .home-a11y{ right:46px; }
+  .a11y-group{ margin:14px 0; display:flex; flex-direction:column; gap:8px; }
+  .a11y-label{ font-size:13px; color:var(--muted); font-weight:700; }
+  .a11y-seg{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .a11y-seg button, .a11y-toggle{
+    min-height:48px; background:var(--panel-2); color:var(--text); border:1.5px solid var(--line); border-radius:12px;
+    font-family:'Rubik', sans-serif; font-size:15px; font-weight:600; cursor:pointer; padding:0 12px;
+  }
+  .a11y-seg button[aria-pressed=true], .a11y-toggle[aria-pressed=true]{ border-color:var(--text); background:var(--panel); box-shadow:inset 0 0 0 1px var(--text); }
+  .a11y-toggle{ display:flex; align-items:center; justify-content:space-between; width:100%; }
+  .a11y-state{ font-size:13px; color:var(--muted); }
+
+  /* text size: the staff screens, their messages and sheets grow together (a browser-zoom-like reflow) */
+  html[data-text=l] #protected-app, html[data-text=l] .sheet-card, html[data-text=l] .toast{ zoom:1.2; }
+  html[data-text=xl] #protected-app, html[data-text=xl] .sheet-card, html[data-text=xl] .toast{ zoom:1.45; }
+
+  /* high contrast: whiter text, stronger borders, no dim greys, clearer focus */
+  html[data-contrast=high] #protected-app, html[data-contrast=high] .sheet, html[data-contrast=high] .toast{
+    --text:#ffffff; --muted:#e3e7f4; --line:rgba(255,255,255,.55); --panel:#10152c; --panel-2:#1a2144;
+  }
+  html[data-contrast=high] #protected-app button, html[data-contrast=high] #protected-app input, html[data-contrast=high] #protected-app select,
+  html[data-contrast=high] .sheet button, html[data-contrast=high] .sheet input{ border-width:2px; }
+  html[data-contrast=high] #protected-app :focus-visible, html[data-contrast=high] .sheet :focus-visible{ outline:3px solid #ffd54a; outline-offset:2px; }
+  html[data-contrast=high] #protected-app .guided-tab, html[data-contrast=high] #protected-app .guided-prev{ color:#fff; border-color:rgba(255,255,255,.7); }
+
+  /* no blinking / moving things on the staff screens */
+  html[data-motion=off] #protected-app *, html[data-motion=off] .sheet *, html[data-motion=off] .toast{ animation:none !important; transition:none !important; }
+
+  /* readable by default: the smallest labels were 10px and the dimmest greys were hard to read */
+  .quick-light-row .qcol .col-label{ font-size:12px; }
+  .back-btn, .guided-legend-btn, .home-link, .home-text-btn{ min-height:44px; }
+  .btn{ min-height:44px; }
+
+  /* when the screen (or the zoom) is narrow, the daily-operations rows stack instead of squeezing the text */
+  #staff-screen-pick .card{ container-type:inline-size; }
+  @container (max-width: 300px){
+    .quick-light-row{ flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:22px; }
+    .quick-light-row .qcol{ flex:none; width:100%; }
+  }

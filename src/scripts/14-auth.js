@@ -68,10 +68,7 @@ document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
   toast('לומדת הרמזור בקרוב! 🎓');
 });
 // home screen's gear icon -> the existing management screen (same view the #manage route opens)
-document.getElementById('hub-manage-gear').addEventListener('click', ()=>{
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-manage').classList.add('active');
-});
+document.getElementById('hub-manage-gear').addEventListener('click', openManagement);
 // home screen's quiet "logout" link just triggers the existing logout button (hidden on this screen)
 document.getElementById('hub-logout-link').addEventListener('click', ()=>{
   document.getElementById('logout-btn').click();
@@ -84,18 +81,15 @@ document.getElementById('manage-back-to-hub').addEventListener('click', ()=>{
 // management screen isn't shown in the regular menu (client request, 2026-10-02) — reach it by
 // adding #manage to the site's address after logging in normally with the regular staff password.
 function maybeShowManageFromHash(){
-  if(location.hash === '#manage'){
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.getElementById('view-manage').classList.add('active');
-  }
+  if(location.hash === '#manage') openManagement();
 }
 document.getElementById('reset-stars-btn').addEventListener('click', async ()=>{
-  if(!confirm('לאפס את לוח הכוכבים לכל הילדים ל-0? אי אפשר לבטל את זה.')) return;
+  if(!(await confirmSheet({ title:'איפוס לוח הכוכבים', text:'כל הילדים יחזרו ל-0 כוכבים. אי אפשר לבטל את זה.', typeWord:'איפוס', okLabel:'לאפס', danger:true }))) return;
   await resetAllStars();
   toast('לוח הכוכבים אופס לכולם');
 });
 document.getElementById('reset-mercury-btn').addEventListener('click', async ()=>{
-  if(!confirm('להחזיר את כל החלליות למצב ההתחלתי (לפני הצעד הראשון)? אי אפשר לבטל את זה.')) return;
+  if(!(await confirmSheet({ title:'החזרת החלליות להתחלה', text:'כל החלליות יחזרו למצב ההתחלתי (לפני הצעד הראשון). אי אפשר לבטל את זה.', typeWord:'איפוס', okLabel:'להחזיר', danger:true }))) return;
   await resetAllMercuryToStart();
   toast('כל החלליות הוחזרו למצב ההתחלתי');
 });
