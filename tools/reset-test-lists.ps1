@@ -25,3 +25,6 @@ Write-Host 'reset list: managerLock (no code)'
 # children added by an interrupted check run
 $roster = Invoke-RestMethod -Uri "$($cfg.supabaseUrl)/rest/v1/roster?select=id" -Headers $h
 foreach($r in $roster){ if($r.id -notmatch '^c([1-9]|1[0-4])$'){ Invoke-RestMethod -Method Delete -Uri "$($cfg.supabaseUrl)/rest/v1/roster?id=eq.$($r.id)" -Headers $h | Out-Null; Write-Host "removed stray child $($r.id)" } }
+
+# bonus revocations left by earlier check runs (staff may delete them since supabase\hardening.sql)
+try { Invoke-RestMethod -Method Delete -Uri "$($cfg.supabaseUrl)/rest/v1/bonus_revocations?id=not.is.null" -Headers $h | Out-Null; Write-Host 'cleared test bonus revocations' } catch { Write-Host 'could not clear test revocations (run supabase\hardening.sql in the test project)' }

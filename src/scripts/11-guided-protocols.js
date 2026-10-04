@@ -224,12 +224,30 @@ function renderYellowScreen(ids){
   document.getElementById(ids.protocol).innerHTML = yellowReminderHtml();
   document.getElementById(ids.childTitle).textContent = 'בונוסים — ' + displayName(child);
 
+  // The next bonus the instructor will probably revoke gently blinks (like the active bonus on the kids' TV),
+  // and moves on after each revocation. Bonuses already revoked for this child are shown as revoked.
+  const todaysBonuses = () => [...bonusesDaily, ...bonusesWeekly].filter(bonusAppliesToday);
+  const chipEls = () => [...document.querySelectorAll(`#${ids.dailyList} .bonus-chip, #${ids.weeklyList} .bonus-chip`)];
+  function updateNextBonus(){
+    const revokedIds = new Set(chipEls().filter(c => c.classList.contains('revoked')).map(c => c.dataset.id));
+    const next = nextBonusToRevoke(todaysBonuses(), revokedIds);
+    chipEls().forEach(c => c.classList.toggle('next', !!next && c.dataset.id === next.id));
+  }
+  async function markAlreadyRevoked(){
+    const mine = new Set((await getActiveBonusRevocations()).filter(r => r.child_id === child.id).map(r => r.bonus_id));
+    chipEls().forEach(c => {
+      if(!mine.has(c.dataset.id) || c.classList.contains('revoked')) return;
+      c.classList.add('revoked'); const b = c.querySelector('.revoke-bonus'); b.textContent = 'נגרע ✓'; b.disabled = true;
+    });
+    updateNextBonus();
+  }
+
   function renderBonusChips(containerId, list, emptyMsg){
     const el = document.getElementById(containerId);
     const todayList = list.filter(bonusAppliesToday);
     if(!todayList.length){ el.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
     el.innerHTML = todayList.map(b => `
-      <div class="bonus-chip" data-id="${b.id}"><span>${b.text}</span><button class="revoke-bonus">גריעה</button></div>
+      <div class="bonus-chip" data-id="${b.id}"><span>${bonusIcon(b)} ${b.text}</span><button class="revoke-bonus">גריעה</button></div>
     `).join('');
     el.querySelectorAll('.revoke-bonus').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
@@ -240,9 +258,10 @@ function renderYellowScreen(ids){
         const saved = await revokeBonus(selectedStaffChild, bonusId);
         if(!saved){ btn.disabled = false; toast('⚠ הגריעה לא נשמרה, נסו שוב'); return; }
         chip.classList.add('revoked'); btn.textContent = 'נגרע ✓';
+        updateNextBonus();                                     // the blinking moves to what can be revoked next
         toastUndo(`✔ נקלט במערכת — נגרע מ${displayName(child)}: ${bonusText}`, async () => {
           const ok = await undoRevokeBonus(saved.id);
-          if(ok){ chip.classList.remove('revoked'); btn.textContent = 'גריעה'; btn.disabled = false; }
+          if(ok){ chip.classList.remove('revoked'); btn.textContent = 'גריעה'; btn.disabled = false; updateNextBonus(); }
           return ok;
         });
       });
@@ -250,7 +269,8 @@ function renderYellowScreen(ids){
   }
   renderBonusChips(ids.dailyList, bonusesDaily, 'אין בונוסים יומיים מוגדרים (הוסיפו במסך הניהול)');
   renderBonusChips(ids.weeklyList, bonusesWeekly, 'אין בונוסים שבועיים מוגדרים (הוסיפו במסך הניהול)');
-
+  updateNextBonus();
+  markAlreadyRevoked();
   const dutyEl = document.getElementById(ids.dutyList);
   if(!dutyRoster.length){ dutyEl.innerHTML = '<div class="empty">אין תורנויות מוגדרות (הוסיפו במסך הניהול)</div>'; }
   else{

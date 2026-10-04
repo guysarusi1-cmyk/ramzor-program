@@ -242,7 +242,7 @@
       // bonus revocation: marked, not duplicated, can be taken back
       showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-revoke-bonus-btn').click(); await sleep(150); $('kq-pick-child-for-revoke-btn').click();
       document.querySelector(`#kids-quick-roster .chip[data-id="${kid}"]`).click(); await sleep(400);
-      const rb = document.querySelector('#kq-yellow-bonus-daily-list .revoke-bonus');
+      const rb = document.querySelector('#kq-yellow-bonus-daily-list .bonus-chip:not(.revoked) .revoke-bonus');
       window.scrollTo(0, 0);
       check('bonus screen: the bonuses are on the first screen, the protocol text is folded away', rb.getBoundingClientRect().top < innerHeight - 40 && !!document.querySelector('#kq-yellow-protocol-list details.proto-reminder:not([open])'), 'bonus at ' + Math.round(rb.getBoundingClientRect().top) + 'px of ' + innerHeight);
       const revBefore = (await getActiveBonusRevocations()).length;
@@ -388,6 +388,35 @@
       }
       showHub(); await sleep(300);
       check('home is reached again and the trail is reset', activeView() === 'view-hub', activeView());
+    });
+
+    // ---- the revoke screen points at the bonus that can be revoked next
+    await step('next bonus', async () => {
+      const at = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
+      const list = [
+        { id:'a', text:'a', startTime:'13:30', endTime:'15:30' }, { id:'b', text:'b', startTime:'15:30', endTime:'17:00' },
+        { id:'c', text:'c', startTime:'18:00', endTime:'20:00' }, { id:'d', text:'d' }
+      ];
+      const next = (revoked, h, m) => { const r = nextBonusToRevoke(list, new Set(revoked), at(h, m)); return r && r.id; };
+      check('rule: what is happening now comes first', next([], 14, 0) === 'a', next([], 14, 0));
+      check('rule: after revoking it, the next in time follows', next(['a'], 14, 0) === 'b', next(['a'], 14, 0));
+      check('rule: between two events, the next one to start', next(['a', 'b'], 17, 30) === 'c', next(['a', 'b'], 17, 30));
+      check('rule: a bonus without hours comes after the timed ones', next(['a', 'b', 'c'], 14, 0) === 'd', next(['a', 'b', 'c'], 14, 0));
+      check('rule: nothing left -> nothing to point at', next(['a', 'b', 'c', 'd'], 14, 0) === null, 'something returned');
+
+      showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-revoke-bonus-btn').click(); await sleep(150); $('kq-pick-child-for-revoke-btn').click();
+      document.querySelector('#kids-quick-roster .chip[data-id="c8"]').click();
+      for(let i = 0; i < 30 && !document.querySelector('#kq-yellow-bonus-daily-list .bonus-chip'); i++) await sleep(100);
+      await sleep(600);
+      const marked = () => [...document.querySelectorAll('#view-kids-quick .bonus-chip.next')];
+      check('exactly one bonus blinks as the next one', marked().length === 1, marked().length);
+      const first = marked()[0];
+      check('it really pulses (animation on)', getComputedStyle(first).animationName !== 'none', getComputedStyle(first).animationName);
+      first.querySelector('.revoke-bonus').click(); await sleep(1200);
+      check('after revoking it, the blinking moves to a different bonus', marked().length === 1 && marked()[0] !== first && first.classList.contains('revoked') && !first.classList.contains('next'), 'still on ' + (marked()[0] && marked()[0].dataset.id));
+      document.querySelector('.toast-undo-btn').click(); await sleep(1500);
+      check('undoing it brings the blinking back', marked().length === 1 && marked()[0] === first, 'now on ' + (marked()[0] && marked()[0].dataset.id));
+      showHub();
     });
 
     // ---- pictures for the bonuses on the kids' TV
