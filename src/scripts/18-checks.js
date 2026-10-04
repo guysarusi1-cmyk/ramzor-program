@@ -806,7 +806,7 @@
       await giveBrick(kid);
       check('the 100th brick is recorded', (await bricks()) === 100, String(await bricks()));
       const more = await giveBrick(kid);
-      check('a 101st brick is refused, the wall stays at 100', more === false && (await bricks()) === 100 && /כבר הושלם/.test(document.querySelector('.toast').textContent), String(await bricks()));
+      check('a 101st brick is refused, the wall stays at 100', more === false && (await bricks()) === 100 && /כבר הושלם/.test([...document.querySelectorAll('.toast')].pop().textContent), String(await bricks()));
       await updateChildState(kid, () => ({ set:{ bricks: base }, guard:['bricks'] }));
       showHub();
     });
