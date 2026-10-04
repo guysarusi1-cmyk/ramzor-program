@@ -33,23 +33,23 @@ function bonusIcon(b){
   return hit ? hit[1] : '🎁';
 }
 
-// Which bonus the instructor will most likely revoke next, so it can be pointed out on the revoke screen:
-// what is happening right now (by the hours set in the bonus editor), else the next one that starts,
-// else the first one without hours, else the last of the day. Bonuses already revoked are skipped.
-function nextBonusToRevoke(list, revokedIds, now){
+// Which bonuses the instructor may revoke right now, so they can be pointed out on the revoke screen: everything
+// that is happening at this hour (by the hours set in the bonus editor — there can be several at once, like the
+// ones that pulse on the kids' TV); if nothing is, those that start next; else the first one without hours (or
+// the last of the day). Bonuses already revoked are skipped. Returns a list (possibly empty).
+function nextBonusesToRevoke(list, revokedIds, now){
   now = now || new Date();
   const left = list.filter(b => !revokedIds.has(b.id));
-  if(!left.length) return null;
+  if(!left.length) return [];
   const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
   const nowM = now.getHours() * 60 + now.getMinutes();
   const timed = left.filter(b => b.startTime && b.endTime);
-  const happening = timed.find(b => nowM >= toMin(b.startTime) && nowM < toMin(b.endTime));
-  if(happening) return happening;
-  const upcoming = timed.filter(b => toMin(b.startTime) > nowM).sort((a, b) => toMin(a.startTime) - toMin(b.startTime))[0];
-  if(upcoming) return upcoming;
-  return left.find(b => !(b.startTime && b.endTime)) || left[left.length - 1];
+  const happening = timed.filter(b => nowM >= toMin(b.startTime) && nowM < toMin(b.endTime));
+  if(happening.length) return happening;
+  const later = timed.filter(b => toMin(b.startTime) > nowM);
+  if(later.length){ const first = Math.min(...later.map(b => toMin(b.startTime))); return later.filter(b => toMin(b.startTime) === first); }
+  return [left.find(b => !(b.startTime && b.endTime)) || left[left.length - 1]];
 }
-
 const BONUS_REVOCATION_HOURS = 5;
 async function getActiveBonusRevocations(){
   const since = new Date(Date.now() - BONUS_REVOCATION_HOURS*60*60*1000).toISOString();

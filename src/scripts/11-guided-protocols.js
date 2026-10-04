@@ -177,8 +177,8 @@ function renderGuidedStep(){
 }
 
 // The legend ("מקרא"): every step of the protocol as number + the action itself (no message / examples),
-// the current one highlighted; tapping a step jumps to it. A side column on wide screens; on a phone it
-// opens from the "כל השלבים" button as a sheet, so it never takes room from the step in front of the child.
+// the current one highlighted; tapping a step jumps to it. Hidden until the "כל השלבים" button is pressed, then shown
+// BESIDE the current step (on a computer and on a phone), so the protocol can be followed with the whole list in view.
 function renderGuidedLegend(){
   const steps = GUIDED_PROTOCOLS[guidedKey].steps;
   const list = document.getElementById('guided-legend-list');
@@ -188,15 +188,19 @@ function renderGuidedLegend(){
     return `<li${cls}><button type="button" data-step="${i}"><span class="gl-n">${i + 1}</span><span class="gl-t">${text}</span></button></li>`;
   }).join('');
   list.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
-    guidedStep = Number(b.dataset.step);
-    closeGuidedLegend();
+    guidedStep = Number(b.dataset.step);       // jump there; the list stays open beside the step
     renderGuidedStep();
     window.scrollTo({ top: 0 });
   }));
 }
-function closeGuidedLegend(){ document.getElementById('staff-screen-guided').classList.remove('legend-open'); }
-document.getElementById('guided-legend-btn').addEventListener('click', () => document.getElementById('staff-screen-guided').classList.add('legend-open'));
-document.getElementById('guided-legend-close').addEventListener('click', closeGuidedLegend);
+function setGuidedLegend(open){
+  document.getElementById('staff-screen-guided').classList.toggle('legend-open', open);
+  const btn = document.getElementById('guided-legend-btn');
+  btn.setAttribute('aria-expanded', String(open));
+  btn.textContent = open ? 'הסתרת השלבים' : 'כל השלבים';
+}
+const closeGuidedLegend = () => setGuidedLegend(false);
+document.getElementById('guided-legend-btn').addEventListener('click', () => setGuidedLegend(!document.getElementById('staff-screen-guided').classList.contains('legend-open')));
 function openGuidedScreen(key){
   closeGuidedLegend();
   guidedKey = key;
@@ -224,14 +228,14 @@ function renderYellowScreen(ids){
   document.getElementById(ids.protocol).innerHTML = yellowReminderHtml();
   document.getElementById(ids.childTitle).textContent = 'בונוסים — ' + displayName(child);
 
-  // The next bonus the instructor will probably revoke gently blinks (like the active bonus on the kids' TV),
-  // and moves on after each revocation. Bonuses already revoked for this child are shown as revoked.
+  // The bonuses that can be revoked at this hour gently blink (like the active bonuses on the kids' TV),
+  // and the blinking moves on after each revocation. Bonuses already revoked for this child are shown as revoked.
   const todaysBonuses = () => [...bonusesDaily, ...bonusesWeekly].filter(bonusAppliesToday);
   const chipEls = () => [...document.querySelectorAll(`#${ids.dailyList} .bonus-chip, #${ids.weeklyList} .bonus-chip`)];
   function updateNextBonus(){
     const revokedIds = new Set(chipEls().filter(c => c.classList.contains('revoked')).map(c => c.dataset.id));
-    const next = nextBonusToRevoke(todaysBonuses(), revokedIds);
-    chipEls().forEach(c => c.classList.toggle('next', !!next && c.dataset.id === next.id));
+    const next = new Set(nextBonusesToRevoke(todaysBonuses(), revokedIds).map(b => b.id));
+    chipEls().forEach(c => c.classList.toggle('next', next.has(c.dataset.id)));
   }
   async function markAlreadyRevoked(){
     const mine = new Set((await getActiveBonusRevocations()).filter(r => r.child_id === child.id).map(r => r.bonus_id));

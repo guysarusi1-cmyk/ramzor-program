@@ -46,7 +46,6 @@
     const confirm = document.querySelector('.confirm-sheet');
     if(confirm){ const c = confirm.querySelector('.confirm-cancel'); if(c){ c.click(); return true; } }
     for(const id of ['a11y-sheet', 'install-sheet']) if(el(id) && !el(id).hidden){ el(id).hidden = true; return true; }
-    if(el('staff-screen-guided').classList.contains('legend-open')){ closeGuidedLegend(); return true; }
     return false;
   }
 

@@ -89,14 +89,17 @@
         check(`${key}: legend lists all ${total} steps`, items.length === total, items.length);
         check(`${key}: legend shows number + action only`, items.every((li, i) => li.querySelector('.gl-n').textContent === String(i + 1) && li.querySelector('.gl-t').textContent.length > 2) && !/העמקת ההבנה|אני רואה שאתה כועס|אני אתן לך שתי אזהרות/.test($('guided-legend-list').textContent), $('guided-legend-list').textContent.slice(0, 80));
         check(`${key}: step 1 is marked as current`, items[0].classList.contains('current') && items.filter(li => li.classList.contains('current')).length === 1, 'wrong current');
-        check(`${key}: ${wide ? 'legend is visible at the side' : 'legend button is shown, legend hidden until opened'}`, wide ? (visible($('guided-legend')) && !visible($('guided-legend-btn'))) : (visible($('guided-legend-btn')) && !visible($('guided-legend'))), 'visibility wrong');
-        if(!wide){
-          $('guided-legend-btn').click();
-          check(`${key}: legend sheet opens on a phone`, visible($('guided-legend')), 'not opened');
-        }
+        check(`${key}: the step list is hidden until the button is pressed`, visible($('guided-legend-btn')) && !visible($('guided-legend')), 'visibility wrong');
+        $('guided-legend-btn').click();
+        const main = document.querySelector('#staff-screen-guided .guided-main').getBoundingClientRect(), side = $('guided-legend').getBoundingClientRect();
+        check(`${key}: pressing it shows the list BESIDE the step, not over it`, visible($('guided-legend')) && visible($('guided-step-body')) && (side.right <= main.left + 2 || main.right <= side.left + 2), `list ${Math.round(side.left)}..${Math.round(side.right)} / step ${Math.round(main.left)}..${Math.round(main.right)}`);
+        check(`${key}: the next/back buttons still work with the list open`, visible($('guided-next-btn')) && $('guided-next-btn').getBoundingClientRect().right <= innerWidth + 1 && $('guided-next-btn').getBoundingClientRect().left >= -1, 'button cut off');
         document.querySelectorAll('#guided-legend-list [data-step]')[3].click();
         check(`${key}: tapping step 4 jumps there`, guidedStep === 3 && document.querySelector('#guided-legend-list li.current .gl-n').textContent === '4' && $('guided-counter').textContent.includes('4'), 'guidedStep=' + guidedStep);
-        check(`${key}: sheet closes after choosing`, wide || !visible($('guided-legend')), 'still open');
+        check(`${key}: the list stays open after choosing`, visible($('guided-legend')), 'closed');
+        $('guided-next-btn').click();
+        check(`${key}: the process continues while the list is open`, guidedStep === 4 && visible($('guided-legend')) && document.querySelector('#guided-legend-list li.current .gl-n').textContent === '5', 'step ' + (guidedStep + 1));
+        $('guided-prev-btn').click(); document.querySelectorAll('#guided-legend-list [data-step]')[3].click();
         check(`${key}: earlier steps are marked done`, document.querySelectorAll('#guided-legend-list li.done').length === 3, document.querySelectorAll('#guided-legend-list li.done').length);
       }
       // wording the client asked to change in orange step 7
@@ -376,49 +379,47 @@
       check('(setup) child picker is open', visible($('kids-quick-pick-child')), 'picker closed');
       await pressBack(); check('Back from the child picker: kids control', visible($('kids-quick-pick-color')) && activeView() === 'view-kids-quick', 'wrong screen');
       await pressBack(); check('Back from kids control: home', activeView() === 'view-hub', activeView());
-      // an open sheet closes first
+      // the step list is not an overlay: Back goes back a step with it open
       $('hub-daily-btn').click(); await sleep(100);
       document.querySelector('[data-quick="red"]').click(); await sleep(100);
-      $('guided-legend-btn').click();
-      check('(setup) the step list is open (phone) or side column (wide)', true, '');
-      if(innerWidth < 640){
-        check('(setup) legend sheet open', $('staff-screen-guided').classList.contains('legend-open'), 'not open');
-        await pressBack();
-        check('Back closes the step list first, the protocol stays', !$('staff-screen-guided').classList.contains('legend-open') && visible($('staff-screen-guided')), 'wrong');
-      }
+      $('guided-next-btn').click(); $('guided-legend-btn').click(); await sleep(100);
+      await pressBack();
+      check('Back goes one step back even with the step list open (the list stays)', guidedStep === 0 && visible($('guided-legend')) && visible($('staff-screen-guided')), 'step ' + (guidedStep + 1));
       showHub(); await sleep(300);
       check('home is reached again and the trail is reset', activeView() === 'view-hub', activeView());
     });
 
-    // ---- the revoke screen points at the bonus that can be revoked next
+    // ---- the revoke screen points at the bonuses that can be revoked at this hour
     await step('next bonus', async () => {
       const at = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
       const list = [
         { id:'a', text:'a', startTime:'13:30', endTime:'15:30' }, { id:'b', text:'b', startTime:'15:30', endTime:'17:00' },
-        { id:'c', text:'c', startTime:'18:00', endTime:'20:00' }, { id:'d', text:'d' }
+        { id:'c', text:'c', startTime:'18:00', endTime:'20:00' }, { id:'c2', text:'c2', startTime:'18:00', endTime:'20:00' }, { id:'d', text:'d' }
       ];
-      const next = (revoked, h, m) => { const r = nextBonusToRevoke(list, new Set(revoked), at(h, m)); return r && r.id; };
-      check('rule: what is happening now comes first', next([], 14, 0) === 'a', next([], 14, 0));
-      check('rule: after revoking it, the next in time follows', next(['a'], 14, 0) === 'b', next(['a'], 14, 0));
-      check('rule: between two events, the next one to start', next(['a', 'b'], 17, 30) === 'c', next(['a', 'b'], 17, 30));
-      check('rule: a bonus without hours comes after the timed ones', next(['a', 'b', 'c'], 14, 0) === 'd', next(['a', 'b', 'c'], 14, 0));
-      check('rule: nothing left -> nothing to point at', next(['a', 'b', 'c', 'd'], 14, 0) === null, 'something returned');
+      const ids = (revoked, h, m) => nextBonusesToRevoke(list, new Set(revoked), at(h, m)).map(b => b.id).join(',');
+      check('rule: what is happening now comes first', ids([], 14, 0) === 'a', ids([], 14, 0));
+      check('rule: two things at the same hour both point', ids([], 18, 33) === 'c,c2', ids([], 18, 33));
+      check('rule: after revoking one, the other still points', ids(['c'], 18, 33) === 'c2', ids(['c'], 18, 33));
+      check('rule: between two events, the one that starts next', ids(['a', 'b'], 17, 30) === 'c,c2', ids(['a', 'b'], 17, 30));
+      check('rule: a bonus without hours comes after the timed ones', ids(['a', 'b', 'c', 'c2'], 14, 0) === 'd', ids(['a', 'b', 'c', 'c2'], 14, 0));
+      check('rule: nothing left -> nothing to point at', ids(['a', 'b', 'c', 'c2', 'd'], 14, 0) === '', ids(['a', 'b', 'c', 'c2', 'd'], 14, 0));
 
       showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-revoke-bonus-btn').click(); await sleep(150); $('kq-pick-child-for-revoke-btn').click();
       document.querySelector('#kids-quick-roster .chip[data-id="c8"]').click();
       for(let i = 0; i < 30 && !document.querySelector('#kq-yellow-bonus-daily-list .bonus-chip'); i++) await sleep(100);
       await sleep(600);
-      const marked = () => [...document.querySelectorAll('#view-kids-quick .bonus-chip.next')];
-      check('exactly one bonus blinks as the next one', marked().length === 1, marked().length);
-      const first = marked()[0];
-      check('it really pulses (animation on)', getComputedStyle(first).animationName !== 'none', getComputedStyle(first).animationName);
+      const todays = () => [...bonusesDaily, ...bonusesWeekly].filter(bonusAppliesToday);
+      const shownIds = () => [...document.querySelectorAll('#view-kids-quick .bonus-chip.next')].map(c => c.dataset.id).sort().join(',');
+      const expected = revokedNow => nextBonusesToRevoke(todays(), new Set(revokedNow)).map(b => b.id).sort().join(',');
+      check('the blinking bonuses are exactly those that fit this hour', shownIds() === expected([]) && shownIds() !== '', shownIds() + ' vs ' + expected([]));
+      const first = document.querySelector('#view-kids-quick .bonus-chip.next');
+      check('they really pulse (animation on)', getComputedStyle(first).animationName !== 'none', getComputedStyle(first).animationName);
       first.querySelector('.revoke-bonus').click(); await sleep(1200);
-      check('after revoking it, the blinking moves to a different bonus', marked().length === 1 && marked()[0] !== first && first.classList.contains('revoked') && !first.classList.contains('next'), 'still on ' + (marked()[0] && marked()[0].dataset.id));
+      check('after revoking one, it stops blinking and the rest follow the rule', first.classList.contains('revoked') && !first.classList.contains('next') && shownIds() === expected([first.dataset.id]), shownIds() + ' vs ' + expected([first.dataset.id]));
       document.querySelector('.toast-undo-btn').click(); await sleep(1500);
-      check('undoing it brings the blinking back', marked().length === 1 && marked()[0] === first, 'now on ' + (marked()[0] && marked()[0].dataset.id));
+      check('undoing it brings the blinking back', shownIds() === expected([]) && first.classList.contains('next'), shownIds());
       showHub();
     });
-
     // ---- pictures for the bonuses on the kids' TV
     await step('bonus pictures', async () => {
       const guess = t => bonusIcon({ text: t });

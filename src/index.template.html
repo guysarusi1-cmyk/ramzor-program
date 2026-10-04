@@ -297,12 +297,11 @@
     <div class="card guided-screen" id="staff-screen-guided" style="display:none;">
       <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
       <div class="guided-head"><span class="guided-dot" aria-hidden="true"></span><h2 class="guided-head-title" id="guided-head-title">פרוטוקול אדום</h2></div>
-      <button type="button" class="guided-legend-btn" id="guided-legend-btn">כל השלבים</button>
+      <button type="button" class="guided-legend-btn" id="guided-legend-btn" aria-expanded="false" aria-controls="guided-legend">כל השלבים</button>
       <div class="guided-layout">
         <aside class="guided-legend" id="guided-legend" aria-label="מקרא שלבי הפרוטוקול">
           <div class="guided-legend-title">שלבי הפרוטוקול</div>
           <ol id="guided-legend-list"></ol>
-          <button type="button" class="btn ghost guided-legend-close" id="guided-legend-close">סגירה</button>
         </aside>
         <div class="guided-main">
           <div id="guided-step-body"></div>

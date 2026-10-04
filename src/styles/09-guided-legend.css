@@ -1,10 +1,12 @@
 
-/* ---- protocol legend: all steps as number + action. Side column on wide screens, a sheet on phones ---- */
+/* ---- protocol legend: all steps as number + action, shown BESIDE the current step (never over it) when the
+   "כל השלבים" button is pressed — on a computer and on a phone alike ---- */
   .guided-legend-btn{
     display:block; margin:-10px auto 14px; background:none; border:1px solid var(--line); border-radius:999px; color:var(--muted);
-    font-family:inherit; font-size:13px; padding:8px 16px; cursor:pointer; min-height:36px;
+    font-family:inherit; font-size:13px; padding:8px 16px; cursor:pointer; min-height:44px;
   }
   .guided-legend-btn:hover{ color:var(--text); }
+  .guided-legend-btn[aria-expanded=true]{ color:var(--text); border-color:var(--text); }
   .guided-legend-title{ font-size:13px; color:var(--muted); font-weight:700; margin-bottom:10px; }
   .guided-legend ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
   .guided-legend li button{
@@ -20,21 +22,21 @@
   .guided-legend li.done .gl-n{ background:rgba(255,255,255,.08); }
   .guided-legend li.current button{ background:var(--panel-2); color:var(--text); font-weight:600; }
   .guided-legend li.current .gl-n{ border-color:var(--proto-color, var(--text)); background:var(--proto-color, var(--text)); color:#12172a; }
-  .guided-legend-close{ display:none; width:100%; margin-top:12px; }
 
-  /* wide screens: the legend sits at the side of the step */
-  @media (min-width:640px){
-    .guided-legend-btn{ display:none; }
-    .guided-layout{ display:grid; grid-template-columns:230px 1fr; gap:22px; align-items:start; }
-    .guided-legend{ border-inline-end:1px solid var(--line); padding-inline-end:16px; }
-  }
-  /* phones: the legend is a sheet that opens on demand */
+  .guided-legend{ display:none; }
+  #staff-screen-guided.legend-open .guided-layout{ display:grid; grid-template-columns:230px 1fr; gap:22px; align-items:start; }
+  #staff-screen-guided.legend-open .guided-legend{ display:block; border-inline-end:1px solid var(--line); padding-inline-end:16px; }
+
+  /* phone: two narrow columns — the list a little narrower, the step keeps working next to it */
   @media (max-width:639px){
-    .guided-legend{
-      display:none; position:fixed; left:0; right:0; bottom:0; z-index:520; max-height:72vh; overflow:auto;
-      background:var(--panel); border-top:1px solid var(--line); border-radius:18px 18px 0 0;
-      padding:18px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -20px 50px rgba(0,0,0,.5);
-    }
-    #staff-screen-guided.legend-open .guided-legend{ display:block; }
-    #staff-screen-guided.legend-open .guided-legend-close{ display:block; }
+    #staff-screen-guided.legend-open{ padding-inline:12px; }
+    #staff-screen-guided.legend-open .guided-layout{ grid-template-columns:minmax(112px, 36%) 1fr; gap:10px; }
+    #staff-screen-guided.legend-open .guided-legend{ padding-inline-end:8px; }
+    #staff-screen-guided.legend-open .guided-legend li button{ font-size:12.5px; gap:6px; padding:7px 4px; line-height:1.35; }
+    #staff-screen-guided.legend-open .gl-n{ width:20px; height:20px; font-size:11px; }
+    #staff-screen-guided.legend-open .guided-legend-title{ font-size:12px; }
+    #staff-screen-guided.legend-open .guided-step-name{ font-size:19px; }
+    #staff-screen-guided.legend-open .guided-step-action{ font-size:15.5px; }
+    #staff-screen-guided.legend-open .guided-tab{ font-size:13px; padding:8px 12px; }
+    #staff-screen-guided.legend-open .guided-next{ font-size:16px; }
   }
