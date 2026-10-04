@@ -796,7 +796,7 @@
 
       // telling the projects apart: names, the deciding question, the strength question, the Mercury reminder
       const goldText = $('staff-screen-gold').textContent;
-      check('gold screen: "🚀 המסע בחלל" and "🧱 המקדש שלי" with the deciding question under each', /המסע בחלל/.test(goldText) && /המקדש שלי/.test(goldText) && /תרגל\/ה מיומנות שהוגדרה מראש/.test(goldText) && /זיהית עכשיו כוח/.test(goldText) && /מתלבטים\?/.test(goldText), goldText.replace(/\s+/g, ' ').slice(0, 160));
+      check('gold screen: star, journey and temple each with their deciding question and the one-line difference', /הענקת כוכב/.test(goldText) && /משהו טוב שרציתי לעודד/.test(goldText) && /המסע בחלל/.test(goldText) && /המקדש שלי/.test(goldText) && /תרגל\/ה מיומנות שהוגדרה מראש/.test(goldText) && /זיהית עכשיו כוח/.test(goldText) && /כוכבים מחזקים התנהגות חיובית שראינו/.test(goldText), goldText.replace(/\s+/g, ' ').slice(0, 160));
       check('the old name "בניית לבנים" is nowhere in the app', !/בניית לבנים/.test((() => { const b = document.body.cloneNode(true); b.querySelectorAll('script, style').forEach(n => n.remove()); return b.textContent; })()) && !SLIDES.some(s => /לבנים/.test(s.label)), 'old name found');
       const kidT = 'c6';
       const bricksT = async () => (await getChildState(kidT)).bricks || 0;

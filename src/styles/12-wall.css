@@ -100,8 +100,9 @@
   .project-choice .pc-title{ display:block; font-size:18px; font-weight:800; }
   .project-choice .pc-q{ display:block; font-size:15px; font-weight:600; color:var(--text); }
   .project-choice .pc-sub{ display:block; font-size:12.5px; font-weight:400; color:var(--muted); }
-  .project-choice.proj-space{ border-inline-start-color:#6ea8ff; }
-  .project-choice.proj-temple{ border-inline-start-color:#d9b46a; }
+  .btn.project-choice.proj-space, .guided-action.project-choice.proj-space{ border-inline-start:5px solid #6ea8ff; }
+  .btn.project-choice.proj-temple, .guided-action.project-choice.proj-temple{ border-inline-start:5px solid #9a7b57; }       /* the colour of old stone */
+  .btn.project-choice.proj-star, .guided-action.project-choice.proj-star{ border-inline-start:5px solid #f2cf6a; }
   .project-hint{ margin:10px auto 0; max-width:420px; text-align:center; font-size:12.5px; line-height:1.6; color:var(--muted); }
   .proj-criterion{ margin:10px 0 4px; padding:8px 12px; border-radius:10px; text-align:center; font-size:14.5px; font-weight:700; color:#bcd6ff; background:rgba(110,168,255,.12); border:1px solid rgba(110,168,255,.3); }
 
