@@ -617,6 +617,11 @@
 
   .tv-address{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:13px; word-break:break-all; margin-bottom:8px; user-select:all; }
 
+/* ---- the bonus that can be revoked next blinks gently (like the active bonus on the kids' TV) ---- */
+  .bonus-chip.next{ border-color:var(--text); animation:bonus-next-pulse 2.4s ease-in-out infinite; }
+  .bonus-chip.next .revoke-bonus{ outline:2px solid var(--text); outline-offset:2px; }
+  @keyframes bonus-next-pulse{ 0%, 100%{ box-shadow:0 0 0 0 rgba(242,239,230,0); } 50%{ box-shadow:0 0 0 6px rgba(242,239,230,.22); } }
+
 /* ---- kids' TV: full-screen celebration (star / step forward) ---- */
   #celebration{
     position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center;
@@ -796,12 +801,14 @@
   @keyframes bb-bounce{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-1.2vmin) } }
   .bonus-board-item.bonus-active .bb-text{ font-size:3.9vmin; }
 
-/* ---- protocol legend: all steps as number + action. Side column on wide screens, a sheet on phones ---- */
+/* ---- protocol legend: all steps as number + action, shown BESIDE the current step (never over it) when the
+   "כל השלבים" button is pressed — on a computer and on a phone alike ---- */
   .guided-legend-btn{
     display:block; margin:-10px auto 14px; background:none; border:1px solid var(--line); border-radius:999px; color:var(--muted);
-    font-family:inherit; font-size:13px; padding:8px 16px; cursor:pointer; min-height:36px;
+    font-family:inherit; font-size:13px; padding:8px 16px; cursor:pointer; min-height:44px;
   }
   .guided-legend-btn:hover{ color:var(--text); }
+  .guided-legend-btn[aria-expanded=true]{ color:var(--text); border-color:var(--text); }
   .guided-legend-title{ font-size:13px; color:var(--muted); font-weight:700; margin-bottom:10px; }
   .guided-legend ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
   .guided-legend li button{
@@ -817,23 +824,23 @@
   .guided-legend li.done .gl-n{ background:rgba(255,255,255,.08); }
   .guided-legend li.current button{ background:var(--panel-2); color:var(--text); font-weight:600; }
   .guided-legend li.current .gl-n{ border-color:var(--proto-color, var(--text)); background:var(--proto-color, var(--text)); color:#12172a; }
-  .guided-legend-close{ display:none; width:100%; margin-top:12px; }
 
-  /* wide screens: the legend sits at the side of the step */
-  @media (min-width:640px){
-    .guided-legend-btn{ display:none; }
-    .guided-layout{ display:grid; grid-template-columns:230px 1fr; gap:22px; align-items:start; }
-    .guided-legend{ border-inline-end:1px solid var(--line); padding-inline-end:16px; }
-  }
-  /* phones: the legend is a sheet that opens on demand */
+  .guided-legend{ display:none; }
+  #staff-screen-guided.legend-open .guided-layout{ display:grid; grid-template-columns:230px 1fr; gap:22px; align-items:start; }
+  #staff-screen-guided.legend-open .guided-legend{ display:block; border-inline-end:1px solid var(--line); padding-inline-end:16px; }
+
+  /* phone: two narrow columns — the list a little narrower, the step keeps working next to it */
   @media (max-width:639px){
-    .guided-legend{
-      display:none; position:fixed; left:0; right:0; bottom:0; z-index:520; max-height:72vh; overflow:auto;
-      background:var(--panel); border-top:1px solid var(--line); border-radius:18px 18px 0 0;
-      padding:18px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -20px 50px rgba(0,0,0,.5);
-    }
-    #staff-screen-guided.legend-open .guided-legend{ display:block; }
-    #staff-screen-guided.legend-open .guided-legend-close{ display:block; }
+    #staff-screen-guided.legend-open{ padding-inline:12px; }
+    #staff-screen-guided.legend-open .guided-layout{ grid-template-columns:minmax(112px, 36%) 1fr; gap:10px; }
+    #staff-screen-guided.legend-open .guided-legend{ padding-inline-end:8px; }
+    #staff-screen-guided.legend-open .guided-legend li button{ font-size:12.5px; gap:6px; padding:7px 4px; line-height:1.35; }
+    #staff-screen-guided.legend-open .gl-n{ width:20px; height:20px; font-size:11px; }
+    #staff-screen-guided.legend-open .guided-legend-title{ font-size:12px; }
+    #staff-screen-guided.legend-open .guided-step-name{ font-size:19px; }
+    #staff-screen-guided.legend-open .guided-step-action{ font-size:15.5px; }
+    #staff-screen-guided.legend-open .guided-tab{ font-size:13px; padding:8px 12px; }
+    #staff-screen-guided.legend-open .guided-next{ font-size:16px; }
   }
 /* ---- green protocol: involved children picker + highlighted social-worker numbers ---- */
   .green-involved{ margin-bottom:14px; }
@@ -1169,12 +1176,11 @@
     <div class="card guided-screen" id="staff-screen-guided" style="display:none;">
       <button class="back-btn" data-back="pick">→ חזרה לרמזור</button>
       <div class="guided-head"><span class="guided-dot" aria-hidden="true"></span><h2 class="guided-head-title" id="guided-head-title">פרוטוקול אדום</h2></div>
-      <button type="button" class="guided-legend-btn" id="guided-legend-btn">כל השלבים</button>
+      <button type="button" class="guided-legend-btn" id="guided-legend-btn" aria-expanded="false" aria-controls="guided-legend">כל השלבים</button>
       <div class="guided-layout">
         <aside class="guided-legend" id="guided-legend" aria-label="מקרא שלבי הפרוטוקול">
           <div class="guided-legend-title">שלבי הפרוטוקול</div>
           <ol id="guided-legend-list"></ol>
-          <button type="button" class="btn ghost guided-legend-close" id="guided-legend-close">סגירה</button>
         </aside>
         <div class="guided-main">
           <div id="guided-step-body"></div>
@@ -1446,6 +1452,23 @@ function bonusIcon(b){
   return hit ? hit[1] : '🎁';
 }
 
+// Which bonuses the instructor may revoke right now, so they can be pointed out on the revoke screen: everything
+// that is happening at this hour (by the hours set in the bonus editor — there can be several at once, like the
+// ones that pulse on the kids' TV); if nothing is, those that start next; else the first one without hours (or
+// the last of the day). Bonuses already revoked are skipped. Returns a list (possibly empty).
+function nextBonusesToRevoke(list, revokedIds, now){
+  now = now || new Date();
+  const left = list.filter(b => !revokedIds.has(b.id));
+  if(!left.length) return [];
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const nowM = now.getHours() * 60 + now.getMinutes();
+  const timed = left.filter(b => b.startTime && b.endTime);
+  const happening = timed.filter(b => nowM >= toMin(b.startTime) && nowM < toMin(b.endTime));
+  if(happening.length) return happening;
+  const later = timed.filter(b => toMin(b.startTime) > nowM);
+  if(later.length){ const first = Math.min(...later.map(b => toMin(b.startTime))); return later.filter(b => toMin(b.startTime) === first); }
+  return [left.find(b => !(b.startTime && b.endTime)) || left[left.length - 1]];
+}
 const BONUS_REVOCATION_HOURS = 5;
 async function getActiveBonusRevocations(){
   const since = new Date(Date.now() - BONUS_REVOCATION_HOURS*60*60*1000).toISOString();
@@ -2379,8 +2402,8 @@ function renderGuidedStep(){
 }
 
 // The legend ("מקרא"): every step of the protocol as number + the action itself (no message / examples),
-// the current one highlighted; tapping a step jumps to it. A side column on wide screens; on a phone it
-// opens from the "כל השלבים" button as a sheet, so it never takes room from the step in front of the child.
+// the current one highlighted; tapping a step jumps to it. Hidden until the "כל השלבים" button is pressed, then shown
+// BESIDE the current step (on a computer and on a phone), so the protocol can be followed with the whole list in view.
 function renderGuidedLegend(){
   const steps = GUIDED_PROTOCOLS[guidedKey].steps;
   const list = document.getElementById('guided-legend-list');
@@ -2390,15 +2413,19 @@ function renderGuidedLegend(){
     return `<li${cls}><button type="button" data-step="${i}"><span class="gl-n">${i + 1}</span><span class="gl-t">${text}</span></button></li>`;
   }).join('');
   list.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
-    guidedStep = Number(b.dataset.step);
-    closeGuidedLegend();
+    guidedStep = Number(b.dataset.step);       // jump there; the list stays open beside the step
     renderGuidedStep();
     window.scrollTo({ top: 0 });
   }));
 }
-function closeGuidedLegend(){ document.getElementById('staff-screen-guided').classList.remove('legend-open'); }
-document.getElementById('guided-legend-btn').addEventListener('click', () => document.getElementById('staff-screen-guided').classList.add('legend-open'));
-document.getElementById('guided-legend-close').addEventListener('click', closeGuidedLegend);
+function setGuidedLegend(open){
+  document.getElementById('staff-screen-guided').classList.toggle('legend-open', open);
+  const btn = document.getElementById('guided-legend-btn');
+  btn.setAttribute('aria-expanded', String(open));
+  btn.textContent = open ? 'הסתרת השלבים' : 'כל השלבים';
+}
+const closeGuidedLegend = () => setGuidedLegend(false);
+document.getElementById('guided-legend-btn').addEventListener('click', () => setGuidedLegend(!document.getElementById('staff-screen-guided').classList.contains('legend-open')));
 function openGuidedScreen(key){
   closeGuidedLegend();
   guidedKey = key;
@@ -2426,12 +2453,30 @@ function renderYellowScreen(ids){
   document.getElementById(ids.protocol).innerHTML = yellowReminderHtml();
   document.getElementById(ids.childTitle).textContent = 'בונוסים — ' + displayName(child);
 
+  // The bonuses that can be revoked at this hour gently blink (like the active bonuses on the kids' TV),
+  // and the blinking moves on after each revocation. Bonuses already revoked for this child are shown as revoked.
+  const todaysBonuses = () => [...bonusesDaily, ...bonusesWeekly].filter(bonusAppliesToday);
+  const chipEls = () => [...document.querySelectorAll(`#${ids.dailyList} .bonus-chip, #${ids.weeklyList} .bonus-chip`)];
+  function updateNextBonus(){
+    const revokedIds = new Set(chipEls().filter(c => c.classList.contains('revoked')).map(c => c.dataset.id));
+    const next = new Set(nextBonusesToRevoke(todaysBonuses(), revokedIds).map(b => b.id));
+    chipEls().forEach(c => c.classList.toggle('next', next.has(c.dataset.id)));
+  }
+  async function markAlreadyRevoked(){
+    const mine = new Set((await getActiveBonusRevocations()).filter(r => r.child_id === child.id).map(r => r.bonus_id));
+    chipEls().forEach(c => {
+      if(!mine.has(c.dataset.id) || c.classList.contains('revoked')) return;
+      c.classList.add('revoked'); const b = c.querySelector('.revoke-bonus'); b.textContent = 'נגרע ✓'; b.disabled = true;
+    });
+    updateNextBonus();
+  }
+
   function renderBonusChips(containerId, list, emptyMsg){
     const el = document.getElementById(containerId);
     const todayList = list.filter(bonusAppliesToday);
     if(!todayList.length){ el.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
     el.innerHTML = todayList.map(b => `
-      <div class="bonus-chip" data-id="${b.id}"><span>${b.text}</span><button class="revoke-bonus">גריעה</button></div>
+      <div class="bonus-chip" data-id="${b.id}"><span>${bonusIcon(b)} ${b.text}</span><button class="revoke-bonus">גריעה</button></div>
     `).join('');
     el.querySelectorAll('.revoke-bonus').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
@@ -2442,9 +2487,10 @@ function renderYellowScreen(ids){
         const saved = await revokeBonus(selectedStaffChild, bonusId);
         if(!saved){ btn.disabled = false; toast('⚠ הגריעה לא נשמרה, נסו שוב'); return; }
         chip.classList.add('revoked'); btn.textContent = 'נגרע ✓';
+        updateNextBonus();                                     // the blinking moves to what can be revoked next
         toastUndo(`✔ נקלט במערכת — נגרע מ${displayName(child)}: ${bonusText}`, async () => {
           const ok = await undoRevokeBonus(saved.id);
-          if(ok){ chip.classList.remove('revoked'); btn.textContent = 'גריעה'; btn.disabled = false; }
+          if(ok){ chip.classList.remove('revoked'); btn.textContent = 'גריעה'; btn.disabled = false; updateNextBonus(); }
           return ok;
         });
       });
@@ -2452,7 +2498,8 @@ function renderYellowScreen(ids){
   }
   renderBonusChips(ids.dailyList, bonusesDaily, 'אין בונוסים יומיים מוגדרים (הוסיפו במסך הניהול)');
   renderBonusChips(ids.weeklyList, bonusesWeekly, 'אין בונוסים שבועיים מוגדרים (הוסיפו במסך הניהול)');
-
+  updateNextBonus();
+  markAlreadyRevoked();
   const dutyEl = document.getElementById(ids.dutyList);
   if(!dutyRoster.length){ dutyEl.innerHTML = '<div class="empty">אין תורנויות מוגדרות (הוסיפו במסך הניהול)</div>'; }
   else{
@@ -3683,7 +3730,6 @@ updateBottomNav();
     const confirm = document.querySelector('.confirm-sheet');
     if(confirm){ const c = confirm.querySelector('.confirm-cancel'); if(c){ c.click(); return true; } }
     for(const id of ['a11y-sheet', 'install-sheet']) if(el(id) && !el(id).hidden){ el(id).hidden = true; return true; }
-    if(el('staff-screen-guided').classList.contains('legend-open')){ closeGuidedLegend(); return true; }
     return false;
   }
 
