@@ -80,8 +80,8 @@ function portalSeed(){
   const today = isoDate(new Date()), mk = monthKeyOf(today), next = addMonths(mk, 1);
   const instructors = portalDemoInstructors();
   const st = {
-    version:1, instructors, shiftTypes:JSON.parse(JSON.stringify(SHIFT_TYPES_DEFAULT)), rules:Object.assign({}, RULES_DEFAULT),
-    months:{}, swaps:[], announcements:[], timetable:{}, birthdays:{}, settings:{ theme:'dark' }, outbox:[]
+    version:2, instructors, shiftTypes:JSON.parse(JSON.stringify(SHIFT_TYPES_DEFAULT)), rules:Object.assign({}, RULES_DEFAULT),
+    months:{}, swaps:[], notices:[], announcements:[], timetable:{}, birthdays:{}, settings:{ theme:'dark' }, outbox:[]
   };
   st.timetable[mk] = timetableDefault(); st.timetable[next] = timetableDefault();
   // tomorrow is a special day (an exception to the weekly pattern)
@@ -105,7 +105,7 @@ function portalDemoPrefs(instructors, mk, seed){
     const slots = {}, absent = [];
     daysOfMonth(mk).forEach(d => SHIFT_TYPES_DEFAULT.forEach(s => {
       const r = rnd();
-      if(r < 0.12) slots[`${d}|${s.id}`] = 'yes'; else if(r < 0.22) slots[`${d}|${s.id}`] = 'avoid'; else if(r < 0.27) slots[`${d}|${s.id}`] = 'no';
+      if(r < 0.10) slots[`${d}|${s.id}`] = 'avoid'; else if(r < 0.15) slots[`${d}|${s.id}`] = 'no';      // (everything else stays "כן", the default)
     }));
     if(idx % 4 === 1){ const d = daysOfMonth(mk)[Math.floor(rnd() * 25)]; absent.push(d, addDays(d, 1)); }
     out[p.id] = { slots, absent };
@@ -116,7 +116,7 @@ function portalDemoPrefs(instructors, mk, seed){
 function portalLoad(){
   if(portalState) return portalState;
   try { const raw = localStorage.getItem(PORTAL_KEY); if(raw){ portalState = JSON.parse(raw); } } catch(e){ portalState = null; }
-  if(!portalState || portalState.version !== 1){ portalState = portalSeed(); portalSave(); }
+  if(!portalState || portalState.version !== 2){ portalState = portalSeed(); portalSave(); }
   return portalState;
 }
 function portalSave(){ try { localStorage.setItem(PORTAL_KEY, JSON.stringify(portalState)); } catch(e){} }

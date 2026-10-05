@@ -937,38 +937,85 @@
       check('instructor: declining removes the placement', !(m.assignments[mSlot.key] || []).includes(victim.id) && !m.approvals[mSlot.key + '|' + victim.id], 'still assigned');
       prefsV.slots = {}; prefsV.absent = [];
 
-      // --- preferences (three levels, tap days or shifts)
+      // --- preferences: everything is "כן" by default; choose a level, then tap days or shifts; "נקה הכל" asks first
       portalUi.persona = 'i2'; portalUi.tab = 'prefs'; portalUi.pmonth = addMonths(mk, 1); showPortal();
       const nm = addMonths(mk, 1), nPrefs = portalPrefsOf(nm, 'i2'); nPrefs.slots = {}; nPrefs.absent = []; portalMonth(nm).submitted.i2 = false;
       showPortal();
       check('preferences: a calendar of the month, with the level bar at the bottom', document.querySelectorAll('.pday:not(.blank)').length === daysOfMonth(nm).length && document.querySelectorAll('.lvbtn').length === 5, 'calendar');
+      check('preferences: the whole screen starts as "כן"', document.querySelectorAll('.pshift').length === daysOfMonth(nm).length * st.shiftTypes.length && [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-yes')), 'not all yes');
+      check('preferences: the clear button is called "נקה הכל"', $('prefs-clear-all').textContent.trim() === 'נקה הכל', $('prefs-clear-all').textContent);
       check('preferences: submitting is required and says so', /טרם הוגשו/.test(document.querySelector('.pstatus').textContent), document.querySelector('.pstatus').textContent);
       document.querySelector('[data-plevel="avoid"]').click();
       const d1 = daysOfMonth(nm)[2];
       document.querySelector(`[data-pslot="${d1}|m"]`).click();
-      check('preferences: choose a level, then tap a shift', nPrefs.slots[d1 + '|m'] === 'avoid', JSON.stringify(nPrefs.slots));
+      check('preferences: choose a level, then tap a shift', nPrefs.slots[d1 + '|m'] === 'avoid' && document.querySelector(`[data-pslot="${d1}|m"]`).classList.contains('lv-avoid'), JSON.stringify(nPrefs.slots));
       document.querySelector(`[data-pday="${daysOfMonth(nm)[4]}"]`).click();
       check('preferences: tapping a day sets all of its shifts', st.shiftTypes.every(s => nPrefs.slots[daysOfMonth(nm)[4] + '|' + s.id] === 'avoid'), JSON.stringify(nPrefs.slots));
       document.querySelector('[data-plevel="absent"]').click(); document.querySelector(`[data-pday="${daysOfMonth(nm)[6]}"]`).click();
       check('preferences: a whole day can be marked as absent', nPrefs.absent.includes(daysOfMonth(nm)[6]), JSON.stringify(nPrefs.absent));
+      $('prefs-clear-all').click(); await sleep(150);
+      const clearSheet = document.querySelector('.confirm-sheet');
+      check('preferences: "נקה הכל" asks "לנקות את כל ההעדפות?" first', !!clearSheet && /לנקות את כל ההעדפות/.test(clearSheet.textContent) && Object.keys(nPrefs.slots).length > 0, clearSheet ? clearSheet.textContent : 'no question');
+      clearSheet.querySelector('.confirm-cancel').click(); await sleep(150);
+      check('preferences: answering "back" keeps the marks', Object.keys(nPrefs.slots).length > 0 && nPrefs.absent.length > 0, JSON.stringify(nPrefs));
+      $('prefs-clear-all').click(); await sleep(150); document.querySelector('.confirm-ok').click(); await sleep(150);
+      check('preferences: confirming clears everything back to "כן"', Object.keys(nPrefs.slots).length === 0 && nPrefs.absent.length === 0 && [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-yes')), JSON.stringify(nPrefs));
+      document.querySelector('[data-plevel="avoid"]').click(); document.querySelector(`[data-pslot="${d1}|m"]`).click();
       document.querySelector('#prefs-submit').click(); await sleep(60);
       check('preferences: submitting is recorded', portalMonth(nm).submitted.i2 === true && /הוגשו/.test(document.querySelector('.pstatus').textContent), 'not submitted');
 
-      // --- an instructor sees the whole team's schedule, with only their own name marked, and no one's preferences
-      portalUi.persona = 'i1'; portalUi.tab = 'schedule'; portalUi.month = mk; showPortal();
+      // --- the schedule tab: two folding sections, the next shift stands out, no yellow frame
+      portalUi.persona = 'i1'; portalUi.tab = 'schedule'; portalUi.month = mk; portalUi.fold = { mine:false, team:false, swap:false }; showPortal();
+      const foldMine = document.querySelector('details[data-fold="mine"]'), foldTeam = document.querySelector('details[data-fold="team"]');
+      check('schedule: "המשמרות שלי" and "הצוות כולו" are folded and can be opened', !!foldMine && !!foldTeam && !foldMine.open && !foldTeam.open && /המשמרות שלי/.test(foldMine.querySelector('summary').textContent) && /הצוות כולו/.test(foldTeam.querySelector('summary').textContent), 'folds');
+      foldMine.open = true; foldTeam.open = true; await sleep(60);
+      check('schedule: the fold state is remembered', portalUi.fold.mine === true && portalUi.fold.team === true, JSON.stringify(portalUi.fold));
+      showPortal();
+      check('schedule: after a refresh the sections stay open', document.querySelector('details[data-fold="mine"]').open && document.querySelector('details[data-fold="team"]').open, 'closed');
+      const nextShift = nextShiftOf(portalPerson('i1'));
+      check('schedule: my next shift carries the "המשמרת הבאה" banner', document.querySelectorAll('.pmine-row.next').length === 1 && /המשמרת הבאה/.test(document.querySelector('.pmine-row.next .pnext-badge').textContent) && document.querySelector('.pmine-row.next b').textContent === dayLabel(nextShift.date), nextShift && nextShift.key);
+      check('schedule: in the team table the whole row of my next shift breathes slowly (no yellow frame)', document.querySelectorAll('.pboard tr.next-row').length === 1 && getComputedStyle(document.querySelector('.pboard tr.next-row td')).animationName === 'next-breathe' && getComputedStyle(document.querySelector('.pboard tr.next-row td')).animationDuration !== '0s' && getComputedStyle(document.querySelector('.pboard tr.today td')).boxShadow === 'none', getComputedStyle(document.querySelector('.pboard tr.next-row td')).animationName);
       check('instructor: sees the whole team with their own name highlighted', document.querySelectorAll('.pboard .pchip').length > 20 && !!document.querySelector('.pboard .pchip.me') && !document.querySelector('.pboard .lv-yes, .pboard .lv-avoid, .pboard .lv-no'), 'board');
 
-      // --- swap: ask a colleague, the colleague agrees, the coordinator approves
-      const mine = myShifts(portalPerson('i1'), mk).find(s => s.date >= isoDate(new Date()));
-      portalUi.tab = 'swaps'; showPortal();
-      document.querySelector(`[data-swap-ask="${mine.key}"]`).click(); await sleep(60);
-      const toId = document.querySelector('#swap-to').value; document.querySelector('#swap-send').click(); await sleep(60);
-      check('swap: the request is recorded and waits for the colleague', st.swaps.some(s => s.key === mine.key && s.from === 'i1' && s.to === toId && s.status === 'asked'), JSON.stringify(st.swaps));
-      portalUi.persona = toId; showPortal(); document.querySelector('[data-swap-agree]').click(); await sleep(60);
-      check('swap: after the colleague agrees it waits for the coordinator', st.swaps[0].status === 'agreed', st.swaps[0].status);
-      portalUi.persona = 'c1'; portalUi.tab = 'swaps'; showPortal(); document.querySelector('[data-approve]').click(); await sleep(60);
-      check('swap: the coordinator approves and the schedule changes', st.swaps[0].status === 'approved' && m.assignments[mine.key].includes(toId) && !m.assignments[mine.key].includes('i1'), JSON.stringify(m.assignments[mine.key]));
-
+      // --- swaps: publish my shift from the schedule tab, a colleague offers, the coordinator decides, both are told
+      const swapFold = document.querySelector('details[data-fold="swap"]');
+      check('swaps: a folded "בקשת החלפה" header sits inside "המשמרות שלי", and the buttons appear when it is opened', !!swapFold && !swapFold.open && getComputedStyle(document.querySelector('.swap-btn')).display === 'none', 'swap fold');
+      swapFold.open = true; await sleep(60);
+      check('swaps: opening it shows a "בקשת החלפה" button beside each upcoming shift', getComputedStyle(document.querySelector('.swap-btn')).display !== 'none' && document.querySelectorAll('.swap-btn').length > 3, 'no buttons');
+      const mine = myShifts(portalPerson('i1'), mk).find(s => s.end > Date.now() && !st.swaps.some(w => w.key === s.key));
+      document.querySelector(`[data-swap-open="${mine.key}"]`).click(); await sleep(150);
+      check('swaps: asks before publishing the shift', !!document.querySelector('.confirm-sheet') && /לבקש החלפה/.test(document.querySelector('.confirm-sheet').textContent), 'no question');
+      document.querySelector('.confirm-ok').click(); await sleep(150);
+      check('swaps: the shift is published on the shared swaps screen (no colleague chosen yet)', st.swaps.some(s => s.key === mine.key && s.from === 'i1' && s.to === null && s.status === 'open'), JSON.stringify(st.swaps[0]));
+      const taker = people.find(p => p.id !== 'i1' && canTakeShift(p.id, mine.key)), stranger = people.find(p => p.id !== 'i1' && p.id !== taker.id && !canTakeShift(p.id, mine.key));
+      portalUi.persona = taker.id; portalUi.tab = 'swaps'; showPortal();
+      check('swaps: every instructor sees who asks for a swap and which shift', /בקשות החלפה פתוחות/.test($('portal-body').textContent) && document.querySelectorAll('.preq.swap').length >= 1 && $('portal-body').textContent.includes(instrName(portalPerson('i1'), st.instructors)), 'no list');
+      if(stranger){ portalUi.persona = stranger.id; showPortal(); check('swaps: somebody who cannot take that shift cannot press the button', !document.querySelector(`[data-swap-take]`) || !document.querySelector(`[data-swap-take="${st.swaps.find(s => s.key === mine.key).id}"]`), 'button shown'); portalUi.persona = taker.id; showPortal(); }
+      document.querySelector(`[data-swap-take="${st.swaps.find(s => s.key === mine.key).id}"]`).click(); await sleep(80);
+      const sw1 = st.swaps.find(s => s.key === mine.key);
+      check('swaps: "אני יכול/ה להחליף" sends the request on to the coordinator and tells both people', sw1.status === 'offered' && sw1.to === taker.id && /הועברה לרכזת/.test(document.querySelector('.toast:last-of-type').textContent) && st.notices.some(n => n.to === 'i1' && /הועברה לרכזת/.test(n.text)) && st.notices.some(n => n.to === taker.id && /הועברה לרכזת/.test(n.text)), JSON.stringify(sw1));
+      portalUi.persona = 'c1'; portalUi.tab = 'swaps'; showPortal();
+      check('swaps: the coordinator sees the request with both names', document.querySelectorAll('[data-approve]').length === 1, 'no request');
+      const outBefore = st.outbox.length; document.querySelector('[data-approve]').click(); await sleep(80);
+      check('swaps: approving changes the schedule of both instructors', sw1.status === 'approved' && m.assignments[mine.key].includes(taker.id) && !m.assignments[mine.key].includes('i1'), JSON.stringify(m.assignments[mine.key]));
+      const mails = st.outbox.slice(0, st.outbox.length - outBefore);
+      check('swaps: both instructors get a "שינוי במשמרות" e-mail', mails.filter(e => /שינוי במשמרות/.test(e.subject)).map(e => e.to).sort().join() === ['i1', taker.id].sort().join(), mails.map(e => e.to + ':' + e.subject).join(' | '));
+      portalUi.persona = 'i1'; portalUi.tab = 'schedule'; showPortal();
+      check('swaps: the requester sees a note about the change on the next visit to the schedule, and can dismiss it', !!document.querySelector('.pnotice') && /שינוי במשמרות/.test(document.querySelector('.pnotice').textContent), 'no note');
+      document.querySelector('[data-notice-ok]').click(); await sleep(60);
+      check('swaps: the dismissed note is gone from the schedule but stays in the messages', st.notices.filter(n => n.to === 'i1' && !n.seen && /שינוי במשמרות/.test(n.text)).length === 0, 'still unseen');
+      portalUi.tab = 'inbox'; showPortal();
+      check('swaps: the messages area lists the personal updates', /עדכונים אישיים/.test($('portal-body').textContent) && /אושרה/.test($('portal-body').textContent), $('portal-body').textContent.slice(0, 120));
+      // a rejected request: both are told, nothing changes
+      const mine2 = myShifts(portalPerson('i3'), mk).find(s => s.end > Date.now());
+      st.swaps.unshift({ id:'s-rej', key:mine2.key, from:'i3', to:null, status:'open', at:new Date().toISOString() });
+      const taker2 = people.find(p => p.id !== 'i3' && canTakeShift(p.id, mine2.key));
+      portalUi.persona = taker2.id; portalUi.tab = 'swaps'; showPortal(); document.querySelector('[data-swap-take="s-rej"]').click(); await sleep(60);
+      portalUi.persona = 'c1'; showPortal(); const before2 = JSON.stringify(m.assignments[mine2.key]); const outB2 = st.outbox.length; document.querySelector('[data-reject]').click(); await sleep(80);
+      check('swaps: rejecting leaves the schedule as it was, e-mails both and leaves a warning note', JSON.stringify(m.assignments[mine2.key]) === before2 && st.outbox.length - outB2 === 2 && st.notices.some(n => n.to === 'i3' && n.kind === 'warn' && /לא אושרה/.test(n.text)) && st.notices.some(n => n.to === taker2.id && n.kind === 'warn'), st.outbox.slice(0, 2).map(e => e.subject).join(' | '));
+      const sw3 = { id:'s-can', key:mine2.key, from:'i3', to:null, status:'open' }; st.swaps.unshift(sw3);
+      portalUi.persona = 'i3'; portalUi.tab = 'swaps'; showPortal(); document.querySelector('[data-swap-cancel="s-can"]').click(); await sleep(60);
+      check('swaps: the requester can cancel an open request', sw3.status === 'cancelled', sw3.status);
       // --- coordinator: auto-schedule, publish, e-mail preview, timetable, theme
       const nmo = portalMonth(nm); portalUi.persona = 'c1'; portalUi.tab = 'schedule'; portalUi.month = nm; showPortal();
       check('coordinator: warns about instructors who did not submit', /עוד לא הגישו/.test(document.querySelector('.pstatus').textContent), 'no warning');

@@ -24,6 +24,8 @@
         const st = portalLoad(), mk = monthKeyOf(isoDate(new Date()));
         if(/light/.test(what)){ st.settings.theme = 'light'; }
         if(/prefs|instr|swaps/.test(what)) portalUi.persona = 'i1';
+        if(/instr/.test(what)) portalUi.fold = { mine:true, team:true, swap:true };
+        if(/swaps/.test(what)){ const other = myShifts(portalPerson('i4'), mk).find(s => s.end > Date.now()); if(other && !st.swaps.some(s => s.key === other.key)) st.swaps.unshift({ id:'s-demo', key:other.key, from:'i4', to:null, status:'open', at:new Date().toISOString() }); }
         const tab = /prefs/.test(what) ? 'prefs' : /instr/.test(what) ? 'schedule' : /swaps/.test(what) ? 'swaps' : /tt/.test(what) ? 'timetable' : /settings/.test(what) ? 'settings' : /subs/.test(what) ? 'submissions' : 'schedule';
         showPortal(tab);
         if(/slot/.test(what)) openSlotEditor(mk, isoDate(new Date()) + '|e');

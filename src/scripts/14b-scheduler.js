@@ -30,7 +30,8 @@ function buildSlots(month, shiftTypes){
 function levelOf(prefs, pid, slot){
   const p = prefs[pid];
   if(p && (p.absent || []).includes(slot.date)) return 'no';
-  return (p && p.slots && p.slots[slot.key]) || 'neutral';
+  if(!p) return 'neutral';                                   // has not opened the preferences at all
+  return (p.slots && p.slots[slot.key]) || 'yes';            // everything is "כן" until the instructor marks otherwise
 }
 
 // can this person take this shift, given what they already have? (the hard rules)

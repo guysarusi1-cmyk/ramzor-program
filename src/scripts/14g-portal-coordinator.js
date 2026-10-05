@@ -36,15 +36,15 @@ function renderCoordSchedule(body){
       <button type="button" class="btn ghost" id="cs-mail">תצוגת מייל</button>
     </div>
     ${hasAssign ? `<div class="psummary" aria-label="סיכום שביעות הרצון">
-      <span class="pchip lv-yes">קיבלו מה שרצו ${stats.all.yes} (${pct(stats.all.yes)}%)</span>
-      <span class="pchip lv-neutral">בלי העדפה ${stats.all.neutral}</span>
+      <span class="pchip lv-yes">בלי הסתייגות (כן) ${stats.all.yes} (${pct(stats.all.yes)}%)</span>
+      <span class="pchip lv-neutral">מדריך שלא פתח העדפות ${stats.all.neutral}</span>
       <span class="pchip lv-avoid">העדיפו שלא ${stats.all.avoid}</span>
       <span class="pchip lv-no">ממש לא ${stats.all.no}</span>
       ${stats.missing ? `<span class="pchip missing">חסרים ${stats.missing}</span>` : ''}
       ${pendingCount ? `<span class="pchip pending">ממתינים לאישור מדריך ${pendingCount}</span>` : ''}
     </div>` : '<div class="pnote">עוד אין סידור לחודש הזה. אפשר ללחוץ "שבץ אוטומטית", או לבנות ידנית בלחיצה על משמרות בטבלה.</div>'}
     ${issues.filter(i => i.type !== 'no').length ? `<details class="pissues"><summary>${issues.filter(i => i.type !== 'no').length} דברים שדורשים תשומת לב</summary>${issues.filter(i => i.type !== 'no').slice(0, 40).map(i => `<div>• ${pEsc(issueText(i, ctx))}</div>`).join('')}</details>` : ''}
-    <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. הצבעים: ירוק = קיבל/ה מה שרצה, צהוב = העדיף/ה שלא, אדום = ממש לא או חסר.</div>
+    <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. הצבעים: ירוק = בלי הסתייגות, צהוב = העדיף/ה שלא, אדום = ממש לא או חסר.</div>
     ${boardHtml(ctx, m.assignments, { colour:true, edit:true })}`;
   wireMonthNav(body);
   body.querySelectorAll('td.editable').forEach(td => {
@@ -123,8 +123,8 @@ function renderCoordSubmissions(body){
     <label class="pfield">מועד אחרון להגשה<input type="date" id="sub-deadline" value="${m.deadline || ''}"></label>
     <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
     <button type="button" class="btn${missing.length ? '' : ' ghost'}" id="sub-remind"${missing.length ? '' : ' disabled'}>שליחת תזכורת למי שלא הגיש</button>
-    <div class="psubs">${people.map(p => { const pr = m.prefs[p.id] || { slots:{}, absent:[] }, c = { yes:0, avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { c[v]++; });
-      return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>כן ${c.yes} · מעדיף שלא ${c.avoid} · ממש לא ${c.no} · היעדרות ${pr.absent.length}</small></div>`; }).join('')}</div>`;
+    <div class="psubs">${people.map(p => { const pr = m.prefs[p.id] || { slots:{}, absent:[] }, c = { avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { if(c[v] !== undefined) c[v]++; });
+      return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>מעדיף שלא ${c.avoid} · ממש לא ${c.no} · היעדרות ${pr.absent.length}</small></div>`; }).join('')}</div>`;
   wireMonthNav(body.closest ? body : body, 'smonth');
   document.getElementById('sub-deadline').addEventListener('change', e => { m.deadline = e.target.value; portalSave(); });
   document.getElementById('sub-remind').addEventListener('click', () => {
@@ -136,14 +136,14 @@ function renderCoordSubmissions(body){
 function renderCoordSwaps(body){
   const st = portalLoad();
   const name = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
-  const agreed = st.swaps.filter(s => s.status === 'agreed'), waiting = st.swaps.filter(s => s.status === 'asked');
+  const agreed = st.swaps.filter(s => s.status === 'offered'), waiting = st.swaps.filter(s => s.status === 'open');
   const pending = [];
   Object.keys(st.months).forEach(mk => Object.keys(st.months[mk].approvals || {}).forEach(k => { if(st.months[mk].approvals[k] === 'pending') pending.push({ key:k.slice(0, k.lastIndexOf('|')), iid:k.slice(k.lastIndexOf('|') + 1) }); }));
   body.innerHTML = `
     <h2 class="psec">ממתינות לאישורך</h2>
-    ${agreed.length ? agreed.map(s => `<div class="preq"><div><b>${pEsc(name(s.from))}</b> ← <b>${pEsc(name(s.to))}</b><br>${slotLabel(s.key)}<br><small>הקולגה הסכים/ה</small></div><div class="preq-actions"><button type="button" class="btn" data-approve="${s.id}">אישור</button><button type="button" class="btn ghost" data-reject="${s.id}">דחייה</button></div></div>`).join('') : '<div class="pnote">אין החלפות שממתינות לאישור.</div>'}
-    <h2 class="psec">ממתינות לקולגה</h2>
-    ${waiting.length ? waiting.map(s => `<div class="pmine-row"><span>${pEsc(name(s.from))} ← ${pEsc(name(s.to))} · ${slotLabel(s.key)}</span><em class="pst pst-asked">${SWAP_STATUS.asked}</em></div>`).join('') : '<div class="pnote">אין.</div>'}
+    ${agreed.length ? agreed.map(s => `<div class="preq"><div><b>${pEsc(name(s.from))}</b> מבקש/ת החלפה, <b>${pEsc(name(s.to))}</b> מוכן/ה להחליף<br>${slotLabel(s.key)}</div><div class="preq-actions"><button type="button" class="btn" data-approve="${s.id}">אישור</button><button type="button" class="btn ghost" data-reject="${s.id}">דחייה</button></div></div>`).join('') : '<div class="pnote">אין החלפות שממתינות לאישור.</div>'}
+    <h2 class="psec">בקשות פתוחות (עדיין אין מחליף/ה)</h2>
+    ${waiting.length ? waiting.map(s => `<div class="pmine-row"><span>${pEsc(name(s.from))} · ${slotLabel(s.key)}</span><em class="pst pst-open">${SWAP_STATUS.open}</em></div>`).join('') : '<div class="pnote">אין.</div>'}
     <h2 class="psec">שיבוצים שממתינים לאישור מדריך ("ממש לא")</h2>
     ${pending.length ? pending.map(p => `<div class="pmine-row"><span>${pEsc(name(p.iid))} · ${slotLabel(p.key)}</span><em class="pst pst-asked">ממתין למדריך</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
   body.querySelectorAll('[data-approve], [data-reject]').forEach(b => b.addEventListener('click', () => {
@@ -152,9 +152,17 @@ function renderCoordSwaps(body){
       const { date } = splitKey(sw.key), m = portalMonth(monthKeyOf(date));
       m.assignments[sw.key] = (m.assignments[sw.key] || []).map(id => id === sw.from ? sw.to : id);
       sw.status = 'approved';
-      queueEmail(sw.from, 'ההחלפה אושרה', `${slotLabel(sw.key)} — עבר/ה ל${name(sw.to)}.`); queueEmail(sw.to, 'ההחלפה אושרה', `${slotLabel(sw.key)} — את/ה במקום ${name(sw.from)}.`);
-      toast('ההחלפה אושרה והסידור עודכן');
-    } else { sw.status = 'rejected'; queueEmail(sw.from, 'ההחלפה לא אושרה', slotLabel(sw.key)); toast('ההחלפה נדחתה'); }
+      queueEmail(sw.from, 'שינוי במשמרות שלך', `הבקשה שלך אושרה: ${slotText(sw.key)} עברה ל${name(sw.to)}.`); queueEmail(sw.to, 'שינוי במשמרות שלך', `הבקשה אושרה: את/ה מחליף/ה את ${name(sw.from)} ב-${slotText(sw.key)}.`);
+      addNotice(sw.from, `שינוי במשמרות: ההחלפה אושרה. ${slotText(sw.key)} עברה ל${name(sw.to)}.`, 'ok');
+      addNotice(sw.to, `שינוי במשמרות: ההחלפה אושרה. את/ה מחליף/ה את ${name(sw.from)} ב-${slotText(sw.key)}.`, 'ok');
+      toast('ההחלפה אושרה, הסידור עודכן והמדריכים קיבלו הודעה');
+    } else {
+      sw.status = 'rejected';
+      queueEmail(sw.from, 'בקשת ההחלפה לא אושרה', `הבקשה להחלפה ב-${slotText(sw.key)} לא אושרה. המשמרת נשארת אצלך.`); queueEmail(sw.to, 'בקשת ההחלפה לא אושרה', `ההחלפה של ${name(sw.from)} ב-${slotText(sw.key)} לא אושרה.`);
+      addNotice(sw.from, `בקשת ההחלפה ל-${slotText(sw.key)} לא אושרה. המשמרת נשארת אצלך.`, 'warn');
+      addNotice(sw.to, `ההחלפה של ${name(sw.from)} ב-${slotText(sw.key)} לא אושרה.`, 'warn');
+      toast('הבקשה נדחתה והמדריכים קיבלו הודעה');
+    }
     portalSave(); renderCoordSwaps(body);
   }));
 }

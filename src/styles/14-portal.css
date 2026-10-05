@@ -63,7 +63,31 @@
   .pboard thead th{ background:var(--p-panel2); font-size:13px; position:sticky; top:0; }
   .pboard thead th small{ display:block; font-weight:400; color:var(--p-muted); direction:ltr; }
   .pboard tbody th{ background:var(--p-panel2); font-size:13px; width:52px; white-space:nowrap; }
-  .pboard tr.today th, .pboard tr.today td{ box-shadow:inset 0 0 0 1px var(--gold); }
+  .pboard tr.today th, .pboard tr.today td{ background:rgba(232,185,74,.10); }
+  /* the row of my next shift breathes slowly (no frame) */
+  .pboard tr.next-row th, .pboard tr.next-row td{ animation:next-breathe 3.6s ease-in-out infinite; }
+  @keyframes next-breathe{ 0%, 100%{ background-color:transparent; } 50%{ background-color:rgba(232,185,74,.30); } }
+  .pmine-row.next{ animation:next-glow 3.6s ease-in-out infinite; border-color:rgba(232,185,74,.7); }
+  @keyframes next-glow{ 0%, 100%{ box-shadow:0 0 0 0 rgba(232,185,74,0); } 50%{ box-shadow:0 0 14px 2px rgba(232,185,74,.45); } }
+  .pnext-badge{ display:inline-block; margin-inline-end:8px; padding:2px 10px; border-radius:10px; background:linear-gradient(#f6d77e, #d9a62f); color:#2a1d00; font-family:'Rubik', sans-serif; font-weight:800; font-size:11.5px; letter-spacing:.02em; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  @media (prefers-reduced-motion: reduce){ .pboard tr.next-row th, .pboard tr.next-row td, .pmine-row.next{ animation:none; } .pboard tr.next-row td, .pboard tr.next-row th{ background-color:rgba(232,185,74,.18); } }
+  html[data-motion=reduce] .pboard tr.next-row th, html[data-motion=reduce] .pboard tr.next-row td, html[data-motion=reduce] .pmine-row.next{ animation:none; }
+
+  /* folding sections */
+  .pfold{ background:var(--p-panel); border:1px solid var(--p-line); border-radius:14px; margin:10px 0; overflow:hidden; }
+  .pfold > summary{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; min-height:48px; cursor:pointer; font-family:'Rubik', sans-serif; font-weight:800; font-size:15.5px; list-style:none; }
+  .pfold > summary::-webkit-details-marker{ display:none; }
+  .pfold > summary::after{ content:'▾'; color:var(--p-muted); transition:transform .2s; }
+  .pfold[open] > summary::after{ transform:rotate(180deg); }
+  .pfold-body{ padding:0 10px 12px; }
+  .pfold.sub{ background:var(--p-panel2); margin:2px 0 8px; } .pfold.sub > summary{ min-height:42px; font-size:13.5px; font-weight:700; }
+  .pfold.sub:not([open]) ~ .pmine .swap-btn{ display:none; }
+  .pcount{ margin-inline-start:auto; margin-inline-end:8px; min-width:26px; text-align:center; padding:1px 8px; border-radius:12px; background:var(--p-panel2); font-size:13px; }
+  .pmine-main{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; }
+  .pmine-row small{ color:var(--p-muted); }
+  .pnotice{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; margin:8px 0; border-radius:12px; background:var(--p-yes-bg); color:var(--p-yes); font-size:14px; font-weight:700; }
+  .pnotice.warn{ background:var(--p-no-bg); color:var(--p-no); } .pnotice.info{ background:var(--p-avoid-bg); color:var(--p-avoid); }
+  .pannounce.warn{ border-color:var(--p-no); } .pannounce.ok{ border-color:var(--p-yes); }
   .pboard tr.weekend td{ background:rgba(128,128,128,.07); }
   .pboard td.editable{ cursor:pointer; } .pboard td.editable:hover, .pboard td.editable:focus-visible{ background:rgba(232,185,74,.12); outline:none; }
   .pboard td.off{ color:var(--p-muted); }

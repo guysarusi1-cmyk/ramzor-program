@@ -3,7 +3,7 @@
 // Demo mode: there are no personal logins yet, so a small "viewing as" selector lets you see the portal as the
 // coordinator or as any instructor. Everything is stored in this browser only (see 14a-portal-data.js).
 const portalHomeFirst = () => PORTAL_ENABLED && !window.__portalNoHome && location.hash !== '#tv';       // (the test tools set __portalNoHome: they start from the רמזור home)
-const portalUi = { persona:'c1', tab:null, month:null, level:'yes', openDay:null };
+const portalUi = { persona:'c1', tab:null, month:null, level:'avoid', openDay:null, fold:{ mine:false, team:false, swap:false } };
 
 function portalPerson(id){ return portalLoad().instructors.find(p => p.id === id); }
 function portalMe(){ return portalPerson(portalUi.persona) || portalLoad().instructors[0]; }
@@ -130,7 +130,7 @@ function boardHtml(ctx, assignments, opts){
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date());
   const head = `<tr><th></th>${ctx.shiftTypes.map(s => `<th>${pEsc(s.label)}<small>${rangeHtml(s.start, s.end)}</small></th>`).join('')}</tr>`;
   const approvals = (portalMonth(ctx.month).approvals) || {};
-  const body = table.map(r => `<tr class="${r.date === today ? 'today' : ''}${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}"><th scope="row"><b>${DOW_SHORT[dowOf(r.date)]}</b> ${parseIso(r.date).getDate()}</th>${r.cells.map((c, i) => {
+  const body = table.map(r => `<tr class="${r.date === today ? 'today' : ''}${opts.nextDate === r.date ? ' next-row' : ''}${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}"><th scope="row"><b>${DOW_SHORT[dowOf(r.date)]}</b> ${parseIso(r.date).getDate()}</th>${r.cells.map((c, i) => {
     if(!c.slot) return '<td class="off">—</td>';
     const chips = c.people.map(p => {
       const pid = p.iid;
