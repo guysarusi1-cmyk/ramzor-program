@@ -76,7 +76,7 @@ function groupRevocationsByBonus(revocations){
     const child = roster.find(c=>c.id === r.child_id);
     if(!child) return;
     if(!byBonus[r.bonus_id]) byBonus[r.bonus_id] = [];
-    const who = initials(child).split('').join('.');
+    const who = tinyKidHtml(child);                                             // the child's character, or the initials when there is none
     if(!byBonus[r.bonus_id].includes(who)) byBonus[r.bonus_id].push(who);      // a child loses a bonus once, however many times it was recorded
   });
   return byBonus;

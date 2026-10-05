@@ -12,6 +12,7 @@
     document.getElementById('login-submit-btn').click();
     for(let i=0;i<60 && !(roster && roster.length);i++) await new Promise(r => setTimeout(r, 200));
     const what = m[1];
+    if(!/[?&]nochars/.test(location.search)) roster.forEach((c, i) => { childSettings[c.id] = Object.assign({}, childSettings[c.id], { id:c.id, character:CHARACTER_KEYS[i % CHARACTER_KEYS.length] }); });       // (the demo gives every child a character, in memory only)
     const acc = location.search.match(/[?&]a11y=([\w,]+)/);                  // e.g. &a11y=xl,contrast
     if(acc){ a11y = { size: /xl/.test(acc[1]) ? 'xl' : /\bl\b/.test(acc[1]) ? 'l' : 'm', contrast: /contrast/.test(acc[1]), motion: /motion/.test(acc[1]) }; applyA11y(); }
     // staff-side screens (shown instead of the kids' TV)

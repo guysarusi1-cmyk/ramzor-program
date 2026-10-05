@@ -14,6 +14,8 @@ function nameColor(name){
   return `hsl(${nameHue(name)}, 55%, 45%)`;
 }
 function avatarHtml(child, sizeClass){
+  const ck = characterFor(child.id);                                   // the child's own character, when one was picked (see 12b-characters.js)
+  if(ck) return characterAvatarHtml(ck);
   return `<div class="avatar-initials" style="background:${nameColor(child.firstName)}">${initials(child)}</div>`;
 }
 
@@ -154,9 +156,14 @@ async function renderStarBoard(){
       card.className = 'star-card';
       card.dataset.childId = child.id;
       card.dataset.stars = stars;
+      card.dataset.char = characterFor(child.id) || '';
       card.innerHTML = starCardHtml(child, stars);
       grid.appendChild(card);
     } else {
+      if((card.dataset.char || '') !== (characterFor(child.id) || '')){        // the child's character changed in management
+        const av = card.querySelector('.avatar-initials'); if(av) av.outerHTML = avatarHtml(child);
+        card.dataset.char = characterFor(child.id) || '';
+      }
       const prevStars = parseInt(card.dataset.stars || '0', 10);
       if(prevStars !== stars){
         updateStarDots(card, prevStars, stars);
@@ -376,7 +383,7 @@ async function renderMercuryBoard(opts){
     // same WIDTH as the others they'd end up almost twice as tall, blowing out the row spacing
     // math above. Cap height too so every marker has a similar, predictable footprint.
     const maxHeightPx = Math.round(widthPx * 1.3);
-    const icon = ship ? `<img class="ship-icon" src="${ship}" style="max-width:${widthPx}px; max-height:${maxHeightPx}px; width:auto; height:auto;">` : avatarHtml(child);
+    const icon = ship ? shipHtml(child, 'ship-icon', `max-width:${widthPx}px; max-height:${maxHeightPx}px; width:auto; height:auto;`) : avatarHtml(child);        // (with the child's character in the ship's window)
     return `<div style="position:relative; width:${widthPx}px; display:flex; justify-content:center;">${icon}${badge}</div><div class="lbl">${displayName(child)}</div>`;
   }, markerWidthPx);
   hideOneMarker(el, opts.hideChildId);

@@ -18,7 +18,7 @@ function bigWallHtml(child, count, newBrick, strength){
       <div class="wall">
         <div class="wall-cornice"></div><div class="wall-frieze"></div>
         <div class="wall-body">${bricks}</div>
-        <div class="wall-base"><span>${escapeHtml(displayName(child))}</span></div>
+        <div class="wall-base"><span>${nameTagHtml(child)}</span></div>
       </div>
       ${strength ? `<div class="wall-strength">${escapeHtml(strength)}</div>` : ''}
       ${count >= WALL_BRICKS && newBrick ? `<div class="wall-done">המקדש של ${escapeHtml(displayName(child))}<br>הושלם!</div>` : ''}
@@ -31,7 +31,7 @@ function miniWallHtml(child, count){
   const done = count >= WALL_BRICKS;
   return `<div class="mini-wall-card${done ? ' done' : ''}" style="--h:${nameHue(child.firstName)};" data-child-id="${child.id}">
       <div class="mini-wall">${cells}</div>
-      <div class="mini-wall-name">${escapeHtml(displayName(child))}</div>
+      <div class="mini-wall-name">${nameTagHtml(child)}</div>
       <div class="mini-wall-count">${done ? '✓' : count}</div>
     </div>`;
 }

@@ -861,6 +861,41 @@
       showHub();
     });
 
+    // ---- the children's characters: picked in management, shown next to every name on the kids' screen and in the ship's window
+    await step('characters', async () => {
+      check('characters: all 14 pictures are in the app', CHARACTER_KEYS.length === 14 && CHARACTER_KEYS.every(k => CHARACTERS[k].src.startsWith('data:image/jpeg')), CHARACTER_KEYS.length);
+      showHub(); await gear();
+      for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
+      const kidA = 'c2', kidB = 'c3';
+      document.querySelector(`.roster-char[data-char-for="${kidA}"]`).click(); await sleep(100);
+      check('characters: management has a picker with all the characters', document.querySelectorAll('.char-picker .char-option').length === 14, document.querySelectorAll('.char-option').length);
+      document.querySelector('.char-option[data-char="ch03"]').click();
+      for(let i = 0; i < 30 && characterFor(kidA) !== 'ch03'; i++) await sleep(100);
+      check('characters: the choice is applied', characterFor(kidA) === 'ch03', String(characterFor(kidA)));
+      await loadChildSettings();
+      check('characters: the choice reached the database', characterFor(kidA) === 'ch03', 'lost after reload');
+      document.querySelector(`.roster-char[data-char-for="${kidB}"]`).click(); await sleep(100);
+      check('characters: a character that belongs to another child cannot be taken', document.querySelector('.char-option[data-char="ch03"]').disabled === true, 'taken one is selectable');
+      document.querySelector(`.roster-char[data-char-for="${kidB}"]`).click(); await sleep(60);
+
+      const kid = roster.find(c => c.id === kidA), src3 = CHARACTERS.ch03.src;
+      check('characters: the round avatar shows the character', avatarHtml(kid).includes('avatar-has-char') && avatarHtml(kid).includes(src3.slice(0, 60)), 'initials shown');
+      check('characters: a child without a character still gets the initials circle', avatarHtml(roster.find(c => c.id === kidB)).includes('avatar-initials') && !avatarHtml(roster.find(c => c.id === kidB)).includes('avatar-has-char'), 'wrong');
+      check('characters: a name tag has the character next to the name', nameTagHtml(kid).includes('nametag') && nameTagHtml(kid).includes('avatar-has-char'), 'no tag');
+      const sh = shipHtml(kid, 'cel-ship');
+      check('characters: the character sits in the window of the child\'s ship', /ship-window/.test(sh) && sh.includes(src3.slice(0, 60)), String(sh).slice(0, 80));
+      check('characters: the bonus "who lost it" line shows the small character', tinyKidHtml(kid).includes('rev-char'), tinyKidHtml(kid));
+      activateDisplayView(); stopCarousel(); await showSlide(5); await sleep(500);
+      check('characters: on the star board the child\'s card shows the character', !!document.querySelector('#star-board .avatar-has-char'), 'not shown');
+      await showSlide(8); await sleep(500);
+      check('characters: on the temple board the name has the character beside it', !!document.querySelector('#walls-board .mini-wall-name .avatar-has-char'), 'not shown');
+      stopCarousel(); showHub(); await gear(); for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
+      document.querySelector(`.roster-char[data-char-for="${kidA}"]`).click(); await sleep(100); document.querySelector('.char-none').click();
+      for(let i = 0; i < 30 && characterFor(kidA); i++) await sleep(100);
+      check('characters: a child can be set back to "no character"', characterFor(kidA) === null && !shipHtml(kid, 'cel-ship').includes('ship-window'), String(characterFor(kidA)));
+      showHub();
+    });
+
     // ---- the instructor portal (only when it is switched on): scheduler, preferences, swaps, coordinator, export, TV screens
     await step('portal', async () => {
       check('the portal is on in the test environment (config/test.json: "portal": true)', PORTAL_ENABLED === true, 'off');

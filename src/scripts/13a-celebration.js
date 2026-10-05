@@ -69,7 +69,7 @@ function celebrationSparkles(n){
 function celebrationBody(kind, child, now, extra){
   if(kind === 'bricks') return bigWallHtml(child, now, now, extra);      // (finishing the wall adds the message inside the wall)
   const milestone = kind !== 'star' && now >= CELEBRATION_TRACK_STEPS;
-  const name = `<div class="cel-name">${escapeHtml(displayName(child))}</div>`;
+  const name = `<div class="cel-name">${kind === 'star' ? escapeHtml(displayName(child)) : nameTagHtml(child)}</div>`;      // (the star moment already shows the character above the name)
   if(kind === 'star'){
     const shown = Math.min(now, CELEBRATION_STAR_SLOTS);
     let slots = '';
@@ -82,7 +82,7 @@ function celebrationBody(kind, child, now, extra){
   }
   // moon / word-planet journey: a track of 7 steps, the traveller starts on the previous step
   const ship = kind === 'mercury' ? shipFor(child.id) : null;
-  const traveller = ship ? `<img class="cel-ship" src="${ship}" alt="">` : avatarHtml(child);
+  const traveller = ship ? shipHtml(child, 'cel-ship') : avatarHtml(child);
   let nodes = '';
   for(let i = 0; i <= CELEBRATION_TRACK_STEPS; i++){
     const cls = i <= now - 1 ? 'passed' : (i === now ? 'cel-target' : '');

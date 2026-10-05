@@ -13,6 +13,15 @@ async function saveChildShip(childId, shipKey){
   if(ok) childSettings = updated;
   return ok;
 }
+// the child's character (see 12b-characters.js); '' takes it away
+async function saveChildCharacter(childId, key){
+  const patch = Object.assign({}, childSettings[childId], { id: childId });
+  if(key) patch.character = key; else delete patch.character;
+  const updated = Object.assign({}, childSettings, { [childId]: patch });
+  const ok = await setMiniList('childSettings', Object.values(updated));
+  if(ok) childSettings = updated;
+  return ok;
+}
 // the ship picked in management, else the one the child always had before the picker existed
 function shipFor(childId){
   const key = childSettings[childId] && childSettings[childId].ship;
@@ -44,6 +53,7 @@ async function setChildSocialWorker(childId, worker){
   return true;
 }
 let shipPickerOpenFor = null;
+let charPickerOpenFor = null;
 function renderManageRoster(){
   const el = document.getElementById('roster-list');
   if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
@@ -56,17 +66,39 @@ function renderManageRoster(){
           <button type="button" class="ship-option${SHIP_OPTIONS[k] === ship ? ' selected' : ''}" data-ship="${k}"><img src="${SHIP_OPTIONS[k]}" alt=""></button>`).join('')}
         </div>
       </div>`;
+    const ck = characterFor(c.id);
+    const takenBy = {}; roster.forEach(o => { const k = characterFor(o.id); if(k && o.id !== c.id) takenBy[k] = displayName(o); });
+    const charPicker = c.id !== charPickerOpenFor ? '' : `
+      <div class="char-picker">
+        <div class="be-label">בחירת דמות ל${escapeHtml(displayName(c))}</div>
+        <div class="char-grid">${CHARACTER_KEYS.map(k => `
+          <button type="button" class="char-option${k === ck ? ' selected' : ''}${takenBy[k] ? ' taken' : ''}" data-char="${k}"${takenBy[k] ? ` disabled title="${escapeHtml(takenBy[k])}"` : ''} aria-label="${escapeHtml(CHARACTERS[k].label)}">${charImgHtml(k)}</button>`).join('')}
+        </div>
+        ${ck ? '<button type="button" class="btn ghost char-none" data-char="">בלי דמות</button>' : ''}
+      </div>`;
     return `
       <div class="roster-row" data-id="${c.id}">
         <button type="button" class="roster-ship" data-ship-for="${c.id}" aria-label="בחירת חללית">${ship ? `<img src="${ship}" alt="">` : '🚀'}</button>
+        <button type="button" class="roster-char" data-char-for="${c.id}" aria-label="בחירת דמות">${ck ? charImgHtml(ck) : '🙂'}</button>
         <span class="roster-name">${escapeHtml(displayNameWithAge(c))}</span>
         <select class="roster-sw" data-sw-for="${c.id}" aria-label="עו״סית של ${escapeHtml(displayName(c))}">
           <option value="">ללא עו״סית</option>
           ${socialWorkers().map(w => `<option value="${w.phone}"${digitsOnly(c.swPhone) === w.phone ? ' selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}
         </select>
         <button type="button" class="rm" data-id="${c.id}" aria-label="מחיקה">✕</button>
-      </div>${picker}`;
+      </div>${picker}${charPicker}`;
   }).join('');
+  el.querySelectorAll('.roster-char').forEach(btn => {
+    btn.addEventListener('click', () => { charPickerOpenFor = (charPickerOpenFor === btn.dataset.charFor) ? null : btn.dataset.charFor; shipPickerOpenFor = null; renderManageRoster(); });
+  });
+  el.querySelectorAll('[data-char]').forEach(opt => {
+    opt.addEventListener('click', async () => {
+      const childId = charPickerOpenFor; charPickerOpenFor = null;
+      const ok = await saveChildCharacter(childId, opt.dataset.char);
+      renderManageRoster();
+      toast(ok ? 'הדמות נשמרה' : 'השמירה נכשלה — בדקו חיבור ונסו שוב');
+    });
+  });
 
   el.querySelectorAll('.roster-sw').forEach(sel => {
     sel.addEventListener('change', async () => {

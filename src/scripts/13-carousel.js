@@ -55,7 +55,7 @@ function bonusBoardSection(title, list, revocationsByBonus){
     <div class="bonus-board-grid" style="margin-bottom:18px;">
       ${list.map(b => {
         const revoked = revocationsByBonus[b.id];
-        const revokedHtml = revoked && revoked.length ? `<span class="bonus-revoked-names">לא היום: ${revoked.join(', ')}</span>` : '';
+        const revokedHtml = revoked && revoked.length ? `<span class="bonus-revoked-names">לא היום: ${revoked.join(' ')}</span>` : '';
         const activeClass = isBonusTimeActive(b) ? ' bonus-active' : '';
         return `<div class="bonus-board-item${activeClass}"><span class="bb-icon">${bonusIcon(b)}</span><span class="bb-body"><span class="bb-text">${b.text}</span>${revokedHtml}</span></div>`;
       }).join('')}

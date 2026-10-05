@@ -1,0 +1,32 @@
+
+/* ---- the children's characters ---- */
+  .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
+  .avatar-initials.avatar-has-char img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .nametag{ display:inline-flex; align-items:center; gap:.45em; max-width:100%; }
+  .nametag .avatar-initials{ width:1.7em; height:1.7em; border:max(2px, .1em) solid; box-shadow:none; }
+  .nametag-name{ min-width:0; overflow:hidden; text-overflow:ellipsis; }
+
+  /* the character in the window of the ship */
+  .ship-wrap{ position:relative; display:inline-block; line-height:0; }
+  .ship-window{ position:absolute; transform:translate(-50%, -50%); aspect-ratio:1 / 1; border-radius:50%; overflow:hidden; border:max(1.5px, .6%) solid rgba(255,255,255,.9); box-shadow:0 0 .6em rgba(0,0,0,.35), inset 0 0 .5em rgba(0,0,0,.25); background:#fff; }
+  .ship-window img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* who lost a bonus: small characters instead of initials */
+  .rev-char{ width:3.6vmin; height:3.6vmin; border-radius:50%; object-fit:cover; vertical-align:middle; margin-inline-start:.8vmin; border:.25vmin solid rgba(255,255,255,.8); background:#fff; }
+
+  /* wall and mini wall */
+  .wall-base .nametag .avatar-initials{ width:1.5em; height:1.5em; }
+  .mini-wall-name .nametag{ font-size:inherit; }
+  .mini-wall-name .nametag .avatar-initials{ width:1.6em; height:1.6em; }
+  .cel-name .nametag .avatar-initials{ width:1.4em; height:1.4em; border-width:.08em; }
+
+  /* management: pick a character */
+  .roster-char{ width:44px; height:44px; border-radius:50%; border:2px dashed var(--line); background:var(--panel-2); color:var(--muted); font-size:18px; cursor:pointer; padding:0; flex-shrink:0; overflow:hidden; }
+  .roster-char img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .char-picker{ background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px; margin:4px 0 10px; }
+  .char-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px; margin-top:8px; }
+  .char-option{ position:relative; padding:0; border:2px solid var(--line); border-radius:50%; overflow:hidden; background:#fff; cursor:pointer; aspect-ratio:1 / 1; }
+  .char-option img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .char-option.selected{ border-color:var(--gold); box-shadow:0 0 0 2px var(--gold); }
+  .char-option.taken{ opacity:.35; cursor:not-allowed; }
+  .char-none{ min-height:44px; }
