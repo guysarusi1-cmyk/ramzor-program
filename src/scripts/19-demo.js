@@ -14,10 +14,19 @@
     const acc = location.search.match(/[?&]a11y=([\w,]+)/);                  // e.g. &a11y=xl,contrast
     if(acc){ a11y = { size: /xl/.test(acc[1]) ? 'xl' : /\bl\b/.test(acc[1]) ? 'l' : 'm', contrast: /contrast/.test(acc[1]), motion: /motion/.test(acc[1]) }; applyA11y(); }
     // staff-side screens (shown instead of the kids' TV)
-    if(what === 'moon' || what === 'curse' || what === 'hub' || what === 'daily' || what === 'kids' || what === 'manage' || what === 'green' || what === 'gold' || what === 'strength' || what === 'words' || /^guided-/.test(what)){
+    if(what === 'moon' || what === 'curse' || what === 'hub' || what === 'daily' || what === 'kids' || what === 'manage' || what === 'green' || what === 'apphome' || /^portal-/.test(what) || what === 'gold' || what === 'strength' || what === 'words' || /^guided-/.test(what)){
       if(what === 'moon' || what === 'curse'){ document.getElementById('hub-kids-btn').click(); await new Promise(r => setTimeout(r, 300)); document.getElementById('kq-moon-journey-btn').click(); document.querySelector('#kids-quick-roster .chip[data-id="c6"]').click(); for(let i=0;i<30 && !document.getElementById('moon-curse');i++) await new Promise(r => setTimeout(r, 150)); if(what === 'curse') document.getElementById('moon-curse').click(); }
       else if(what === 'strength'){ document.getElementById('hub-kids-btn').click(); await new Promise(r => setTimeout(r, 300)); document.getElementById('kq-brick-btn').click(); document.querySelector('#kids-quick-roster .chip[data-id="c6"]').click(); }
       else if(what === 'words'){ const real = getChildState; getChildState = async id => Object.assign(await real(id), { moonSteps: 7, mercurySteps: 3 }); document.getElementById('hub-kids-btn').click(); await new Promise(r => setTimeout(r, 300)); document.getElementById('kq-moon-journey-btn').click(); document.querySelector('#kids-quick-roster .chip[data-id="c6"]').click(); }
+      else if(what === 'apphome') showAppHome();
+      else if(/^portal-/.test(what)){      // portal-coord | portal-slot | portal-prefs | portal-instr | portal-swaps | portal-tt | portal-settings | portal-subs | portal-light
+        const st = portalLoad(), mk = monthKeyOf(isoDate(new Date()));
+        if(/light/.test(what)){ st.settings.theme = 'light'; }
+        if(/prefs|instr|swaps/.test(what)) portalUi.persona = 'i1';
+        const tab = /prefs/.test(what) ? 'prefs' : /instr/.test(what) ? 'schedule' : /swaps/.test(what) ? 'swaps' : /tt/.test(what) ? 'timetable' : /settings/.test(what) ? 'settings' : /subs/.test(what) ? 'submissions' : 'schedule';
+        showPortal(tab);
+        if(/slot/.test(what)) openSlotEditor(mk, isoDate(new Date()) + '|e');
+      }
       else if(what === 'daily') document.getElementById('hub-daily-btn').click();
       else if(what === 'kids') document.getElementById('hub-kids-btn').click();
       else if(what === 'manage') document.getElementById('hub-manage-gear').click();
@@ -54,7 +63,7 @@
       getAllChildStates = async () => ({ get: id => Object.assign(emptyChildState(), { bricks: fake[roster.findIndex(c => c.id === id) % fake.length] }) });
       SLIDES[8].hidden = false; showSlide(8);
     }
-    else if(/^slide\d$/.test(what)) showSlide(Number(what.slice(5)));
+    else if(/^slide\d+$/.test(what)) showSlide(Number(what.slice(5)));
   });
 })();
 /*@END-TEST-ONLY*/

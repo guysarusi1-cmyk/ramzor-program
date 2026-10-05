@@ -860,6 +860,152 @@
       showHub();
     });
 
+    // ---- the instructor portal (only when it is switched on): scheduler, preferences, swaps, coordinator, export, TV screens
+    await step('portal', async () => {
+      check('the portal is on in the test environment (config/test.json: "portal": true)', PORTAL_ENABLED === true, 'off');
+      if(!PORTAL_ENABLED) return;
+      portalReset();
+      const st = portalLoad(), mk = monthKeyOf(isoDate(new Date())), m = st.months[mk], ctx = portalCtx(mk);
+      const people = st.instructors.filter(p => p.role === 'instructor');
+
+      // --- the scheduler
+      const res = autoSchedule(ctx), stats = scheduleStats(ctx, res.assignments), issues = validateSchedule(ctx, res.assignments);
+      check('scheduler: every shift gets all the people it needs', stats.missing === 0 && res.unfilled.length === 0, 'missing ' + stats.missing);
+      check('scheduler: no rule is broken (rest, consecutive days, shifts per week, nights, one shift a day)', issues.length === 0, JSON.stringify(issues.slice(0, 3)));
+      check('scheduler: nobody is put on a "ממש לא" shift', stats.all.no === 0, stats.all.no + ' times');
+      check('scheduler: many wishes are kept and few "rather not" are used', stats.all.yes > stats.all.total * 0.3 && stats.all.avoid <= 5, `yes ${stats.all.yes}/${stats.all.total}, avoid ${stats.all.avoid}`);
+      const counts = people.map(p => (stats.per[p.id] || { total:0 }).total);
+      check('scheduler: the work is shared fairly', Math.max(...counts) - Math.min(...counts) <= 3, counts.join(','));
+      check('scheduler: same input gives the same schedule', JSON.stringify(autoSchedule(ctx).assignments) === JSON.stringify(res.assignments), 'differs');
+      const tight = autoSchedule(Object.assign({}, ctx, { shiftTypes:st.shiftTypes.map(s => Object.assign({}, s, { need:9, needWeekend:9 })) }));
+      check('scheduler: when there are not enough people it reports what is missing, and still breaks no rule', tight.unfilled.length > 0 && validateSchedule(Object.assign({}, ctx, { shiftTypes:st.shiftTypes.map(s => Object.assign({}, s, { need:9, needWeekend:9 })) }), tight.assignments).filter(i => i.type !== 'unfilled').length === 0, tight.unfilled.length + ' unfilled');
+      // manual mistakes are caught
+      const slots = buildSlots(mk, st.shiftTypes), mSlot = slots.find(s => s.shiftId === 'm' && s.dow === 1), nSlot = slots.find(s => s.shiftId === 'n' && s.date === mSlot.date);
+      const nextMorning = slots.find(s => s.shiftId === 'm' && s.date === addDays(mSlot.date, 1));
+      const forced = JSON.parse(JSON.stringify(res.assignments)); forced[nSlot.key] = ['i5']; forced[nextMorning.key] = ['i5'];
+      const catchTypes = validateSchedule(ctx, forced).map(i => i.type);
+      check('validation: a night followed by a morning is flagged (rest)', catchTypes.includes('rest'), catchTypes.join(','));
+      const dbl = JSON.parse(JSON.stringify(res.assignments)); dbl[mSlot.key] = ['i5']; dbl[slots.find(s => s.shiftId === 'e' && s.date === mSlot.date).key] = ['i5'];
+      check('validation: two shifts in one day are flagged', validateSchedule(ctx, dbl).some(i => i.type === 'sameday'), 'not flagged');
+      const withNo = autoSchedule(ctx); const noPref = JSON.parse(JSON.stringify(ctx.prefs)); noPref.i3.slots[mSlot.key] = 'no';
+      const bad = JSON.parse(JSON.stringify(withNo.assignments)); bad[mSlot.key] = ['i3'];
+      check('validation: a "ממש לא" shift that is assigned by hand is flagged', validateSchedule(Object.assign({}, ctx, { prefs:noPref }), bad).some(i => i.type === 'no' && i.iid === 'i3'), 'not flagged');
+      check('names: first name only, the last initial only when two share a first name', instrName(portalPerson('i1'), st.instructors) === "דנה כ'" && instrName(portalPerson('i3'), st.instructors) === 'יוסי', instrName(portalPerson('i1'), st.instructors) + ' / ' + instrName(portalPerson('i3'), st.instructors));
+
+      // --- Excel and print
+      const bytes = buildScheduleXlsx(ctx, res.assignments), view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      check('Excel: a real zip (.xlsx) is produced', bytes[0] === 0x50 && bytes[1] === 0x4B && view.getUint32(bytes.length - 22, true) === 0x06054b50, 'bad header');
+      const entries = []; { let p = view.getUint32(bytes.length - 6, true); const n = view.getUint16(bytes.length - 12, true); for(let i = 0; i < n; i++){ const nl = view.getUint16(p + 28, true), name = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nl)), off = view.getUint32(p + 42, true), crc = view.getUint32(p + 16, true), size = view.getUint32(p + 24, true); const lh = 30 + view.getUint16(off + 26, true) + view.getUint16(off + 28, true); entries.push({ name, crc, data:bytes.subarray(off + lh, off + lh + size) }); p += 46 + nl; } }
+      check('Excel: all the parts are there and every checksum matches', ['[Content_Types].xml', 'xl/workbook.xml', 'xl/styles.xml', 'xl/worksheets/sheet1.xml'].every(n => entries.some(e => e.name === n)) && entries.every(e => crc32(e.data) === e.crc), entries.map(e => e.name).join(','));
+      const xmls = entries.map(e => new DOMParser().parseFromString(new TextDecoder().decode(e.data), 'application/xml'));
+      check('Excel: every part is well-formed XML', xmls.every(x => !x.querySelector('parsererror')), 'parse error');
+      const sheetXml = new TextDecoder().decode(entries.find(e => e.name === 'xl/worksheets/sheet1.xml').data);
+      check('Excel: rows are days, columns are shifts, names are coloured by how the wish was kept', (sheetXml.match(/<row /g) || []).length === daysOfMonth(mk).length + 2 && sheetXml.includes(XLSX_COLORS.yes) && /rightToLeft="1"/.test(sheetXml), 'rows ' + (sheetXml.match(/<row /g) || []).length);
+      check('print: the schedule table has a row per day', (scheduleHtmlTable(ctx, res.assignments).match(/<tr>/g) || []).length === daysOfMonth(mk).length + 1, 'rows');
+
+      // --- app home
+      showAppHome();
+      check('app home: two cards, רמזור and פורטל המדריך', activeView() === 'view-apphome' && !!$('apphome-ramzor') && !!$('apphome-portal'), activeView());
+      $('apphome-ramzor').click();
+      check('app home: the רמזור card opens the existing home screen', activeView() === 'view-hub', activeView());
+      showAppHome(); $('apphome-portal').click();
+      check('app home: the portal card opens the portal', activeView() === 'view-portal', activeView());
+
+      // --- coordinator
+      portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = mk; showPortal();
+      const tabs = [...document.querySelectorAll('#view-portal [data-ptab]')].map(b => b.textContent);
+      check('coordinator: only schedule, submissions, swaps, timetable and settings (no children or רמזור management)', tabs.join() === 'סידור,הגשות,החלפות,לו"ז,הגדרות', tabs.join());
+      check('coordinator: the schedule table shows a row per day, coloured by how the wishes were kept', document.querySelectorAll('.pboard tbody tr').length === daysOfMonth(mk).length && !!document.querySelector('.pboard .lv-yes'), 'no table');
+      const target = document.querySelector('.pboard td.editable'); target.click(); await sleep(100);
+      check('coordinator: pressing a shift opens its editor with everybody and their wish', !!document.querySelector('.psheet') && document.querySelectorAll('.psheet .pedit-row').length === people.length, 'no editor');
+      document.querySelector('.psheet [data-close]').click();
+      const nKeyBefore = (m.assignments[mSlot.key] || []).slice();
+      portalUi.tab = 'schedule'; showPortal();
+      // put a person who wrote "ממש לא" on a shift by hand: warning + needs the instructor's approval
+      const victim = people.find(p => !nKeyBefore.includes(p.id)), prefsV = portalPrefsOf(mk, victim.id); prefsV.slots[mSlot.key] = 'no';
+      openSlotEditor(mk, mSlot.key); await sleep(60);
+      const cb = document.querySelector(`.psheet [data-pid="${victim.id}"]`); cb.checked = true; cb.dispatchEvent(new Event('change')); await sleep(60);
+      check('coordinator: a "ממש לא" placement shows a red warning and asks for approval', /ממש לא/.test(document.querySelector('#slot-warn').textContent) && /אישור/.test(document.querySelector('#slot-warn').textContent), document.querySelector('#slot-warn').textContent);
+      document.querySelector('#slot-save').click(); await sleep(80);
+      check('coordinator: the shift is saved and marked as waiting for the instructor', (m.assignments[mSlot.key] || []).includes(victim.id) && m.approvals[mSlot.key + '|' + victim.id] === 'pending' && !!document.querySelector('.pchip.pending'), JSON.stringify(m.approvals));
+
+      // --- the instructor sees the request and answers
+      portalUi.persona = victim.id; portalUi.tab = 'swaps'; showPortal();
+      check('instructor: sees the request to approve the "ממש לא" shift', !!document.querySelector('[data-appr-ok]'), 'no request');
+      document.querySelector('[data-appr-no]').click(); await sleep(60);
+      check('instructor: declining removes the placement', !(m.assignments[mSlot.key] || []).includes(victim.id) && !m.approvals[mSlot.key + '|' + victim.id], 'still assigned');
+      prefsV.slots = {}; prefsV.absent = [];
+
+      // --- preferences (three levels, tap days or shifts)
+      portalUi.persona = 'i2'; portalUi.tab = 'prefs'; portalUi.pmonth = addMonths(mk, 1); showPortal();
+      const nm = addMonths(mk, 1), nPrefs = portalPrefsOf(nm, 'i2'); nPrefs.slots = {}; nPrefs.absent = []; portalMonth(nm).submitted.i2 = false;
+      showPortal();
+      check('preferences: a calendar of the month, with the level bar at the bottom', document.querySelectorAll('.pday:not(.blank)').length === daysOfMonth(nm).length && document.querySelectorAll('.lvbtn').length === 5, 'calendar');
+      check('preferences: submitting is required and says so', /טרם הוגשו/.test(document.querySelector('.pstatus').textContent), document.querySelector('.pstatus').textContent);
+      document.querySelector('[data-plevel="avoid"]').click();
+      const d1 = daysOfMonth(nm)[2];
+      document.querySelector(`[data-pslot="${d1}|m"]`).click();
+      check('preferences: choose a level, then tap a shift', nPrefs.slots[d1 + '|m'] === 'avoid', JSON.stringify(nPrefs.slots));
+      document.querySelector(`[data-pday="${daysOfMonth(nm)[4]}"]`).click();
+      check('preferences: tapping a day sets all of its shifts', st.shiftTypes.every(s => nPrefs.slots[daysOfMonth(nm)[4] + '|' + s.id] === 'avoid'), JSON.stringify(nPrefs.slots));
+      document.querySelector('[data-plevel="absent"]').click(); document.querySelector(`[data-pday="${daysOfMonth(nm)[6]}"]`).click();
+      check('preferences: a whole day can be marked as absent', nPrefs.absent.includes(daysOfMonth(nm)[6]), JSON.stringify(nPrefs.absent));
+      document.querySelector('#prefs-submit').click(); await sleep(60);
+      check('preferences: submitting is recorded', portalMonth(nm).submitted.i2 === true && /הוגשו/.test(document.querySelector('.pstatus').textContent), 'not submitted');
+
+      // --- an instructor sees the whole team's schedule, with only their own name marked, and no one's preferences
+      portalUi.persona = 'i1'; portalUi.tab = 'schedule'; portalUi.month = mk; showPortal();
+      check('instructor: sees the whole team with their own name highlighted', document.querySelectorAll('.pboard .pchip').length > 20 && !!document.querySelector('.pboard .pchip.me') && !document.querySelector('.pboard .lv-yes, .pboard .lv-avoid, .pboard .lv-no'), 'board');
+
+      // --- swap: ask a colleague, the colleague agrees, the coordinator approves
+      const mine = myShifts(portalPerson('i1'), mk).find(s => s.date >= isoDate(new Date()));
+      portalUi.tab = 'swaps'; showPortal();
+      document.querySelector(`[data-swap-ask="${mine.key}"]`).click(); await sleep(60);
+      const toId = document.querySelector('#swap-to').value; document.querySelector('#swap-send').click(); await sleep(60);
+      check('swap: the request is recorded and waits for the colleague', st.swaps.some(s => s.key === mine.key && s.from === 'i1' && s.to === toId && s.status === 'asked'), JSON.stringify(st.swaps));
+      portalUi.persona = toId; showPortal(); document.querySelector('[data-swap-agree]').click(); await sleep(60);
+      check('swap: after the colleague agrees it waits for the coordinator', st.swaps[0].status === 'agreed', st.swaps[0].status);
+      portalUi.persona = 'c1'; portalUi.tab = 'swaps'; showPortal(); document.querySelector('[data-approve]').click(); await sleep(60);
+      check('swap: the coordinator approves and the schedule changes', st.swaps[0].status === 'approved' && m.assignments[mine.key].includes(toId) && !m.assignments[mine.key].includes('i1'), JSON.stringify(m.assignments[mine.key]));
+
+      // --- coordinator: auto-schedule, publish, e-mail preview, timetable, theme
+      const nmo = portalMonth(nm); portalUi.persona = 'c1'; portalUi.tab = 'schedule'; portalUi.month = nm; showPortal();
+      check('coordinator: warns about instructors who did not submit', /עוד לא הגישו/.test(document.querySelector('.pstatus').textContent), 'no warning');
+      document.querySelector('#cs-auto').click();
+      for(let i = 0; i < 40 && !Object.keys(nmo.assignments).length; i++) await sleep(100);
+      check('coordinator: the automatic schedule button builds next month', Object.keys(nmo.assignments).length > 20 && nmo.published === false, 'nothing built');
+      document.querySelector('#cs-publish').click(); await sleep(60);
+      check('coordinator: publishing marks it and queues an e-mail to everybody', nmo.published === true && st.outbox[0].to === 'all' && /פורסם/.test(st.outbox[0].subject), JSON.stringify(st.outbox[0]));
+      portalUi.tab = 'timetable'; portalUi.tmonth = mk; showPortal();
+      const before = (st.timetable[mk].weekly[1] || []).length; document.querySelector('#tt-add').click(); await sleep(50);
+      document.querySelector('#act-n').value = 'בדיקה'; document.querySelector('#act-save').click(); await sleep(60);
+      check('timetable: an activity can be added to the weekly pattern', (st.timetable[mk].weekly[portalUi.ttDay] || []).some(a => a.n === 'בדיקה'), 'not added');
+      const light = st.settings.theme; showPortal(); document.querySelector('#portal-theme').click();
+      check('theme: the portal can be switched between dark and light', document.querySelector('.portal-shell').dataset.ptheme !== light, document.querySelector('.portal-shell').dataset.ptheme);
+      st.settings.theme = 'dark';
+
+      // --- the new kids' TV screens
+      check('TV: four new screens are in the rotation list', [9, 10, 11, 12].every(id => !!SLIDES[id]), SLIDES.length);
+      refreshPortalSlides();
+      check('TV: they show when there is something to show (today has people, activities and a birthday)', SLIDES[9].hidden === false && SLIDES[10].hidden === false && SLIDES[11].hidden === false && SLIDES[12].hidden === false, [9, 10, 11, 12].map(i => SLIDES[i].hidden).join());
+      activateDisplayView(); stopCarousel();
+      await showSlide(9);
+      check('TV: "who is here today" groups people by shift, with a photo and a first name', document.querySelectorAll('#tv-instructors .tvi-group').length >= 2 && document.querySelectorAll('#tv-instructors .tvi-photo').length >= 4 && [...document.querySelectorAll('#tv-instructors .tvi-name')].every(n => n.textContent.trim().length > 0 && n.textContent.trim().split(' ').length <= 2), 'groups');
+      await showSlide(10);
+      check('TV: today\'s timetable lists the activities, one of them lit', document.querySelectorAll('#tv-timetable .tvt-row').length === timetableFor(isoDate(new Date())).length && !!document.querySelector('#tv-timetable .tvt-row.now'), document.querySelectorAll('#tv-timetable .tvt-row').length + ' rows');
+      await showSlide(11);
+      check('TV: the week shows seven days and flags the special day', document.querySelectorAll('#tv-week .tvw-day').length === 7 && document.querySelectorAll('#tv-week .tvw-day.special').length === 1, 'week');
+      await showSlide(12);
+      check('TV: the birthday screen shows today\'s child with the age', document.querySelectorAll('#tv-birthdays .tvb-card').length === birthdaysToday().length && /גיל \d+/.test($('tv-birthdays').textContent), $('tv-birthdays').textContent);
+      stopCarousel(); showHub();
+
+      // --- the retention rule and the reset
+      portalMonth(addMonths(mk, -6)).published = true; portalPrune();
+      check('retention: schedules older than three months are dropped', !st.months[addMonths(mk, -6)], 'kept');
+      portalReset(); check('the demo can be reset to its starting data', Object.keys(portalLoad().months).length === 2 && portalLoad().swaps.length === 0, 'not reset');
+      portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = portalUi.tmonth = null;
+    });
+
     // ---- kids' TV: every visible slide renders, names without age
     await step('tv', async () => {
       activateDisplayView(); stopCarousel();

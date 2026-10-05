@@ -30,6 +30,7 @@ async function refreshJourneyBoards(){
   SLIDES[6].hidden = !need.moon;
   SLIDES[7].hidden = !need.mercury;
   SLIDES[8].hidden = !data.some(r => (r.bricks || 0) > 0);        // the walls board, once anybody has a brick
+  if(PORTAL_ENABLED) refreshPortalSlides();                        // the new instructor / timetable / birthday screens
 }
 function renderOverviewSlide(){
   const el = document.getElementById('overview-slide-content');

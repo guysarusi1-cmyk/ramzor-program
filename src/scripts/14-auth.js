@@ -11,6 +11,7 @@ async function loadApp(){
   await initRoster();
   await initMiniLists();
   renderManageRoster();
+  if(PORTAL_HOME_FIRST && location.hash !== '#manage') showAppHome();          // with the portal on, the first screen is the app home
 }
 
 document.getElementById('login-submit-btn').addEventListener('click', async ()=>{
@@ -53,6 +54,7 @@ function activateDisplayView(){
 }
 
 function showHub(){
+  document.body.classList.remove('portal-mode');
   stopCarousel();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-hub').classList.add('active');
