@@ -83,6 +83,7 @@
   .pfold.sub{ background:var(--p-panel2); margin:2px 0 8px; } .pfold.sub > summary{ min-height:42px; font-size:13.5px; font-weight:700; }
   .pfold.sub:not([open]) ~ .pmine .swap-btn{ display:none; }
   .pcount{ margin-inline-start:auto; margin-inline-end:8px; min-width:26px; text-align:center; padding:1px 8px; border-radius:12px; background:var(--p-panel2); font-size:13px; }
+  .swap-btn{ white-space:nowrap; flex-shrink:0; }
   .pmine-main{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; }
   .pmine-row small{ color:var(--p-muted); }
   .pnotice{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; margin:8px 0; border-radius:12px; background:var(--p-yes-bg); color:var(--p-yes); font-size:14px; font-weight:700; }
