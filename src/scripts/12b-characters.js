@@ -16,7 +16,7 @@ const CHARACTERS = {
   ch10:{ src:'@asset(characters/ch10.jpg)', ring:'#7cc576', label:'אריה' },
   ch11:{ src:'@asset(characters/ch11.jpg)', ring:'#6ab4ea', label:'ג\'ויסטיק' },
   ch12:{ src:'@asset(characters/ch12.jpg)', ring:'#6ab4ea', label:'סירה' },
-  ch13:{ src:'@asset(characters/ch13.jpg)', ring:'#f4c95d', label:'דינו ארוך צוואר' },
+  ch13:{ src:'@asset(characters/ch13.jpg)', ring:'#f4c95d', label:'דינוזאור כחול' },
   ch14:{ src:'@asset(characters/ch14.jpg)', ring:'#6ab4ea', label:'כוכב' }
 };
 const CHARACTER_KEYS = Object.keys(CHARACTERS);
