@@ -6,6 +6,7 @@
 (function(){
   const m = location.search.match(/[?&]demo=([\w-]+)/);
   if(!m) return;
+  window.__portalNoHome = true;
   window.addEventListener('load', async () => {
     document.getElementById('login-password').value = '@config(testPassword)';
     document.getElementById('login-submit-btn').click();

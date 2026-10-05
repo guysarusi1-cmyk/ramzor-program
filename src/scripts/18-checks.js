@@ -5,6 +5,7 @@
 // It only ever runs against the test project, never the live site.
 (function(){
   if(!/[?&]runchecks\b/.test(location.search)) return;
+  window.__portalNoHome = true;
   const results = [];
   const check = (name, ok, detail) => results.push({ name, ok: !!ok, detail: ok ? '' : String(detail ?? '') });
   const sleep = ms => new Promise(r => setTimeout(r, ms));

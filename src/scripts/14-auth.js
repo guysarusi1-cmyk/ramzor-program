@@ -11,7 +11,7 @@ async function loadApp(){
   await initRoster();
   await initMiniLists();
   renderManageRoster();
-  if(PORTAL_HOME_FIRST && location.hash !== '#manage') showAppHome();          // with the portal on, the first screen is the app home
+  if(portalHomeFirst() && location.hash !== '#manage') showAppHome();          // with the portal on, the first screen is the app home
 }
 
 document.getElementById('login-submit-btn').addEventListener('click', async ()=>{

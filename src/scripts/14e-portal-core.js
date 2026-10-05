@@ -2,7 +2,7 @@
 // ---------- THE INSTRUCTOR PORTAL: the shell (app home, header, tabs, shared pieces) ----------
 // Demo mode: there are no personal logins yet, so a small "viewing as" selector lets you see the portal as the
 // coordinator or as any instructor. Everything is stored in this browser only (see 14a-portal-data.js).
-const PORTAL_HOME_FIRST = PORTAL_ENABLED && !/[?&](runchecks|demo)/.test(location.search) && location.hash !== '#tv';
+const portalHomeFirst = () => PORTAL_ENABLED && !window.__portalNoHome && location.hash !== '#tv';       // (the test tools set __portalNoHome: they start from the רמזור home)
 const portalUi = { persona:'c1', tab:null, month:null, level:'yes', openDay:null };
 
 function portalPerson(id){ return portalLoad().instructors.find(p => p.id === id); }
