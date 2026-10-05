@@ -32,6 +32,14 @@
     const inp = document.querySelector('.code-input');
     if(inp){ inp.value = MANAGER_TEST_PASSWORD; document.querySelector('.confirm-ok').click(); }
   }
+  // with the manager login on, the cleanup writes of the checks (setChildState = the manager's reset path) need the manager's session
+  async function ensureManager(){
+    if(!MANAGER_LOGIN) return;
+    const { error } = await sbAdmin.auth.signInWithPassword({ email: MANAGER_EMAIL, password: MANAGER_TEST_PASSWORD });
+    if(error) check('the manager TEST login works (config/test.json: testManagerPassword)', false, error.message);
+    managementOpenUntil = Date.now() + 30 * 60 * 1000;
+  }  // puts a test child's numbers back (lowering them is the manager's reset path, which instructors are refused by the database)
+  async function putState(id, patch){ const s = await getChildStateForUpdate(id); if(!s) return; Object.assign(s, patch); await setChildState(id, s); }
   async function step(name, fn){
     try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || e); }
   }
@@ -48,6 +56,7 @@
       check('daily step limit is OFF in test', MOON_DAILY_LIMIT_ENABLED === false, 'limit is on');
     });
 
+    await ensureManager();
     // ---- home
     await step('home', async () => {
       check('home screen is the first screen', activeView() === 'view-hub', activeView());
@@ -212,12 +221,12 @@
       const base = await stars();
       await Promise.all([1, 2, 3, 4, 5, 6].map(() => giveStar(kid)));
       check('6 simultaneous stars give exactly 6 (none lost)', (await stars()) === base + 6, base + ' -> ' + (await stars()));
-      await updateChildState(kid, () => ({ set:{ stars: base }, guard:['stars'] }));
+      await putState(kid, { stars: base });
 
       await giveStar(kid);
       check('the star message has no "ביטול" button (switched off for now)', !document.querySelector('.toast-undo') && STAR_UNDO_ENABLED === false && !!document.querySelector('.toast'), 'undo still shown');
       check('the star itself is recorded', (await stars()) === base + 1, base + ' vs ' + (await stars()));
-      await updateChildState(kid, () => ({ set:{ stars: base }, guard:['stars'] }));
+      await putState(kid, { stars: base });
 
       // moon / word-planet journey through the real screens
       showHub(); $('hub-kids-btn').click(); await sleep(200); $('kq-moon-journey-btn').click();
@@ -767,6 +776,7 @@
 
     // ---- the wall project: 100 bricks per child, a colour per child, a message at the 100th brick
     await step('wall project', async () => {
+      await ensureManager(); await putState('c6', { bricks: 0 }); await putState('c3', { bricks: 0 });
       const host = $('celebration');
       const kidA = roster.find(c => c.id === 'c2'), kidB = roster.find(c => c.id === 'c3');
       const scene = document.createElement('div');
@@ -819,7 +829,7 @@
       sh.querySelector('.strength-input').value = 'סקרנות'; sh.querySelector('.strength-ok').click();
       for(let i = 0; i < 30 && (await bricksT()) === baseT + 1; i++) await sleep(100);
       check('temple: a free-text strength is named in the message', (await bricksT()) === baseT + 2 && /כוח: סקרנות/.test([...document.querySelectorAll('.toast')].pop().textContent), String(await bricksT()));
-      await updateChildState(kidT, () => ({ set:{ bricks: baseT }, guard:['bricks'] }));
+      await putState(kidT, { bricks: baseT });
       await sleep(900);
       const tvPill = bigWallHtml(kidA, 5, 5, 'אומץ'); const holder = document.createElement('div'); holder.innerHTML = tvPill;
       check('TV: the named strength is shown on the wall', holder.querySelector('.wall-strength') && holder.querySelector('.wall-strength').textContent === 'אומץ', 'missing');
@@ -846,7 +856,7 @@
       check('the 100th brick is recorded', (await bricks()) === 100, String(await bricks()));
       const more = await giveBrick(kid);
       check('a 101st brick is refused, the wall stays at 100', more === false && (await bricks()) === 100 && /כבר הושלם/.test([...document.querySelectorAll('.toast')].pop().textContent), String(await bricks()));
-      await updateChildState(kid, () => ({ set:{ bricks: base }, guard:['bricks'] }));
+      await putState(kid, { bricks: base });
       showHub();
     });
 
