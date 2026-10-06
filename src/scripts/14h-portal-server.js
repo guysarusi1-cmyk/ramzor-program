@@ -4,8 +4,9 @@
 // (e-mail + a 6-digit code); the database decides what each one may see (supabase\scheduling.sql).
 // The regular staff session of the רמזור is not touched: this uses a second Supabase client with its own storage key.
 const sbPersonal = PORTAL_ENABLED ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ storageKey:'ramzor-personal-auth', persistSession:true, autoRefreshToken:true } }) : null;
-const SRV_SHIFT_DB = { m:'M', e:'A', n:'N' };                       // the portal's shift ids -> the database's
-const SRV_SHIFT_UI = { M:'m', A:'e', N:'n' };
+const SRV_SHIFT_DB = { m:'M', e:'A', n:'N', l:'L' };                       // the portal's shift ids -> the database's (l = the long weekend, marked on Fridays)
+const SRV_SHIFT_UI = { M:'m', A:'e', N:'n' };                              // (the shifts of the schedule)
+const SRV_PREF_UI = { M:'m', A:'e', N:'n', L:'l' };                       // (the shifts of the preferences)
 const SRV_SHIFTS = [
   { id:'m', label:'בוקר', start:'07:00', end:'15:00', need:2, needWeekend:2, night:false },
   { id:'e', label:'אחר הצהריים', start:'14:00', end:'22:00', need:4, needWeekend:4, night:false },
@@ -44,12 +45,14 @@ async function srvLoad(){
   const staff = await srvAll(() => sbPersonal.from('staff').select('id,display_name,kind,active,sort_order').order('sort_order').order('display_name'));
   const today = monthKeyOf(israelNow().date), months = [-1, 0, 1, 2].map(n => addMonths(today, n));
   const from = firstOf(months[0]), to = daysOfMonth(months[3]).slice(-1)[0];
-  const [slots, abs, subs, sched, notices] = await Promise.all([
+  const [slots, abs, subs, sched, notices, hrs, cons] = await Promise.all([
     srvAll(() => sbPersonal.from('prefs_slot').select('staff_id,day,shift,level').gte('day', from).lte('day', to)),
-    srvAll(() => sbPersonal.from('prefs_absence').select('staff_id,day').gte('day', from).lte('day', to)),
-    srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month').gte('month', from).lte('month', to)),
+    srvAll(() => sbPersonal.from('prefs_absence').select('staff_id,day,reason,note').gte('day', from).lte('day', to)),
+    srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,note').gte('month', from).lte('month', to)),
     srvAll(() => sbPersonal.from('schedule').select('month,status').gte('month', from).lte('month', to)),
-    srvAll(() => sbPersonal.from('notices').select('id,text,kind,seen,created_at').order('created_at', { ascending:false }).limit(40))
+    srvAll(() => sbPersonal.from('notices').select('id,text,kind,seen,created_at').order('created_at', { ascending:false }).limit(40)),
+    srvAll(() => sbPersonal.from('prefs_hours').select('staff_id,day,from_time,to_time').gte('day', from).lte('day', to)),
+    srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday').gte('month', from).lte('month', to))
   ]);
   const st = {
     version:2, serverMode:true, instructors:staff.map((s, i) => ({ id:s.id, first:s.display_name, last:'', role:s.kind, active:s.active, photo:samplePhoto(i + 1) })),
@@ -59,16 +62,18 @@ async function srvLoad(){
   };
   portalState = st; srv.me = meId; srv.meRow = st.instructors.find(p => p.id === meId) || null;
   months.forEach(mk => {
-    const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, assignments:{}, approvals:{}, published:false };
+    const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, assignments:{}, approvals:{}, published:false };
     st.months[mk] = m;
   });
   const monthOf = d => monthKeyOf(d);
   slots.forEach(r => {
-    const m = st.months[monthOf(r.day)], id = SRV_SHIFT_UI[r.shift]; if(!m || !id || r.level === 'yes') return;
-    (m.prefs[r.staff_id] = m.prefs[r.staff_id] || { slots:{}, absent:[] }).slots[`${r.day}|${id}`] = r.level === 'can' ? 'avoid' : r.level;       // the screen's "avoid" = the database's "can" (יכול)
+    const m = st.months[monthOf(r.day)], id = SRV_PREF_UI[r.shift]; if(!m || !id || r.level === 'yes') return;
+    srvPrefsOf(m, r.staff_id).slots[`${r.day}|${id}`] = r.level === 'can' ? 'avoid' : r.level;       // the screen's "avoid" = the database's "can" (יכול)
   });
-  abs.forEach(r => { const m = st.months[monthOf(r.day)]; if(m) (m.prefs[r.staff_id] = m.prefs[r.staff_id] || { slots:{}, absent:[] }).absent.push(r.day); });
-  subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) m.submitted[r.staff_id] = true; });
+  abs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); if(r.reason === 'self') pr.absent.push(r.day); else pr.fixed.push({ day:r.day, reason:r.reason, note:r.note }); });      // (a vacation, sick leave... that the coordinator entered cannot be changed here)
+  hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); (pr.hours[r.day] = pr.hours[r.day] || []).push([parseInt(r.from_time, 10), parseInt(r.to_time, 10) || 24]); });
+  cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_morning, pull:r.pull_to_sunday }; });
+  subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
   const published = sched.filter(r => r.status === 'published').map(r => monthOf(r.month));
   published.forEach(mk => { if(st.months[mk]) st.months[mk].published = true; });
   if(published.length){
@@ -86,7 +91,8 @@ async function srvLoad(){
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
   return true;
 }
-const srvSnapshot = mk => { const p = portalPrefsOf(mk, srv.me); return JSON.stringify({ s:Object.keys(p.slots).sort().map(k => k + '=' + p.slots[k]), a:p.absent.slice().sort() }); };
+const srvPrefsOf = (m, id) => (m.prefs[id] = m.prefs[id] || { slots:{}, absent:[] }, Object.assign(m.prefs[id], { fixed:m.prefs[id].fixed || [], hours:m.prefs[id].hours || {}, consent:m.prefs[id].consent || { extend:null, pull:null } }));
+const srvSnapshot = mk => { const p = srvPrefsOf(portalMonth(mk), srv.me); return JSON.stringify({ s:Object.keys(p.slots).sort().map(k => k + '=' + p.slots[k]), a:p.absent.slice().sort(), h:Object.keys(p.hours).sort().map(k => k + '=' + JSON.stringify(p.hours[k])), c:p.consent.extend !== null && p.consent.pull !== null ? p.consent : null }); };
 
 // ---- writing the person's own preferences (the database accepts only their own rows, only while the month is open)
 async function srvSyncPrefs(mk){
@@ -97,7 +103,15 @@ async function srvSyncPrefs(mk){
   if(r.error) throw r.error;
   const slotRows = Object.keys(p.slots).map(k => { const [d, s] = k.split('|'); return { staff_id:srv.me, day:d, shift:SRV_SHIFT_DB[s], level:p.slots[k] === 'avoid' ? 'can' : p.slots[k] }; });
   if(slotRows.length){ r = await sbPersonal.from('prefs_slot').insert(slotRows); if(r.error) throw r.error; }
-  if(p.absent.length){ r = await sbPersonal.from('prefs_absence').insert(p.absent.map(d => ({ staff_id:srv.me, day:d }))); if(r.error) throw r.error; }
+  if(p.absent.length){ r = await sbPersonal.from('prefs_absence').insert(p.absent.map(d => ({ staff_id:srv.me, day:d, reason:'self' }))); if(r.error) throw r.error; }
+  r = await sbPersonal.from('prefs_hours').delete().eq('staff_id', srv.me).gte('day', first).lte('day', last);
+  if(r.error) throw r.error;
+  const hourRows = []; Object.keys(p.hours).forEach(d => p.hours[d].forEach(([a, b]) => hourRows.push({ staff_id:srv.me, day:d, from_time:String(a).padStart(2, '0') + ':00', to_time:b >= 24 ? '23:59' : String(b).padStart(2, '0') + ':00' })));
+  if(hourRows.length){ r = await sbPersonal.from('prefs_hours').insert(hourRows); if(r.error) throw r.error; }
+  if(p.consent.extend !== null && p.consent.pull !== null){          // the two consents are asked again every month; saved once both are answered
+    r = await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(mk), extend_morning:p.consent.extend, pull_to_sunday:p.consent.pull, answered_at:new Date().toISOString() });
+    if(r.error) throw r.error;
+  }
   srv.saved[mk] = snap;
 }
 // called after every change on the screen (from portalSave): saves whatever differs from what the server has, a moment later
@@ -123,12 +137,15 @@ async function srvFlush(){
   srv.busy = false;
   const el = document.getElementById('srv-save-state'); if(el) el.textContent = srv.failed ? 'לא נשמר עדיין' : 'נשמר ✓';
 }
-async function srvSubmit(mk){
+async function srvSubmit(mk, note){
   await srvFlush();
   if(srv.failed || srvSnapshot(mk) !== srv.saved[mk]) throw new Error('not saved');
-  const r = await sbPersonal.from('prefs_submission').upsert({ staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() });
+  const row = { staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() };
+  if(note !== undefined) row.note = note || null;
+  const r = await sbPersonal.from('prefs_submission').upsert(row);
   if(r.error) throw r.error;
   portalMonth(mk).submitted[srv.me] = true;
+  if(note) portalMonth(mk).notes[srv.me] = note;
 }
 
 // ---- the screens in server mode

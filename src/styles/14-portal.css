@@ -178,3 +178,17 @@
   .plogin .btn{ width:100%; margin-bottom:10px; }
   .plogin-error{ color:var(--red); font-size:13px; min-height:18px; }
   .portal-hello{ font-weight:700; margin:2px 0 10px; }
+  /* the connected portal: custom hours, the consents, the long weekend button */
+  .pday.fixed{ opacity:.75; }
+  .pday-hrs{ display:block; font-size:10px; color:var(--p-avoid); text-align:center; line-height:1.1; }
+  .pday.has-hours .pday-num{ outline:1px dashed var(--p-avoid); outline-offset:1px; }
+  .phours-row{ display:flex; align-items:center; gap:10px; margin:10px 0; }
+  .phours-row select{ flex:1; padding:10px; background:var(--panel-2); color:var(--text); border:1px solid var(--line); border-radius:10px; font-size:16px; font-family:inherit; }
+  .pconsents{ margin:14px 0 6px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; background:var(--panel-2); }
+  .pconsents.unanswered{ border-color:var(--gold); }
+  .pconsent{ display:flex; flex-direction:column; gap:6px; margin:10px 0; }
+  .pconsent small{ color:var(--muted); }
+  .pchoice{ display:flex; gap:8px; }
+  .pchoice button{ flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--text); font:inherit; font-weight:700; }
+  .pchoice button.on{ background:var(--gold); color:#1b1b1b; border-color:var(--gold); }
+  #view-portal textarea{ width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px; color:var(--text); font-size:15px; font-family:inherit; margin-top:6px; }

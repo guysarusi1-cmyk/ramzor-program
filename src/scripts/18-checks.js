@@ -42,7 +42,9 @@
   }  // puts a test child's numbers back (lowering them is the manager's reset path, which instructors are refused by the database)
   async function putState(id, patch){ const s = await getChildStateForUpdate(id); if(!s) return; Object.assign(s, patch); await setChildState(id, s); }
   async function step(name, fn){
-    try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || e); }
+    try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || (e && e.message ? e.message + ' ' + (e.details || e.hint || '') : JSON.stringify(e)));
+      if(typeof portalServerOn !== 'undefined' && portalServerOn){ portalServerOn = false; portalState = null; try { await sbPersonal.auth.signOut(); } catch(e2){} }          // a crashed server step must not leave the demo broken for the steps after it
+    }
   }
 
   async function run(){
@@ -1120,21 +1122,36 @@
         document.querySelector(`[data-pslot="${daysOfMonth(next)[10]}|m"]`).click(); await sleep(50);
         document.querySelector('[data-plevel="absent"]').click(); await sleep(50);
         document.querySelector(`[data-pslot="${daysOfMonth(next)[20]}|m"]`).click(); await sleep(50);
+        // the long weekend button exists on Fridays only; custom hours; the two consents
+        const fri = daysOfMonth(next).find(d => dowOf(d) === 5), sun = daysOfMonth(next).find(d => dowOf(d) === 0);
+        check('portal server: Friday has a fourth button (the long weekend), other days three', document.querySelectorAll(`[data-pslot^="${fri}|"]`).length === 4 && document.querySelectorAll(`[data-pslot^="${sun}|"]`).length === 3, 'wrong buttons');
+        document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-pslot="${fri}|l"]`).click(); await sleep(50);
+        document.querySelector('[data-plevel="hours"]').click(); await sleep(50);
+        const hday = daysOfMonth(next).find(d => dowOf(d) === 2); document.querySelector(`[data-pday="${hday}"]`).click(); await sleep(80);
+        document.querySelector('[data-hfrom="0"]').value = '11'; document.querySelector('[data-hto="0"]').value = '15'; document.querySelector('#hours-save').click(); await sleep(80);
+        document.querySelector('[data-consent="extend:1"]').click(); await sleep(50); document.querySelector('[data-consent="pull:0"]').click(); await sleep(50);
         for(let i = 0; i < 40 && srvSnapshot(next) !== srv.saved[next]; i++) await sleep(150);
         check('portal server: a change on the screen is saved to the server by itself', srvSnapshot(next) === srv.saved[next] && !srv.failed, 'not saved');
         await srvLoad();
         const back = portalPrefsOf(next, srv.me);
         check('portal server: after reloading from the server the marks are still there (לא / יכול / היעדרות)', back.slots[key] === 'no' && back.slots[`${daysOfMonth(next)[10]}|m`] === 'avoid' && back.absent.includes(daysOfMonth(next)[20]), JSON.stringify(back));
-        portalUi.persona = srv.me; showPortal('prefs'); await sleep(100); portalUi.pmonth = next;
+        check('portal server: the long weekend mark, the custom hours and the two consents are kept too', back.slots[`${fri}|l`] === 'no' && JSON.stringify(back.hours[hday]) === '[[11,15]]' && back.consent.extend === true && back.consent.pull === false, JSON.stringify([back.slots[`${fri}|l`], back.hours[hday], back.consent]));
+        portalUi.persona = srv.me; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
+        const subAt = async () => { const r = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return r.data && r.data.length ? r.data[0].submitted_at : null; };
+        const sub0 = await subAt();
         document.getElementById('prefs-submit').click();
-        for(let i = 0; i < 40 && !portalMonth(next).submitted[srv.me]; i++) await sleep(150);
-        check('portal server: submitting the preferences is recorded on the server', portalMonth(next).submitted[srv.me] === true, 'not submitted');
-        // the coordinator can see it, the other instructors cannot see the marks
-        // clean up: everything back to "כן"
-        const p = portalPrefsOf(next, srv.me); p.slots = {}; p.absent = []; portalSave();
+        let sub1 = null; for(let i = 0; i < 40; i++){ await sleep(150); sub1 = await subAt(); if(sub1 && (!sub0 || sub1 > sub0)) break; }
+        check('portal server: submitting the preferences is recorded on the server (a new submission time)', !!sub1 && (!sub0 || sub1 > sub0), JSON.stringify([sub0, sub1]));
+        // without answering the consents the submission is refused
+        const pc = portalPrefsOf(next, srv.me), keepC = Object.assign({}, pc.consent); pc.consent.extend = null; showPortal('prefs'); await sleep(100);
+        document.getElementById('prefs-submit').click(); await sleep(400);
+        check('portal server: the submission is refused until both consent questions are answered', (await subAt()) === sub1, 'accepted');
+        pc.consent = keepC;
+        // clean up: everything back to "כן", and the consents back to "לא"
+        const p = portalPrefsOf(next, srv.me); p.slots = {}; p.absent = []; p.hours = {}; p.consent = { extend:false, pull:false }; portalSave();
         for(let i = 0; i < 40 && srvSnapshot(next) !== srv.saved[next]; i++) await sleep(150);
         await srvLoad();
-        check('portal server: clearing everything is saved too', Object.keys(portalPrefsOf(next, srv.me).slots).length === 0 && portalPrefsOf(next, srv.me).absent.length === 0, 'still marked');
+        check('portal server: clearing everything is saved too', Object.keys(portalPrefsOf(next, srv.me).slots).length === 0 && portalPrefsOf(next, srv.me).absent.length === 0 && Object.keys(portalPrefsOf(next, srv.me).hours).length === 0, 'still marked');
       } else check('(info) portal server: the month after next is not open for preferences right now, so the saving was not exercised', true, '');
       // a month that is closed is shown as closed, and the database refuses a write
       const closed = addMonths(monthKeyOf(israelNow().date), 0);

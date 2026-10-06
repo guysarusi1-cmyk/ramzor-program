@@ -73,36 +73,60 @@ function renderInstructorSchedule(body){
 
 // ---- preferences: every shift is "כן" until you mark otherwise; choose a level at the bottom, then tap days or shifts
 const LEVEL_BUTTONS = [['yes', 'כן'], ['avoid', 'יכול'], ['no', 'לא'], ['absent', 'היעדרות']];
+const SRV_LEVEL_BUTTONS = [['yes', 'כן'], ['avoid', 'יכול'], ['no', 'לא'], ['absent', 'היעדרות'], ['hours', 'שעות אחרות']];
+const SRV_LONG = { id:'l', label:'סופ"ש ארוך', letter:'ס' };               // the long weekend: one more button on Fridays
+const prefShiftsFor = date => portalServerOn && dowOf(date) === 5 ? portalLoad().shiftTypes.concat([SRV_LONG]) : portalLoad().shiftTypes;
+const FIXED_REASON = { vacation:'חופשה', sick:'מחלה', reserve:'מילואים', leave:'חופשה מיוחדת', other:'היעדרות', self:'היעדרות' };
 function renderInstructorPrefs(body){
   const me = portalMe(), st = portalLoad();
   if(!portalUi.pmonth) portalUi.pmonth = addMonths(monthKeyOf(isoDate(new Date())), 1);
-  const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
+  const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalServerOn ? srvPrefsOf(m, me.id) : portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
   const days = daysOfMonth(mk), lead = dowOf(days[0]);
   const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
-  const marked = Object.keys(prefs.slots).length + prefs.absent.length;
+  const marked = Object.keys(prefs.slots).length + prefs.absent.length + (portalServerOn ? Object.keys(prefs.hours).length : 0);
   const dl = m.deadline ? parseIso(m.deadline) : null;
+  const fixedOn = date => portalServerOn ? prefs.fixed.find(f => f.day === date) : null;
   let cells = '';
   for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
-    const absent = prefs.absent.includes(date);
-    cells += `<div class="pday${absent ? ' absent' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}">
+    const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
+    cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
-      <div class="pday-shifts">${st.shiftTypes.map(s => { const lv = absent ? 'no' : (prefs.slots[`${date}|${s.id}`] || 'yes'); return `<button type="button" class="pshift lv-${lv}" data-pslot="${date}|${s.id}" aria-label="${pEsc(s.label)}">${pEsc(s.label.charAt(0))}</button>`; }).join('')}</div>
+      ${hrs ? `<span class="pday-hrs" title="שעות אחרות">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</span>` : ''}
+      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const lv = absent ? 'no' : (prefs.slots[`${date}|${s.id}`] || 'yes'); return `<button type="button" class="pshift lv-${lv}" data-pslot="${date}|${s.id}" aria-label="${pEsc(s.label)}">${pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>
     </div>`;
   });
+  const fixedList = portalServerOn ? prefs.fixed.filter(f => daysOfMonth(mk).includes(f.day)) : [];
+  const cons = prefs.consent || { extend:null, pull:null };
+  const choice = (name, v) => `<div class="pchoice" role="group"><button type="button" class="${cons[name] === true ? 'on' : ''}" data-consent="${name}:1"${locked ? ' disabled' : ''}>כן</button><button type="button" class="${cons[name] === false ? 'on' : ''}" data-consent="${name}:0"${locked ? ' disabled' : ''}>לא</button></div>`;
+  const levels = portalServerOn ? SRV_LEVEL_BUTTONS : LEVEL_BUTTONS;
   body.innerHTML = `
     ${monthNavHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'ההעדפות הוגשו ✓ (אפשר לעדכן עד סגירת ההגשה)' : 'ההעדפות טרם הוגשו. ההגשה חובה.'}${dl ? ` · נסגר ב-${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
     ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע (היא נפתחת ב-1 בחודש הקודם ונסגרת ב-24 בו בשעה 22:30). לשינוי פנו לרכזת.</div>' : ''}
-    <div class="pnote">כל המשמרות מסומנות "כן" כברירת מחדל. סמנו רק מה שאתם לא רוצים: בחרו רמה למטה, ואז לחצו על יום (כל המשמרות שלו) או על משמרת בודדת. ${st.shiftTypes.map(s => s.label.charAt(0) + ' = ' + s.label).join(' · ')}</div>
+    ${fixedList.length ? `<div class="pnote">ימים שהרכזת סימנה או שאושרו לך: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
+    <div class="pnote">כל המשמרות מסומנות "כן" כברירת מחדל. סמנו רק מה שאתם לא רוצים: בחרו רמה למטה, ואז לחצו על יום (כל המשמרות שלו) או על משמרת בודדת. ${prefShiftsFor(days[0]).map(s => (s.letter || s.label.charAt(0)) + ' = ' + s.label).join(' · ')}${portalServerOn ? ' · ס = סופ"ש ארוך (שישי 17:00 עד מוצאי שבת), מסומן ביום שישי. "שעות אחרות": בחרו את הרמה, ואז לחצו על יום, כדי לציין שאתם זמינים רק בחלק מהשעות.' : ''}</div>
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
+    ${portalServerOn ? `
+    <div class="pconsents${cons.extend === null || cons.pull === null ? ' unanswered' : ''}">
+      <h2 class="psec">ההסכמות שלי לחודש הזה</h2>
+      <div class="pconsent"><span>מוכן/ה להישאר עד 16:00 במשמרת בוקר, כשצריך?</span>${choice('extend')}<small>עד 4 הארכות בחודש</small></div>
+      <div class="pconsent"><span>מוכן/ה להמשיך משבת בלילה עד יום ראשון ב-11:00, כשצריך?</span>${choice('pull')}</div>
+    </div>
+    <label class="pfield">הערה לרכזת (לא חובה)<textarea id="prefs-note" rows="2" maxlength="400"${locked ? ' disabled' : ''}>${pEsc(m.notes && m.notes[me.id] || '')}</textarea></label>` : ''}
     <div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת העדפות'}</button><span class="pnote">${marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"'}</span></div>
-    <div class="plevelbar" role="group" aria-label="בחירת רמה">${LEVEL_BUTTONS.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`;
+    <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">${portalServerOn ? 'זמין לכל החודש' : 'נקה הכל'}</button></div>`;
   wireMonthNav(body, 'pmonth');
   body.querySelectorAll('[data-plevel]').forEach(b => b.addEventListener('click', () => { portalUi.level = b.dataset.plevel; renderInstructorPrefs(body); }));
+  body.querySelectorAll('[data-consent]').forEach(b => b.addEventListener('click', () => {
+    if(locked) return;
+    const [name, v] = b.dataset.consent.split(':'); prefs.consent[name] = v === '1'; portalSave(); renderInstructorPrefs(body);
+  }));
   body.querySelectorAll('[data-pslot]').forEach(b => b.addEventListener('click', () => {
     if(locked) return;
     const key = b.dataset.pslot, date = key.split('|')[0], lv = portalUi.level;
+    if(fixedOn(date)) return;
+    if(lv === 'hours'){ openHoursSheet(date, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
     else if(lv === 'yes'){ delete prefs.slots[key]; }                      // "כן" is the default, so nothing needs to be stored
     else if(prefs.slots[key] === lv){ delete prefs.slots[key]; } else { prefs.slots[key] = lv; }
@@ -110,24 +134,45 @@ function renderInstructorPrefs(body){
   }));
   body.querySelectorAll('[data-pday]').forEach(b => b.addEventListener('click', () => {
     if(locked) return;
-    const date = b.dataset.pday, lv = portalUi.level, keys = st.shiftTypes.map(s => `${date}|${s.id}`);
+    const date = b.dataset.pday, lv = portalUi.level, keys = prefShiftsFor(date).map(s => `${date}|${s.id}`);
+    if(fixedOn(date)) return;
+    if(lv === 'hours'){ openHoursSheet(date, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
-    else if(lv === 'yes'){ keys.forEach(k => delete prefs.slots[k]); prefs.absent = prefs.absent.filter(d => d !== date); }
+    else if(lv === 'yes'){ keys.forEach(k => delete prefs.slots[k]); prefs.absent = prefs.absent.filter(d => d !== date); if(portalServerOn) delete prefs.hours[date]; }
     else if(keys.every(k => prefs.slots[k] === lv)){ keys.forEach(k => delete prefs.slots[k]); } else { keys.forEach(k => { prefs.slots[k] = lv; }); }
     portalSave(); renderInstructorPrefs(body);
   }));
   document.getElementById('prefs-clear-all').addEventListener('click', async () => {
     if(locked) return;
-    if(!(await confirmSheet({ title:'לנקות את כל ההעדפות?', text:'כל הסימונים של החודש הזה יחזרו ל"כן" (ברירת המחדל), כולל היעדרויות. אי אפשר לבטל.', okLabel:'כן, לנקות הכל', cancelLabel:'חזרה', danger:true }))) return;
-    prefs.slots = {}; prefs.absent = []; portalSave(); toast('כל ההעדפות נוקו'); renderInstructorPrefs(body);
+    if(!(await confirmSheet({ title:portalServerOn ? 'לסמן זמינות לכל החודש?' : 'לנקות את כל ההעדפות?', text:'כל הסימונים של החודש הזה יחזרו ל"כן" (ברירת המחדל), כולל היעדרויות' + (portalServerOn ? ' ושעות אחרות' : '') + '. אי אפשר לבטל.', okLabel:portalServerOn ? 'כן, זמין/ה לכל החודש' : 'כן, לנקות הכל', cancelLabel:'חזרה', danger:true }))) return;
+    prefs.slots = {}; prefs.absent = []; if(portalServerOn) prefs.hours = {}; portalSave(); toast(portalServerOn ? 'סומנת כזמין/ה לכל החודש' : 'כל ההעדפות נוקו'); renderInstructorPrefs(body);
   });
   document.getElementById('prefs-submit').addEventListener('click', async () => {
     if(locked) return;
-    if(portalServerOn){ try { await srvSubmit(mk); } catch(e){ toast('ההגשה לא נשמרה. נסו שוב.'); return; } toast('ההעדפות הוגשו ✓'); renderInstructorPrefs(body); return; }
+    if(portalServerOn){
+      if(cons.extend === null || cons.pull === null){ toast('צריך לענות על שתי שאלות ההסכמה לפני ההגשה'); const box = body.querySelector('.pconsents'); if(box) box.scrollIntoView({ block:'center' }); return; }
+      try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim()); } catch(e){ toast('ההגשה לא נשמרה. נסו שוב.'); return; }
+      toast('ההעדפות הוגשו ✓'); renderInstructorPrefs(body); return;
+    }
     m.submitted[me.id] = true; portalSave(); toast('ההעדפות הוגשו ✓'); renderInstructorPrefs(body);
   });
 }
-function toggleAbsent(prefs, date){ prefs.absent = prefs.absent.includes(date) ? prefs.absent.filter(d => d !== date) : prefs.absent.concat(date); }
+// custom hours for one day: up to two ranges (whole hours); used only when they complete a full shift
+function openHoursSheet(date, prefs, done){
+  const cur = (prefs.hours[date] || []).slice(0, 2);
+  const opts = (from, to, sel) => { let o = '<option value="">—</option>'; for(let h = from; h <= to; h++) o += `<option value="${h}"${sel === h ? ' selected' : ''}>${String(h % 24).padStart(2, '0')}:00</option>`; return o; };
+  const row = i => `<div class="phours-row"><select data-hfrom="${i}" aria-label="משעה">${opts(6, 23, cur[i] && cur[i][0])}</select><span>עד</span><select data-hto="${i}" aria-label="עד שעה">${opts(7, 24, cur[i] && cur[i][1])}</select></div>`;
+  const sh = portalSheet(`<h2>שעות אחרות ב${dayLabel(date)}</h2><div class="pnote">אפשר לציין עד שני טווחים שבהם אתם זמינים. המערכת תשתמש בהם רק כשהם משלימים משמרת שלמה.</div>${row(0)}${row(1)}<div id="hours-err" class="pwarn" aria-live="polite"></div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" id="hours-clear">מחיקה</button><button type="button" class="btn" id="hours-save">שמירה</button></div>`);
+  sh.querySelector('#hours-clear').addEventListener('click', () => { delete prefs.hours[date]; portalSave(); sh.close(); done(); });
+  sh.querySelector('#hours-save').addEventListener('click', () => {
+    const rs = [0, 1].map(i => [sh.querySelector(`[data-hfrom="${i}"]`).value, sh.querySelector(`[data-hto="${i}"]`).value]).filter(r => r[0] !== '' || r[1] !== '');
+    const bad = rs.some(r => r[0] === '' || r[1] === '' || Number(r[0]) >= Number(r[1])) || (rs.length === 2 && Number(rs[0][0]) < Number(rs[1][1]) && Number(rs[1][0]) < Number(rs[0][1]));
+    if(bad){ sh.querySelector('#hours-err').textContent = 'בדקו שהשעות נכונות: "מ" לפני "עד", והטווחים לא חופפים.'; return; }
+    if(rs.length) prefs.hours[date] = rs.map(r => [Number(r[0]), Number(r[1])]).sort((a, b) => a[0] - b[0]); else delete prefs.hours[date];
+    portalSave(); sh.close(); done();
+  });
+}function toggleAbsent(prefs, date){ prefs.absent = prefs.absent.includes(date) ? prefs.absent.filter(d => d !== date) : prefs.absent.concat(date); }
 
 // ---- swaps: an instructor publishes a shift (from the schedule tab); anyone who can take it presses "אני יכול/ה להחליף";
 // the request then goes to the coordinator, whose answer changes the schedule and is sent to both people
@@ -137,7 +182,7 @@ function canTakeShift(pid, key){
   const slot = buildSlots(mk, ctx.shiftTypes).find(s => s.key === key);
   if(!slot || slot.end <= Date.now()) return false;
   if(Object.keys(m.assignments).some(k => k.startsWith(date + '|') && (m.assignments[k] || []).includes(pid))) return false;      // already working that day
-  return levelOf(ctx.prefs, pid, slot) !== 'no';
+  return portalServerOn || levelOf(ctx.prefs, pid, slot) !== 'no';          // (on the real system any instructor may offer to take a shift)
 }
 function renderInstructorSwaps(body){
   const me = portalMe(), st = portalLoad();
