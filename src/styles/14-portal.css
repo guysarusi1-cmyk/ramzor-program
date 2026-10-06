@@ -192,3 +192,23 @@
   .pchoice button{ flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--text); font:inherit; font-weight:700; }
   .pchoice button.on{ background:var(--gold); color:#1b1b1b; border-color:var(--gold); }
   #view-portal textarea{ width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px; color:var(--text); font-size:15px; font-family:inherit; margin-top:6px; }
+  /* the connected portal: coordinator screens, service girls, vacation */
+  .pflag{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--p-line); font-size:14px; }
+  .pflag span{ min-width:0; }
+  .pmine-actions{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:flex-end; }
+  .psub-note{ grid-column:1 / -1; margin-top:4px; font-size:13px; color:var(--p-muted); }
+  .pwarn-inline{ color:var(--p-no); }
+  .pvac{ display:flex; flex-direction:column; gap:8px; }
+  .pvac input[type=date], .pstaff-add input, .pstaff-add select, .pstaff-row input{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px; color:var(--text); font-size:15px; font-family:inherit; min-width:0; }
+  .psvc{ display:flex; flex-direction:column; gap:8px; margin:10px 0; }
+  .psvc-row{ display:flex; flex-direction:column; gap:6px; padding:8px 10px; border:1px solid var(--p-line); border-radius:12px; background:var(--p-panel); }
+  .psvc-row.empty{ border-color:var(--gold); }
+  .pchoice.wrap{ flex-wrap:wrap; }
+  .pchoice.wrap button{ flex:1 1 40%; }
+  .pstaff-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--p-line); }
+  .pstaff-name{ flex:1 1 90px; font-weight:700; }
+  .pstaff-row input{ flex:2 1 160px; }
+  .pstaff-add{ display:flex; flex-wrap:wrap; gap:8px; }
+  .pstaff-add input, .pstaff-add select{ flex:1 1 120px; }
+  .pstaff-order{ display:flex; gap:4px; }
+  .pcell small, .pchip small{ opacity:.8; font-size:.8em; }

@@ -8,9 +8,9 @@ const SRV_SHIFT_DB = { m:'M', e:'A', n:'N', l:'L' };                       // th
 const SRV_SHIFT_UI = { M:'m', A:'e', N:'n' };                              // (the shifts of the schedule)
 const SRV_PREF_UI = { M:'m', A:'e', N:'n', L:'l' };                       // (the shifts of the preferences)
 const SRV_SHIFTS = [
-  { id:'m', label:'בוקר', start:'07:00', end:'15:00', need:2, needWeekend:2, night:false },
-  { id:'e', label:'אחר הצהריים', start:'14:00', end:'22:00', need:4, needWeekend:4, night:false },
-  { id:'n', label:'לילה', start:'22:00', end:'08:00', need:2, needWeekend:2, night:true }
+  { id:'m', label:'בוקר', start:'07:00', end:'15:00', need:1, needWeekend:1, night:false },
+  { id:'e', label:'אחר הצהריים', start:'14:00', end:'22:00', need:1, needWeekend:1, night:false },
+  { id:'n', label:'לילה', start:'22:00', end:'08:00', need:1, needWeekend:1, night:true }
 ];
 const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false };
 const firstOf = mk => mk + '-01';
@@ -62,7 +62,7 @@ async function srvLoad(){
   };
   portalState = st; srv.me = meId; srv.meRow = st.instructors.find(p => p.id === meId) || null;
   months.forEach(mk => {
-    const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, assignments:{}, approvals:{}, published:false };
+    const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, assignments:{}, annot:{}, approvals:{}, published:false, status:null };
     st.months[mk] = m;
   });
   const monthOf = d => monthKeyOf(d);
@@ -74,22 +74,36 @@ async function srvLoad(){
   hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); (pr.hours[r.day] = pr.hours[r.day] || []).push([parseInt(r.from_time, 10), parseInt(r.to_time, 10) || 24]); });
   cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_morning, pull:r.pull_to_sunday }; });
   subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
-  const published = sched.filter(r => r.status === 'published').map(r => monthOf(r.month));
-  published.forEach(mk => { if(st.months[mk]) st.months[mk].published = true; });
-  if(published.length){
-    const rows = await srvAll(() => sbPersonal.from('assignment').select('id,staff_id,day,shift').in('month', published.map(firstOf)));
-    rows.forEach(r => {
-      const m = st.months[monthOf(r.day)], id = SRV_SHIFT_UI[r.shift]; if(!m || !id) return;          // (short morning / long weekend shifts: next step)
-      const key = `${r.day}|${id}`;
-      (m.assignments[key] = m.assignments[key] || []).push(r.staff_id);
-      st.assignmentIds[r.id] = { key, staff:r.staff_id }; st.assignmentIds[`${key}|${r.staff_id}`] = r.id;      // (both ways: id -> shift, and shift + person -> id)
-    });
+  sched.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.status = r.status; m.published = r.status === 'published'; } });
+  st.rows = [];
+  if(sched.length){                                       // (the database shows a person only the published schedules; the coordinator sees the drafts too)
+    const rows = await srvAll(() => sbPersonal.from('assignment').select('id,staff_id,day,shift,from_time,to_time,flags').in('month', sched.map(r => r.month)).order('day'));
+    rows.forEach(r => srvAddRow(st, r));
   }
-  const swapRows = await srvAll(() => sbPersonal.from('swap_requests').select('id,assignment_id,from_staff,to_staff,status,created_at').order('created_at', { ascending:false })).catch(() => []);
-  st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
+  const swapRows = await srvAll(() => sbPersonal.from('swap_requests').select('id,assignment_id,from_staff,to_staff,status,urgent,created_at').order('created_at', { ascending:false })).catch(() => []);
+  st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
   srv.saved = {};
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
+  if(srv.meRow && srv.meRow.role === 'coordinator') await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)
   return true;
+}
+// one row of the schedule -> the list of rows (for "my shifts") and the team board (instructors only; short / long / custom-hours shifts carry a note)
+const SRV_STD = { M:['07:00', '15:00'], A:['14:00', '22:00'], N:['22:00', '08:00'], S:['07:00', '11:00'] };
+function srvAddRow(st, r){
+  const t5 = x => x ? x.slice(0, 5) : null, from = t5(r.from_time), to = t5(r.to_time);
+  st.rows.push({ id:r.id, staff:r.staff_id, day:r.day, shift:r.shift, from, to, flags:r.flags || [] });
+  const who = st.instructors.find(p => p.id === r.staff_id);
+  if(!who || who.role !== 'instructor') return;
+  const keys = r.shift === 'L' ? [[r.day, 'e'], [addDays(r.day, 1), 'm'], [addDays(r.day, 1), 'e']] : r.shift === 'S' ? [[r.day, 'm']] : [[r.day, SRV_SHIFT_UI[r.shift]]];
+  const std = SRV_STD[r.shift];
+  const note = r.shift === 'L' ? 'סופ"ש ארוך' : r.shift === 'S' ? '07–11' : (from && to && std && (from !== std[0] || to !== std[1]) ? from.slice(0, 2) + '–' + to.slice(0, 2) : '');
+  keys.forEach(([d, id]) => {
+    const mm = st.months[monthKeyOf(d)]; if(!mm || !id) return;
+    const key = `${d}|${id}`;
+    (mm.assignments[key] = mm.assignments[key] || []).push(r.staff_id);
+    if(note) mm.annot[`${key}|${r.staff_id}`] = note;
+  });
+  if(r.shift !== 'L'){ const key = keys[0].join('|'); st.assignmentIds[r.id] = { key, staff:r.staff_id }; st.assignmentIds[`${key}|${r.staff_id}`] = r.id; }       // (both ways: id -> shift, and shift + person -> id)
 }
 const srvPrefsOf = (m, id) => (m.prefs[id] = m.prefs[id] || { slots:{}, absent:[] }, Object.assign(m.prefs[id], { fixed:m.prefs[id].fixed || [], hours:m.prefs[id].hours || {}, consent:m.prefs[id].consent || { extend:null, pull:null } }));
 const srvSnapshot = mk => { const p = srvPrefsOf(portalMonth(mk), srv.me); return JSON.stringify({ s:Object.keys(p.slots).sort().map(k => k + '=' + p.slots[k]), a:p.absent.slice().sort(), h:Object.keys(p.hours).sort().map(k => k + '=' + JSON.stringify(p.hours[k])), c:p.consent.extend !== null && p.consent.pull !== null ? p.consent : null }); };
@@ -150,62 +164,41 @@ async function srvSubmit(mk, note){
 
 // ---- the screens in server mode
 function srvTabs(me){
-  if(me.role === 'coordinator') return [['submissions', 'הגשות'], ['swaps', 'החלפות'], ['schedule', 'סידור']];
-  if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['inbox', 'הודעות']];
-  return [['schedule', 'הסידור']];
+  if(me.role === 'coordinator') return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']];
+  if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
+  if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
+  return [['schedule', 'הסידור'], ['hours', 'שעות'], ['inbox', 'הודעות']];          // teachers
 }
 function srvRenderTab(me, body, t){
   const soon = what => { body.innerHTML = `<div class="pnote">${what} — עדיין בבנייה.</div>`; };
   if(me.role === 'coordinator'){
     if(t === 'submissions') return srvRenderSubmissions(body);
     if(t === 'swaps') return srvRenderCoordSwaps(body);
-    return soon('מסך הסידור של הרכזת');
+    if(t === 'vacations') return srvRenderCoordVacations(body);
+    if(t === 'settings') return srvRenderCoordSettings(body);
+    return srvRenderCoordSchedule(body);
   }
-  if(me.role !== 'instructor'){ body.innerHTML = '<div class="pnote">הפורטל לבנות שירות ולמורות עדיין בבנייה. כאן יופיע הסידור שלכן.</div>'; return; }
-  if(t === 'schedule') return renderInstructorSchedule(body);
-  if(t === 'prefs') return renderInstructorPrefs(body);
+  if(t === 'schedule') return srvRenderSchedule(body);
   if(t === 'inbox') return srvRenderInbox(body);
+  if(t === 'vacation') return srvRenderVacation(body);
+  if(t === 'avail') return srvRenderAvailability(body);
+  if(t === 'hours') return srvRenderTeacherHours(body);
+  if(t === 'prefs' && me.role === 'instructor') return renderInstructorPrefs(body);
   return renderInstructorSwaps(body);
 }
-function srvRenderInbox(body){
+async function srvRenderInbox(body){
   const st = portalLoad();
-  body.innerHTML = `<h2 class="psec">עדכונים אישיים</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}`;
-}
-function srvRenderSubmissions(body){
-  const st = portalLoad();
-  if(!portalUi.smonth) portalUi.smonth = addMonths(monthKeyOf(israelNow().date), 1);
-  const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role === 'instructor');
-  const missing = people.filter(p => !m.submitted[p.id]);
-  body.innerHTML = `
-    ${monthNavHtml(mk)}
-    <div class="pnote">ההגשה נסגרת ב-24 בחודש הקודם בשעה 22:30.</div>
-    <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
-    <div class="psubs">${people.map(p => { const pr = m.prefs[p.id] || { slots:{}, absent:[] }, c = { avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { if(c[v] !== undefined) c[v]++; });
-      return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>יכול ${c.avoid} · לא ${c.no} · היעדרות ${pr.absent.length}</small></div>`; }).join('')}</div>`;
-  wireMonthNav(body, 'smonth');
-}
-
-// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
+  const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
+  body.innerHTML = `<h2 class="psec">עדכונים אישיים</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}
+    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות.</div>'}`;
+  st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)
+}// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
 async function srvReload(){ await srvFlush(); await srvLoad(); }
+async function srvReloadSafe(){ try { await srvReload(); } catch(e){ /* the screen refreshes on the next action; a failed refresh must not break what the person is doing */ } }
 async function srvSwapAction(fn, args){
   const r = await sbPersonal.rpc(fn, args);
   if(r.error) throw r.error;
   await srvReload();
-}
-function srvRenderCoordSwaps(body){
-  const st = portalLoad(), name = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
-  const agreed = st.swaps.filter(s => s.status === 'offered'), waiting = st.swaps.filter(s => s.status === 'open');
-  body.innerHTML = `
-    <h2 class="psec">ממתינות לאישורך</h2>
-    ${agreed.length ? agreed.map(s => `<div class="preq"><div><b>${pEsc(name(s.from))}</b> מבקש/ת החלפה, <b>${pEsc(name(s.to))}</b> מוכן/ה להחליף<br>${slotLabel(s.key)}</div><div class="preq-actions"><button type="button" class="btn" data-approve="${s.id}">אישור</button><button type="button" class="btn ghost" data-reject="${s.id}">דחייה</button></div></div>`).join('') : '<div class="pnote">אין החלפות שממתינות לאישור.</div>'}
-    <h2 class="psec">בקשות פתוחות (עדיין אין מחליף/ה)</h2>
-    ${waiting.length ? waiting.map(s => `<div class="pmine-row"><span>${pEsc(name(s.from))} · ${slotLabel(s.key)}</span><em class="pst pst-open">${SWAP_STATUS.open}</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
-  body.querySelectorAll('[data-approve], [data-reject]').forEach(b => b.addEventListener('click', async () => {
-    const approve = !!b.dataset.approve;
-    try { await srvSwapAction('decide_swap', { p_swap:b.dataset.approve || b.dataset.reject, p_approve:approve }); toast(approve ? 'ההחלפה אושרה, והמשמרת עברה. שני האנשים קיבלו עדכון.' : 'ההחלפה נדחתה. שני האנשים קיבלו עדכון.'); }
-    catch(e){ toast('הפעולה לא הצליחה. נסו שוב.'); }
-    srvRenderCoordSwaps(body);
-  }));
 }
 // ---- sign in
 function srvLoginHtml(step, email){

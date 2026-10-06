@@ -110,7 +110,7 @@ function wireMonthNav(root, key){
 }
 function portalCtx(mk){
   const st = portalLoad(), m = portalMonth(mk);
-  return { month:mk, instructors:st.instructors, shiftTypes:st.shiftTypes, prefs:m.prefs, rules:st.rules };
+  return { month:mk, instructors:st.instructors, shiftTypes:st.shiftTypes, prefs:m.prefs, rules:st.rules, annot:m.annot || {} };
 }
 // a bottom sheet with any content; returns the element (close with [data-close] or by tapping outside)
 function portalSheet(html){
@@ -139,7 +139,8 @@ function boardHtml(ctx, assignments, opts){
       const mine = opts.me && pid === opts.me;
       const cls = opts.colour ? 'lv-' + p.level : 'lv-neutral';
       const pending = approvals[c.slot.key + '|' + pid] === 'pending';
-      return `<span class="pchip ${cls}${mine ? ' me' : ''}${pending ? ' pending' : ''}">${pEsc(p.name)}${pending ? ' ⏳' : ''}</span>`;
+      const ann = ctx.annot && ctx.annot[c.slot.key + '|' + pid];
+      return `<span class="pchip ${cls}${mine ? ' me' : ''}${pending ? ' pending' : ''}">${pEsc(p.name)}${ann ? ` <small>${pEsc(ann)}</small>` : ''}${pending ? ' ⏳' : ''}</span>`;
     }).join('');
     const miss = c.missing ? `<span class="pchip missing">חסר ${c.missing}</span>` : '';
     return `<td${opts.edit ? ` class="editable" data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : ''}>${chips}${miss}</td>`;

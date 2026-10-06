@@ -27,8 +27,22 @@ function todayGroups(nowMs){
   return groups.sort((a, b) => a.slot.start - b.slot.start);
 }
 
+// the real data for the TV: who works today (first name + photo only), read with the one function that a visitor may call (supabase/scheduling-v2.sql: tv_today)
+const PORTAL_TV_LIVE = '@config(portalTv)' === 'True';
+let tvLive = null, tvLiveAt = 0;
+async function loadTvLive(){ try { const r = await sb.rpc('tv_today'); tvLive = r.error ? null : r.data; } catch(e){ tvLive = null; } if(typeof refreshPortalSlides === 'function') refreshPortalSlides(); }
+const TV_GROUPS = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה'], ['L', 'סופ"ש ארוך']];
+const tvPhoto = p => p.photo_url ? `<img class="tvi-photo" src="${p.photo_url}" alt="">` : `<div class="tvi-photo tvi-letter">${escapeHtml(p.first_name.charAt(0))}</div>`;
+function tvLiveGroups(){ return TV_GROUPS.map(([code, label]) => ({ code, label, people:(tvLive || []).filter(p => p.kind === 'instructor' && (p.shift === code || (code === 'M' && p.shift === 'S'))) })).filter(g => g.people.length); }
 async function renderInstructorsToday(){
   const el = document.getElementById('tv-instructors'), st = portalLoad();
+  if(PORTAL_TV_LIVE){
+    const gs = tvLiveGroups();
+    if(!gs.length){ el.innerHTML = '<div class="empty">אין מדריכים משובצים להיום</div>'; return; }
+    el.style.setProperty('--tvi-cols', gs.length);
+    el.innerHTML = gs.map(g => `<div class="tvi-group"><div class="tvi-shift"><span>${g.label}</span></div><div class="tvi-people">${g.people.map(p => `<div class="tvi-person">${tvPhoto(p)}<div class="tvi-name">${escapeHtml(p.first_name)}</div></div>`).join('')}</div></div>`).join('');
+    return;
+  }
   const groups = todayGroups().filter(g => g.people.length);
   if(!groups.length){ el.innerHTML = '<div class="empty">אין מדריכים משובצים להיום</div>'; return; }
   el.style.setProperty('--tvi-cols', groups.length);
@@ -76,7 +90,8 @@ async function renderBirthdaysToday(){
 function refreshPortalSlides(){
   if(!PORTAL_ENABLED || !SLIDES[9]) return;
   const st = portalLoad(), today = isoDate(new Date());
-  SLIDES[9].hidden = !todayGroups().some(g => g.people.length);
+  if(PORTAL_TV_LIVE && Date.now() - tvLiveAt > 5 * 60 * 1000){ tvLiveAt = Date.now(); loadTvLive(); }          // (the TV asks again every five minutes)
+  SLIDES[9].hidden = PORTAL_TV_LIVE ? !tvLiveGroups().length : !todayGroups().some(g => g.people.length);
   SLIDES[10].hidden = timetableFor(today).length === 0;
   SLIDES[11].hidden = !st.timetable[monthKeyOf(today)];
   SLIDES[12].hidden = !(typeof roster !== 'undefined' && roster.length && birthdaysToday().length);

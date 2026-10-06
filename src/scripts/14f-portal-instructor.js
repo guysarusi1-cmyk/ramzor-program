@@ -198,7 +198,7 @@ function renderInstructorSwaps(body){
     <div class="pnote">מי מבקש החלפה, ולאיזו משמרת. מי שיכול/ה להחליף לוחץ/ת על הכפתור, והבקשה עוברת לרכזת. כדי לבקש החלפה בעצמך, פתחו "הסידור" ← "המשמרות שלי" ← "בקשת החלפה".</div>
     ${open.length ? open.map(s => {
       const own = s.from === me.id, can = !own && canTakeShift(me.id, s.key);
-      return `<div class="preq swap"><div><b>${pEsc(name(s.from))}</b> מבקש/ת החלפה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">לא זמין/ה למשמרת הזו</em>'}</div></div>`;
+      return `<div class="preq swap"><div>${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}<b>${pEsc(name(s.from))}</b> מבקש/ת החלפה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">לא זמין/ה למשמרת הזו</em>'}</div></div>`;
     }).join('') : '<div class="pnote">אין כרגע בקשות החלפה פתוחות.</div>'}
     <h2 class="psec">הבקשות שלי</h2>
     ${mineReq.length ? mineReq.map(s => `<div class="pmine-row"><span>${slotLabel(s.key)}<br><small>${s.from === me.id ? 'ביקשת החלפה' + (s.to ? ' · הציע/ה: ' + pEsc(name(s.to)) : '') : 'הצעת להחליף את ' + pEsc(name(s.from))}</small></span><em class="pst pst-${s.status}">${SWAP_STATUS[s.status]}</em></div>`).join('') : '<div class="pnote">אין בקשות.</div>'}`;

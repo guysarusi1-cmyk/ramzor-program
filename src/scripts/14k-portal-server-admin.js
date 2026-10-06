@@ -1,0 +1,180 @@
+
+// ---------- THE PORTAL ON THE SERVER: the coordinator's other screens (who submitted, absences, vacation requests, settings) ----------
+const ABSENCE_REASONS = [['sick', 'מחלה'], ['reserve', 'מילואים'], ['leave', 'חופשה מיוחדת / לידה'], ['other', 'אחר']];
+const KIND_WORD = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת' };
+const nameOf = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
+const shortDate = d => `${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`;
+// the days of one person as ranges: ['2026-12-03','2026-12-04','2026-12-05'] -> '3/12–5/12'
+function dayRanges(days){
+  const ds = [...new Set(days)].sort(), out = []; let s = null, prev = null;
+  ds.forEach(d => { if(s && addDays(prev, 1) === d){ prev = d; return; } if(s) out.push([s, prev]); s = prev = d; });
+  if(s) out.push([s, prev]);
+  return out.map(([a, b]) => a === b ? shortDate(a) : `${shortDate(a)}–${shortDate(b)}`).join(', ');
+}
+
+// ---------------------------------------------------------------- who submitted, the notes, who is away
+function srvRenderSubmissions(body){
+  const st = portalLoad();
+  if(!portalUi.smonth) portalUi.smonth = addMonths(monthKeyOf(srvToday()), 1);
+  const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role !== 'coordinator');
+  const missing = people.filter(p => !m.submitted[p.id]);
+  const away = people.map(p => { const pr = m.prefs[p.id] || {}; const fx = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day)); return { p, fx, self:(pr.absent || []) }; }).filter(x => x.fx.length || x.self.length);
+  body.innerHTML = `
+    ${monthNavHtml(mk)}
+    <div class="pnote">ההגשה נסגרת ב-24 בחודש הקודם בשעה 22:30. עד ה-23 נשלחת אלייך רשימה של מי שעוד לא הגיש.</div>
+    <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
+    <div class="psubs">${people.map(p => { const pr = m.prefs[p.id] || { slots:{}, absent:[], hours:{} }, c = { avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { if(c[v] !== undefined) c[v]++; });
+      const note = m.notes && m.notes[p.id];
+      return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>${KIND_WORD[p.role] || ''}${p.role === 'instructor' ? ` · יכול ${c.avoid} · לא ${c.no} · היעדרות ${(pr.absent || []).length}${Object.keys(pr.hours || {}).length ? ' · שעות אחרות ' + Object.keys(pr.hours).length : ''}${pr.consent && pr.consent.extend ? ' · מסכים להארכה' : ''}${pr.consent && pr.consent.pull ? ' · מסכים למשיכה' : ''}` : ''}</small>${note ? `<div class="psub-note">הערה: ${pEsc(note)}</div>` : ''}</div>`; }).join('')}</div>
+    <h2 class="psec">מי נעדר החודש</h2>
+    ${away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}${x.self.length ? (x.fx.length ? ' · ' : '') + 'סומן על ידו/ה: ' + dayRanges(x.self) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'}
+    <button type="button" class="btn ghost" id="abs-add">הוספת היעדרות (מחלה, מילואים, לידה...)</button>`;
+  wireMonthNav(body, 'smonth');
+  document.getElementById('abs-add').addEventListener('click', () => srvAbsenceSheet(body));
+}
+function srvAbsenceSheet(body){
+  const st = portalLoad(), people = st.instructors.filter(p => p.active && p.role !== 'coordinator'), today = srvToday();
+  const sh = portalSheet(`<h2>הוספת היעדרות</h2>
+    <label class="pfield">מי<select id="ab-who">${people.map(p => `<option value="${p.id}">${pEsc(instrName(p, st.instructors))}</option>`).join('')}</select></label>
+    <label class="pfield">סיבה<select id="ab-why">${ABSENCE_REASONS.map(r => `<option value="${r[0]}">${r[1]}</option>`).join('')}</select></label>
+    <label class="pfield">מתאריך<input type="date" id="ab-from" value="${today}"></label>
+    <label class="pfield">עד תאריך<input type="date" id="ab-to" value="${today}"></label>
+    <label class="pfield">הערה (לא חובה)<input type="text" id="ab-note" maxlength="200"></label>
+    <div id="ab-err" class="pwarn" aria-live="polite"></div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="ab-go">שמירה</button></div>`);
+  sh.querySelector('#ab-go').addEventListener('click', async () => {
+    const who = sh.querySelector('#ab-who').value, why = sh.querySelector('#ab-why').value, from = sh.querySelector('#ab-from').value, to = sh.querySelector('#ab-to').value, note = sh.querySelector('#ab-note').value.trim() || null;
+    if(!from || !to || to < from){ sh.querySelector('#ab-err').textContent = 'בדקו את התאריכים'; return; }
+    const days = []; for(let d = from; d <= to && days.length < 200; d = addDays(d, 1)) days.push(d);
+    const u = await sbPersonal.from('prefs_absence').upsert(days.map(d => ({ staff_id:who, day:d, reason:why, note })), { onConflict:'staff_id,day' });
+    if(u.error){ sh.querySelector('#ab-err').textContent = 'השמירה נכשלה'; return; }
+    const clash = st.rows.filter(r => r.staff === who && r.day >= from && r.day <= to);                  // shifts already handed out in those days: she has to look at them
+    if(clash.length) await sbPersonal.from('coordinator_flags').insert(clash.map(r => ({ month:firstOf(monthKeyOf(r.day)), day:r.day, kind:'vacation_conflict', text:`היעדרות חופפת למשמרת ${SRV_SHIFT_WORD[r.shift]} של ${nameOf(who)} ב${dayLabel(r.day)}`, staff_id:who })));
+    sh.close(); toast(clash.length ? `נשמר. שימי לב: יש ${clash.length} משמרות באותם ימים (הן מופיעות ברשימת מה שדורש תשומת לב)` : 'ההיעדרות נשמרה');
+    await srvReloadSafe(); srvRenderSubmissions(body);
+  });
+}
+
+// ---------------------------------------------------------------- swaps (the coordinator decides; an urgent one is marked)
+function srvRenderCoordSwaps(body){
+  const st = portalLoad();
+  const agreed = st.swaps.filter(s => s.status === 'offered'), waiting = st.swaps.filter(s => s.status === 'open');
+  body.innerHTML = `
+    <h2 class="psec">ממתינות לאישורך</h2>
+    ${agreed.length ? agreed.map(s => `<div class="preq">${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}<div><b>${pEsc(nameOf(s.from))}</b> מבקש/ת החלפה, <b>${pEsc(nameOf(s.to))}</b> מוכן/ה להחליף<br>${slotLabel(s.key)}</div><div class="preq-actions"><button type="button" class="btn" data-approve="${s.id}">אישור</button><button type="button" class="btn ghost" data-reject="${s.id}">דחייה</button></div></div>`).join('') : '<div class="pnote">אין החלפות שממתינות לאישור.</div>'}
+    <h2 class="psec">בקשות פתוחות (עדיין אין מחליף/ה)</h2>
+    ${waiting.length ? waiting.map(s => `<div class="pmine-row"><span>${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}${pEsc(nameOf(s.from))} · ${slotLabel(s.key)}</span><em class="pst pst-open">${SWAP_STATUS.open}</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
+  body.querySelectorAll('[data-approve], [data-reject]').forEach(b => b.addEventListener('click', async () => {
+    const approve = !!b.dataset.approve, s = st.swaps.find(x => x.id === (b.dataset.approve || b.dataset.reject));
+    if(approve && s){                                              // a rest problem only warns; the answer stays hers
+      const row = st.rows.find(r => r.id === s.aid), w = row ? srvWarnings(s.to, row.day, row.shift, row.from, row.to, row.id) : [];
+      if(w.length && !(await confirmSheet({ title:'לאשר למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לאשר', cancelLabel:'חזרה', danger:true }))) return;
+    }
+    try { await srvSwapAction('decide_swap', { p_swap:b.dataset.approve || b.dataset.reject, p_approve:approve }); toast(approve ? 'ההחלפה אושרה, והמשמרת עברה. כל מי שנוגע בעניין קיבל עדכון.' : 'ההחלפה נדחתה. שני האנשים קיבלו עדכון.'); }
+    catch(e){ toast(/ahmash/.test(String(e && e.message)) ? 'ההחלפה חסומה: המשמרת תישאר בלי אחמ"שית' : 'הפעולה לא הצליחה. נסו שוב.'); }
+    srvRenderCoordSwaps(body);
+  }));
+}
+
+// ---------------------------------------------------------------- long vacation requests
+function srvRenderCoordVacations(body){
+  const st = portalLoad(), list = st.vacations || [], pending = list.filter(v => v.status === 'pending'), rest = list.filter(v => v.status !== 'pending').slice(0, 15);
+  const clashOf = v => st.rows.filter(r => r.staff === v.staff_id && r.day >= v.from_day && r.day <= v.to_day).length;
+  const line = v => `<b>${pEsc(nameOf(v.staff_id))}</b> · ${shortDate(v.from_day)}–${shortDate(v.to_day)} (${Math.round((parseIso(v.to_day) - parseIso(v.from_day)) / 86400000) + 1} ימים)${v.note ? `<br><small>${pEsc(v.note)}</small>` : ''}`;
+  body.innerHTML = `
+    <h2 class="psec">בקשות חופשה שממתינות לאישורך</h2>
+    ${pending.length ? pending.map(v => `<div class="preq"><div>${line(v)}${clashOf(v) ? `<br><small class="pwarn-inline">⚠ יש ${clashOf(v)} משמרות באותם ימים</small>` : ''}</div><div class="preq-actions"><button type="button" class="btn" data-vac-ok="${v.id}">אישור</button><button type="button" class="btn ghost" data-vac-no="${v.id}">דחייה</button></div></div>`).join('') : '<div class="pnote">אין בקשות שממתינות.</div>'}
+    <h2 class="psec">בקשות קודמות</h2>
+    ${rest.length ? rest.map(v => `<div class="pmine-row"><span>${line(v)}</span><em class="pst pst-${v.status === 'approved' ? 'approved' : 'rejected'}">${SRV_VAC_STATUS[v.status]}</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
+  body.querySelectorAll('[data-vac-ok], [data-vac-no]').forEach(b => b.addEventListener('click', async () => {
+    const approve = !!b.dataset.vacOk, r = await sbPersonal.rpc('decide_vacation', { p_id:b.dataset.vacOk || b.dataset.vacNo, p_approve:approve });
+    toast(r.error ? 'הפעולה לא הצליחה' : approve ? 'החופשה אושרה, והימים נכנסו כהיעדרות' : 'הבקשה נדחתה');
+    await srvReloadSafe(); srvRenderCoordVacations(body);
+  }));
+}
+
+// ---------------------------------------------------------------- settings: staff, special days, announcements, the log
+async function srvRenderCoordSettings(body){
+  const st = portalLoad(); portalUi.setFold = portalUi.setFold || {};
+  const today = srvToday();
+  const [days, ann, log] = await Promise.all([
+    sbPersonal.from('special_days').select('day,kind,label,min_staff,max_staff').gte('day', today).order('day').limit(60),
+    sbPersonal.from('announcements').select('created_at,text,via').order('created_at', { ascending:false }).limit(8),
+    sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(40)
+  ]);
+  const staff = st.instructors.filter(p => p.active || true), priv = st.priv || {};
+  const instr = staff.filter(p => p.role === 'instructor').sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
+  const fold = (id, title, inner) => `<details class="pfold" data-sfold="${id}"${portalUi.setFold[id] ? ' open' : ''}><summary><span>${title}</span></summary><div class="pfold-body">${inner}</div></details>`;
+  const KIND_DAY = { holiday:'חג (כמו שבת)', eve:'ערב חג (כמו שישי)', special:'יום מיוחד' };
+  body.innerHTML = `
+    ${fold('staff', 'הצוות, מיילים וסדר עדיפות', `
+      <div class="pnote">כאן מזינים כתובת מייל לכל אחד ויוצרים לו התחברות. סדר המדריכים הוא סדר העדיפות בחלוקת המשמרות מעבר למינימום (למעלה = עדיפות גבוהה). המדריכים לא רואים אותו.</div>
+      ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
+        <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
+        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
+        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
+      <h3 class="psec">בנות שירות, מורות ואחרים</h3>
+      ${staff.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><span class="pstaff-name">${pEsc(p.first)} <small>${KIND_WORD[p.role]}</small></span>
+        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
+        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
+      <h3 class="psec">הוספת איש צוות</h3>
+      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`)}
+    ${fold('days', 'חגים וימים מיוחדים', `
+      <div class="pnote">חגים וערבי חג מסומנים אוטומטית. כאן אפשר לערוך, למחוק או להוסיף יום מיוחד (עם מספר מדריכים משלו).</div>
+      ${(days.data || []).map(d => `<div class="pmine-row"><span><b>${dayLabel(d.day)}</b> · ${KIND_DAY[d.kind] || d.kind}${d.label ? ' · ' + pEsc(d.label) : ''}${d.min_staff ? ` · ${d.min_staff}–${d.max_staff || d.min_staff + 1} מדריכים` : ''}</span><button type="button" class="btn ghost small" data-day-del="${d.day}">מחיקה</button></div>`).join('') || '<div class="pnote">אין ימים מיוחדים קרובים.</div>'}
+      <h3 class="psec">הוספה</h3>
+      <div class="pstaff-add"><input type="date" id="sd-day" min="${today}"><select id="sd-kind"><option value="special">יום מיוחד</option><option value="holiday">חג (כמו שבת)</option><option value="eve">ערב חג (כמו שישי)</option></select><input type="text" id="sd-label" placeholder="שם"><input type="number" id="sd-min" min="1" max="12" placeholder="מינימום"><input type="number" id="sd-max" min="1" max="12" placeholder="מקסימום"><button type="button" class="btn small" id="sd-go">הוספה</button></div>`)}
+    ${fold('ann', 'הודעה לצוות', `
+      <label class="pfield">הודעה<textarea id="an-text" rows="3" maxlength="800"></textarea></label>
+      <div class="pchoice wrap" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
+      <button type="button" class="btn" id="an-send">שליחה</button>
+      <h3 class="psec">הודעות אחרונות</h3>
+      ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`)}
+    ${fold('log', 'יומן שינויים בסידור', `
+      <div class="pnote">מי שינה משמרת ומתי (שינויים ידניים, החלפות והבנייה האוטומטית).</div>
+      ${(log.data || []).map(l => { const d = (l.detail && (l.detail.new || l.detail.old)) || {}; const who = l.by_staff ? nameOf(l.by_staff) : 'המערכת / המנהל'; return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')}</small><br>${pEsc(who)}: ${l.what === 'insert shift' ? 'נוספה' : l.what === 'delete shift' ? 'הוסרה' : 'עודכנה'} משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${pEsc(nameOf(d.staff_id))}</span></div>`; }).join('') || '<div class="pnote">אין שינויים.</div>'}`)}`;
+  body.querySelectorAll('details[data-sfold]').forEach(d => d.addEventListener('toggle', () => { portalUi.setFold[d.dataset.sfold] = d.open; }));
+  const again = async () => { await srvReloadSafe(); srvRenderCoordSettings(body); };
+  body.querySelectorAll('[data-mail]').forEach(inp => inp.addEventListener('change', async () => {
+    const mail = inp.value.trim().toLowerCase() || null;
+    const u = await sbPersonal.from('staff_private').update({ email:mail }).eq('staff_id', inp.dataset.mail);
+    toast(u.error ? 'המייל לא נשמר (אולי הוא כבר בשימוש)' : 'המייל נשמר'); if(!u.error) (st.priv[inp.dataset.mail] = st.priv[inp.dataset.mail] || {}).email = mail;
+  }));
+  body.querySelectorAll('[data-login]').forEach(b => b.addEventListener('click', async () => {
+    const mail = (st.priv[b.dataset.login] || {}).email; if(!mail){ toast('קודם מזינים כתובת מייל'); return; }
+    b.disabled = true; const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:b.dataset.login } });
+    toast(r.error || (r.data && r.data.error) ? 'יצירת ההתחברות נכשלה' : 'ההתחברות נוצרה. אפשר להיכנס עם קוד שנשלח למייל.'); again();
+  }));
+  const move = async (id, dir) => {
+    const ids = instr.map(p => p.id), i = ids.indexOf(id), j = i + dir; if(j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    for(let k = 0; k < ids.length; k++) await sbPersonal.from('staff_private').update({ leader_priority:k + 1 }).eq('staff_id', ids[k]);
+    again();
+  };
+  body.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => move(b.dataset.up, -1)));
+  body.querySelectorAll('[data-down]').forEach(b => b.addEventListener('click', () => move(b.dataset.down, 1)));
+  document.getElementById('new-go').addEventListener('click', async () => {
+    const name = document.getElementById('new-name').value.trim(), kind = document.getElementById('new-kind').value, mail = document.getElementById('new-mail').value.trim().toLowerCase() || null;
+    if(!name){ toast('צריך שם'); return; }
+    const maxOrder = Math.max(0, ...st.instructors.map((p, i) => i + 1));
+    const s = await sbPersonal.from('staff').insert({ display_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
+    if(s.error){ toast('ההוספה נכשלה'); return; }
+    const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, leader_priority:kind === 'instructor' ? instr.length + 1 : null });
+    toast(pr.error ? 'האדם נוסף, אבל המייל לא נשמר' : 'נוסף. אפשר ליצור לו התחברות.'); again();
+  });
+  body.querySelectorAll('[data-day-del]').forEach(b => b.addEventListener('click', async () => { await sbPersonal.from('special_days').delete().eq('day', b.dataset.dayDel); srvRenderCoordSettings(body); }));
+  document.getElementById('sd-go').addEventListener('click', async () => {
+    const day = document.getElementById('sd-day').value; if(!day){ toast('בחרו תאריך'); return; }
+    const mn = parseInt(document.getElementById('sd-min').value, 10) || null, mx = parseInt(document.getElementById('sd-max').value, 10) || null;
+    const u = await sbPersonal.from('special_days').upsert({ day, kind:document.getElementById('sd-kind').value, label:document.getElementById('sd-label').value.trim() || null, min_staff:mn, max_staff:mx });
+    toast(u.error ? 'השמירה נכשלה' : 'נשמר'); srvRenderCoordSettings(body);
+  });
+  let via = 'portal';
+  body.querySelectorAll('[data-via]').forEach(b => b.addEventListener('click', () => { via = b.dataset.via; body.querySelectorAll('[data-via]').forEach(x => x.classList.toggle('on', x === b)); }));
+  document.getElementById('an-send').addEventListener('click', async () => {
+    const text = document.getElementById('an-text').value.trim(); if(!text){ toast('כתבו הודעה'); return; }
+    if(!(await confirmSheet({ title:'לשלוח את ההודעה?', text:via === 'portal' ? 'ההודעה תופיע בפורטל של כל הצוות.' : via === 'email' ? 'ההודעה תישלח במייל לכל הצוות.' : 'ההודעה תופיע בפורטל ותישלח במייל לכל הצוות.', okLabel:'כן, לשלוח', cancelLabel:'חזרה' }))) return;
+    const r = await sbPersonal.rpc('post_announcement', { p_text:text, p_via:via });
+    toast(r.error ? 'השליחה נכשלה' : 'ההודעה נשלחה'); srvRenderCoordSettings(body);
+  });
+}

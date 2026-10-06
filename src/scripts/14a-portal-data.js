@@ -4,6 +4,7 @@
 // Everything here is fictional demo data, stored in localStorage, until the server side is approved and connected.
 const PORTAL_ENABLED = '@config(portal)' === 'True';
 const PORTAL_KEY = 'ramzor-portal-demo-v1';
+const PORTAL_EMPTY = { version:2, instructors:[], shiftTypes:[], months:{}, swaps:[], notices:[], announcements:[], timetable:{}, birthdays:{}, outbox:[], assignmentIds:{}, rules:{}, settings:{ theme:'dark' } };
 let portalServerOn = false;                 // true when the portal runs on the real database (#portal, see 14h-portal-server.js): the data is then NOT the demo data
 const DOW_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const DOW_SHORT = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
@@ -115,7 +116,8 @@ function portalDemoPrefs(instructors, mk, seed){
 }
 
 function portalLoad(){
-  if(portalState || portalServerOn) return portalState;
+  if(portalServerOn) return portalState || PORTAL_EMPTY;          // (while the server data is still loading, the screens that run on a timer see an empty portal, not a crash)
+  if(portalState) return portalState;
   try { const raw = localStorage.getItem(PORTAL_KEY); if(raw){ portalState = JSON.parse(raw); } } catch(e){ portalState = null; }
   if(!portalState || portalState.version !== 2){ portalState = portalSeed(); portalSave(); }
   return portalState;

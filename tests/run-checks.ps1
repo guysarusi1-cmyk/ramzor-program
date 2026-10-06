@@ -1,6 +1,8 @@
-﻿# Runs the automatic checks of the whole app in a hidden browser (phone, desktop and TV sizes).
+# Runs the automatic checks of the whole app in a hidden browser (phone, desktop and TV sizes).
 # Exit code 0 = everything passed; anything else = something is broken (details are printed).
-#   .\tests\run-checks.ps1
+#   .\tests\run-checks.ps1            (everything)
+#   .\tests\run-checks.ps1 -Only 'portal people'   (just one step, to find what is wrong faster)
+param([string]$Only = '', [int]$Wait = 420, [string]$Sizes = 'phone,desktop,tv')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $port = 5188
@@ -19,13 +21,14 @@ Start-Sleep -Seconds 2
 $allOk = $true
 try {
   foreach($size in @(@('phone','390,844'), @('desktop','1280,800'), @('tv','1920,1080'))){
+    if(($Sizes -split ',') -notcontains $size[0]){ continue }
     if(Test-Path $resultFile){ [IO.File]::Delete($resultFile) }
     $profile = Join-Path $env:TEMP ('ramzor-check-profile-' + $size[0] + '-' + [Guid]::NewGuid().ToString('N').Substring(0,6))
-    Start-Process $browser -ArgumentList '--headless=new','--disable-gpu','--no-first-run',"--user-data-dir=$profile","--window-size=$($size[1])","http://localhost:$port/?runchecks" | Out-Null
+    Start-Process $browser -ArgumentList '--headless=new','--disable-gpu','--no-first-run',"--user-data-dir=$profile","--window-size=$($size[1])",("http://localhost:$port/?runchecks" + $(if($Only){ '&only=' + [uri]::EscapeDataString($Only) } else { '' })) | Out-Null
     $waited = 0
-    while(-not (Test-Path $resultFile) -and $waited -lt 120){ Start-Sleep -Seconds 1; $waited++ }
+    while(-not (Test-Path $resultFile) -and $waited -lt $Wait){ Start-Sleep -Seconds 1; $waited++ }
     Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like "*$profile*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-    if(-not (Test-Path $resultFile)){ Write-Host "[$($size[0])] no result within 120 s" -ForegroundColor Red; $allOk = $false; continue }
+    if(-not (Test-Path $resultFile)){ Write-Host "[$($size[0])] no result within $Wait s" -ForegroundColor Red; $allOk = $false; continue }
     Start-Sleep -Milliseconds 300
     $res = Get-Content $resultFile -Raw -Encoding UTF8 | ConvertFrom-Json
     $bad = @($res.results | Where-Object { -not $_.ok })

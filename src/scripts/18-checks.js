@@ -7,7 +7,8 @@
   if(!/[?&]runchecks\b/.test(location.search)) return;
   window.__portalNoHome = true;
   const results = [];
-  const check = (name, ok, detail) => results.push({ name, ok: !!ok, detail: ok ? '' : String(detail ?? '') });
+  window.__checkResults = results;                 // (so that a person watching the page can see how far the checks got)
+  const check =(name, ok, detail) => results.push({ name, ok: !!ok, detail: ok ? '' : String(detail ?? '') });
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const $ = id => document.getElementById(id);
   const activeView = () => (document.querySelector('.view.active') || {}).id;
@@ -41,7 +42,9 @@
     managementOpenUntil = Date.now() + 30 * 60 * 1000;
   }  // puts a test child's numbers back (lowering them is the manager's reset path, which instructors are refused by the database)
   async function putState(id, patch){ const s = await getChildStateForUpdate(id); if(!s) return; Object.assign(s, patch); await setChildState(id, s); }
+  const ONLY = (location.search.match(/[?&]only=([^&]+)/) || [])[1];              // ?runchecks&only=portal%20people  runs just that step (after the sign-in)
   async function step(name, fn){
+    if(ONLY && name !== 'sign in' && decodeURIComponent(ONLY) !== name) return;
     try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || (e && e.message ? e.message + ' ' + (e.details || e.hint || '') : JSON.stringify(e)));
       if(typeof portalServerOn !== 'undefined' && portalServerOn){ portalServerOn = false; portalState = null; try { await sbPersonal.auth.signOut(); } catch(e2){} }          // a crashed server step must not leave the demo broken for the steps after it
     }
@@ -1171,7 +1174,7 @@
       // --- a service girl sees only her own place
       if(await asPerson('service')){
         portalUi.persona = srv.me; portalUi.tab = null; showPortal(); await sleep(100);
-        check('portal server: the service account gets its own (not yet built) screen and no instructor tabs', !document.querySelector('[data-ptab="prefs"]') && /בנות שירות/.test(document.getElementById('portal-body').textContent), 'wrong');
+        check('portal server: the service account gets its own tabs (availability, vacation) and no instructor preferences', !document.querySelector('[data-ptab="prefs"]') && !!document.querySelector('[data-ptab="avail"]') && !!document.querySelector('[data-ptab="vacation"]'), [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab).join(','));
       }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
       portalUi.persona = 'c1'; portalUi.tab = null; portalUi.pmonth = portalUi.smonth = null; showHub();
@@ -1204,7 +1207,7 @@
         if(r.error) throw r.error;
         // 1. the instructor publishes her shift
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(150);
-        const btn = document.querySelector('[data-swap-open]');
+        const btn = document.querySelector('[data-said]');
         check('portal swaps: the instructor sees her published shift with a swap button', !!btn, 'no button');
         btn.click(); await answerSheet();
         check('portal swaps: the request is created on the server', await waitFor(() => portalLoad().swaps.some(s => s.status === 'open' && s.from === i1)), 'not created');
@@ -1223,12 +1226,117 @@
         const now = await sbPersonal.from('assignment').select('staff_id').eq('day', day).eq('shift', 'M');
         check('portal swaps: the shift now belongs to the colleague', !now.error && now.data.length === 1 && now.data[0].staff_id === i2, JSON.stringify(now.data));
         // 4. both people got a notice
-        await sign('instructor'); showPortal('inbox'); await sleep(150);
-        check('portal swaps: the person who asked got a notice about the approval', /אושרה/.test(document.getElementById('portal-body').textContent), document.getElementById('portal-body').textContent.slice(0, 120));
+        await sign('instructor'); showPortal('inbox'); await sleep(500);
+        check('portal swaps: the person who asked got a notice about the change', /הוסרה/.test(document.getElementById('portal-body').textContent), document.getElementById('portal-body').textContent.slice(0, 120));
       } finally {
         await sign('coordinator');
         await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
         await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
+        portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = null; portalUi.fold = { mine:false, team:false, swap:false }; showHub();
+      }
+    });
+
+    // ---- the coordinator's schedule screen, long vacations, "I cannot come", the service girls' availability, announcements, special days
+    await step('portal people', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local';
+      const sign = async kind => {
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
+        const { error } = await sbPersonal.auth.signInWithPassword({ email:M(kind), password:PW });
+        if(error) return false;
+        portalServerOn = true; if(!(await srvLoad())) return false;
+        portalUi.persona = srv.me; return true;
+      };
+      const waitFor = async (fn, n = 20) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
+      const maybeSheet = async () => { for(let i = 0; i < 8; i++){ const s = document.querySelector('.confirm-sheet'); if(s){ s.querySelector('.confirm-ok').click(); await sleep(80); return true; } await sleep(100); } return false; };
+      if(!(await sign('instructor'))){ check('portal people: the instructor test account signs in', false, 'no'); portalServerOn = false; return; }
+      const i1 = srv.me;
+      if(!(await sign('instructor2'))){ check('(info) portal people: skipped — the second instructor test account is missing', true, ''); portalServerOn = false; return; }
+      const i2 = srv.me;
+      if(!(await sign('coordinator'))){ check('portal people: the coordinator test account signs in', false, 'no'); portalServerOn = false; return; }
+      const today = israelNow().date, day = addDays(today, 1), mkT = monthKeyOf(day), next = addMonths(monthKeyOf(today), 1);
+      const had = await sbPersonal.from('schedule').select('month').eq('month', firstOf(mkT));
+      if(had.error || had.data.length){ check('(info) portal people: skipped — a schedule for that month already exists on the test server, which the checks never touch', true, ''); portalServerOn = false; return; }
+      const created = { announcements:false, vac:null, day:null };
+      try {
+        // ---- the coordinator: a schedule that was sent to her
+        let r = await sbPersonal.from('schedule').insert({ month:firstOf(mkT), status:'sent', sent_to_coordinator:new Date().toISOString() });
+        if(r.error) throw r.error;
+        r = await sbPersonal.from('assignment').insert([{ month:firstOf(mkT), staff_id:i1, day, shift:'A', from_time:'14:00', to_time:'22:00' }, { month:firstOf(mkT), staff_id:i2, day, shift:'N', from_time:'22:00', to_time:'08:00' }]);
+        if(r.error) throw r.error;
+        r = await sbPersonal.from('coordinator_flags').insert({ month:firstOf(mkT), day, kind:'extension', text:'בדיקה אוטומטית', resolved:false });
+        if(r.error) throw r.error;
+        await srvReload(); portalUi.month = mkT; portalUi.tab = 'schedule'; showPortal('schedule'); await sleep(200);
+        const txt = () => document.getElementById('portal-body').textContent;
+        check('portal people: the coordinator sees the schedule that was sent to her, and its status', /נשלח אלייך/.test(txt()) && !!document.querySelector('#cs-publish') && !document.querySelector('#cs-publish').disabled, txt().slice(0, 80));
+        check('portal people: the board shows the two people, and there is no automatic build button', document.querySelectorAll('.pboard .pchip').length >= 2 && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.pboard .pchip').length + ' / ' + JSON.stringify(portalMonth(mkT).assignments) + ' / rows ' + portalLoad().rows.length + ' / ' + (document.querySelector('.pboard') ? document.querySelector('.pboard').outerHTML.slice(0, 500) : 'no board'));
+        check('portal people: what needs her attention is listed', /בדיקה אוטומטית/.test(txt()), txt().slice(0, 120));
+        document.querySelector('[data-flag-done]').click();
+        check('portal people: marking an item as handled is saved', await waitFor(async () => { const f = await sbPersonal.from('coordinator_flags').select('resolved').eq('text', 'בדיקה אוטומטית'); return f.data && f.data.length && f.data[0].resolved === true; }), 'not saved');
+        // edit a shift: add the second instructor to the morning, then remove her
+        document.querySelector(`td.editable[data-key="${day}|m"]`).click(); await sleep(150);
+        const who = document.querySelector('#add-who'); who.value = i2; who.dispatchEvent(new Event('change')); document.querySelector('#add-go').click(); await maybeSheet();
+        check('portal people: the coordinator adds a person to a shift and it is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return a.data && a.data.length === 1; }), 'not added');
+        await sleep(300);
+        const rm = document.querySelector('[data-rm]'); check('portal people: the shift shows the person with a remove button', !!rm, 'no button');
+        if(rm){ rm.click(); await maybeSheet(); }
+        check('portal people: removing the person is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M'); return a.data && a.data.length === 0; }), 'not removed');
+        document.querySelector('#slot-body [data-close]').click();
+        // the night with one person only warns (needs exactly two, one woman)
+        check('portal people: a shift that breaks the rules shows a warning in the editor', srvShiftWarnings(day, 'N', portalLoad().rows).length > 0, 'no warning');
+        // publish: from then on every change tells the people
+        await srvReload(); showPortal('schedule'); await sleep(150);
+        document.querySelector('#cs-publish').click(); await answerSheet();
+        check('portal people: publishing makes the schedule published on the server', await waitFor(async () => { const s = await sbPersonal.from('schedule').select('status').eq('month', firstOf(mkT)); return s.data && s.data[0] && s.data[0].status === 'published'; }), 'not published');
+        // ---- an instructor reports "I cannot come" (the shift opens at once)
+        await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(200);
+        const cant = document.querySelector('[data-cant]'); check('portal people: the instructor sees "cannot come" next to her shift', !!cant, 'no button');
+        if(cant){ cant.click(); await answerSheet(); }
+        check('portal people: the report opens an urgent swap request at once', await waitFor(() => portalLoad().swaps.some(s => s.urgent && s.status === 'open' && s.from === i1)), 'not opened');
+        // ---- the long vacation: asked by the instructor, approved by the coordinator, entered as absence
+        showPortal('vacation'); await sleep(500);
+        const vf = addDays(today, 45), vt = addDays(today, 47);
+        document.querySelector('#vac-from').value = vf; document.querySelector('#vac-from').dispatchEvent(new Event('change')); document.querySelector('#vac-to').value = vt; document.querySelector('#vac-to').dispatchEvent(new Event('change'));
+        document.querySelector('#vac-send').click(); await answerSheet();
+        check('portal people: the vacation request is sent', await waitFor(async () => { const v = await sbPersonal.from('vacation_requests').select('id').eq('from_day', vf); return v.data && v.data.length === 1; }), 'not sent');
+        await sign('coordinator'); showPortal('vacations'); await sleep(200);
+        check('portal people: the coordinator sees the request waiting', !!document.querySelector('[data-vac-ok]'), 'nothing waiting');
+        document.querySelector('[data-vac-ok]').click();
+        check('portal people: approving the vacation enters the days as absence', await waitFor(async () => { const a = await sbPersonal.from('prefs_absence').select('day').eq('staff_id', i1).eq('reason', 'vacation').gte('day', vf).lte('day', vt); return a.data && a.data.length === 3; }), 'no absence');
+        // ---- an announcement from the coordinator, read by the instructor
+        showPortal('settings'); await sleep(800);
+        const det = document.querySelector('details[data-sfold="ann"]'); det.open = true;
+        document.querySelector('#an-text').value = 'הודעת בדיקה אוטומטית'; document.querySelector('#an-send').click(); await answerSheet(); created.announcements = true;
+        check('portal people: the announcement is sent', await waitFor(async () => { const a = await sbPersonal.from('announcements').select('id').eq('text', 'הודעת בדיקה אוטומטית'); return a.data && a.data.length === 1; }), 'not sent');
+        // ---- a special day
+        await sleep(600); const sd = addDays(today, 20);
+        document.querySelector('#sd-day').value = sd; document.querySelector('#sd-label').value = 'בדיקה'; document.querySelector('#sd-go').click();
+        check('portal people: a special day can be added', await waitFor(async () => { const d = await sbPersonal.from('special_days').select('day').eq('day', sd); return d.data && d.data.length === 1; }), 'not added'); created.day = sd;
+        check('portal people: the settings list the staff with their e-mail fields and the priority arrows', document.querySelectorAll('[data-mail]').length >= 20 && document.querySelectorAll('[data-up]').length >= 15, document.querySelectorAll('[data-mail]').length);
+        await sign('instructor2'); showPortal('inbox'); await sleep(700);
+        check('portal people: the other instructor reads the announcement in her messages', /הודעת בדיקה אוטומטית/.test(document.getElementById('portal-body').textContent), document.getElementById('portal-body').textContent.slice(0, 100));
+        // ---- the service girl: availability for every day, then submit
+        if(srvPrefsOpen(next) && await sign('service')){
+          portalUi.pmonth = next; showPortal('avail'); await sleep(700);
+          const opts = [...document.querySelectorAll('[data-svc$="|both"]')];
+          check('portal people: the service girl is asked about every Sunday-Thursday of the open month', opts.length >= 18 && opts.length <= 23, opts.length);
+          for(let k = 0; k < opts.length; k++){ const b = document.querySelector(`[data-svc="${opts[k].dataset.svc}"]`); if(b) b.click(); await sleep(450); }
+          const left = document.body.textContent.match(/נשארו (\d+) ימים/);
+          check('portal people: after choosing every day nothing is left to choose', !left, left && left[0]);
+          const sub = document.querySelector('#svc-submit'); if(sub) sub.click();
+          check('portal people: the availability is submitted', await waitFor(async () => { const s = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return s.data && s.data.length === 1 && Date.now() - new Date(s.data[0].submitted_at).getTime() < 60000; }), 'not submitted');
+          await sbPersonal.from('prefs_service').delete().eq('staff_id', srv.me).gte('day', firstOf(next));
+        }
+      } finally {
+        await sign('coordinator');
+        await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
+        await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
+        await sbPersonal.from('coordinator_flags').delete().eq('text', 'בדיקה אוטומטית');
+        await sbPersonal.from('prefs_absence').delete().eq('staff_id', i1).eq('reason', 'vacation');
+        await sbPersonal.from('vacation_requests').delete().eq('staff_id', i1);
+        if(created.announcements) await sbPersonal.from('announcements').delete().eq('text', 'הודעת בדיקה אוטומטית');
+        if(created.day) await sbPersonal.from('special_days').delete().eq('day', created.day);
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
         portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = null; portalUi.fold = { mine:false, team:false, swap:false }; showHub();
       }
