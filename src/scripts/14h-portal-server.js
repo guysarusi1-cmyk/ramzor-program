@@ -12,7 +12,7 @@ const SRV_SHIFTS = [
   { id:'e', label:'אחר הצהריים', start:'14:00', end:'22:00', need:1, needWeekend:1, night:false },
   { id:'n', label:'לילה', start:'22:00', end:'08:00', need:1, needWeekend:1, night:true }
 ];
-const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false };
+const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false, photos:null };
 const firstOf = mk => mk + '-01';
 
 // ---- Israel time (the database closes the preferences by Israel time, so the screen does too)
@@ -55,7 +55,7 @@ async function srvLoad(){
     srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday').gte('month', from).lte('month', to))
   ]);
   const st = {
-    version:2, serverMode:true, instructors:staff.map((s, i) => ({ id:s.id, first:s.display_name, last:'', role:s.kind, active:s.active, photo:samplePhoto(i + 1) })),
+    version:2, serverMode:true, instructors:staff.map((s, i) => ({ id:s.id, first:s.display_name, last:'', role:s.kind, active:s.active, photo:(srv.photos && srv.photos[s.id]) || letterPhoto(s.display_name, i) })),
     shiftTypes:JSON.parse(JSON.stringify(SRV_SHIFTS)), rules:Object.assign({}, RULES_DEFAULT), months:{}, swaps:[], assignmentIds:{}, announcements:[], timetable:{}, birthdays:{}, outbox:[],
     notices:notices.map(n => ({ id:n.id, to:meId, at:n.created_at, text:n.text, kind:n.kind, seen:n.seen, fromServer:true })),
     settings:{ theme:(function(){ try { return localStorage.getItem('ramzor-portal-theme') || 'dark'; } catch(e){ return 'dark'; } })() }
@@ -85,7 +85,24 @@ async function srvLoad(){
   srv.saved = {};
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
   if(srv.meRow && srv.meRow.role === 'coordinator') await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)
+  if(srv.photos === null) srvLoadPhotos();                                          // (the photos are heavy, so they come once, in the background)
   return true;
+}
+// a person without a photo: a round coloured letter
+function letterPhoto(name, seed){
+  const hue = ((seed || 0) * 47 + 200) % 360, ch = String(name || '?').trim().charAt(0);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='hsl(${hue},45%,42%)'/><text x='50' y='66' font-size='52' font-family='Arial,sans-serif' font-weight='700' fill='white' text-anchor='middle'>${ch}</text></svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+async function srvLoadPhotos(){
+  srv.photos = {};
+  try {
+    const rows = await srvAll(() => sbPersonal.from('staff').select('id,photo_url').not('photo_url', 'is', null));
+    rows.forEach(r => { srv.photos[r.id] = r.photo_url; });
+  } catch(e){ srv.photos = null; return; }
+  portalLoad().instructors.forEach(p => { if(srv.photos[p.id]) p.photo = srv.photos[p.id]; });
+  const v = document.getElementById('view-portal');
+  if(v && v.classList.contains('active') && !document.querySelector('.psheet')){ try { portalRefresh(); } catch(e){} }
 }
 // one row of the schedule -> the list of rows (for "my shifts") and the team board (instructors only; short / long / custom-hours shifts carry a note)
 const SRV_STD = { M:['07:00', '15:00'], A:['14:00', '22:00'], N:['22:00', '08:00'], S:['07:00', '11:00'] };
@@ -189,6 +206,7 @@ function srvRenderTab(me, body, t){
 async function srvRenderInbox(body){
   const st = portalLoad();
   const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
+  if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
   body.innerHTML = `<h2 class="psec">עדכונים אישיים</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}
     <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות.</div>'}`;
   st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)

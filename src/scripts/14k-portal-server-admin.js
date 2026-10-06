@@ -14,6 +14,7 @@ function dayRanges(days){
 
 // ---------------------------------------------------------------- who submitted, the notes, who is away
 function srvRenderSubmissions(body){
+  if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad();
   if(!portalUi.smonth) portalUi.smonth = addMonths(monthKeyOf(srvToday()), 1);
   const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role !== 'coordinator');
@@ -57,6 +58,7 @@ function srvAbsenceSheet(body){
 
 // ---------------------------------------------------------------- swaps (the coordinator decides; an urgent one is marked)
 function srvRenderCoordSwaps(body){
+  if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad();
   const agreed = st.swaps.filter(s => s.status === 'offered'), waiting = st.swaps.filter(s => s.status === 'open');
   body.innerHTML = `
@@ -78,6 +80,7 @@ function srvRenderCoordSwaps(body){
 
 // ---------------------------------------------------------------- long vacation requests
 function srvRenderCoordVacations(body){
+  if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad(), list = st.vacations || [], pending = list.filter(v => v.status === 'pending'), rest = list.filter(v => v.status !== 'pending').slice(0, 15);
   const clashOf = v => st.rows.filter(r => r.staff === v.staff_id && r.day >= v.from_day && r.day <= v.to_day).length;
   const line = v => `<b>${pEsc(nameOf(v.staff_id))}</b> · ${shortDate(v.from_day)}–${shortDate(v.to_day)} (${Math.round((parseIso(v.to_day) - parseIso(v.from_day)) / 86400000) + 1} ימים)${v.note ? `<br><small>${pEsc(v.note)}</small>` : ''}`;
@@ -102,6 +105,7 @@ async function srvRenderCoordSettings(body){
     sbPersonal.from('announcements').select('created_at,text,via').order('created_at', { ascending:false }).limit(8),
     sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(40)
   ]);
+  if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
   const staff = st.instructors.filter(p => p.active || true), priv = st.priv || {};
   const instr = staff.filter(p => p.role === 'instructor').sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
   const fold = (id, title, inner) => `<details class="pfold" data-sfold="${id}"${portalUi.setFold[id] ? ' open' : ''}><summary><span>${title}</span></summary><div class="pfold-body">${inner}</div></details>`;
@@ -109,12 +113,12 @@ async function srvRenderCoordSettings(body){
   body.innerHTML = `
     ${fold('staff', 'הצוות, מיילים וסדר עדיפות', `
       <div class="pnote">כאן מזינים כתובת מייל לכל אחד ויוצרים לו התחברות. סדר המדריכים הוא סדר העדיפות בחלוקת המשמרות מעבר למינימום (למעלה = עדיפות גבוהה). המדריכים לא רואים אותו.</div>
-      ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
+      ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
-      ${staff.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><span class="pstaff-name">${pEsc(p.first)} <small>${KIND_WORD[p.role]}</small></span>
+      ${staff.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${KIND_WORD[p.role]}</small></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
@@ -140,7 +144,17 @@ async function srvRenderCoordSettings(body){
     const u = await sbPersonal.from('staff_private').update({ email:mail }).eq('staff_id', inp.dataset.mail);
     toast(u.error ? 'המייל לא נשמר (אולי הוא כבר בשימוש)' : 'המייל נשמר'); if(!u.error) (st.priv[inp.dataset.mail] = st.priv[inp.dataset.mail] || {}).email = mail;
   }));
-  body.querySelectorAll('[data-login]').forEach(b => b.addEventListener('click', async () => {
+  body.querySelectorAll('[data-photo]').forEach(inp => inp.addEventListener('change', async () => {
+    const file = inp.files && inp.files[0]; if(!file) return;
+    try {
+      const uri = await resizePhoto(file, 200);
+      const u = await sbPersonal.from('staff').update({ photo_url:uri }).eq('id', inp.dataset.photo);
+      if(u.error) throw u.error;
+      if(srv.photos) srv.photos[inp.dataset.photo] = uri; const pp = portalPerson(inp.dataset.photo); if(pp) pp.photo = uri;
+      toast('התמונה נשמרה');
+    } catch(e){ toast('התמונה לא נשמרה'); }
+    srvRenderCoordSettings(body);
+  }));  body.querySelectorAll('[data-login]').forEach(b => b.addEventListener('click', async () => {
     const mail = (st.priv[b.dataset.login] || {}).email; if(!mail){ toast('קודם מזינים כתובת מייל'); return; }
     b.disabled = true; const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:b.dataset.login } });
     toast(r.error || (r.data && r.data.error) ? 'יצירת ההתחברות נכשלה' : 'ההתחברות נוצרה. אפשר להיכנס עם קוד שנשלח למייל.'); again();
@@ -176,5 +190,19 @@ async function srvRenderCoordSettings(body){
     if(!(await confirmSheet({ title:'לשלוח את ההודעה?', text:via === 'portal' ? 'ההודעה תופיע בפורטל של כל הצוות.' : via === 'email' ? 'ההודעה תישלח במייל לכל הצוות.' : 'ההודעה תופיע בפורטל ותישלח במייל לכל הצוות.', okLabel:'כן, לשלוח', cancelLabel:'חזרה' }))) return;
     const r = await sbPersonal.rpc('post_announcement', { p_text:text, p_via:via });
     toast(r.error ? 'השליחה נכשלה' : 'ההודעה נשלחה'); srvRenderCoordSettings(body);
+  });
+}
+
+// a photo from the phone or computer -> a small square JPEG (centre cut), so that it stays light for everybody
+function resizePhoto(file, size){
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(img.width, img.height), c = document.createElement('canvas'); c.width = c.height = size;
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('not an image')); };
+    img.src = url;
   });
 }

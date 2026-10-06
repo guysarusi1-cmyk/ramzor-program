@@ -1259,6 +1259,7 @@
       const had = await sbPersonal.from('schedule').select('month').eq('month', firstOf(mkT));
       if(had.error || had.data.length){ check('(info) portal people: skipped — a schedule for that month already exists on the test server, which the checks never touch', true, ''); portalServerOn = false; return; }
       const created = { announcements:false, vac:null, day:null };
+      await sbPersonal.from('announcements').delete().eq('text', 'הודעת בדיקה אוטומטית'); await sbPersonal.from('vacation_requests').delete().eq('staff_id', i1); await sbPersonal.from('prefs_absence').delete().eq('staff_id', i1).eq('reason', 'vacation'); await sbPersonal.from('coordinator_flags').delete().eq('text', 'בדיקה אוטומטית');          // (leftovers of an earlier interrupted run)
       try {
         // ---- the coordinator: a schedule that was sent to her
         let r = await sbPersonal.from('schedule').insert({ month:firstOf(mkT), status:'sent', sent_to_coordinator:new Date().toISOString() });
@@ -1278,7 +1279,7 @@
         document.querySelector(`td.editable[data-key="${day}|m"]`).click(); await sleep(150);
         const who = document.querySelector('#add-who'); who.value = i2; who.dispatchEvent(new Event('change')); document.querySelector('#add-go').click(); await maybeSheet();
         check('portal people: the coordinator adds a person to a shift and it is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return a.data && a.data.length === 1; }), 'not added');
-        await sleep(300);
+        await waitFor(async () => !!document.querySelector('[data-rm]'), 60);
         const rm = document.querySelector('[data-rm]'); check('portal people: the shift shows the person with a remove button', !!rm, 'no button');
         if(rm){ rm.click(); await maybeSheet(); }
         check('portal people: removing the person is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M'); return a.data && a.data.length === 0; }), 'not removed');

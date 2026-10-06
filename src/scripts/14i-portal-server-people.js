@@ -13,6 +13,7 @@ function srvRowLine(r){
 
 // the schedule tab (everybody): my shifts, and the whole team's board
 function srvRenderSchedule(body){
+  if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad(), mk = portalUi.month || (portalUi.month = monthKeyOf(srvToday())), m = portalMonth(mk), ctx = portalCtx(mk);
   const today = srvToday(), isInstr = me.role === 'instructor';
   const mine = st.rows.filter(r => r.staff === me.id && monthKeyOf(r.day) === mk).sort((a, b) => (a.day + (a.from || '')).localeCompare(b.day + (b.from || '')));
@@ -58,6 +59,7 @@ function srvRenderSchedule(body){
 async function srvRenderVacation(body){
   body.innerHTML = '<div class="pnote">טוען...</div>';
   const r = await sbPersonal.from('vacation_requests').select('id,from_day,to_day,note,status,created_at').eq('staff_id', srv.me).order('created_at', { ascending:false });
+  if(!body.isConnected) return;
   const list = r.data || [], today = srvToday();
   body.innerHTML = `
     <h2 class="psec">בקשת חופשה</h2>
@@ -101,6 +103,7 @@ async function srvRenderAvailability(body){
   body.innerHTML = '<div class="pnote">טוען...</div>';
   const days = daysOfMonth(mk).filter(d => dowOf(d) <= 4);
   const r = await sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srv.me).gte('day', days[0]).lte('day', days[days.length - 1]);
+  if(!body.isConnected) return;
   const have = {}; (r.data || []).forEach(x => { have[x.day] = x.opt; });
   const fixed = srvPrefsOf(m, srv.me).fixed.map(f => f.day);
   const submitted = !!m.submitted[srv.me], left = days.filter(d => !have[d] && !fixed.includes(d)).length;
@@ -129,6 +132,7 @@ async function srvRenderAvailability(body){
 async function srvRenderTeacherHours(body){
   const mk = portalUi.pmonth || (portalUi.pmonth = addMonths(monthKeyOf(srvToday()), 1)), m = portalMonth(mk), locked = !srvPrefsOpen(mk);
   const fx = await sbPersonal.rpc('my_fixed_hours');
+  if(!body.isConnected) return;
   const spans = fx.data || {}, submitted = !!m.submitted[srv.me];
   body.innerHTML = `
     ${monthNavHtml(mk)}

@@ -78,6 +78,7 @@ const SRV_LONG = { id:'l', label:'סופ"ש ארוך', letter:'ס' };           
 const prefShiftsFor = date => portalServerOn && dowOf(date) === 5 ? portalLoad().shiftTypes.concat([SRV_LONG]) : portalLoad().shiftTypes;
 const FIXED_REASON = { vacation:'חופשה', sick:'מחלה', reserve:'מילואים', leave:'חופשה מיוחדת', other:'היעדרות', self:'היעדרות' };
 function renderInstructorPrefs(body){
+  if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad();
   if(!portalUi.pmonth) portalUi.pmonth = addMonths(monthKeyOf(isoDate(new Date())), 1);
   const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalServerOn ? srvPrefsOf(m, me.id) : portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
@@ -185,6 +186,7 @@ function canTakeShift(pid, key){
   return portalServerOn || levelOf(ctx.prefs, pid, slot) !== 'no';          // (on the real system any instructor may offer to take a shift)
 }
 function renderInstructorSwaps(body){
+  if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad();
   const name = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
   const approvalsForMe = [];

@@ -212,3 +212,5 @@
   .pstaff-add input, .pstaff-add select{ flex:1 1 120px; }
   .pstaff-order{ display:flex; gap:4px; }
   .pcell small, .pchip small{ opacity:.8; font-size:.8em; }
+  .pstaff-photo{ flex:0 0 40px; cursor:pointer; }
+  .pstaff-photo img{ width:40px; height:40px; border-radius:50%; object-fit:cover; display:block; border:1px solid var(--p-line); }
