@@ -7,7 +7,7 @@ function issueText(i, ctx){
   switch(i.type){
     case 'unfilled': return `חסר/ים ${i.missing} מדריכים: ${where}`;
     case 'over': return `יותר מדי מדריכים (${i.extra} עודף): ${where}`;
-    case 'no': return `${who} סימן/ה "ממש לא": ${where}`;
+    case 'no': return `${who} סימן/ה "לא": ${where}`;
     case 'sameday': return `${who} משובץ/ת לשתי משמרות באותו יום: ${where}`;
     case 'rest': return `${who}: מנוחה קצרה מדי לפני ${where}`;
     case 'consec': return `${who}: יותר מדי ימים ברצף (${i.run}) ליד ${where}`;
@@ -39,12 +39,12 @@ function renderCoordSchedule(body){
       <span class="pchip lv-yes">בלי הסתייגות (כן) ${stats.all.yes} (${pct(stats.all.yes)}%)</span>
       <span class="pchip lv-neutral">מדריך שלא פתח העדפות ${stats.all.neutral}</span>
       <span class="pchip lv-avoid">העדיפו שלא ${stats.all.avoid}</span>
-      <span class="pchip lv-no">ממש לא ${stats.all.no}</span>
+      <span class="pchip lv-no">לא ${stats.all.no}</span>
       ${stats.missing ? `<span class="pchip missing">חסרים ${stats.missing}</span>` : ''}
       ${pendingCount ? `<span class="pchip pending">ממתינים לאישור מדריך ${pendingCount}</span>` : ''}
     </div>` : '<div class="pnote">עוד אין סידור לחודש הזה. אפשר ללחוץ "שבץ אוטומטית", או לבנות ידנית בלחיצה על משמרות בטבלה.</div>'}
     ${issues.filter(i => i.type !== 'no').length ? `<details class="pissues"><summary>${issues.filter(i => i.type !== 'no').length} דברים שדורשים תשומת לב</summary>${issues.filter(i => i.type !== 'no').slice(0, 40).map(i => `<div>• ${pEsc(issueText(i, ctx))}</div>`).join('')}</details>` : ''}
-    <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. הצבעים: ירוק = בלי הסתייגות, צהוב = העדיף/ה שלא, אדום = ממש לא או חסר.</div>
+    <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. הצבעים: ירוק = בלי הסתייגות, צהוב = יכול/ה, אדום = לא או חסר.</div>
     ${boardHtml(ctx, m.assignments, { colour:true, edit:true })}`;
   wireMonthNav(body);
   body.querySelectorAll('td.editable').forEach(td => {
@@ -86,7 +86,7 @@ function openSlotEditor(mk, key){
   const chosen = new Set(m.assignments[key] || []);
   const sh = portalSheet(`<h2>${slotLabel(key)}</h2><div class="pnote">נדרשים ${slot.need} מדריכים. לצד כל שם: מה הוא/היא סימנ/ה.</div><div id="slot-warn" class="pwarn" aria-live="polite"></div><div class="pedit-list" id="slot-list"></div>
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="slot-save">שמירה</button></div>`);
-  const levelWord = { yes:'כן', neutral:'—', avoid:'מעדיף/ה שלא', no:'ממש לא' };
+  const levelWord = { yes:'כן', neutral:'—', avoid:'יכול', no:'לא' };
   const draw = () => {
     sh.querySelector('#slot-list').innerHTML = people.map(p => { const lv = levelOf(ctx.prefs, p.id, slot); return `<label class="pedit-row lv-${lv}"><input type="checkbox" data-pid="${p.id}"${chosen.has(p.id) ? ' checked' : ''}><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><em>${levelWord[lv]}</em></label>`; }).join('');
     sh.querySelectorAll('[data-pid]').forEach(c => c.addEventListener('change', () => { if(c.checked) chosen.add(c.dataset.pid); else chosen.delete(c.dataset.pid); warn(); }));
@@ -104,7 +104,7 @@ function openSlotEditor(mk, key){
       const ak = key + '|' + pid;
       if(!before.has(pid) && levelOf(ctx.prefs, pid, slot) === 'no'){
         m.approvals[ak] = 'pending';
-        queueEmail(pid, 'נדרש אישורך לשיבוץ', `הרכזת שיבצה אותך ל${slotLabel(key)}, למרות שסימנת "ממש לא". נא לאשר או לדחות בפורטל.`);
+        queueEmail(pid, 'נדרש אישורך לשיבוץ', `הרכזת שיבצה אותך ל${slotLabel(key)}, למרות שסימנת "לא". נא לאשר או לדחות בפורטל.`);
       }
     });
     before.forEach(pid => { if(!chosen.has(pid)) delete m.approvals[key + '|' + pid]; });
@@ -124,7 +124,7 @@ function renderCoordSubmissions(body){
     <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
     <button type="button" class="btn${missing.length ? '' : ' ghost'}" id="sub-remind"${missing.length ? '' : ' disabled'}>שליחת תזכורת למי שלא הגיש</button>
     <div class="psubs">${people.map(p => { const pr = m.prefs[p.id] || { slots:{}, absent:[] }, c = { avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { if(c[v] !== undefined) c[v]++; });
-      return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>מעדיף שלא ${c.avoid} · ממש לא ${c.no} · היעדרות ${pr.absent.length}</small></div>`; }).join('')}</div>`;
+      return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>יכול ${c.avoid} · לא ${c.no} · היעדרות ${pr.absent.length}</small></div>`; }).join('')}</div>`;
   wireMonthNav(body.closest ? body : body, 'smonth');
   document.getElementById('sub-deadline').addEventListener('change', e => { m.deadline = e.target.value; portalSave(); });
   document.getElementById('sub-remind').addEventListener('click', () => {
@@ -144,7 +144,7 @@ function renderCoordSwaps(body){
     ${agreed.length ? agreed.map(s => `<div class="preq"><div><b>${pEsc(name(s.from))}</b> מבקש/ת החלפה, <b>${pEsc(name(s.to))}</b> מוכן/ה להחליף<br>${slotLabel(s.key)}</div><div class="preq-actions"><button type="button" class="btn" data-approve="${s.id}">אישור</button><button type="button" class="btn ghost" data-reject="${s.id}">דחייה</button></div></div>`).join('') : '<div class="pnote">אין החלפות שממתינות לאישור.</div>'}
     <h2 class="psec">בקשות פתוחות (עדיין אין מחליף/ה)</h2>
     ${waiting.length ? waiting.map(s => `<div class="pmine-row"><span>${pEsc(name(s.from))} · ${slotLabel(s.key)}</span><em class="pst pst-open">${SWAP_STATUS.open}</em></div>`).join('') : '<div class="pnote">אין.</div>'}
-    <h2 class="psec">שיבוצים שממתינים לאישור מדריך ("ממש לא")</h2>
+    <h2 class="psec">שיבוצים שממתינים לאישור מדריך ("לא")</h2>
     ${pending.length ? pending.map(p => `<div class="pmine-row"><span>${pEsc(name(p.iid))} · ${slotLabel(p.key)}</span><em class="pst pst-asked">ממתין למדריך</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
   body.querySelectorAll('[data-approve], [data-reject]').forEach(b => b.addEventListener('click', () => {
     const sw = st.swaps.find(x => x.id === (b.dataset.approve || b.dataset.reject));

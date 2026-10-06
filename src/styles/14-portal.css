@@ -170,3 +170,11 @@
     .print-table b{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .print-table .lv-yes{ color:#2E7D32; background:none; } .print-table .lv-neutral{ color:#1F2937; } .print-table .lv-avoid{ color:#B26A00; background:none; } .print-table .lv-no{ color:#C62828; background:none; }
   }
+
+  /* the personal sign-in and greeting of the connected portal */
+  .plogin{ max-width:380px; margin:0 auto; padding-top:46px; text-align:center; }
+  .plogin .card{ text-align:right; }
+  .plogin input{ width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:12px; color:var(--text); font-size:16px; font-family:inherit; margin:6px 0 12px; }
+  .plogin .btn{ width:100%; margin-bottom:10px; }
+  .plogin-error{ color:var(--red); font-size:13px; min-height:18px; }
+  .portal-hello{ font-weight:700; margin:2px 0 10px; }

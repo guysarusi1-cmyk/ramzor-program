@@ -4,6 +4,7 @@
 // Everything here is fictional demo data, stored in localStorage, until the server side is approved and connected.
 const PORTAL_ENABLED = '@config(portal)' === 'True';
 const PORTAL_KEY = 'ramzor-portal-demo-v1';
+let portalServerOn = false;                 // true when the portal runs on the real database (#portal, see 14h-portal-server.js): the data is then NOT the demo data
 const DOW_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const DOW_SHORT = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
@@ -24,7 +25,7 @@ function dayLabel(s){ const d = parseIso(s); return `${DOW_NAMES[d.getDay()]} ${
 function weekStartOf(s){ return addDays(s, -dowOf(s)); }
 
 // ---- the three levels a preference can have (anything else = neutral)
-const LEVELS = { yes:'כן', avoid:'מעדיף שלא', no:'ממש לא' };
+const LEVELS = { yes:'כן', avoid:'יכול', no:'לא' };
 
 const SHIFT_TYPES_DEFAULT = [
   { id:'m', label:'בוקר', start:'07:00', end:'15:00', need:2, needWeekend:2, night:false },
@@ -59,7 +60,7 @@ function portalDemoInstructors(){
 // the name shown on the TV and in the schedule: first name only, plus the last initial only when two people share a first name
 function instrName(p, all){
   const same = (all || portalState.instructors).filter(q => q.active && q.id !== p.id && q.first === p.first);
-  return same.length ? `${p.first} ${p.last.charAt(0)}'` : p.first;
+  return same.length && p.last ? `${p.first} ${p.last.charAt(0)}'` : p.first;
 }
 
 // ---- the weekly pattern of the children's day (the TV timetable) — a monthly plan = a weekly pattern + exceptions
@@ -114,12 +115,12 @@ function portalDemoPrefs(instructors, mk, seed){
 }
 
 function portalLoad(){
-  if(portalState) return portalState;
+  if(portalState || portalServerOn) return portalState;
   try { const raw = localStorage.getItem(PORTAL_KEY); if(raw){ portalState = JSON.parse(raw); } } catch(e){ portalState = null; }
   if(!portalState || portalState.version !== 2){ portalState = portalSeed(); portalSave(); }
   return portalState;
 }
-function portalSave(){ try { localStorage.setItem(PORTAL_KEY, JSON.stringify(portalState)); } catch(e){} }
+function portalSave(){ if(portalServerOn){ srvQueueSave(); return; } try { localStorage.setItem(PORTAL_KEY, JSON.stringify(portalState)); } catch(e){} }
 function portalReset(){ portalState = null; try { localStorage.removeItem(PORTAL_KEY); } catch(e){} return portalLoad(); }
 // keep only the last three months of schedules and preferences (the agreed retention)
 function portalPrune(){

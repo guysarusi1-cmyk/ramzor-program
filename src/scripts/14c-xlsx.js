@@ -1,7 +1,7 @@
 
 // ---------- EXPORT: Excel file (a real .xlsx, built here with no library) and print / PDF ----------
 // The schedule is written with rows = days and columns = shifts; every name is coloured by how well the wish was kept
-// (green = got what they wanted, orange = would rather not, red = "ממש לא" or a missing person, dark = no preference).
+// (green = got what they wanted, orange = would rather not, red = "לא" or a missing person, dark = no preference).
 const XLSX_COLORS = { yes:'FF2E7D32', neutral:'FF1F2937', avoid:'FFB26A00', no:'FFC62828' };
 
 const CRC_TABLE = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -86,7 +86,7 @@ function buildScheduleXlsx(ctx, assignments){
     if(c.missing){ if(runs.length) runs.push({ text:'\n' }); runs.push({ text:`חסר/ים ${c.missing}`, color:XLSX_COLORS.no, bold:true }); }
     return runs.length ? { runs, s:2 } : { text:'', s:2 };
   })]));
-  rows.push([{ text:'מקרא', s:3 }, { runs:[{ text:'ירוק = קיבל/ה מה שרצה  ', color:XLSX_COLORS.yes, bold:true }, { text:'כתום = העדיף/ה שלא  ', color:XLSX_COLORS.avoid, bold:true }, { text:'אדום = ממש לא / חסר  ', color:XLSX_COLORS.no, bold:true }, { text:'כהה = בלי העדפה', color:XLSX_COLORS.neutral, bold:true }], s:0 }]);
+  rows.push([{ text:'מקרא', s:3 }, { runs:[{ text:'ירוק = קיבל/ה מה שרצה  ', color:XLSX_COLORS.yes, bold:true }, { text:'כתום = יכול/ה  ', color:XLSX_COLORS.avoid, bold:true }, { text:'אדום = לא / חסר  ', color:XLSX_COLORS.no, bold:true }, { text:'כהה = בלי העדפה', color:XLSX_COLORS.neutral, bold:true }], s:0 }]);
   return buildXlsx('סידור ' + monthLabel(ctx.month), rows, [16, ...ctx.shiftTypes.map(() => 26)]);
 }
 function downloadBytes(bytes, filename, mime){

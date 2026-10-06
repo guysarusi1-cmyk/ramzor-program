@@ -1,8 +1,8 @@
 
 // ---------- THE SCHEDULER: builds a first work schedule from the rules and the preferences ----------
 // Pure functions (no screen, no database), so they can be checked on their own.
-//   "ממש לא" (no)   = a hard rule: the automatic schedule never uses it (only the coordinator may override, with a warning)
-//   "מעדיף שלא" (avoid) and "כן" (yes) = wishes: the schedule tries to respect them, as far as the rules and the needs allow
+//   "לא" (no)   = a hard rule: the automatic schedule never uses it (only the coordinator may override, with a warning)
+//   "יכול" (avoid) and "כן" (yes) = wishes: the schedule tries to respect them, as far as the rules and the needs allow
 // The rules (how many per shift, rest between shifts, ...) are numbers that the coordinator can change.
 const LEVEL_SCORE = { yes:10, neutral:0, avoid:-7, no:-60 };
 
@@ -180,7 +180,7 @@ function scheduleStats(ctx, assignments){
 function whyAssigned(ctx, pid, slot){
   const lv = levelOf(ctx.prefs, pid, slot);
   if(lv === 'yes') return 'סימן/ה "כן" למשמרת הזו';
-  if(lv === 'avoid') return 'סימן/ה "מעדיף שלא", ושובץ/ה כי לא נמצא מי שמתאים יותר';
-  if(lv === 'no') return 'סימן/ה "ממש לא" — שיבוץ ידני של הרכזת, דורש אישור';
+  if(lv === 'avoid') return 'סימן/ה "יכול", ושובץ/ה כי לא נמצא מי שמתאים יותר';
+  if(lv === 'no') return 'סימן/ה "לא" — שיבוץ ידני של הרכזת, דורש אישור';
   return 'בלי העדפה — שובץ/ה כדי להשלים את הצוות';
 }

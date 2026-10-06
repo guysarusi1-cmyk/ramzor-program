@@ -6,7 +6,7 @@ const portalHomeFirst = () => PORTAL_ENABLED && !window.__portalNoHome && locati
 const portalUi = { persona:'c1', tab:null, month:null, level:'avoid', openDay:null, fold:{ mine:false, team:false, swap:false } };
 
 function portalPerson(id){ return portalLoad().instructors.find(p => p.id === id); }
-function portalMe(){ return portalPerson(portalUi.persona) || portalLoad().instructors[0]; }
+function portalMe(){ return portalPerson(portalUi.persona) || portalLoad().instructors[0]; }          // (in server mode persona = the signed-in person)
 function portalIsCoordinator(){ return portalMe().role === 'coordinator'; }
 function pEsc(s){ return escapeHtml(s == null ? '' : s); }
 function portalActivateView(id){
@@ -53,6 +53,7 @@ function showAppHome(){
 
 // ---- the portal itself
 function portalTabsFor(me){
+  if(portalServerOn) return srvTabs(me);
   return me.role === 'coordinator'
     ? [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['timetable', 'לו"ז'], ['settings', 'הגדרות']]
     : [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['inbox', 'הודעות']];
@@ -69,25 +70,26 @@ function showPortal(tab){
   view.innerHTML = `
     <div class="portal-shell" data-ptheme="${st.settings.theme}">
       <div class="portal-top">
-        <button type="button" class="back-btn portal-back" id="portal-home">→ מסך ראשי</button>
+        <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn ? 'יציאה' : '→ מסך ראשי'}</button>
         <h1 class="portal-title">פורטל המדריך</h1>
         <button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${st.settings.theme === 'dark' ? '☀️' : '🌙'}</button>
       </div>
-      <label class="portal-as">צפייה כ:
+      ${portalServerOn ? `<div class="portal-hello">שלום ${pEsc(me.first)}</div>` : `<label class="portal-as">צפייה כ:
         <select id="portal-persona">${st.instructors.filter(p => p.active).map(p => `<option value="${p.id}"${p.id === me.id ? ' selected' : ''}>${pEsc(instrName(p, st.instructors))}${p.role === 'coordinator' ? ' (רכזת)' : ''}</option>`).join('')}</select>
         <span class="portal-demo-tag">דמו</span>
-      </label>
+      </label>`}
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
       <div id="portal-body"></div>
     </div>`;
-  document.getElementById('portal-home').addEventListener('click', showAppHome);
-  document.getElementById('portal-theme').addEventListener('click', () => { st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; portalSave(); showPortal(); });
-  document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
+  document.getElementById('portal-home').addEventListener('click', portalServerOn ? srvSignOut : showAppHome);
+  document.getElementById('portal-theme').addEventListener('click', () => { st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
+  if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
   view.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.ptab; showPortal(); }));
   portalRenderTab();
 }
 function portalRenderTab(){
   const me = portalMe(), body = document.getElementById('portal-body'), t = portalUi.tab;
+  if(portalServerOn) return srvRenderTab(me, body, t);
   if(me.role === 'coordinator'){
     if(t === 'schedule') renderCoordSchedule(body); else if(t === 'submissions') renderCoordSubmissions(body);
     else if(t === 'swaps') renderCoordSwaps(body); else if(t === 'timetable') renderCoordTimetable(body); else renderCoordSettings(body);

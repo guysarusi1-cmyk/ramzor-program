@@ -908,7 +908,7 @@
       const res = autoSchedule(ctx), stats = scheduleStats(ctx, res.assignments), issues = validateSchedule(ctx, res.assignments);
       check('scheduler: every shift gets all the people it needs', stats.missing === 0 && res.unfilled.length === 0, 'missing ' + stats.missing);
       check('scheduler: no rule is broken (rest, consecutive days, shifts per week, nights, one shift a day)', issues.length === 0, JSON.stringify(issues.slice(0, 3)));
-      check('scheduler: nobody is put on a "ממש לא" shift', stats.all.no === 0, stats.all.no + ' times');
+      check('scheduler: nobody is put on a "לא" shift', stats.all.no === 0, stats.all.no + ' times');
       check('scheduler: many wishes are kept and few "rather not" are used', stats.all.yes > stats.all.total * 0.3 && stats.all.avoid <= 5, `yes ${stats.all.yes}/${stats.all.total}, avoid ${stats.all.avoid}`);
       const counts = people.map(p => (stats.per[p.id] || { total:0 }).total);
       check('scheduler: the work is shared fairly', Math.max(...counts) - Math.min(...counts) <= 3, counts.join(','));
@@ -925,7 +925,7 @@
       check('validation: two shifts in one day are flagged', validateSchedule(ctx, dbl).some(i => i.type === 'sameday'), 'not flagged');
       const withNo = autoSchedule(ctx); const noPref = JSON.parse(JSON.stringify(ctx.prefs)); noPref.i3.slots[mSlot.key] = 'no';
       const bad = JSON.parse(JSON.stringify(withNo.assignments)); bad[mSlot.key] = ['i3'];
-      check('validation: a "ממש לא" shift that is assigned by hand is flagged', validateSchedule(Object.assign({}, ctx, { prefs:noPref }), bad).some(i => i.type === 'no' && i.iid === 'i3'), 'not flagged');
+      check('validation: a "לא" shift that is assigned by hand is flagged', validateSchedule(Object.assign({}, ctx, { prefs:noPref }), bad).some(i => i.type === 'no' && i.iid === 'i3'), 'not flagged');
       check('names: first name only, the last initial only when two share a first name', instrName(portalPerson('i1'), st.instructors) === "דנה כ'" && instrName(portalPerson('i3'), st.instructors) === 'יוסי', instrName(portalPerson('i1'), st.instructors) + ' / ' + instrName(portalPerson('i3'), st.instructors));
 
       // --- Excel and print
@@ -957,17 +957,17 @@
       document.querySelector('.psheet [data-close]').click();
       const nKeyBefore = (m.assignments[mSlot.key] || []).slice();
       portalUi.tab = 'schedule'; showPortal();
-      // put a person who wrote "ממש לא" on a shift by hand: warning + needs the instructor's approval
+      // put a person who wrote "לא" on a shift by hand: warning + needs the instructor's approval
       const victim = people.find(p => !nKeyBefore.includes(p.id)), prefsV = portalPrefsOf(mk, victim.id); prefsV.slots[mSlot.key] = 'no';
       openSlotEditor(mk, mSlot.key); await sleep(60);
       const cb = document.querySelector(`.psheet [data-pid="${victim.id}"]`); cb.checked = true; cb.dispatchEvent(new Event('change')); await sleep(60);
-      check('coordinator: a "ממש לא" placement shows a red warning and asks for approval', /ממש לא/.test(document.querySelector('#slot-warn').textContent) && /אישור/.test(document.querySelector('#slot-warn').textContent), document.querySelector('#slot-warn').textContent);
+      check('coordinator: a "לא" placement shows a red warning and asks for approval', /לא/.test(document.querySelector('#slot-warn').textContent) && /אישור/.test(document.querySelector('#slot-warn').textContent), document.querySelector('#slot-warn').textContent);
       document.querySelector('#slot-save').click(); await sleep(80);
       check('coordinator: the shift is saved and marked as waiting for the instructor', (m.assignments[mSlot.key] || []).includes(victim.id) && m.approvals[mSlot.key + '|' + victim.id] === 'pending' && !!document.querySelector('.pchip.pending'), JSON.stringify(m.approvals));
 
       // --- the instructor sees the request and answers
       portalUi.persona = victim.id; portalUi.tab = 'swaps'; showPortal();
-      check('instructor: sees the request to approve the "ממש לא" shift', !!document.querySelector('[data-appr-ok]'), 'no request');
+      check('instructor: sees the request to approve the "לא" shift', !!document.querySelector('[data-appr-ok]'), 'no request');
       document.querySelector('[data-appr-no]').click(); await sleep(60);
       check('instructor: declining removes the placement', !(m.assignments[mSlot.key] || []).includes(victim.id) && !m.approvals[mSlot.key + '|' + victim.id], 'still assigned');
       prefsV.slots = {}; prefsV.absent = [];
@@ -1087,6 +1087,77 @@
       check('retention: schedules older than three months are dropped', !st.months[addMonths(mk, -6)], 'kept');
       portalReset(); check('the demo can be reset to its starting data', Object.keys(portalLoad().months).length === 2 && portalLoad().swaps.length === 0, 'not reset');
       portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = portalUi.tmonth = null;
+    });
+
+    // ---- the portal on the real (test) database: personal sign-in, what each kind of person may see, preferences kept on the server
+    await step('portal server', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', MAIL = { instructor:'instructor-test@merkaz-cherum.local', coordinator:'coordinator-test@merkaz-cherum.local', service:'service-test@merkaz-cherum.local' };
+      const asPerson = async kind => {
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
+        const { error } = await sbPersonal.auth.signInWithPassword({ email:MAIL[kind], password:PW });
+        if(error){ check(`portal server: the ${kind} test account can sign in (supabase/scheduling-test-users.sql was run?)`, false, error.message); return false; }
+        portalServerOn = true; return await srvLoad();
+      };
+      const next = addMonths(monthKeyOf(israelNow().date), 1), body = () => document.getElementById('portal-body');
+      // --- an instructor
+      if(!(await asPerson('instructor'))){ check('portal server: the instructor account is linked to a person', false, 'not linked'); portalServerOn = false; return; }
+      const me = srv.meRow, st = portalLoad();
+      check('portal server: the instructor is recognised as an instructor', !!me && me.role === 'instructor', JSON.stringify(me && me.role));
+      check('portal server: the instructor sees the whole staff list', st.instructors.length >= 20, st.instructors.length);
+      const priv = await sbPersonal.from('staff_private').select('staff_id');
+      check('portal server: the instructor sees NO private staff data (e-mails, flags)', !priv.error && priv.data.length === 0, priv.error ? priv.error.message : priv.data.length);
+      const others = await sbPersonal.from('prefs_slot').select('staff_id').neq('staff_id', srv.me);
+      check('portal server: the instructor sees nobody else\'s preferences', !others.error && others.data.length === 0, others.error ? others.error.message : others.data.length);
+      portalUi.persona = srv.me; portalUi.tab = 'prefs'; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
+      check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
+      check('portal server: the level buttons are named כן / יכול / לא', ['כן', 'יכול', 'לא'].every(w => [...document.querySelectorAll('.lvbtn')].some(b => b.textContent === w)), [...document.querySelectorAll('.lvbtn')].map(b => b.textContent).join(','));
+      if(srvPrefsOpen(next)){
+        const day = daysOfMonth(next)[9], key = `${day}|n`;
+        document.querySelector('[data-plevel="no"]').click(); await sleep(50);
+        document.querySelector(`[data-pslot="${key}"]`).click(); await sleep(50);
+        document.querySelector('[data-plevel="avoid"]').click(); await sleep(50);
+        document.querySelector(`[data-pslot="${daysOfMonth(next)[10]}|m"]`).click(); await sleep(50);
+        document.querySelector('[data-plevel="absent"]').click(); await sleep(50);
+        document.querySelector(`[data-pslot="${daysOfMonth(next)[20]}|m"]`).click(); await sleep(50);
+        for(let i = 0; i < 40 && srvSnapshot(next) !== srv.saved[next]; i++) await sleep(150);
+        check('portal server: a change on the screen is saved to the server by itself', srvSnapshot(next) === srv.saved[next] && !srv.failed, 'not saved');
+        await srvLoad();
+        const back = portalPrefsOf(next, srv.me);
+        check('portal server: after reloading from the server the marks are still there (לא / יכול / היעדרות)', back.slots[key] === 'no' && back.slots[`${daysOfMonth(next)[10]}|m`] === 'avoid' && back.absent.includes(daysOfMonth(next)[20]), JSON.stringify(back));
+        portalUi.persona = srv.me; showPortal('prefs'); await sleep(100); portalUi.pmonth = next;
+        document.getElementById('prefs-submit').click();
+        for(let i = 0; i < 40 && !portalMonth(next).submitted[srv.me]; i++) await sleep(150);
+        check('portal server: submitting the preferences is recorded on the server', portalMonth(next).submitted[srv.me] === true, 'not submitted');
+        // the coordinator can see it, the other instructors cannot see the marks
+        // clean up: everything back to "כן"
+        const p = portalPrefsOf(next, srv.me); p.slots = {}; p.absent = []; portalSave();
+        for(let i = 0; i < 40 && srvSnapshot(next) !== srv.saved[next]; i++) await sleep(150);
+        await srvLoad();
+        check('portal server: clearing everything is saved too', Object.keys(portalPrefsOf(next, srv.me).slots).length === 0 && portalPrefsOf(next, srv.me).absent.length === 0, 'still marked');
+      } else check('(info) portal server: the month after next is not open for preferences right now, so the saving was not exercised', true, '');
+      // a month that is closed is shown as closed, and the database refuses a write
+      const closed = addMonths(monthKeyOf(israelNow().date), 0);
+      const refused = await sbPersonal.from('prefs_slot').insert({ staff_id:srv.me, day:daysOfMonth(closed)[20], shift:'M', level:'no' });
+      check('portal server: the database refuses a change in a closed month', !!refused.error, 'accepted!');
+      portalUi.pmonth = closed; showPortal('prefs'); await sleep(100);
+      check('portal server: a closed month is shown as closed (no clicking)', /סגורה/.test(document.getElementById('portal-body').textContent), 'not shown');
+      // --- the coordinator sees every submission
+      if(await asPerson('coordinator')){
+        check('portal server: the coordinator is recognised', srv.meRow.role === 'coordinator', srv.meRow.role);
+        const priv2 = await sbPersonal.from('staff_private').select('staff_id');
+        check('portal server: the coordinator sees the private staff data', !priv2.error && priv2.data.length >= 20, priv2.error ? priv2.error.message : priv2.data.length);
+        portalUi.persona = srv.me; portalUi.tab = 'submissions'; portalUi.smonth = next; showPortal('submissions'); await sleep(100);
+        check('portal server: the coordinator\'s submissions screen lists the instructors', document.querySelectorAll('#portal-body .psub-row').length >= 15, document.querySelectorAll('#portal-body .psub-row').length);
+        check('portal server: the coordinator has no "build the schedule automatically" button', !/[Aa]uto|אוטומט/.test(document.getElementById('view-portal').textContent), 'found');
+      }
+      // --- a service girl sees only her own place
+      if(await asPerson('service')){
+        portalUi.persona = srv.me; portalUi.tab = null; showPortal(); await sleep(100);
+        check('portal server: the service account gets its own (not yet built) screen and no instructor tabs', !document.querySelector('[data-ptab="prefs"]') && /בנות שירות/.test(document.getElementById('portal-body').textContent), 'wrong');
+      }
+      await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
+      portalUi.persona = 'c1'; portalUi.tab = null; portalUi.pmonth = portalUi.smonth = null; showHub();
     });
 
     // ---- kids' TV: every visible slide renders, names without age

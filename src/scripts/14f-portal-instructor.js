@@ -68,12 +68,13 @@ function renderInstructorSchedule(body){
 }
 
 // ---- preferences: every shift is "כן" until you mark otherwise; choose a level at the bottom, then tap days or shifts
-const LEVEL_BUTTONS = [['yes', 'כן'], ['avoid', 'מעדיף שלא'], ['no', 'ממש לא'], ['absent', 'היעדרות']];
+const LEVEL_BUTTONS = [['yes', 'כן'], ['avoid', 'יכול'], ['no', 'לא'], ['absent', 'היעדרות']];
 function renderInstructorPrefs(body){
   const me = portalMe(), st = portalLoad();
   if(!portalUi.pmonth) portalUi.pmonth = addMonths(monthKeyOf(isoDate(new Date())), 1);
   const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
   const days = daysOfMonth(mk), lead = dowOf(days[0]);
+  const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
   const marked = Object.keys(prefs.slots).length + prefs.absent.length;
   const dl = m.deadline ? parseIso(m.deadline) : null;
   let cells = '';
@@ -87,7 +88,8 @@ function renderInstructorPrefs(body){
   });
   body.innerHTML = `
     ${monthNavHtml(mk)}
-    <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'ההעדפות הוגשו ✓ (אפשר לעדכן עד סגירת ההגשה)' : 'ההעדפות טרם הוגשו. ההגשה חובה.'}${dl ? ` · נסגר ב-${dl.getDate()}/${dl.getMonth() + 1}` : ''}</div>
+    <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'ההעדפות הוגשו ✓ (אפשר לעדכן עד סגירת ההגשה)' : 'ההעדפות טרם הוגשו. ההגשה חובה.'}${dl ? ` · נסגר ב-${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
+    ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע (היא נפתחת ב-1 בחודש הקודם ונסגרת ב-24 בו בשעה 22:30). לשינוי פנו לרכזת.</div>' : ''}
     <div class="pnote">כל המשמרות מסומנות "כן" כברירת מחדל. סמנו רק מה שאתם לא רוצים: בחרו רמה למטה, ואז לחצו על יום (כל המשמרות שלו) או על משמרת בודדת. ${st.shiftTypes.map(s => s.label.charAt(0) + ' = ' + s.label).join(' · ')}</div>
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
     <div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת העדפות'}</button><span class="pnote">${marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"'}</span></div>
@@ -95,6 +97,7 @@ function renderInstructorPrefs(body){
   wireMonthNav(body, 'pmonth');
   body.querySelectorAll('[data-plevel]').forEach(b => b.addEventListener('click', () => { portalUi.level = b.dataset.plevel; renderInstructorPrefs(body); }));
   body.querySelectorAll('[data-pslot]').forEach(b => b.addEventListener('click', () => {
+    if(locked) return;
     const key = b.dataset.pslot, date = key.split('|')[0], lv = portalUi.level;
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
     else if(lv === 'yes'){ delete prefs.slots[key]; }                      // "כן" is the default, so nothing needs to be stored
@@ -102,6 +105,7 @@ function renderInstructorPrefs(body){
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-pday]').forEach(b => b.addEventListener('click', () => {
+    if(locked) return;
     const date = b.dataset.pday, lv = portalUi.level, keys = st.shiftTypes.map(s => `${date}|${s.id}`);
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
     else if(lv === 'yes'){ keys.forEach(k => delete prefs.slots[k]); prefs.absent = prefs.absent.filter(d => d !== date); }
@@ -109,10 +113,13 @@ function renderInstructorPrefs(body){
     portalSave(); renderInstructorPrefs(body);
   }));
   document.getElementById('prefs-clear-all').addEventListener('click', async () => {
+    if(locked) return;
     if(!(await confirmSheet({ title:'לנקות את כל ההעדפות?', text:'כל הסימונים של החודש הזה יחזרו ל"כן" (ברירת המחדל), כולל היעדרויות. אי אפשר לבטל.', okLabel:'כן, לנקות הכל', cancelLabel:'חזרה', danger:true }))) return;
     prefs.slots = {}; prefs.absent = []; portalSave(); toast('כל ההעדפות נוקו'); renderInstructorPrefs(body);
   });
-  document.getElementById('prefs-submit').addEventListener('click', () => {
+  document.getElementById('prefs-submit').addEventListener('click', async () => {
+    if(locked) return;
+    if(portalServerOn){ try { await srvSubmit(mk); } catch(e){ toast('ההגשה לא נשמרה. נסו שוב.'); return; } toast('ההעדפות הוגשו ✓'); renderInstructorPrefs(body); return; }
     m.submitted[me.id] = true; portalSave(); toast('ההעדפות הוגשו ✓'); renderInstructorPrefs(body);
   });
 }
@@ -137,7 +144,7 @@ function renderInstructorSwaps(body){
   const mineReq = st.swaps.filter(s => s.from === me.id || s.to === me.id).slice(0, 10);
   body.innerHTML = `
     ${approvalsForMe.length ? '<h2 class="psec">בקשות אליי</h2>' : ''}
-    ${approvalsForMe.map(a => `<div class="preq warn"><div>הרכזת שיבצה אותך למשמרת שסימנת עליה "ממש לא":<br><b>${slotLabel(a.key)}</b><br>האם את/ה מאשר/ת?</div><div class="preq-actions"><button type="button" class="btn" data-appr-ok="${a.mk}|${a.k}">מאשר/ת</button><button type="button" class="btn ghost" data-appr-no="${a.mk}|${a.k}">לא מאשר/ת</button></div></div>`).join('')}
+    ${approvalsForMe.map(a => `<div class="preq warn"><div>הרכזת שיבצה אותך למשמרת שסימנת עליה "לא":<br><b>${slotLabel(a.key)}</b><br>האם את/ה מאשר/ת?</div><div class="preq-actions"><button type="button" class="btn" data-appr-ok="${a.mk}|${a.k}">מאשר/ת</button><button type="button" class="btn ghost" data-appr-no="${a.mk}|${a.k}">לא מאשר/ת</button></div></div>`).join('')}
     <h2 class="psec">בקשות החלפה פתוחות</h2>
     <div class="pnote">מי מבקש החלפה, ולאיזו משמרת. מי שיכול/ה להחליף לוחץ/ת על הכפתור, והבקשה עוברת לרכזת. כדי לבקש החלפה בעצמך, פתחו "הסידור" ← "המשמרות שלי" ← "בקשת החלפה".</div>
     ${open.length ? open.map(s => {

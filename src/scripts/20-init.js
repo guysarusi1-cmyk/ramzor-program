@@ -1,6 +1,7 @@
 // ---------- INIT ----------
 (async function init(){
   if(location.hash === '#diag'){ showDiagnostics(); return; }   // device / TV check page, no login needed
+  if(location.hash === '#portal' && PORTAL_ENABLED){ portalServerBoot(); return; }      // the personal sign-in of the portal (its own login, not the staff password)
   const authed = await checkAuth();
   if(authed){
     await loadApp();
