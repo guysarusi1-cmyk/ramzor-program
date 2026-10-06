@@ -1,0 +1,15 @@
+Supabase -> Authentication -> Email Templates -> "Magic Link"
+
+Subject:
+קוד הכניסה שלך לפורטל
+
+Message body:
+<div dir="rtl" style="font-family:Arial,sans-serif;font-size:16px">
+  <p>שלום,</p>
+  <p>קוד הכניסה שלך לפורטל של מרכז חירום הוא:</p>
+  <p style="font-size:32px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+  <p>הקוד תקף לזמן קצר. אם לא ביקשת להיכנס, אפשר פשוט להתעלם מההודעה.</p>
+  <p>בהוקרה,<br>הצוות שלך במרכז חירום</p>
+</div>
+
+Also: Authentication -> Sign In / Providers -> Email: "Enable sign ups" stays OFF (the portal never creates accounts by itself).
