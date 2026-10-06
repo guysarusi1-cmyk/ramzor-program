@@ -105,10 +105,12 @@ function srvRenderCoordSchedule(body){
   const pub = document.getElementById('cs-publish');
   if(pub) pub.addEventListener('click', async () => {
     const open = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk && !['service_absent', 'service'].includes(f.kind)).length;
-    if(!(await confirmSheet({ title:'לפרסם את הסידור?', text:`מרגע הפרסום כל המדריכים רואים אותו${open ? ` (עדיין יש ${open} דברים שדורשים תשומת לב)` : ''}. כל שינוי אחר כך שולח הודעה ומייל.`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    if(!(await confirmSheet({ title:'לפרסם את הסידור?', text:`מרגע הפרסום כל המדריכים רואים אותו, וכל אחד מקבל הודעה אישית על איך הלכו הבקשות שלו${open ? ` (עדיין יש ${open} דברים שדורשים תשומת לב)` : ''}. כל שינוי אחר כך שולח הודעה ומייל למי שהושפע.`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
     const u = await sbPersonal.from('schedule').update({ status:'published', published_at:new Date().toISOString() }).eq('month', firstOf(mk));
     if(u.error){ toast('הפרסום נכשל. נסו שוב.'); return; }
-    toast('הסידור פורסם'); await srvReloadSafe(); srvRenderCoordSchedule(body);
+    await srvReloadSafe();
+    const sent = await srvSendFeedback(mk).catch(() => ({ ok:0, failed:1 }));              // every instructor gets a personal, warm message about how the requests went
+    toast(sent.ok ? `הסידור פורסם, וכל מדריך/ה קיבל/ה הודעה אישית על איך הלכו הבקשות` : 'הסידור פורסם. ההודעות האישיות על הבקשות עוד לא נשלחו, נטפל בזה'); srvRenderCoordSchedule(body);
   });
   document.getElementById('cs-xlsx').addEventListener('click', () => { downloadScheduleXlsx(ctx, m.assignments); toast('קובץ האקסל נוצר'); });
   document.getElementById('cs-print').addEventListener('click', () => printSchedule(ctx, m.assignments));

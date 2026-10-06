@@ -214,3 +214,12 @@
   .pcell small, .pchip small{ opacity:.8; font-size:.8em; }
   .pstaff-photo{ flex:0 0 40px; cursor:pointer; }
   .pstaff-photo img{ width:40px; height:40px; border-radius:50%; object-fit:cover; display:block; border:1px solid var(--p-line); }
+
+  /* the monthly goal, and the soft notes */
+  .pgoal{ margin:14px 0 6px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; background:var(--panel-2); }
+  .pgoal-list{ display:flex; flex-direction:column; gap:8px; margin:10px 0; }
+  .pgoal-opt{ text-align:right; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:transparent; color:var(--text); font:inherit; display:flex; flex-direction:column; gap:3px; }
+  .pgoal-opt small{ color:var(--muted); font-weight:400; }
+  .pgoal-opt.on{ border-color:var(--gold); background:rgba(240,194,57,.12); }
+  .pnote-soft{ border-right:3px solid var(--gold); padding-right:10px; }
+  .pfb{ margin:10px 0; padding:12px; border:1px solid var(--p-line); border-radius:14px; background:var(--p-panel); line-height:1.6; white-space:pre-line; }

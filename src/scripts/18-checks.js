@@ -984,7 +984,7 @@
       check('preferences: a calendar of the month, with the level bar at the bottom', document.querySelectorAll('.pday:not(.blank)').length === daysOfMonth(nm).length && document.querySelectorAll('.lvbtn').length === 5, 'calendar');
       check('preferences: the whole screen starts as "כן"', document.querySelectorAll('.pshift').length === daysOfMonth(nm).length * st.shiftTypes.length && [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-yes')), 'not all yes');
       check('preferences: the clear button is called "נקה הכל"', $('prefs-clear-all').textContent.trim() === 'נקה הכל', $('prefs-clear-all').textContent);
-      check('preferences: submitting is required and says so', /טרם הוגשו/.test(document.querySelector('.pstatus').textContent), document.querySelector('.pstatus').textContent);
+      check('preferences: before submitting, the screen invites the person to send the preferences', /נשמח לקבל את ההעדפות/.test(document.querySelector('.pstatus').textContent), document.querySelector('.pstatus').textContent);
       document.querySelector('[data-plevel="avoid"]').click();
       const d1 = daysOfMonth(nm)[2];
       document.querySelector(`[data-pslot="${d1}|m"]`).click();
@@ -1002,7 +1002,7 @@
       check('preferences: confirming clears everything back to "כן"', Object.keys(nPrefs.slots).length === 0 && nPrefs.absent.length === 0 && [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-yes')), JSON.stringify(nPrefs));
       document.querySelector('[data-plevel="avoid"]').click(); document.querySelector(`[data-pslot="${d1}|m"]`).click();
       document.querySelector('#prefs-submit').click(); await sleep(60);
-      check('preferences: submitting is recorded', portalMonth(nm).submitted.i2 === true && /הוגשו/.test(document.querySelector('.pstatus').textContent), 'not submitted');
+      check('preferences: submitting is recorded', portalMonth(nm).submitted.i2 === true && /אצלנו, תודה/.test(document.querySelector('.pstatus').textContent), 'not submitted');
 
       // --- the schedule tab: two folding sections, the next shift stands out, no yellow frame
       portalUi.persona = 'i1'; portalUi.tab = 'schedule'; portalUi.month = mk; portalUi.fold = { mine:false, team:false, swap:false }; showPortal();
@@ -1080,7 +1080,7 @@
       await showSlide(9);
       check('TV: "who is here today" groups people by shift, with a photo and a first name', document.querySelectorAll('#tv-instructors .tvi-group').length >= 2 && document.querySelectorAll('#tv-instructors .tvi-photo').length >= 4 && [...document.querySelectorAll('#tv-instructors .tvi-name')].every(n => n.textContent.trim().length > 0 && n.textContent.trim().split(' ').length <= 2), 'groups');
       await showSlide(10);
-      check('TV: today\'s timetable lists the activities, one of them lit', document.querySelectorAll('#tv-timetable .tvt-row').length === timetableFor(isoDate(new Date())).length && !!document.querySelector('#tv-timetable .tvt-row.now'), document.querySelectorAll('#tv-timetable .tvt-row').length + ' rows');
+      check('TV: today\'s timetable lists the activities, one of them lit', document.querySelectorAll('#tv-timetable .tvt-row').length === timetableFor(isoDate(new Date())).length && (!!document.querySelector('#tv-timetable .tvt-row.now') || nowHHMM() < timetableFor(isoDate(new Date()))[0].t), document.querySelectorAll('#tv-timetable .tvt-row').length + ' rows');          // (before the first activity of the morning nothing is lit yet)
       await showSlide(11);
       check('TV: the week shows seven days and flags the special day', document.querySelectorAll('#tv-week .tvw-day').length === 7 && document.querySelectorAll('#tv-week .tvw-day.special').length === 1, 'week');
       await showSlide(12);
@@ -1092,6 +1092,31 @@
       check('retention: schedules older than three months are dropped', !st.months[addMonths(mk, -6)], 'kept');
       portalReset(); check('the demo can be reset to its starting data', Object.keys(portalLoad().months).length === 2 && portalLoad().swaps.length === 0, 'not reset');
       portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = portalUi.tmonth = null;
+    });
+
+    // ---- the feedback after a schedule is published: pure functions, so they are checked with made-up data (no server)
+    await step('feedback wording', async () => {
+      if(!PORTAL_ENABLED) return;
+      const mk = addMonths(monthKeyOf(isoDate(new Date())), 2), ds = daysOfMonth(mk), pick = dow => ds.filter(d => dowOf(d) === dow);
+      const d1 = pick(2)[0], d2 = pick(3)[0], d3 = pick(1)[1], d4 = pick(4)[1];
+      const prefs = { slots:{ [`${d1}|n`]:'no', [`${d2}|m`]:'avoid', [`${d3}|e`]:'no' }, absent:[d4], hours:{}, fixed:[] };
+      const rows = [{ day:d1, shift:'N', from:'22:00', to:'08:00' }, { day:pick(0)[0], shift:'M', from:'07:00', to:'15:00' }];
+      const fb = srvFeedbackFor({ first:'דנה' }, mk, { prefs, rows, profile:{ female:true }, goal:null });
+      check('feedback: counts the requests that were met and the ones that were not', fb.asked === 4 && fb.honored === 3 && fb.unmet.length === 1, JSON.stringify([fb.asked, fb.honored, fb.unmet.length]));
+      check('feedback: the words say that we tried, and thank the person', /הצלחנו להיענות ל-3/.test(fb.text) && /ניסינו/.test(fb.text) && /תודה/.test(fb.text) && /אנחנו כאן בשבילך/.test(fb.text), fb.text.slice(0, 200));
+      check('feedback: nothing in it blames the person or sounds like a reprimand', !/אשמתך|לא עמדת|עליך לשפר|כשל|הפרת|חייב/.test(fb.text), fb.text);
+      check('feedback: the shift that was not honoured is named with its day', fb.unmet[0].includes(dayLabel(d1)) && /לילה/.test(fb.unmet[0]), fb.unmet[0]);
+      const min = fbMinimum({ female:true }, mk), weeks = fbWeeks(mk).length;
+      check('feedback: the minimum is spelled out for the person (2 mid-week + a night a week, 4 weekend shifts)', min.total === weeks * 2 + weeks + Math.max(0, 4 - weeks) && /משמרות אמצע שבוע/.test(min.text) && /4 משמרות סופ"ש/.test(min.text), JSON.stringify(min));
+      check('feedback: a person who does no nights has a different minimum, and a manual-only person has none', fbMinimum({ no_nights:true }, mk).total === weeks * 2 + 4 && fbMinimum({ manual_only:true }, mk).total === null, '');
+      const gaps = srvFeedbackFor({ first:'דנה' }, mk, { prefs:{ slots:{}, absent:[], hours:{}, fixed:[] }, rows:[], profile:{ female:true }, goal:null });
+      check('feedback: when the minimum was not reached it is said gently, with an offer of help', gaps.minGaps.length > 0 && /לא קשור אלייך/.test(gaps.text) && /נמצא יחד פתרון/.test(gaps.text), gaps.text.slice(-300));
+      const gMin = srvFeedbackFor({ first:'דנה' }, mk, { prefs:{ slots:{}, absent:[], hours:{}, fixed:[] }, rows:[rows[0]], profile:{ female:true }, goal:'min' });
+      check('feedback: the goal "only the minimum" is answered in its own words', /ביקשת לעשות החודש את המינימום הנדרש/.test(gMin.text), gMin.text.slice(0, 300));
+      const gWeek = srvFeedbackFor({ first:'דנה' }, mk, { prefs:{ slots:{}, absent:[], hours:{}, fixed:[] }, rows:[rows[0]], profile:{ female:true }, goal:'weekly45' });
+      check('feedback: the goal "4-5 a week" says plainly that it was not reached this time, without blame', gWeek.goalOk === false && /ביקשת לעשות 4-5 משמרות בכל שבוע/.test(gWeek.text) && /תודה על ההבנה/.test(gWeek.text), gWeek.text.slice(0, 400));
+      const fem = srvFeedbackFor({ first:'דנה' }, mk, { prefs, rows, profile:{ female:true }, goal:null }), mal = srvFeedbackFor({ first:'יוסי' }, mk, { prefs, rows, profile:{ female:false }, goal:null });
+      check('feedback: the closing line follows the person\'s gender', /שאת חלק/.test(fem.text) && /שאתה חלק/.test(mal.text), '');
     });
 
     // ---- the portal on the real (test) database: personal sign-in, what each kind of person may see, preferences kept on the server
@@ -1118,6 +1143,10 @@
       check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
       check('portal server: the level buttons are named כן / יכול / לא', ['כן', 'יכול', 'לא'].every(w => [...document.querySelectorAll('.lvbtn')].some(b => b.textContent === w)), [...document.querySelectorAll('.lvbtn')].map(b => b.textContent).join(','));
       if(srvPrefsOpen(next)){
+        check('portal server: the monthly-goal question offers three choices and "no preference"', document.querySelectorAll('.pgoal-opt').length === 4 && /המינימום שלך/.test(document.querySelector('.pgoal').textContent), document.querySelectorAll('.pgoal-opt').length + ' / ' + JSON.stringify(srv.profile));
+        document.querySelector('[data-goal="weekly45"]').click(); await sleep(60);
+        check('portal server: choosing a goal marks it on the screen', portalMonth(next).goals[srv.me] === 'weekly45' && document.querySelector('[data-goal="weekly45"]').classList.contains('on'), JSON.stringify(portalMonth(next).goals));
+        document.querySelector('[data-goal=""]').click(); await sleep(60);
         const day = daysOfMonth(next)[9], key = `${day}|n`;
         document.querySelector('[data-plevel="no"]').click(); await sleep(50);
         document.querySelector(`[data-pslot="${key}"]`).click(); await sleep(50);
@@ -1209,6 +1238,9 @@
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(150);
         const btn = document.querySelector('[data-said]');
         check('portal swaps: the instructor sees her published shift with a swap button', !!btn, 'no button');
+        const aid = portalLoad().rows.find(r => r.staff === i1 && r.day === day).id, cr = await sbPersonal.rpc('swap_candidates', { p_assignment:aid });
+        if(cr.error) check('(info) portal swaps: the list of colleagues who could take a shift needs supabase/scheduling-v5.sql (not run yet)', true, '');
+        else check('portal swaps: the list of colleagues who could take the shift is returned, and it does not include the person herself', Array.isArray(cr.data) && cr.data.length >= 1 && !cr.data.some(x => x.name === srv.meRow.first), JSON.stringify(cr.data).slice(0, 100));
         btn.click(); await answerSheet();
         check('portal swaps: the request is created on the server', await waitFor(() => portalLoad().swaps.some(s => s.status === 'open' && s.from === i1)), 'not created');
         // 2. a colleague offers to take it
@@ -1329,8 +1361,23 @@
           check('portal people: the availability is submitted', await waitFor(async () => { const s = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return s.data && s.data.length === 1 && Date.now() - new Date(s.data[0].submitted_at).getTime() < 60000; }), 'not submitted');
           await sbPersonal.from('prefs_service').delete().eq('staff_id', srv.me).gte('day', firstOf(next));
         }
+        // ---- an instructor who is not scheduled automatically places herself on a shift where somebody is missing (needs scheduling-v5.sql)
+        await sign('coordinator');
+        const probe = await sbPersonal.rpc('take_open_shift', { p_day:day, p_shift:'M' });             // (refused for the coordinator; this only shows whether the function exists)
+        if(probe.error && /Could not find the function|does not exist/i.test(probe.error.message || '')) check('(info) portal people: open shifts for the not-automatic instructors need supabase/scheduling-v5.sql (not run yet)', true, '');
+        else {
+          await sbPersonal.from('staff_private').update({ manual_only:true }).eq('staff_id', i2);
+          await sign('instructor2'); portalUi.month = mkT; showPortal('open'); await waitFor(async () => !!document.querySelector('[data-take]'), 40);
+          const take = document.querySelector('[data-take]');
+          check('portal people: a not-automatic instructor sees the shifts that are missing someone, in a warm voice', !!take && /משמרות שמחכות לעזרה/.test(txt()), txt().slice(0, 100));
+          if(take){
+            const [td, ts] = take.dataset.take.split('|'); take.click(); await answerSheet();
+            check('portal people: taking an open shift places her on it', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', td).eq('shift', ts); return a.data && a.data.length === 1; }), 'not placed');
+          }
+        }
       } finally {
         await sign('coordinator');
+        await sbPersonal.from('staff_private').update({ manual_only:false }).eq('staff_id', i2);
         await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
         await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
         await sbPersonal.from('coordinator_flags').delete().eq('text', 'בדיקה אוטומטית');

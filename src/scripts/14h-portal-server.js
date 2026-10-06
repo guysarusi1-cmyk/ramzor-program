@@ -12,7 +12,7 @@ const SRV_SHIFTS = [
   { id:'e', label:'אחר הצהריים', start:'14:00', end:'22:00', need:1, needWeekend:1, night:false },
   { id:'n', label:'לילה', start:'22:00', end:'08:00', need:1, needWeekend:1, night:true }
 ];
-const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false, photos:null };
+const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false, photos:null, profile:null, profileFor:null };
 const firstOf = mk => mk + '-01';
 
 // ---- Israel time (the database closes the preferences by Israel time, so the screen does too)
@@ -62,7 +62,7 @@ async function srvLoad(){
   };
   portalState = st; srv.me = meId; srv.meRow = st.instructors.find(p => p.id === meId) || null;
   months.forEach(mk => {
-    const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, assignments:{}, annot:{}, approvals:{}, published:false, status:null };
+    const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, goals:{}, assignments:{}, annot:{}, approvals:{}, published:false, status:null };
     st.months[mk] = m;
   });
   const monthOf = d => monthKeyOf(d);
@@ -74,6 +74,9 @@ async function srvLoad(){
   hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); (pr.hours[r.day] = pr.hours[r.day] || []).push([parseInt(r.from_time, 10), parseInt(r.to_time, 10) || 24]); });
   cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_morning, pull:r.pull_to_sunday }; });
   subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
+  let goalRows = []; try { goalRows = await srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,goal').gte('month', from).lte('month', to)); } catch(e){ goalRows = []; }          // (the goal column comes with scheduling-v5.sql; until then there is none)
+  goalRows.forEach(r => { const m = st.months[monthOf(r.month)]; if(m && r.goal) m.goals[r.staff_id] = r.goal; });
+  if(srv.profileFor !== meId){ srv.profileFor = meId; try { const pr = await sbPersonal.rpc('my_profile'); srv.profile = pr.error ? null : pr.data; } catch(e){ srv.profile = null; } }
   sched.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.status = r.status; m.published = r.status === 'published'; } });
   st.rows = [];
   if(sched.length){                                       // (the database shows a person only the published schedules; the coordinator sees the drafts too)
@@ -162,26 +165,29 @@ async function srvFlush(){
     const unseen = portalState.notices.filter(n => n.seen && n.fromServer && !n.sent);
     for(const n of unseen){ const r = await sbPersonal.from('notices').update({ seen:true }).eq('id', n.id); if(!r.error) n.sent = true; }
   } catch(e){
-    srv.failed = true; toast('השמירה נכשלה. נסו שוב בעוד רגע.');
+    srv.failed = true; toast('לא הצלחנו לשמור כרגע, ננסה שוב אוטומטית בעוד רגע');
     setTimeout(srvQueueSave, 5000);
   }
   srv.busy = false;
-  const el = document.getElementById('srv-save-state'); if(el) el.textContent = srv.failed ? 'לא נשמר עדיין' : 'נשמר ✓';
+  const el = document.getElementById('srv-save-state'); if(el) el.textContent = srv.failed ? 'עוד לא נשמר, ננסה שוב' : 'נשמר ✓';
 }
-async function srvSubmit(mk, note){
+async function srvSubmit(mk, note, goal){
   await srvFlush();
   if(srv.failed || srvSnapshot(mk) !== srv.saved[mk]) throw new Error('not saved');
   const row = { staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() };
   if(note !== undefined) row.note = note || null;
+  if(goal !== undefined && (goal || portalMonth(mk).goals[srv.me])) row.goal = goal || null;          // (sent only when there is something to say, so that it works before and after scheduling-v5.sql)
   const r = await sbPersonal.from('prefs_submission').upsert(row);
   if(r.error) throw r.error;
   portalMonth(mk).submitted[srv.me] = true;
   if(note) portalMonth(mk).notes[srv.me] = note;
+  if(goal !== undefined){ if(goal) portalMonth(mk).goals[srv.me] = goal; else delete portalMonth(mk).goals[srv.me]; }
 }
 
 // ---- the screens in server mode
 function srvTabs(me){
   if(me.role === 'coordinator') return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']];
+  if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
   if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
   return [['schedule', 'הסידור'], ['hours', 'שעות'], ['inbox', 'הודעות']];          // teachers
@@ -200,6 +206,7 @@ function srvRenderTab(me, body, t){
   if(t === 'vacation') return srvRenderVacation(body);
   if(t === 'avail') return srvRenderAvailability(body);
   if(t === 'hours') return srvRenderTeacherHours(body);
+  if(t === 'open') return srvRenderOpenShifts(body);
   if(t === 'prefs' && me.role === 'instructor') return renderInstructorPrefs(body);
   return renderInstructorSwaps(body);
 }
@@ -207,8 +214,8 @@ async function srvRenderInbox(body){
   const st = portalLoad();
   const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
   if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
-  body.innerHTML = `<h2 class="psec">עדכונים אישיים</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}
-    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות.</div>'}`;
+  body.innerHTML = `<h2 class="psec">העדכונים שלך</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}
+    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}`;
   st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)
 }// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
 async function srvReload(){ await srvFlush(); await srvLoad(); }
@@ -223,7 +230,7 @@ function srvLoginHtml(step, email){
   return `<div class="plogin"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">פורטל המדריך</h1>
     <div class="card">
       ${step === 'email' ? `
-        <h2>כניסה אישית</h2>
+        <h2>ברוכים הבאים</h2><div class="pnote">נשלח אליכם קוד כניסה קצר למייל, בלי סיסמאות להיזכר בהן.</div>
         <label class="pfield">כתובת מייל<input type="email" id="plogin-email" autocomplete="email" inputmode="email" dir="ltr"></label>
         <button type="button" class="btn" id="plogin-send">שלחו לי קוד</button>
         /*@TEST-ONLY*/
@@ -243,13 +250,13 @@ function srvShowLogin(step, email){
   const view = document.getElementById('view-portal');
   view.innerHTML = srvLoginHtml(step || 'email', email);
   const err = msg => { document.getElementById('plogin-error').textContent = msg || ''; };
-  const guard = async (btn, work) => { btn.disabled = true; err(''); try { await work(); } catch(e){ err('משהו השתבש, נסו שוב בעוד רגע.'); } btn.disabled = false; };
-  const enter = async () => { if(await srvStart()) return; err('החשבון הזה עדיין לא מחובר לרשימת הצוות. פנו לרכזת.'); await sbPersonal.auth.signOut(); };
+  const guard = async (btn, work) => { btn.disabled = true; err(''); try { await work(); } catch(e){ err('משהו קטן השתבש. אפשר לנסות שוב בעוד רגע.'); } btn.disabled = false; };
+  const enter = async () => { if(await srvStart()) return; err('עוד לא חיברנו את הכתובת הזו לרשימת הצוות. הרכזת תשמח לעזור לכם להיכנס.'); await sbPersonal.auth.signOut(); };
   if(step === 'code'){
     document.getElementById('plogin-verify').addEventListener('click', ev => guard(ev.target, async () => {
       const code = document.getElementById('plogin-code').value.trim();
       const { error } = await sbPersonal.auth.verifyOtp({ email, token:code, type:'email' });
-      if(error){ err('הקוד לא נכון או שפג תוקפו.'); return; }
+      if(error){ err('הקוד לא התאים, או שהוא כבר לא בתוקף. אפשר לבקש קוד חדש.'); return; }
       await enter();
     }));
     document.getElementById('plogin-back').addEventListener('click', () => srvShowLogin('email'));
@@ -258,7 +265,7 @@ function srvShowLogin(step, email){
       const mail = document.getElementById('plogin-email').value.trim().toLowerCase();
       if(!mail){ err('הקלידו את כתובת המייל.'); return; }
       const { error } = await sbPersonal.auth.signInWithOtp({ email:mail, options:{ shouldCreateUser:false } });
-      if(error){ err('לא הצלחנו לשלוח קוד לכתובת הזו. בדקו שהיא נכונה, או פנו לרכזת.'); return; }
+      if(error){ err('לא הצלחנו לשלוח קוד לכתובת הזו. אפשר לבדוק שהיא נכונה, ואם זה ממשיך, הרכזת תשמח לעזור.'); return; }
       srvShowLogin('code', mail);
     }));
     /*@TEST-ONLY*/
