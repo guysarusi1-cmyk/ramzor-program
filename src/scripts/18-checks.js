@@ -1160,6 +1160,63 @@
       portalUi.persona = 'c1'; portalUi.tab = null; portalUi.pmonth = portalUi.smonth = null; showHub();
     });
 
+    // ---- swaps on the real (test) database: the three steps (instructor asks, colleague offers, coordinator approves) and the notices
+    await step('portal swaps', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local';
+      const sign = async kind => {
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
+        const { error } = await sbPersonal.auth.signInWithPassword({ email:M(kind), password:PW });
+        if(error) return false;
+        portalServerOn = true; if(!(await srvLoad())) return false;
+        portalUi.persona = srv.me; return true;
+      };
+      const waitFor = async fn => { for(let i = 0; i < 50; i++){ if(fn()) return true; await sleep(150); } return false; };
+      if(!(await sign('instructor'))){ check('portal swaps: the instructor test account signs in', false, 'cannot sign in'); portalServerOn = false; return; }
+      const i1 = srv.me;
+      if(!(await sign('instructor2'))){ check('(info) portal swaps: skipped — the second instructor test account does not exist yet (supabase/scheduling-test-users.sql)', true, ''); portalServerOn = false; return; }
+      const i2 = srv.me;
+      if(!(await sign('coordinator'))){ check('portal swaps: the coordinator test account signs in', false, 'cannot sign in'); portalServerOn = false; return; }
+      const day = addDays(israelNow().date, 1), mkT = monthKeyOf(day);
+      const had = await sbPersonal.from('schedule').select('month').eq('month', firstOf(mkT));
+      if(had.error || had.data.length){ check('(info) portal swaps: skipped — a schedule for that month already exists on the test server, which the checks never touch', true, ''); portalServerOn = false; return; }
+      try {
+        let r = await sbPersonal.from('schedule').insert({ month:firstOf(mkT), status:'published', published_at:new Date().toISOString() });
+        if(r.error) throw r.error;
+        r = await sbPersonal.from('assignment').insert({ month:firstOf(mkT), staff_id:i1, day, shift:'M', from_time:'07:00', to_time:'15:00' });
+        if(r.error) throw r.error;
+        // 1. the instructor publishes her shift
+        await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(150);
+        const btn = document.querySelector('[data-swap-open]');
+        check('portal swaps: the instructor sees her published shift with a swap button', !!btn, 'no button');
+        btn.click(); await answerSheet();
+        check('portal swaps: the request is created on the server', await waitFor(() => portalLoad().swaps.some(s => s.status === 'open' && s.from === i1)), 'not created');
+        // 2. a colleague offers to take it
+        await sign('instructor2'); showPortal('swaps'); await sleep(150);
+        const take = document.querySelector('[data-swap-take]');
+        check('portal swaps: the colleague sees the open request with a button to take it', !!take, 'no button');
+        take.click();
+        check('portal swaps: the offer moves the request to the coordinator', await waitFor(() => portalLoad().swaps.some(s => s.status === 'offered' && s.to === i2)), 'not offered');
+        // 3. the coordinator approves
+        await sign('coordinator'); showPortal('swaps'); await sleep(150);
+        const ok = document.querySelector('[data-approve]');
+        check('portal swaps: the coordinator sees it waiting for her answer', !!ok, 'nothing waiting');
+        ok.click();
+        check('portal swaps: after the approval the request is closed', await waitFor(() => portalLoad().swaps.every(s => s.status !== 'offered')), 'still waiting');
+        const now = await sbPersonal.from('assignment').select('staff_id').eq('day', day).eq('shift', 'M');
+        check('portal swaps: the shift now belongs to the colleague', !now.error && now.data.length === 1 && now.data[0].staff_id === i2, JSON.stringify(now.data));
+        // 4. both people got a notice
+        await sign('instructor'); showPortal('inbox'); await sleep(150);
+        check('portal swaps: the person who asked got a notice about the approval', /אושרה/.test(document.getElementById('portal-body').textContent), document.getElementById('portal-body').textContent.slice(0, 120));
+      } finally {
+        await sign('coordinator');
+        await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
+        await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
+        portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = null; portalUi.fold = { mine:false, team:false, swap:false }; showHub();
+      }
+    });
+
     // ---- kids' TV: every visible slide renders, names without age
     await step('tv', async () => {
       activateDisplayView(); stopCarousel();

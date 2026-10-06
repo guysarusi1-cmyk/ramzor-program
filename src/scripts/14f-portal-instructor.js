@@ -62,6 +62,10 @@ function renderInstructorSchedule(body){
   body.querySelectorAll('[data-swap-open]').forEach(b => b.addEventListener('click', async () => {
     const key = b.dataset.swapOpen;
     if(!(await confirmSheet({ title:'לבקש החלפה?', text:`המשמרת ${slotText(key)} תפורסם במסך ההחלפות, ועמיתים יוכלו להציע להחליף אותך.`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    if(portalServerOn){
+      try { await srvSwapAction('request_swap', { p_assignment:st.assignmentIds[key + '|' + me.id] }); toast('המשמרת פורסמה במסך ההחלפות'); } catch(e){ toast('לא הצלחנו לפרסם את הבקשה. נסו שוב.'); }
+      renderInstructorSchedule(body); return;
+    }
     st.swaps.unshift({ id:'s' + Date.now(), key, from:me.id, to:null, status:'open', at:new Date().toISOString() });
     portalSave(); toast('המשמרת פורסמה במסך ההחלפות'); renderInstructorSchedule(body);
   }));
@@ -153,15 +157,21 @@ function renderInstructorSwaps(body){
     }).join('') : '<div class="pnote">אין כרגע בקשות החלפה פתוחות.</div>'}
     <h2 class="psec">הבקשות שלי</h2>
     ${mineReq.length ? mineReq.map(s => `<div class="pmine-row"><span>${slotLabel(s.key)}<br><small>${s.from === me.id ? 'ביקשת החלפה' + (s.to ? ' · הציע/ה: ' + pEsc(name(s.to)) : '') : 'הצעת להחליף את ' + pEsc(name(s.from))}</small></span><em class="pst pst-${s.status}">${SWAP_STATUS[s.status]}</em></div>`).join('') : '<div class="pnote">אין בקשות.</div>'}`;
-  body.querySelectorAll('[data-swap-take]').forEach(b => b.addEventListener('click', () => {
+  body.querySelectorAll('[data-swap-take]').forEach(b => b.addEventListener('click', async () => {
     const sw = st.swaps.find(x => x.id === b.dataset.swapTake); if(!sw || sw.status !== 'open') return;
+    if(portalServerOn){
+      try { await srvSwapAction('offer_swap', { p_swap:sw.id }); toast('הבקשה הועברה לרכזת'); } catch(e){ toast('לא הצלחנו. אולי המשמרת כבר נתפסה.'); }
+      renderInstructorSwaps(body); return;
+    }
     sw.to = me.id; sw.status = 'offered';
     queueEmail('c1', 'בקשת החלפה ממתינה לאישורך', `${name(sw.from)} מבקש/ת החלפה במשמרת ${slotText(sw.key)}. ${name(me.id)} מוכן/ה להחליף.`);
     addNotice(sw.from, `${name(me.id)} הציע/ה להחליף אותך ב-${slotText(sw.key)}. הבקשה הועברה לרכזת.`, 'info');
     addNotice(me.id, `הבקשה להחליף את ${name(sw.from)} ב-${slotText(sw.key)} הועברה לרכזת.`, 'info');
     portalSave(); toast('הבקשה הועברה לרכזת'); renderInstructorSwaps(body);
   }));
-  body.querySelectorAll('[data-swap-cancel]').forEach(b => b.addEventListener('click', () => { const sw = st.swaps.find(x => x.id === b.dataset.swapCancel); if(sw){ sw.status = 'cancelled'; portalSave(); toast('הבקשה בוטלה'); renderInstructorSwaps(body); } }));
+  body.querySelectorAll('[data-swap-cancel]').forEach(b => b.addEventListener('click', async () => {
+    if(portalServerOn){ try { await srvSwapAction('cancel_swap', { p_swap:b.dataset.swapCancel }); toast('הבקשה בוטלה'); } catch(e){ toast('הביטול נכשל. נסו שוב.'); } renderInstructorSwaps(body); return; }
+    const sw = st.swaps.find(x => x.id === b.dataset.swapCancel); if(sw){ sw.status = 'cancelled'; portalSave(); toast('הבקשה בוטלה'); renderInstructorSwaps(body); } }));
   body.querySelectorAll('[data-appr-ok], [data-appr-no]').forEach(b => b.addEventListener('click', () => {
     const [mk, k] = (b.dataset.apprOk || b.dataset.apprNo).split(/\|(.+)/).filter(Boolean), m = portalMonth(mk), key = k.slice(0, k.lastIndexOf('|'));
     if(b.dataset.apprOk){ m.approvals[k] = 'ok'; toast('האישור נשלח לרכזת'); }
