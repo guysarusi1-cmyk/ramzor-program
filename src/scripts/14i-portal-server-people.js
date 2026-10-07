@@ -15,7 +15,7 @@ function srvRowLine(r){
 async function srvSwapCandidates(assignmentId){
   try { const r = await sbPersonal.rpc('swap_candidates', { p_assignment:assignmentId }); return r.error || !r.data ? [] : r.data.map(x => x.name); } catch(e){ return []; }
 }
-const srvCandidatesText = names => names.length ? ` עמיתים שזמינים למשמרת הזאת ולא שובצו אליה: ${names.join(', ')}. אפשר גם לפנות אליהם ישירות.` : '';
+const srvCandidatesText = names => names.length ? tx('cands', names.join(', ')) : '';
 
 // the schedule tab (everybody): how the requests went, my shifts, and the whole team's board
 function srvRenderSchedule(body){
@@ -30,7 +30,7 @@ function srvRenderSchedule(body){
   body.innerHTML = `
     ${notices.map(n => `<div class="pnotice ${n.kind}" role="status"><span>${pEsc(n.text)}</span><button type="button" class="btn small" data-notice-ok="${n.id}">הבנתי, תודה</button></div>`).join('')}
     ${monthNavHtml(mk)}
-    ${!m.published ? `<div class="pnote">הסידור לחודש הזה עוד בהכנה. ברגע שהוא יפורסם נעדכן אותך כאן ובמייל.</div>` : `
+    ${!m.published ? `<div class="pnote">${tx('sch_unpub')}</div>` : `
     ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
       <summary><span>המשמרות שלי</span><span class="pcount">${mine.length}</span></summary>
@@ -40,8 +40,8 @@ function srvRenderSchedule(body){
         return `<div class="pmine-row${upcoming ? '' : ' past'}${isNext ? ' next' : ''}">
           <div class="pmine-main">${isNext ? '<span class="pnext-badge">המשמרת הבאה שלך</span>' : ''}${srvRowLine(r)}</div>
           ${req ? `<em class="pst pst-${req.status}">${SWAP_STATUS[req.status]}</em>` : canAct ? `<span class="pmine-actions"><button type="button" class="btn ghost small" data-said="${r.id}">בקשת החלפה</button><button type="button" class="btn ghost small" data-cant="${r.id}">לא יכול/ה להגיע</button></span>` : ''}
-        </div>`; }).join('') : '<div class="pnote">בחודש הזה עדיין לא שובצו לך משמרות. אם זה לא מה שציפיתם, נשמח לשמוע ולעזור.</div>'}</div>
-        ${isInstr ? '<div class="pnote">צריך להחליף משמרת? "בקשת החלפה" מפרסמת אותה בלוח ההחלפות, ועמיתים יכולים להציע לעזור. אם קרה משהו ולא תוכלו להגיע, "לא יכול/ה להגיע" מעדכן את הרכזת ופותח את המשמרת להחלפה מיד. אנחנו כאן בשבילכם.</div>' : ''}</div>
+        </div>`; }).join('') : `<div class="pnote">${tx('sch_none')}</div>`}</div>
+        ${isInstr ? `<div class="pnote">${tx('sch_help')}</div>` : ''}</div>
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
@@ -52,15 +52,15 @@ function srvRenderSchedule(body){
   body.querySelectorAll('[data-said]').forEach(b => b.addEventListener('click', async () => {
     const r = st.rows.find(x => x.id === b.dataset.said); if(!r) return;
     const cand = await srvSwapCandidates(r.id);
-    if(!(await confirmSheet({ title:'לבקש החלפה?', text:`נפרסם את המשמרת ${dayLabel(r.day)} (${SRV_SHIFT_WORD[r.shift]}) בלוח ההחלפות, ועמיתים יוכלו להציע לעזור.${srvCandidatesText(cand)}`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
-    try { await srvSwapAction('request_swap', { p_assignment:r.id }); toast('פרסמנו את המשמרת בלוח ההחלפות, ונעדכן אותך כשיימצא מחליף/ה'); } catch(e){ toast('לא הצלחנו לפרסם כרגע. אפשר לנסות שוב בעוד רגע'); }
+    if(!(await confirmSheet({ title:'לבקש החלפה?', text:tx('swap_confirm', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    try { await srvSwapAction('request_swap', { p_assignment:r.id }); toast(tx('swap_posted')); } catch(e){ toast(tx('swap_fail')); }
     srvRenderSchedule(body);
   }));
   body.querySelectorAll('[data-cant]').forEach(b => b.addEventListener('click', async () => {
     const r = st.rows.find(x => x.id === b.dataset.cant); if(!r) return;
     const cand = await srvSwapCandidates(r.id);
-    if(!(await confirmSheet({ title:'קורה, ואנחנו כאן. לדווח שלא תוכלו להגיע?', text:`נעדכן עכשיו את הרכזת ונפתח את המשמרת ${dayLabel(r.day)} (${SRV_SHIFT_WORD[r.shift]}) להחלפה, וגם המדריכים האחרים יקבלו הודעה. ההחלפה עצמה תחכה לאישור הרכזת.${srvCandidatesText(cand)}`, okLabel:'כן, לדווח', cancelLabel:'חזרה' }))) return;
-    try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:null }); toast('עדכנו את הרכזת ופתחנו את המשמרת להחלפה. אין לכם מה לדאוג'); } catch(e){ toast('לא הצלחנו לשלוח את העדכון כרגע. אפשר לנסות שוב בעוד רגע'); }
+    if(!(await confirmSheet({ title:tx('cant_title'), text:tx('cant_text', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לדווח', cancelLabel:'חזרה' }))) return;
+    try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:null }); toast(tx('cant_done')); } catch(e){ toast(tx('cant_fail')); }
     srvRenderSchedule(body);
   }));
 }
@@ -73,7 +73,7 @@ async function srvRenderVacation(body){
   const list = r.data || [], today = srvToday();
   body.innerHTML = `
     <h2 class="psec">בקשת חופשה</h2>
-    <div class="pnote">כדי שנצליח לתכנן את הצוות ולאשר את החופשה בקלות, נשמח לקבל בקשה של שבוע עד שלושה שבועות לפחות 30 יום מראש, ובקשה של שלושה שבועות ומעלה לפחות חודשיים מראש. אחרי שהרכזת מאשרת, הימים נכנסים אוטומטית כהיעדרות. (ליום או יומיים אפשר פשוט לסמן "היעדרות" בהעדפות.)</div>
+    <div class="pnote">${tx('vac_guide')}</div>
     <div class="pvac">
       <label class="pfield">מתאריך<input type="date" id="vac-from" min="${today}"></label>
       <label class="pfield">עד תאריך<input type="date" id="vac-to" min="${today}"></label>
@@ -82,13 +82,13 @@ async function srvRenderVacation(body){
       <button type="button" class="btn" id="vac-send">שליחת הבקשה</button>
     </div>
     <h2 class="psec">הבקשות שלי</h2>
-    ${list.length ? list.map(v => `<div class="pmine-row"><span><b>${parseIso(v.from_day).getDate()}/${parseIso(v.from_day).getMonth() + 1} – ${parseIso(v.to_day).getDate()}/${parseIso(v.to_day).getMonth() + 1}</b>${v.note ? `<br><small>${pEsc(v.note)}</small>` : ''}</span><span class="pmine-actions"><em class="pst pst-${v.status === 'approved' ? 'approved' : v.status === 'pending' ? 'offered' : 'rejected'}">${SRV_VAC_STATUS[v.status]}</em>${v.status === 'pending' ? `<button type="button" class="btn ghost small" data-vac-cancel="${v.id}">ביטול</button>` : ''}</span></div>`).join('') : '<div class="pnote">עדיין לא שלחתם בקשות.</div>'}`;
+    ${list.length ? list.map(v => `<div class="pmine-row"><span><b>${parseIso(v.from_day).getDate()}/${parseIso(v.from_day).getMonth() + 1} – ${parseIso(v.to_day).getDate()}/${parseIso(v.to_day).getMonth() + 1}</b>${v.note ? `<br><small>${pEsc(v.note)}</small>` : ''}</span><span class="pmine-actions"><em class="pst pst-${v.status === 'approved' ? 'approved' : v.status === 'pending' ? 'offered' : 'rejected'}">${SRV_VAC_STATUS[v.status]}</em>${v.status === 'pending' ? `<button type="button" class="btn ghost small" data-vac-cancel="${v.id}">ביטול</button>` : ''}</span></div>`).join('') : `<div class="pnote">${tx('vac_none')}</div>`}`;
   const from = body.querySelector('#vac-from'), to = body.querySelector('#vac-to'), hint = body.querySelector('#vac-hint');
   const days = () => from.value && to.value ? Math.round((parseIso(to.value) - parseIso(from.value)) / 86400000) + 1 : 0;
   const ahead = () => from.value ? Math.round((parseIso(from.value) - parseIso(today)) / 86400000) : 0;
   const update = () => {
     const d = days(), a = ahead();
-    hint.textContent = !d ? '' : d >= 21 && a < 60 ? `זו חופשה של ${d} ימים. בדרך כלל כדאי להגיש חופשה כזו חודשיים מראש. אפשר לשלוח גם עכשיו, והרכזת תעשה כל מה שאפשר.` : d >= 7 && a < 30 ? `זו חופשה של ${d} ימים. בדרך כלל כדאי להגיש חופשה כזו 30 יום מראש. אפשר לשלוח גם עכשיו, והרכזת תעשה כל מה שאפשר.` : '';
+    hint.textContent = !d ? '' : d >= 21 && a < 60 ? tx('vac_hint', d, 'חודשיים מראש') : d >= 7 && a < 30 ? tx('vac_hint', d, '30 יום מראש') : '';
   };
   from.addEventListener('change', () => { if(to.value && to.value < from.value) to.value = from.value; to.min = from.value || today; update(); }); to.addEventListener('change', update);
   body.querySelector('#vac-send').addEventListener('click', async () => {
@@ -97,8 +97,8 @@ async function srvRenderVacation(body){
     if(d > 119){ toast('אפשר לבקש עד 4 חודשים בבקשה אחת'); return; }
     if(!(await confirmSheet({ title:'לשלוח את הבקשה?', text:`בקשת חופשה של ${d} ימים תישלח לרכזת, והיא תחזור אליכם.`, okLabel:'כן, לשלוח', cancelLabel:'חזרה' }))) return;
     const ins = await sbPersonal.from('vacation_requests').insert({ staff_id:srv.me, from_day:from.value, to_day:to.value, note:(body.querySelector('#vac-note').value || '').trim() || null });
-    if(ins.error){ toast('לא הצלחנו לשלוח כרגע. אפשר לנסות שוב בעוד רגע'); return; }
-    toast('הבקשה נשלחה, תודה! הרכזת תחזור אליכם'); srvRenderVacation(body);
+    if(ins.error){ toast(tx('vac_fail')); return; }
+    toast(tx('vac_sent')); srvRenderVacation(body);
   });
   body.querySelectorAll('[data-vac-cancel]').forEach(b => b.addEventListener('click', async () => {
     const u = await sbPersonal.from('vacation_requests').update({ status:'cancelled' }).eq('id', b.dataset.vacCancel);
@@ -134,7 +134,7 @@ async function srvRenderAvailability(body){
     if(left){ toast('נשמח שתבחרו לכל יום לפני ההגשה, ככה נוכל לתכנן'); return; }
     const u = await sbPersonal.from('prefs_submission').upsert({ staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() });
     if(u.error){ toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
-    m.submitted[srv.me] = true; toast('תודה! הזמינות שלכן הוגשה ✓'); srvRenderAvailability(body);
+    m.submitted[srv.me] = true; toast(tx('avail_ok')); srvRenderAvailability(body);
   });
 }
 
@@ -155,7 +155,7 @@ async function srvRenderTeacherHours(body){
   body.querySelector('#th-submit').addEventListener('click', async () => {
     const u = await sbPersonal.from('prefs_submission').upsert({ staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() });
     if(u.error){ toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
-    m.submitted[srv.me] = true; toast('תודה! השעות אושרו ✓'); srvRenderTeacherHours(body);
+    m.submitted[srv.me] = true; toast(tx('avail_ok')); srvRenderTeacherHours(body);
   });
 }
 
@@ -168,12 +168,12 @@ async function srvRenderOpenShifts(body){
   if(!body.isConnected) return;
   body.innerHTML = `
     <h2 class="psec">משמרות שמחכות לעזרה שלך</h2>
-    <div class="pnote">כאן מופיעות משמרות שעדיין חסר בהן מישהו. תודה שאכפת לך מהצוות! אפשר לקחת מה שנוח לך, והרכזת תקבל על זה הודעה.</div>
-    ${lists.length ? lists.map(o => `<div class="pmine-row"><span><b>${dayLabel(o.day)}</b> · ${SRV_SHIFT_WORD[o.shift]} <small>(חסר/ים ${o.need - o.have})</small></span><button type="button" class="btn small" data-take="${o.day}|${o.shift}">אשמח לקחת</button></div>`).join('') : '<div class="pnote">כרגע אין משמרות חסרות. תודה שבדקת!</div>'}`;
+    <div class="pnote">${tx('open_intro')}</div>
+    ${lists.length ? lists.map(o => `<div class="pmine-row"><span><b>${dayLabel(o.day)}</b> · ${SRV_SHIFT_WORD[o.shift]} <small>(חסר/ים ${o.need - o.have})</small></span><button type="button" class="btn small" data-take="${o.day}|${o.shift}">אשמח לקחת</button></div>`).join('') : `<div class="pnote">${tx('open_none')}</div>`}`;
   body.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', async () => {
     const [day, shift] = b.dataset.take.split('|');
     if(!(await confirmSheet({ title:'למלא את המשמרת?', text:`נשבץ אותך למשמרת ${dayLabel(day)} (${SRV_SHIFT_WORD[shift]}). תודה על העזרה!`, okLabel:'כן, אשמח', cancelLabel:'חזרה' }))) return;
     const r = await sbPersonal.rpc('take_open_shift', { p_day:day, p_shift:shift });
-    toast(r.error ? 'לא הצלחנו לשבץ כרגע, ייתכן שמישהו כבר מילא את המשמרת. תודה על הנכונות!' : 'שיבצנו אותך, תודה רבה!'); await srvReloadSafe(); srvRenderOpenShifts(body);
+    toast(r.error ? tx('open_fail') : tx('open_ok')); await srvReloadSafe(); srvRenderOpenShifts(body);
   }));
 }

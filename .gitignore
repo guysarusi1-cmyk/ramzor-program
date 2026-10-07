@@ -1,4 +1,4 @@
-﻿dist/
+dist/
 config/test.json
 config/*.local.json
 backups/

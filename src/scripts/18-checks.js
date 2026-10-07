@@ -44,7 +44,7 @@
   async function putState(id, patch){ const s = await getChildStateForUpdate(id); if(!s) return; Object.assign(s, patch); await setChildState(id, s); }
   const ONLY = (location.search.match(/[?&]only=([^&]+)/) || [])[1];              // ?runchecks&only=portal%20people  runs just that step (after the sign-in)
   async function step(name, fn){
-    if(ONLY && name !== 'sign in' && decodeURIComponent(ONLY) !== name) return;
+    if(ONLY && name !== 'sign in' && !decodeURIComponent(ONLY).split('|').includes(name)) return;
     try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || (e && e.message ? e.message + ' ' + (e.details || e.hint || '') : JSON.stringify(e)));
       if(typeof portalServerOn !== 'undefined' && portalServerOn){ portalServerOn = false; portalState = null; try { await sbPersonal.auth.signOut(); } catch(e2){} }          // a crashed server step must not leave the demo broken for the steps after it
     }
@@ -1119,6 +1119,25 @@
       check('feedback: the closing line follows the person\'s gender', /שאת חלק/.test(fem.text) && /שאתה חלק/.test(mal.text), '');
     });
 
+    // ---- the three voices of the system (warm, light, brief): the catalog is checked with made-up arguments, no server
+    await step('voices', async () => {
+      if(!PORTAL_ENABLED) return;
+      const keep = srv.voice, keys = Object.keys(VOICES), args = ['ראשון 5/7', 'צהריים', ' עמיתים: דנה.', 3, 4];
+      check('voices: every sentence exists in all three voices', keys.every(k => ['warm', 'light', 'brief'].every(v => typeof VOICES[k][v] === 'function')), keys.filter(k => !['warm', 'light', 'brief'].every(v => typeof VOICES[k][v] === 'function')).join(','));
+      const empties = []; keys.forEach(k => ['warm', 'light', 'brief'].forEach(v => { const s = VOICES[k][v](...args); if(k !== 'fb_close' && !String(s).trim() && !(v === 'brief' && k === 'fb_thanks')) empties.push(k + '/' + v); if(/undefined|NaN|\[object/.test(String(s))) empties.push(k + '/' + v + ' (broken)'); }));
+      check('voices: nothing comes out empty or broken', empties.length === 0, empties.join(','));
+      check('voices: the light and the brief voices are really different from the warm one', ['st_unsub', 'sch_help', 'vac_guide', 'open_intro', 'swaps_intro'].every(k => VOICES[k].light(...args) !== VOICES[k].warm(...args) && VOICES[k].brief(...args) !== VOICES[k].warm(...args)), 'same');
+      check('voices: the brief one is shorter than the warm one in the long explanations', ['sch_help', 'vac_guide', 'swaps_intro', 'open_intro', 'hint_low', 'fb_min_gap'].every(k => VOICES[k].brief(...args).length < VOICES[k].warm(...args).length), 'not shorter');
+      srv.voice = 'brief'; const b = tx('st_unsub'); srv.voice = 'light'; const l = tx('st_unsub'); srv.voice = null;
+      check('voices: tx() follows the chosen voice', b === 'נא להגיש העדפות.' && /לא יכתוב את עצמו/.test(l) && /נשמח לקבל/.test(tx('st_unsub')), b + ' / ' + l);
+      const mk = addMonths(monthKeyOf(isoDate(new Date())), 2), ds = daysOfMonth(mk), d1 = ds.filter(d => dowOf(d) === 2)[0];
+      const inp = v => ({ prefs:{ slots:{ [`${d1}|n`]:'no' }, absent:[], hours:{}, fixed:[] }, rows:[{ day:d1, shift:'N', from:'22:00', to:'08:00' }], profile:{ female:true }, goal:'min', voice:v });
+      const fw = srvFeedbackFor({ first:'דנה' }, mk, inp('warm')), fl = srvFeedbackFor({ first:'דנה' }, mk, inp('light')), fb = srvFeedbackFor({ first:'דנה' }, mk, inp('brief'));
+      check('voices: the feedback after publishing is written in the three voices, with the same facts', fw.text !== fl.text && fl.text !== fb.text && fb.text.length < fw.text.length && [fw, fl, fb].every(f => f.text.includes(dayLabel(d1)) && f.asked === 2), fw.text.length + '/' + fl.text.length + '/' + fb.text.length);
+      check('voices: the brief feedback has no pleasantries and the light one is not rude', !/אנחנו כאן בשבילך/.test(fb.text) && !/טיפש|מטומטם|גרוע/.test(fl.text), fb.text);
+      srv.voice = keep;
+    });
+
     // ---- the portal on the real (test) database: personal sign-in, what each kind of person may see, preferences kept on the server
     await step('portal server', async () => {
       if(!PORTAL_ENABLED) return;
@@ -1148,6 +1167,16 @@
       portalUi.persona = srv.me; portalUi.tab = 'prefs'; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
       check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
       check('portal server: the level buttons are named כן / יכול / לא', ['כן', 'יכול', 'לא'].every(w => [...document.querySelectorAll('.lvbtn')].some(b => b.textContent === w)), [...document.querySelectorAll('.lvbtn')].map(b => b.textContent).join(','));
+      // the gear: the person chooses the language of the system
+      check('portal server: there is a gear (system settings) in the top bar', !!document.getElementById('portal-gear'), 'no gear');
+      document.getElementById('portal-gear').click(); await sleep(150);
+      check('portal server: the settings offer the three voices (warm, light, brief)', document.querySelectorAll('.psheet [data-voice]').length === 3 && /חמה ורכה/.test(document.querySelector('.psheet').textContent) && /קלילה והומוריסטית/.test(document.querySelector('.psheet').textContent) && /קצרה ועניינית/.test(document.querySelector('.psheet').textContent), 'no options');
+      document.querySelector('.psheet [data-voice="brief"]').click(); await sleep(400);
+      check('portal server: choosing the brief voice changes the screen at once', srv.voice === 'brief' && /נא להגיש העדפות|ההעדפות הוגשו\./.test(document.getElementById('portal-body').textContent), srv.voice + ' / ' + document.querySelector('.pstatus').textContent);
+      document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-voice="light"]').click(); await sleep(400);
+      check('portal server: choosing the light voice changes the screen too', srv.voice === 'light' && /לא יכתוב את עצמו|שמנו במקום בטוח/.test(document.getElementById('portal-body').textContent), srv.voice);
+      document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-voice="warm"]').click(); await sleep(400);
+      check('portal server: back to the warm voice', srv.voice === 'warm' && /נשמח לקבל את ההעדפות|אצלנו, תודה/.test(document.getElementById('portal-body').textContent), srv.voice);
       if(srvPrefsOpen(next)){
         check('portal server: the monthly-goal question offers three choices and "no preference"', document.querySelectorAll('.pgoal-opt').length === 4 && /המינימום שלך/.test(document.querySelector('.pgoal').textContent), document.querySelectorAll('.pgoal-opt').length + ' / ' + JSON.stringify(srv.profile));
         document.querySelector('[data-goal="weekly45"]').click(); await sleep(60);
@@ -1292,7 +1321,7 @@
         portalServerOn = true; if(!(await srvLoad())) return false;
         portalUi.persona = srv.me; return true;
       };
-      const waitFor = async (fn, n = 20) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
+      const waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
       const maybeSheet = async () => { for(let i = 0; i < 8; i++){ const s = document.querySelector('.confirm-sheet'); if(s){ s.querySelector('.confirm-ok').click(); await sleep(80); return true; } await sleep(100); } return false; };
       if(!(await sign('instructor'))){ check('portal people: the instructor test account signs in', false, 'no'); portalServerOn = false; return; }
       const i1 = srv.me;
@@ -1334,6 +1363,7 @@
         await srvReload(); showPortal('schedule'); await sleep(150);
         document.querySelector('#cs-publish').click(); await answerSheet();
         check('portal people: publishing makes the schedule published on the server', await waitFor(async () => { const s = await sbPersonal.from('schedule').select('status').eq('month', firstOf(mkT)); return s.data && s.data[0] && s.data[0].status === 'published'; }), 'not published');
+        await waitFor(() => [...document.querySelectorAll('.toast')].some(t => /הסידור פורסם/.test(t.textContent)), 400);          // (the personal messages to everybody are sent after the publishing; wait until that is over before changing the user)
         // ---- an instructor reports "I cannot come" (the shift opens at once)
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(200);
         const cant = document.querySelector('[data-cant]'); check('portal people: the instructor sees "cannot come" next to her shift', !!cant, 'no button');

@@ -108,13 +108,13 @@ function renderInstructorPrefs(body){
   let availHint = '';
   if(portalServerOn && minInfo && minInfo.total){                  // a gentle word when the marks leave little room for the minimum
     const free = days.filter(d => !fixedOn(d) && !prefs.absent.includes(d)).reduce((n, d) => n + ['m', 'e', 'n'].filter(id => !prefs.slots[`${d}|${id}`]).length, 0);
-    if(free < minInfo.total * 2) availHint = `<div class="pnote pnote-soft">שמנו לב שבסימונים הנוכחיים נשארו ${free} משמרות שמתאימות לך. כדי שנצליח לשבץ אותך במינימום (בערך ${minInfo.total} משמרות) כדאי להשאיר קצת יותר גמישות. אם משהו מגביל אותך, נשמח לשמוע ולמצוא פתרון יחד.</div>`;
+    if(free < minInfo.total * 2) availHint = `<div class="pnote pnote-soft">${tx('hint_low', free, minInfo.total)}</div>`;
   }
   const goalBtn = (v, label, sub) => `<button type="button" class="pgoal-opt${goal === v ? ' on' : ''}" data-goal="${v || ''}"${locked ? ' disabled' : ''}><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
   body.innerHTML = `
     ${monthNavHtml(mk)}
-    <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'ההעדפות שלך אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.' : 'נשמח לקבל את ההעדפות שלך. זה עוזר לנו לבנות סידור שמתאים לך.'}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
-    ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע (היא נפתחת ב-1 בחודש הקודם ונסגרת ב-24 בו בשעה 22:30). לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.</div>' : ''}
+    <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
+    ${locked ? `<div class="pnote">${tx('locked')}</div>` : ''}
     ${fixedList.length ? `<div class="pnote">הימים שאושרו לך או שהרכזת סימנה: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
     <details class="pfold" data-fold="prefhelp"${openFold('prefhelp') ? ' open' : ''}><summary><span>איך ממלאים? (לחצו להסבר)</span></summary><div class="pfold-body"><div class="pnote">כל המשמרות מסומנות "כן", כלומר שאתם זמינים. נשמח לדעת אם יש משמרות שפחות מתאימות לכם: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. ${[...DEFAULT_SHIFT_LEGEND(st.shiftTypes)].join(' · ')}${portalServerOn ? ` · 🕯️ = סופ"ש ארוך (שישי צהריים מאוחר, בשבת בוקר וצהריים, עד אחרי יציאת שבת). אותה בחירה מופיעה גם ביום שישי וגם ביום שבת. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.` : ''}</div></div></details>
     ${availHint}
@@ -171,17 +171,17 @@ function renderInstructorPrefs(body){
   }));
   document.getElementById('prefs-clear-all').addEventListener('click', async () => {
     if(locked) return;
-    if(!(await confirmSheet({ title:'לנקות את כל ההעדפות?', text:'כל הסימונים שלך בחודש הזה (כן, יכול, לא' + (portalServerOn ? ' ושעות אחרות' : ', היעדרויות') + ') יחזרו ל"כן", כלומר זמינים. אפשר תמיד לסמן שוב.', okLabel:'כן, לנקות הכל', cancelLabel:'חזרה', danger:true }))) return;
-    prefs.slots = {}; prefs.absent = []; if(portalServerOn) prefs.hours = {}; portalSave(); toast('ניקינו הכול. הכל "כן" שוב'); renderInstructorPrefs(body);
+    if(!(await confirmSheet({ title:'לנקות את כל ההעדפות?', text:tx('clear_text', portalServerOn ? ' ושעות אחרות' : ', היעדרויות'), okLabel:'כן, לנקות הכל', cancelLabel:'חזרה', danger:true }))) return;
+    prefs.slots = {}; prefs.absent = []; if(portalServerOn) prefs.hours = {}; portalSave(); toast(tx('clear_done')); renderInstructorPrefs(body);
   });
   document.getElementById('prefs-submit').addEventListener('click', async () => {
     if(locked) return;
     if(portalServerOn){
-      if(cons.extend === null || cons.pull === null){ toast('נשמח אם תענו על שתי השאלות הקטנות לפני ההגשה. זה עוזר לנו לתכנן'); const box = body.querySelector('.pconsents'); if(box) box.scrollIntoView({ block:'center' }); return; }
-      try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim(), m.goals[me.id] || null); } catch(e){ toast('לא הצלחנו לשמור את ההגשה כרגע. אפשר לנסות שוב בעוד רגע'); return; }
-      toast('תודה! ההעדפות שלך הוגשו ✓'); renderInstructorPrefs(body); return;
+      if(cons.extend === null || cons.pull === null){ toast(tx('consent_needed')); const box = body.querySelector('.pconsents'); if(box) box.scrollIntoView({ block:'center' }); return; }
+      try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim(), m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
+      toast(tx('submit_ok')); renderInstructorPrefs(body); return;
     }
-    m.submitted[me.id] = true; portalSave(); toast('תודה! ההעדפות שלך הוגשו ✓'); renderInstructorPrefs(body);
+    m.submitted[me.id] = true; portalSave(); toast(tx('submit_ok')); renderInstructorPrefs(body);
   });
 }
 // custom hours for one day: up to two ranges (whole hours); used only when they complete a full shift
@@ -223,17 +223,17 @@ function renderInstructorSwaps(body){
     ${approvalsForMe.length ? '<h2 class="psec">בקשות אליי</h2>' : ''}
     ${approvalsForMe.map(a => `<div class="preq warn"><div>הרכזת שיבצה אותך למשמרת שסימנת עליה "לא":<br><b>${slotLabel(a.key)}</b><br>האם את/ה מאשר/ת?</div><div class="preq-actions"><button type="button" class="btn" data-appr-ok="${a.mk}|${a.k}">מאשר/ת</button><button type="button" class="btn ghost" data-appr-no="${a.mk}|${a.k}">לא מאשר/ת</button></div></div>`).join('')}
     <h2 class="psec">בקשות החלפה פתוחות</h2>
-    <div class="pnote">עמיתים שמחפשים מחליף/ה למשמרת. אם יש לכם אפשרות לעזור, לחצו על הכפתור והבקשה תעבור לרכזת. תודה שאתם שם אחד בשביל השני. כדי לבקש החלפה בעצמכם, פתחו "הסידור" ← "המשמרות שלי" ← "בקשת החלפה".</div>
+    <div class="pnote">${tx('swaps_intro')}</div>
     ${open.length ? open.map(s => {
       const own = s.from === me.id, can = !own && canTakeShift(me.id, s.key);
       return `<div class="preq swap"><div>${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}<b>${pEsc(name(s.from))}</b> מחפש/ת מחליף/ה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">אי אפשר לשבץ אותך כרגע</em>'}</div></div>`;
-    }).join('') : '<div class="pnote">כרגע אין בקשות החלפה פתוחות. תודה שאכפת לכם!</div>'}
+    }).join('') : `<div class="pnote">${tx('swaps_none')}</div>`}
     <h2 class="psec">הבקשות שלי</h2>
     ${mineReq.length ? mineReq.map(s => `<div class="pmine-row"><span>${slotLabel(s.key)}<br><small>${s.from === me.id ? 'ביקשתם החלפה' + (s.to ? ' · מוכן/ה לעזור: ' + pEsc(name(s.to)) : '') : 'הצעתם להחליף את ' + pEsc(name(s.from))}</small></span><span class="pmine-actions">${portalServerOn && s.from === me.id && s.status === 'open' ? `<button type="button" class="btn ghost small" data-cands="${s.aid}">מי זמין/ה?</button>` : ''}<em class="pst pst-${s.status}">${SWAP_STATUS[s.status]}</em></span></div>`).join('') : '<div class="pnote">אין בקשות.</div>'}`;
   body.querySelectorAll('[data-swap-take]').forEach(b => b.addEventListener('click', async () => {
     const sw = st.swaps.find(x => x.id === b.dataset.swapTake); if(!sw || sw.status !== 'open') return;
     if(portalServerOn){
-      try { await srvSwapAction('offer_swap', { p_swap:sw.id }); toast('תודה! הבקשה הועברה לרכזת, ונעדכן את שניכם'); } catch(e){ toast('לא הצלחנו כרגע, ייתכן שהמשמרת כבר נתפסה. תודה על הנכונות!'); }
+      try { await srvSwapAction('offer_swap', { p_swap:sw.id }); toast(tx('take_ok')); } catch(e){ toast(tx('take_fail')); }
       renderInstructorSwaps(body); return;
     }
     sw.to = me.id; sw.status = 'offered';
@@ -247,7 +247,7 @@ function renderInstructorSwaps(body){
     portalSheet(`<h2>עמיתים שזמינים למשמרת</h2><div class="pnote">${names.length ? 'אלה העמיתים שזמינים למשמרת הזאת ולא שובצו אליה. אפשר לפנות אליהם ישירות ולבקש עזרה: ' + names.map(pEsc).join(', ') + '.' : 'כרגע לא מצאנו עמיתים פנויים למשמרת הזאת. נשמח לעזור, ואפשר גם לדבר עם הרכזת.'}</div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>תודה</button></div>`);
   }));
   body.querySelectorAll('[data-swap-cancel]').forEach(b => b.addEventListener('click', async () => {
-    if(portalServerOn){ try { await srvSwapAction('cancel_swap', { p_swap:b.dataset.swapCancel }); toast('ביטלנו את הבקשה'); } catch(e){ toast('לא הצלחנו לבטל כרגע. אפשר לנסות שוב בעוד רגע'); } renderInstructorSwaps(body); return; }
+    if(portalServerOn){ try { await srvSwapAction('cancel_swap', { p_swap:b.dataset.swapCancel }); toast(tx('cancel_ok')); } catch(e){ toast(tx('cancel_fail')); } renderInstructorSwaps(body); return; }
     const sw = st.swaps.find(x => x.id === b.dataset.swapCancel); if(sw){ sw.status = 'cancelled'; portalSave(); toast('הבקשה בוטלה'); renderInstructorSwaps(body); } }));
   body.querySelectorAll('[data-appr-ok], [data-appr-no]').forEach(b => b.addEventListener('click', () => {
     const [mk, k] = (b.dataset.apprOk || b.dataset.apprNo).split(/\|(.+)/).filter(Boolean), m = portalMonth(mk), key = k.slice(0, k.lastIndexOf('|'));

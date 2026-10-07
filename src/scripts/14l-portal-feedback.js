@@ -34,7 +34,7 @@ const fbRowShiftId = r => r.shift === 'S' ? 'm' : ({ M:'m', A:'e', N:'n', L:'l' 
 
 // the whole picture for one person and one month
 function srvFeedbackFor(p, mk, input){
-  const { prefs, rows, profile, goal } = input, gx = (m, f) => fbGx(profile, m, f);
+  const { prefs, rows, profile, goal } = input, gx = (m, f) => fbGx(profile, m, f), V = input.voice || portalVoice(), T = (key, ...a) => txFor(V, key, ...a), fem = !(profile && profile.female === false);
   const days = daysOfMonth(mk), mine = rows.filter(r => r.day.slice(0, 7) === mk);
   const unmet = [], honored = [];
   const on = (day, id) => mine.filter(r => r.day === day && fbRowShiftId(r) === id);
@@ -55,9 +55,16 @@ function srvFeedbackFor(p, mk, input){
   let goalLine = '', goalOk = null;
   if(goal){
     const t = FB_GOAL_WORD[goal];
-    if(goal === 'min'){ goalOk = min.total == null || c.total <= min.total + 2; goalLine = !goalOk ? `ביקשת ${t}. הפעם קיבלת ${c.total} משמרות, יותר מהמינימום, כי היינו צריכים עוד ידיים. אנחנו מודים לך על הגמישות.` : (min.total != null && c.total < min.total - 1) ? `ביקשת ${t}. הפעם קיבלת ${c.total} משמרות, קצת מתחת למינימום, וזה לא קשור אלייך. נשמח להשלים את זה יחד.` : `ביקשת ${t}, וקיבלת ${c.total} משמרות, בדיוק במקום שרצית. תודה על השיתוף!`; }
-    else if(goal === 'max'){ goalOk = min.total == null || c.total >= min.total + 3; goalLine = goalOk ? `ביקשת ${t}, וקיבלת ${c.total} משמרות. תודה על הנכונות!` : `ביקשת ${t}. ניסינו לתת לך כמה שיותר, והפעם הגענו ל-${c.total} משמרות. לא הצלחנו לתת יותר בלי לפגוע בכללים ובצוות.`; }
-    else { const weeks = c.perWeek, bad = weeks.filter(w => w.all < 4 || w.all > 5); goalOk = bad.length === 0; goalLine = goalOk ? `ביקשת ${t}, ובכל שבוע קיבלת 4 או 5 משמרות. נהדר!` : `ביקשת ${t}. ניסינו, ובשבוע של ${dayLabel(bad[0].week)} יצא ${bad[0].all}${bad.length > 1 ? ` (ועוד ${bad.length - 1} שבועות)` : ''}. לא תמיד הצלחנו להתאים את זה, ותודה על ההבנה.`; }
+    if(goal === 'min'){
+      goalOk = min.total == null || c.total <= min.total + 2;
+      goalLine = !goalOk ? T('fb_g_min_high', t, c.total) : (min.total != null && c.total < min.total - 1) ? T('fb_g_min_low', t, c.total) : T('fb_g_min_ok', t, c.total);
+    } else if(goal === 'max'){
+      goalOk = min.total == null || c.total >= min.total + 3;
+      goalLine = goalOk ? T('fb_g_max_ok', t, c.total) : T('fb_g_max_no', t, c.total);
+    } else {
+      const weeks = c.perWeek, bad = weeks.filter(w => w.all < 4 || w.all > 5); goalOk = bad.length === 0;
+      goalLine = goalOk ? T('fb_g_wk_ok', t) : T('fb_g_wk_no', t, dayLabel(bad[0].week), String(bad[0].all) + (bad.length > 1 ? ` (ועוד ${bad.length - 1} שבועות)` : ''));
+    }
     (goalOk ? honored : unmet).push(`הבקשה ${t}`);
   }
   const minGaps = [];
@@ -68,17 +75,18 @@ function srvFeedbackFor(p, mk, input){
   } else if(profile && profile.only_long && !mine.some(r => r.shift === 'L')) minGaps.push('עוד לא שובצת לסופ"ש ארוך');
   const asked = honored.length + unmet.length, name = p.first;
   const lines = [];
-  lines.push(`הסידור של ${monthLabel(mk)} פורסם, ורצינו לשתף אותך כבר עכשיו איך הלכו הבקשות שלך.`);
-  if(!asked) lines.push(`החודש לא סימנת בקשות מיוחדות, וניסינו לתת לך סידור נוח ככל האפשר. קיבלת ${c.total} משמרות.`);
-  else lines.push(`מתוך ${asked} הבקשות שסימנת הצלחנו להיענות ל-${honored.length}, ותודה ששיתפת אותנו. זה עוזר לנו לבנות סידור שמתאים לכולם.`);
+  lines.push(T('fb_intro', monthLabel(mk)));
+  if(!asked) lines.push(T('fb_nothing', c.total));
+  else lines.push(T('fb_count', asked, honored.length));
   const reqUnmet = unmet.filter(u => !u.startsWith('הבקשה '));
-  if(reqUnmet.length) lines.push(`אלה הבקשות שהפעם לא הצלחנו לקיים, למרות שבאמת ניסינו:\n${reqUnmet.map(u => '• ' + u).join('\n')}\nלפעמים צריך להשלים צוות או לשמור על כללי הבטיחות והמנוחה. נמשיך לעשות כמיטב יכולתנו בחודשים הבאים.`);
+  if(reqUnmet.length) lines.push(T('fb_unmet', reqUnmet.map(u => '• ' + u).join('\n')));
   if(goalLine) lines.push(goalLine);
   if(min.total != null){
-    if(!minGaps.length) lines.push(`וגם: עמדת במינימום של החודש (${min.text}). תודה על ההשקעה!`);
-    else lines.push(`לגבי המינימום (${min.text}): נשארו כמה משמרות שלא הצלחנו להשלים בשבילך:\n${minGaps.map(g => '• ' + g).join('\n')}\nזה לא קשור אלייך, ואין צורך להילחץ. אם נוח לך, אפשר לפנות לרכזת ונמצא יחד פתרון.`);
+    if(!minGaps.length) lines.push(T('fb_min_ok', min.text));
+    else lines.push(T('fb_min_gap', min.text, minGaps.map(g => '• ' + g).join('\n')));
   }
-  lines.push(`אם משהו לא יושב לך טוב, אפשר לבקש החלפה בפורטל או לדבר עם הרכזת. אנחנו כאן בשבילך, ${gx('תודה שאתה חלק מהצוות', 'תודה שאת חלק מהצוות')}.`);
+  const closing = T('fb_close', T('fb_thanks', fem));
+  if(closing) lines.push(closing);
   return { subject:`הסידור של ${monthLabel(mk)} פורסם: ככה הלכו הבקשות שלך`, text:lines.join('\n\n'), asked, honored:honored.length, unmet:reqUnmet, goalOk, total:c.total, min, minGaps };
 }
 
@@ -90,7 +98,7 @@ async function srvSendFeedback(mk){
     const rows = st.rows.filter(r => r.staff === p.id), pr = (m.prefs[p.id] || { slots:{}, absent:[], hours:{} });
     if(!rows.length && !Object.keys(pr.slots || {}).length) continue;
     const pv = (st.priv || {})[p.id] || {};
-    const fb = srvFeedbackFor(p, mk, { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour }, goal:(m.goals || {})[p.id] || null });
+    const fb = srvFeedbackFor(p, mk, { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour }, goal:(m.goals || {})[p.id] || null, voice:(st.voices || {})[p.id] || 'warm' });
     const r = await sbPersonal.rpc('coordinator_tell', { p_staff:p.id, p_subject:fb.subject, p_text:fb.text, p_kind:'info' });
     if(r.error) sent.failed++; else sent.ok++;
   }

@@ -12,7 +12,7 @@ const SRV_SHIFTS = [
   { id:'e', label:'צהריים', letter:'צ', start:'14:00', end:'22:00', need:1, needWeekend:1, night:false },
   { id:'n', label:'לילה', start:'22:00', end:'08:00', need:1, needWeekend:1, night:true }
 ];
-const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false, photos:null, profile:null, profileFor:null };
+const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false, photos:null, profile:null, profileFor:null, voice:null, reminders:true };
 const firstOf = mk => mk + '-01';
 
 // ---- Israel time (the database closes the preferences by Israel time, so the screen does too)
@@ -57,7 +57,7 @@ async function srvLoad(){
   const st = {
     version:2, serverMode:true, instructors:staff.map((s, i) => ({ id:s.id, first:s.display_name, last:'', role:s.kind, active:s.active, photo:(srv.photos && srv.photos[s.id]) || letterPhoto(s.display_name, i) })),
     shiftTypes:JSON.parse(JSON.stringify(SRV_SHIFTS)), rules:Object.assign({}, RULES_DEFAULT), months:{}, swaps:[], assignmentIds:{}, announcements:[], timetable:{}, birthdays:{}, outbox:[],
-    notices:notices.map(n => ({ id:n.id, to:meId, at:n.created_at, text:n.text, kind:n.kind, seen:n.seen, fromServer:true })),
+    notices:notices.map(n => ({ id:n.id, to:meId, at:n.created_at, text:n.text, kind:n.kind, seen:n.seen, sent:!!n.seen, fromServer:true })),
     settings:{ theme:(function(){ try { return localStorage.getItem('ramzor-portal-theme') || 'dark'; } catch(e){ return 'dark'; } })() }
   };
   portalState = st; srv.me = meId; srv.meRow = st.instructors.find(p => p.id === meId) || null;
@@ -76,7 +76,7 @@ async function srvLoad(){
   subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
   let goalRows = []; try { goalRows = await srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,goal').gte('month', from).lte('month', to)); } catch(e){ goalRows = []; }          // (the goal column comes with scheduling-v5.sql; until then there is none)
   goalRows.forEach(r => { const m = st.months[monthOf(r.month)]; if(m && r.goal) m.goals[r.staff_id] = r.goal; });
-  if(srv.profileFor !== meId){ srv.profileFor = meId; try { const pr = await sbPersonal.rpc('my_profile'); srv.profile = pr.error ? null : pr.data; } catch(e){ srv.profile = null; } }
+  if(srv.profileFor !== meId){ srv.profileFor = meId; srv.me = meId; try { const pr = await sbPersonal.rpc('my_profile'); srv.profile = pr.error ? null : pr.data; } catch(e){ srv.profile = null; } await srvLoadSettings(); applyPortalSize(); }
   sched.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.status = r.status; m.published = r.status === 'published'; } });
   st.rows = [];
   if(sched.length){                                       // (the database shows a person only the published schedules; the coordinator sees the drafts too)

@@ -236,3 +236,6 @@
   .pchoice button[data-consent$=":0"]{ border-color:var(--p-no, #ff8a80); color:var(--p-no, #ff8a80); }
   .pchoice button[data-consent$=":1"].on{ background:var(--p-yes, #7be0a0); color:#0b2417; }
   .pchoice button[data-consent$=":0"].on{ background:var(--p-no, #ff8a80); color:#2c0b08; }
+  /* the gear next to the theme button, and the large-text option */
+  .portal-top-actions{ display:flex; gap:8px; align-items:center; }
+  body.portal-big .portal-shell{ zoom:1.14; }

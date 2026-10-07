@@ -64,6 +64,7 @@ async function srvLoadCoord(){
     srvAll(() => sbPersonal.from('vacation_requests').select('id,staff_id,from_day,to_day,note,status,created_at').order('created_at', { ascending:false }).limit(60))
   ]);
   st.priv = {}; priv.forEach(r => { st.priv[r.staff_id] = r; });
+  st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}          // (each person's chosen voice, so that her feedback is written in it)
   st.flags = flags; st.vacations = vac;
 }
 

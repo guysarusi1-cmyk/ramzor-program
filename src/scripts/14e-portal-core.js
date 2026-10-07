@@ -72,7 +72,7 @@ function showPortal(tab){
       <div class="portal-top">
         <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn ? 'יציאה' : '→ מסך ראשי'}</button>
         <h1 class="portal-title">פורטל המדריך</h1>
-        <button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${st.settings.theme === 'dark' ? '☀️' : '🌙'}</button>
+        <span class="portal-top-actions">${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
       ${portalServerOn ? `<div class="portal-hello">שלום ${pEsc(me.first)}</div>` : `<label class="portal-as">צפייה כ:
         <select id="portal-persona">${st.instructors.filter(p => p.active).map(p => `<option value="${p.id}"${p.id === me.id ? ' selected' : ''}>${pEsc(instrName(p, st.instructors))}${p.role === 'coordinator' ? ' (רכזת)' : ''}</option>`).join('')}</select>
@@ -82,6 +82,7 @@ function showPortal(tab){
       <div id="portal-body"></div>
     </div>`;
   document.getElementById('portal-home').addEventListener('click', portalServerOn ? srvSignOut : showAppHome);
+  const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
   document.getElementById('portal-theme').addEventListener('click', () => { st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
   if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
   view.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.ptab; showPortal(); }));

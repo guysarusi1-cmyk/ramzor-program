@@ -2,7 +2,7 @@
 # Exit code 0 = everything passed; anything else = something is broken (details are printed).
 #   .\tests\run-checks.ps1            (everything)
 #   .\tests\run-checks.ps1 -Only 'portal people'   (just one step, to find what is wrong faster)
-param([string]$Only = '', [int]$Wait = 420, [string]$Sizes = 'phone,desktop,tv')
+param([string]$Only = '', [int]$Wait = 900, [string]$Sizes = 'phone,desktop,tv')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $port = 5188
