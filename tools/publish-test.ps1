@@ -18,6 +18,7 @@ $owner = (gh api user --jq .login).Trim(); $repo = "$owner/ramzor-test"
 $exists = $true; try { gh repo view $repo --json name 2>$null | Out-Null; if($LASTEXITCODE -ne 0){ $exists = $false } } catch { $exists = $false }
 if(-not $exists){ gh repo create $repo --public --description "Test version of the Ramzor program (no real data on this page)" | Out-Null }
 Set-Location $site
+$ErrorActionPreference = 'Continue'      # git writes harmless warnings to the error stream
 if(-not (Test-Path '.git')){ git init -b main | Out-Null; git remote add origin "https://github.com/$repo.git" }
 git config user.name 'Claude (dev)'; git config user.email "$owner@users.noreply.github.com"
 git add -A; git commit -q -m 'Test version' 2>$null
