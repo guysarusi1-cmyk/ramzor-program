@@ -102,7 +102,7 @@ function portalRefresh(){ portalRenderTab(); }
 
 // ---- shared small pieces
 function monthNavHtml(mk, extra){
-  return `<div class="pmonth"><button type="button" data-pmonth="-1" aria-label="חודש קודם">›</button><b>${monthLabel(mk)}</b><button type="button" data-pmonth="1" aria-label="חודש הבא">‹</button>${extra || ''}</div>`;
+  return `<div class="pmonth"><button type="button" data-pmonth="-1" aria-label="חודש קודם"><bdi dir="ltr">›</bdi></button><b>${monthLabel(mk)}</b><button type="button" data-pmonth="1" aria-label="חודש הבא"><bdi dir="ltr">‹</bdi></button>${extra || ''}</div>`;          // (the arrows are fixed left-to-right, so that no phone mirrors them: the right one points right, the left one points left)
 }
 function wireMonthNav(root, key){
   key = key || 'month';

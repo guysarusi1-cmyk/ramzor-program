@@ -9,7 +9,7 @@ const SRV_SHIFT_UI = { M:'m', A:'e', N:'n' };                              // (t
 const SRV_PREF_UI = { M:'m', A:'e', N:'n', L:'l' };                       // (the shifts of the preferences)
 const SRV_SHIFTS = [
   { id:'m', label:'בוקר', start:'07:00', end:'15:00', need:1, needWeekend:1, night:false },
-  { id:'e', label:'אחר הצהריים', start:'14:00', end:'22:00', need:1, needWeekend:1, night:false },
+  { id:'e', label:'צהריים', letter:'צ', start:'14:00', end:'22:00', need:1, needWeekend:1, night:false },
   { id:'n', label:'לילה', start:'22:00', end:'08:00', need:1, needWeekend:1, night:true }
 ];
 const srv = { me:null, meRow:null, saved:{}, timer:null, failed:false, busy:false, photos:null, profile:null, profileFor:null };
@@ -172,7 +172,8 @@ async function srvFlush(){
   const el = document.getElementById('srv-save-state'); if(el) el.textContent = srv.failed ? 'עוד לא נשמר, ננסה שוב' : 'נשמר ✓';
 }
 async function srvSubmit(mk, note, goal){
-  await srvFlush();
+  // first everything on the screen must be saved (a save that is already running is waited for, not skipped)
+  for(let i = 0; i < 80 && (srv.busy || srvSnapshot(mk) !== srv.saved[mk]); i++){ if(!srv.busy) await srvFlush(); else await new Promise(r => setTimeout(r, 150)); }
   if(srv.failed || srvSnapshot(mk) !== srv.saved[mk]) throw new Error('not saved');
   const row = { staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() };
   if(note !== undefined) row.note = note || null;

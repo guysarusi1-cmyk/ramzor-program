@@ -19,7 +19,7 @@
 
   // answers the question sheet that replaced the browser's confirm box (typing the word when one is asked for)
   async function answerSheet(word){
-    for(let i = 0; i < 30 && !document.querySelector('.confirm-sheet'); i++) await sleep(100);
+    for(let i = 0; i < 90 && !document.querySelector('.confirm-sheet'); i++) await sleep(100);
     const s = document.querySelector('.confirm-sheet'); if(!s) return false;
     const inp = s.querySelector('.confirm-input'); if(inp && word){ inp.value = word; inp.dispatchEvent(new Event('input')); }
     s.querySelector('.confirm-ok').click(); await sleep(80); return true;
@@ -1139,6 +1139,12 @@
       check('portal server: the instructor sees NO private staff data (e-mails, flags)', !priv.error && priv.data.length === 0, priv.error ? priv.error.message : priv.data.length);
       const others = await sbPersonal.from('prefs_slot').select('staff_id').neq('staff_id', srv.me);
       check('portal server: the instructor sees nobody else\'s preferences', !others.error && others.data.length === 0, others.error ? others.error.message : others.data.length);
+      if(srvPrefsOpen(next)){                                   // (start from a clean month: leftovers of an interrupted earlier run would turn a tap into an "un-tap")
+        const lastDay = daysOfMonth(next).slice(-1)[0];
+        for(const tb of ['prefs_slot', 'prefs_absence', 'prefs_hours']) await sbPersonal.from(tb).delete().eq('staff_id', srv.me).gte('day', firstOf(next)).lte('day', lastDay);
+        await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(next), extend_morning:false, pull_to_sunday:false });
+        await srvLoad();
+      }
       portalUi.persona = srv.me; portalUi.tab = 'prefs'; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
       check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
       check('portal server: the level buttons are named כן / יכול / לא', ['כן', 'יכול', 'לא'].every(w => [...document.querySelectorAll('.lvbtn')].some(b => b.textContent === w)), [...document.querySelectorAll('.lvbtn')].map(b => b.textContent).join(','));
@@ -1152,21 +1158,27 @@
         document.querySelector(`[data-pslot="${key}"]`).click(); await sleep(50);
         document.querySelector('[data-plevel="avoid"]').click(); await sleep(50);
         document.querySelector(`[data-pslot="${daysOfMonth(next)[10]}|m"]`).click(); await sleep(50);
-        document.querySelector('[data-plevel="absent"]').click(); await sleep(50);
+        document.querySelector('[data-plevel="no"]').click(); await sleep(50);
         document.querySelector(`[data-pslot="${daysOfMonth(next)[20]}|m"]`).click(); await sleep(50);
-        // the long weekend button exists on Fridays only; custom hours; the two consents
+        check('portal server: tapping a shift marks it with the chosen level', Object.keys(srvPrefsOf(portalMonth(next), srv.me).slots).length === 3, JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots) + ' / locked? ' + !srvPrefsOpen(next) + ' / button ' + (document.querySelector(`[data-pslot="${key}"]`) || {}).outerHTML);
+        // the long weekend button exists on Fridays and Saturdays; custom hours; the two consents
         const fri = daysOfMonth(next).find(d => dowOf(d) === 5), sun = daysOfMonth(next).find(d => dowOf(d) === 0);
-        check('portal server: Friday has a fourth button (the long weekend), other days three', document.querySelectorAll(`[data-pslot^="${fri}|"]`).length === 4 && document.querySelectorAll(`[data-pslot^="${sun}|"]`).length === 3, 'wrong buttons');
+        const sat = daysOfMonth(next).find(d => dowOf(d) === 6);
+        check('portal server: Friday and Saturday have a fourth button (the long weekend, with candles), other days three', document.querySelectorAll(`[data-pslot^="${fri}|"]`).length === 4 && document.querySelectorAll(`[data-pslot^="${sat}|"]`).length === 4 && document.querySelectorAll(`[data-pslot^="${sun}|"]`).length === 3 && /🕯/.test(document.querySelector(`[data-pslot="${sat}|l"]`).textContent), 'wrong buttons');
+        check('portal server: the shift of noon is called צהריים and marked צ', st.shiftTypes[1].label === 'צהריים' && document.querySelector(`[data-pslot="${sun}|e"]`).textContent === 'צ', st.shiftTypes[1].label);
+        check('portal server: the explanation is folded away until it is asked for', document.querySelector('details[data-fold="prefhelp"]') && document.querySelector('details[data-fold="prefhelp"]').open === false, 'open');
+        check('portal server: the bottom buttons are כן / יכול / לא / שעות אחרות / נקה הכל (no absence, no all-month button)', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|') === 'כן|יכול|לא|שעות אחרות|נקה הכל', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|'));
         document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-pslot="${fri}|l"]`).click(); await sleep(50);
+        check('portal server: the Saturday long-weekend button shows the same mark as Friday\'s', document.querySelector(`[data-pslot="${sat}|l"]`).classList.contains('lv-no'), 'not mirrored: ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots) + ' / level ' + portalUi.level + ' / ' + document.querySelector(`[data-pslot="${sat}|l"]`).outerHTML + ' / fri ' + document.querySelector(`[data-pslot="${fri}|l"]`).outerHTML);
         document.querySelector('[data-plevel="hours"]').click(); await sleep(50);
         const hday = daysOfMonth(next).find(d => dowOf(d) === 2); document.querySelector(`[data-pday="${hday}"]`).click(); await sleep(80);
         document.querySelector('[data-hfrom="0"]').value = '11'; document.querySelector('[data-hto="0"]').value = '15'; document.querySelector('#hours-save').click(); await sleep(80);
         document.querySelector('[data-consent="extend:1"]').click(); await sleep(50); document.querySelector('[data-consent="pull:0"]').click(); await sleep(50);
-        for(let i = 0; i < 40 && srvSnapshot(next) !== srv.saved[next]; i++) await sleep(150);
+        for(let i = 0; i < 120 && (srvSnapshot(next) !== srv.saved[next] || srv.busy); i++) await sleep(150);
         check('portal server: a change on the screen is saved to the server by itself', srvSnapshot(next) === srv.saved[next] && !srv.failed, 'not saved');
         await srvLoad();
         const back = portalPrefsOf(next, srv.me);
-        check('portal server: after reloading from the server the marks are still there (לא / יכול / היעדרות)', back.slots[key] === 'no' && back.slots[`${daysOfMonth(next)[10]}|m`] === 'avoid' && back.absent.includes(daysOfMonth(next)[20]), JSON.stringify(back));
+        check('portal server: after reloading from the server the marks are still there (לא / יכול / היעדרות)', back.slots[key] === 'no' && back.slots[`${daysOfMonth(next)[10]}|m`] === 'avoid' && back.slots[`${daysOfMonth(next)[20]}|m`] === 'no', JSON.stringify(back));
         check('portal server: the long weekend mark, the custom hours and the two consents are kept too', back.slots[`${fri}|l`] === 'no' && JSON.stringify(back.hours[hday]) === '[[11,15]]' && back.consent.extend === true && back.consent.pull === false, JSON.stringify([back.slots[`${fri}|l`], back.hours[hday], back.consent]));
         portalUi.persona = srv.me; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
         const subAt = async () => { const r = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return r.data && r.data.length ? r.data[0].submitted_at : null; };
@@ -1181,9 +1193,9 @@
         pc.consent = keepC;
         // clean up: everything back to "כן", and the consents back to "לא"
         const p = portalPrefsOf(next, srv.me); p.slots = {}; p.absent = []; p.hours = {}; p.consent = { extend:false, pull:false }; portalSave();
-        for(let i = 0; i < 40 && srvSnapshot(next) !== srv.saved[next]; i++) await sleep(150);
+        for(let i = 0; i < 120 && (srvSnapshot(next) !== srv.saved[next] || srv.busy); i++) await sleep(150);
         await srvLoad();
-        check('portal server: clearing everything is saved too', Object.keys(portalPrefsOf(next, srv.me).slots).length === 0 && portalPrefsOf(next, srv.me).absent.length === 0 && Object.keys(portalPrefsOf(next, srv.me).hours).length === 0, 'still marked');
+        check('portal server: clearing everything is saved too', Object.keys(portalPrefsOf(next, srv.me).slots).length === 0 && portalPrefsOf(next, srv.me).absent.length === 0 && Object.keys(portalPrefsOf(next, srv.me).hours).length === 0, 'still marked: ' + JSON.stringify(portalPrefsOf(next, srv.me)));
       } else check('(info) portal server: the month after next is not open for preferences right now, so the saving was not exercised', true, '');
       // a month that is closed is shown as closed, and the database refuses a write
       const closed = addMonths(monthKeyOf(israelNow().date), 0);

@@ -125,7 +125,14 @@
   .plevelbar{ position:fixed; left:0; right:0; bottom:0; z-index:300; display:flex; gap:6px; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); background:var(--panel); border-top:1px solid var(--line); box-shadow:0 -6px 20px rgba(0,0,0,.35); }
   .lvbtn{ flex:1; min-height:48px; border-radius:12px; border:2px solid var(--line); background:var(--panel-2); color:var(--text); font-family:'Rubik', sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
   .lvbtn.lv-clear{ background:var(--panel-2); }
-  .lvbtn.active{ transform:translateY(-3px); box-shadow:0 4px 12px rgba(0,0,0,.45); border-color:#fff !important; }
+  /* each level keeps its own colour at all times; the chosen one is filled with it (and lifted a little), the others are outlined */
+  .lvbtn.active{ transform:translateY(-3px); box-shadow:0 4px 12px rgba(0,0,0,.45); }
+  .lvbtn.lv-yes.active{ background:var(--p-yes, #7be0a0); color:#0b2417; }
+  .lvbtn.lv-avoid.active{ background:var(--p-avoid, #f0c239); color:#2b2200; }
+  .lvbtn.lv-no.active{ background:var(--p-no, #ff8a80); color:#2c0b08; }
+  .lvbtn.lv-hours{ background:#14263f; color:#8ec0ff; border-color:#8ec0ff !important; }
+  .lvbtn.lv-hours.active{ background:#8ec0ff; color:#0b1a2e; }
+  .lvbtn.lv-clear{ color:var(--muted); }
 
   /* coordinator: edit one shift, submissions, timetable, settings */
   .pedit-list{ max-height:46vh; overflow:auto; margin:8px 0; }
@@ -223,3 +230,9 @@
   .pgoal-opt.on{ border-color:var(--gold); background:rgba(240,194,57,.12); }
   .pnote-soft{ border-right:3px solid var(--gold); padding-right:10px; }
   .pfb{ margin:10px 0; padding:12px; border:1px solid var(--p-line); border-radius:14px; background:var(--p-panel); line-height:1.6; white-space:pre-line; }
+  /* the long weekend button (candles), and the two consent buttons keep their own colours */
+  .pshift-long{ font-size:15px; line-height:1; }
+  .pchoice button[data-consent$=":1"]{ border-color:var(--p-yes, #7be0a0); color:var(--p-yes, #7be0a0); }
+  .pchoice button[data-consent$=":0"]{ border-color:var(--p-no, #ff8a80); color:var(--p-no, #ff8a80); }
+  .pchoice button[data-consent$=":1"].on{ background:var(--p-yes, #7be0a0); color:#0b2417; }
+  .pchoice button[data-consent$=":0"].on{ background:var(--p-no, #ff8a80); color:#2c0b08; }
