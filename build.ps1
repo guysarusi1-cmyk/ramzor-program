@@ -1,9 +1,10 @@
-﻿# Builds the single-file site from src/.
+# Builds the single-file site from src/.
 #   .\build.ps1 -Env live   -> dist\live\index.html  (what staff use)
 #   .\build.ps1 -Env test   -> dist\test\index.html  (test environment: banner, test tools, test backend, live reload)
 param(
   [ValidateSet('live','test')][string]$Env = 'live',
-  [string]$Out
+  [string]$Out,
+  [switch]$NoTools      # a test build to show on a phone: without the automatic checks and the demo modes (they carry the test passwords)
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -44,7 +45,7 @@ function Expand-Tokens([string]$text){
 }
 
 $css = (Get-ChildItem (Join-Path $root 'src\styles') -Filter *.css | Sort-Object Name | ForEach-Object { Read-Text $_.FullName }) -join ''
-$js  = (Get-ChildItem (Join-Path $root 'src\scripts') -Filter *.js  | Sort-Object Name | ForEach-Object { Read-Text $_.FullName }) -join ''
+$js  = (Get-ChildItem (Join-Path $root 'src\scripts') -Filter *.js  | Where-Object { -not ($NoTools -and $_.Name -in '18-checks.js', '19-demo.js') } | Sort-Object Name | ForEach-Object { Read-Text $_.FullName }) -join ''
 $html = Read-Text (Join-Path $root 'src\index.template.html')
 
 # String.Replace (not -replace): the payloads contain '$' characters
