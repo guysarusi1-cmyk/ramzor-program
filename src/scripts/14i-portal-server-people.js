@@ -34,7 +34,7 @@ function srvRenderSchedule(body){
     ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
       <summary><span>המשמרות שלי</span><span class="pcount">${mine.length}</span></summary>
-      <div class="pfold-body">${isInstr && mine.length ? `<div class="pchange"><button type="button" class="btn ghost small" id="want-change">רוצה שינוי</button></div>` : ''}<div class="pmine">${mine.length ? mine.map(r => {
+      <div class="pfold-body">${isInstr && mine.length ? `<div class="pchange"><button type="button" class="btn ghost small" id="want-change">בקשת החלפה</button></div>` : ''}<div class="pmine">${mine.length ? mine.map(r => {
         const upcoming = r.day >= today, isNext = next && next.id === r.id, req = openByAid[r.id];
         return `<div class="pmine-row${upcoming ? '' : ' past'}${isNext ? ' next' : ''}">
           <div class="pmine-main">${isNext ? '<span class="pnext-badge">המשמרת הבאה שלך</span>' : ''}${srvRowLine(r)}</div>

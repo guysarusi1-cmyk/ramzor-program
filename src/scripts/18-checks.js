@@ -1358,14 +1358,14 @@
         // 1. the instructor publishes her shift
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(150);
         const want = document.getElementById('want-change');
-        check('portal swaps: the instructor has one "רוצה שינוי" button, and no swap / cannot-come buttons on every shift', !!want && !document.querySelector('[data-said], [data-cant]'), 'want ' + !!want);
+        check('portal swaps: the instructor has one "בקשת החלפה" button, and no swap / cannot-come buttons on every shift', !!want && !document.querySelector('[data-said], [data-cant]'), 'want ' + !!want);
         { const folds = [...document.querySelectorAll('details.pfold')].map(d => d.dataset.fold);
           check('portal swaps: under "הצוות כולו" (a monthly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.mcal') && folds.indexOf('openshifts') === folds.indexOf('team') + 1 && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.mcal-head').length === 7, folds.join(',')); }
         const aid = portalLoad().rows.find(r => r.staff === i1 && r.day === day).id, cr = await sbPersonal.rpc('swap_candidates', { p_assignment:aid });
         if(cr.error) check('(info) portal swaps: the list of colleagues who could take a shift needs supabase/scheduling-v5.sql (not run yet)', true, '');
         else check('portal swaps: the list of colleagues who could take the shift is returned, and it does not include the person herself', Array.isArray(cr.data) && cr.data.length >= 1 && !cr.data.some(x => x.name === srv.meRow.first), JSON.stringify(cr.data).slice(0, 100));
         const flowOk = await changeFlow('swap', day);
-        check('portal swaps: "רוצה שינוי" -> request a swap -> asked which shift (in the right gender) -> picking it asks to confirm', flowOk && /איזו משמרת תרצ[הי] להחליף\?/.test(lastQuestion), flowOk + ' / ' + lastQuestion);
+        check('portal swaps: "בקשת החלפה" -> request a swap -> asked which shift (in the right gender) -> picking it asks to confirm', flowOk && /איזו משמרת תרצ[הי] להחליף\?/.test(lastQuestion), flowOk + ' / ' + lastQuestion);
         check('portal swaps: the request is created on the server', await waitFor(() => portalLoad().swaps.some(s => s.status === 'open' && s.from === i1)), 'not created');
         // 2. a colleague offers to take it
         await sign('instructor2'); showPortal('swaps'); await sleep(150);
@@ -1452,7 +1452,7 @@
         await waitFor(() => [...document.querySelectorAll('.toast')].some(t => /הסידור פורסם/.test(t.textContent)), 400);          // (the personal messages to everybody are sent after the publishing; wait until that is over before changing the user)
         // ---- an instructor reports "I cannot come" (the shift opens at once)
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(200);
-        const cantOk = await changeFlow('cant', day); check('portal people: "רוצה שינוי" -> cannot come -> asked which shift -> picking it asks to confirm', cantOk && /לאיזו משמרת לא תוכל[י]? להגיע\?/.test(lastQuestion), cantOk + ' / ' + lastQuestion);
+        const cantOk = await changeFlow('cant', day); check('portal people: "בקשת החלפה" -> cannot come -> asked which shift -> picking it asks to confirm', cantOk && /לאיזו משמרת לא תוכל[י]? להגיע\?/.test(lastQuestion), cantOk + ' / ' + lastQuestion);
         check('portal people: the report opens an urgent swap request at once', await waitFor(() => portalLoad().swaps.some(s => s.urgent && s.status === 'open' && s.from === i1)), 'not opened');
         // ---- the long vacation: asked by the instructor, approved by the coordinator, entered as absence
         showPortal('vacation'); await sleep(500);
