@@ -15,7 +15,7 @@
   const visible = el => !!el && getComputedStyle(el).display !== 'none';
   const errors = [];
   window.addEventListener('error', e => errors.push('error: ' + e.message));
-  window.addEventListener('unhandledrejection', e => errors.push('promise: ' + (e.reason && e.reason.message || e.reason)));
+  window.addEventListener('unhandledrejection', e => errors.push('promise: ' + (e.reason && e.reason.message || e.reason) + (e.reason && e.reason.stack ? ' @ ' + e.reason.stack.split('\n').slice(1, 4).map(s => s.trim().replace(/^at /, '')).join(' < ') : '')));
 
   // answers the question sheet that replaced the browser's confirm box (typing the word when one is asked for)
   async function answerSheet(word){

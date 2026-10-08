@@ -19,7 +19,7 @@ const srvCandidatesText = names => names.length ? tx('cands', names.join(', ')) 
 
 // the schedule tab (everybody): how the requests went, my shifts, and the whole team's board
 function srvRenderSchedule(body){
-  if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
+  if(!body.isConnected || !portalServerOn || !portalState || !portalState.serverMode) return;                                   // (a screen that finished loading after the person left it, or signed out, must not draw)
   const me = portalMe(), st = portalLoad(), mk = portalUi.month || (portalUi.month = monthKeyOf(srvToday())), m = portalMonth(mk), ctx = portalCtx(mk);
   const today = srvToday(), isInstr = me.role === 'instructor';
   const mine = st.rows.filter(r => r.staff === me.id && monthKeyOf(r.day) === mk).sort((a, b) => (a.day + (a.from || '')).localeCompare(b.day + (b.from || '')));

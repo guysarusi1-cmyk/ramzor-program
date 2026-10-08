@@ -15,9 +15,12 @@
     if(/^psrv-/.test(what)){      // the portal on the database: psrv-login | psrv-prefs | psrv-sched | psrv-subs | psrv-service  (signs in with the TEST personal accounts)
       document.getElementById('login-screen').style.display = 'none'; document.getElementById('protected-app').style.display = '';
       if(what === 'psrv-login'){ srvShowLogin('email'); return; }
-      const kind = what === 'psrv-subs' ? 'coordinator' : what === 'psrv-service' ? 'service' : 'instructor';
+      const kind = /^psrv-(subs|csched|cswaps)$/.test(what) ? 'coordinator' : what === 'psrv-service' ? 'service' : 'instructor';
       await sbPersonal.auth.signInWithPassword({ email:kind + '-test@merkaz-cherum.local', password:'@config(testPersonalPassword)' });
-      await srvStart(); showPortal(what === 'psrv-prefs' ? 'prefs' : what === 'psrv-subs' ? 'submissions' : 'schedule');
+      await srvStart();
+      const pm = location.search.match(/[?&]pmonth=(\d{4}-\d{2})/); if(pm) portalUi.month = portalUi.pmonth = portalUi.smonth = pm[1];          // (&pmonth=2026-11 opens that month)
+      if(/[?&]open\b/.test(location.search)) portalUi.fold = { mine:true, team:true, swap:true, fb:true };          // (&open shows the folded parts opened)
+      showPortal(({ 'psrv-prefs':'prefs', 'psrv-subs':'submissions', 'psrv-swaps':'swaps', 'psrv-cswaps':'swaps', 'psrv-inbox':'inbox' })[what] || 'schedule');
       return;
     }
     if(!/[?&]nochars/.test(location.search)) roster.forEach((c, i) => { childSettings[c.id] = Object.assign({}, childSettings[c.id], { id:c.id, character:CHARACTER_KEYS[i % CHARACTER_KEYS.length] }); });       // (the demo gives every child a character, in memory only)
