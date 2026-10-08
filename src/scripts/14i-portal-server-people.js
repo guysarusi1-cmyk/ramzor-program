@@ -44,14 +44,12 @@ function srvRenderSchedule(body){
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
-      <div class="pfold-body">${weekCalHtml(ctx, m.assignments, { me:me.id, week:portalUi.weekMonth === mk ? portalUi.week : null, ahmash:srv.ahmash })}</div>
+      <div class="pfold-body">${monthCalHtml(ctx, m.assignments, { me:me.id, ahmash:srv.ahmash })}</div>
     </details>
     ${isInstr ? `<details class="pfold" data-fold="openshifts"${openFold('openshifts') ? ' open' : ''}>
       <summary><span>משמרות פתוחות</span><span class="pcount" id="open-count"></span></summary>
       <div class="pfold-body" id="open-fold-body"><div class="pnote">רק רגע...</div></div>
     </details>` : ''}`}`;
-  if(portalUi.weekMonth !== mk){ portalUi.weekMonth = mk; portalUi.week = null; }
-  body.querySelectorAll('[data-wkgo]').forEach(b => b.addEventListener('click', () => { if(!b.dataset.wkgo) return; portalUi.week = b.dataset.wkgo; portalUi.weekMonth = mk; srvRenderSchedule(body); }));
   wireMonthNav(body); wireFolds(body);
   if(isInstr && m.published) srvFillOpenFold(body, mk); else { const ob = document.getElementById('open-fold-body'); if(ob) ob.innerHTML = `<div class="pnote">${tx('open_none')}</div>`; }
   body.querySelectorAll('[data-notice-ok]').forEach(b => b.addEventListener('click', () => { const n = st.notices.find(x => x.id === b.dataset.noticeOk); if(n) n.seen = true; portalSave(); srvRenderSchedule(body); }));

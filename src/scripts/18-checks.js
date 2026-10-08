@@ -1158,30 +1158,34 @@
       srv.voice = keep;
     });
 
-    // ---- the team as a weekly calendar and the ahmash mark: pure functions, made-up people, no server
+    // ---- the team as a monthly calendar and the ahmash mark: pure functions, made-up people, no server
     await step('team calendar', async () => {
       if(!PORTAL_ENABLED) return;
-      const mk = addMonths(monthKeyOf(isoDate(new Date())), 2), ds = daysOfMonth(mk), sun = ds.find(d => dowOf(d) === 0), fri = addDays(sun, 5), mon = addDays(sun, 1);
+      const mk = addMonths(monthKeyOf(isoDate(new Date())), 2), ds = daysOfMonth(mk), sun = ds.find(d => dowOf(d) === 0), fri = addDays(sun, 5), mon = addDays(sun, 1), tue = addDays(sun, 2), wed = addDays(sun, 3);
       const people = [['a', 'דנה'], ['b', 'רונית'], ['c', 'יוסי'], ['d', 'מיכל']].map(([id, first]) => ({ id, first, last:'', active:true, role:'instructor' }));
       const ctx = { month:mk, instructors:people, shiftTypes:JSON.parse(JSON.stringify(SRV_SHIFTS)), prefs:{}, rules:{}, annot:{} };
       const asg = { [`${mon}|e`]:['a', 'b'], [`${mon}|m`]:['b', 'c'], [`${fri}|m`]:['a', 'c'], [`${fri}|e`]:['c', 'd'] };
-      const box = document.createElement('div'); box.innerHTML = weekCalHtml(ctx, asg, { me:'c', week:sun, ahmash:{ b:1, d:2, a:2 } });
-      const cells = [...box.querySelectorAll('.wcal-cell')], heads = box.querySelectorAll('.wcal-dayhead'), rowheads = [...box.querySelectorAll('.wcal-rowhead')].map(x => x.textContent);
-      check('team calendar: a week with seven days across and a row for each shift', heads.length === 7 && rowheads.length === 3 && /בוקר/.test(rowheads[0]) && /צהריים/.test(rowheads[1]) && /לילה/.test(rowheads[2]), heads.length + ' / ' + rowheads.join('|'));
-      const noonMon = cells[1 * 7 + 1], morningMon = cells[0 * 7 + 1], morningFri = cells[0 * 7 + 5], noonFri = cells[1 * 7 + 5];
-      check('team calendar: in the afternoon shift the ahmash is first, with the word אחמ"ש under her name (no star, no colour)', !noonMon.querySelector('.ahm-star') && /אחמ"ש/.test(noonMon.querySelector('.ahm-tag').textContent) && noonMon.querySelector('.pchip').classList.contains('ahm') && /רונית/.test(noonMon.querySelector('.pchip').textContent) && /אחמ"ש/.test(noonMon.querySelector('.pchip').textContent) && noonMon.querySelectorAll('.ahm').length === 1, noonMon.innerHTML.slice(0, 300));
+      const draw = (assignments, opts) => { const box = document.createElement('div'); box.style.width = '374px'; document.body.appendChild(box); box.innerHTML = monthCalHtml(ctx, assignments, opts); return box; };
+      const dayOf = (box, date) => box.querySelectorAll('.mcal-day:not(.blank)')[ds.indexOf(date)], shiftOf = (box, date, i) => dayOf(box, date).querySelectorAll('.mcal-shift')[i];
+      const box = draw(asg, { me:'c', ahmash:{ b:1, d:2, a:2 } });
+      const grid = box.querySelector('.mcal');
+      check('team calendar: a rectangle for every day of the month, with the morning, noon and night inside, and the seven days of the week above', box.querySelectorAll('.mcal-day:not(.blank)').length === ds.length && [...box.querySelectorAll('.mcal-day:not(.blank)')].every(d => d.querySelectorAll('.mcal-shift').length === 3) && box.querySelectorAll('.mcal-head').length === 7, box.querySelectorAll('.mcal-day:not(.blank)').length + ' / ' + ds.length);
+      check('team calendar: the whole month fits the width of the screen (no sideways scrolling)', grid.scrollWidth <= grid.clientWidth + 1 && !box.querySelector('.wcal-scroll, .board-scroll'), grid.scrollWidth + ' > ' + grid.clientWidth);
+      const noonMon = shiftOf(box, mon, 1), morningMon = shiftOf(box, mon, 0), morningFri = shiftOf(box, fri, 0), noonFri = shiftOf(box, fri, 1);
+      check('team calendar: in the afternoon shift the ahmash is written first, with אחמ"ש under her name (no star, no colour)', !box.querySelector('.ahm-star') && /רונית/.test(noonMon.querySelector('.mcal-name').textContent) && noonMon.querySelector('.mcal-name').classList.contains('ahm') && /אחמ"ש/.test(noonMon.querySelector('.ahm-tag').textContent) && noonMon.querySelectorAll('.ahm').length === 1, noonMon.innerHTML.slice(0, 300));
       check('team calendar: on a weekday morning nobody is marked', morningMon.querySelectorAll('.ahm').length === 0, morningMon.innerHTML.slice(0, 200));
-      check('team calendar: on Friday morning and afternoon the ahmash is marked too (the higher rank only)', morningFri.querySelectorAll('.ahm').length === 1 && /דנה/.test(morningFri.querySelector('.ahm').textContent) && noonFri.querySelectorAll('.ahm').length === 1 && /מיכל/.test(noonFri.querySelector('.ahm').textContent), morningFri.innerHTML.slice(0, 200));
-      check('team calendar: the person herself is highlighted, and a week can be left and entered', !!box.querySelector('.pchip.me') && box.querySelectorAll('[data-wkgo]').length === 2, box.querySelectorAll('.pchip.me').length);
+      check('team calendar: on Friday morning and afternoon the ahmash is marked too', morningFri.querySelectorAll('.ahm').length === 1 && /דנה/.test(morningFri.querySelector('.ahm').textContent) && noonFri.querySelectorAll('.ahm').length === 1 && /מיכל/.test(noonFri.querySelector('.ahm').textContent), morningFri.innerHTML.slice(0, 200));
+      check('team calendar: the person herself is highlighted, and every person is a separate name', box.querySelectorAll('.mcal-name.me').length === 3 && box.querySelectorAll('.mcal-name').length === 8, box.querySelectorAll('.mcal-name.me').length + ' / ' + box.querySelectorAll('.mcal-name').length);
       // several ahmash on one shift: only one is marked, a main one before a second-rank one, not the one who was the ahmash the day before, and the one who served less
-      { const tue = addDays(sun, 2), wed = addDays(sun, 3), two = { [`${mon}|e`]:['a', 'b', 'd'], [`${tue}|e`]:['a', 'b'], [`${wed}|e`]:['a', 'b'] };
-        const b3 = document.createElement('div'); b3.innerHTML = weekCalHtml(ctx, two, { me:'c', week:sun, ahmash:{ a:1, b:1, d:2 } });
-        const cl = [...b3.querySelectorAll('.wcal-cell')], mk1 = cl[1 * 7 + 1], mk2 = cl[1 * 7 + 2], mk3 = cl[1 * 7 + 3], who = c => c.querySelector('.ahm') ? c.querySelector('.ahm').textContent : '';
-        check('team calendar: only ONE ahmash is marked in a shift, even with three on it (a second-rank one is not preferred over a main one)', mk1.querySelectorAll('.ahm').length === 1 && /דנה/.test(who(mk1)), who(mk1));
-        check('team calendar: the ahmash of the day before is not marked again when the other one can be (and so they take turns)', mk2.querySelectorAll('.ahm').length === 1 && /רונית/.test(who(mk2)) && /דנה/.test(who(mk3)), who(mk2) + ' / ' + who(mk3));
-        const board = document.createElement('div'); board.innerHTML = boardHtml(Object.assign({}, ctx, { instructors:people }), two, { ahmash:{ a:1, b:1, d:2 } });
-        check('team calendar: the coordinator\\'s board marks one ahmash per shift in the same way', board.querySelectorAll('.pchip.ahm').length === 3, board.querySelectorAll('.pchip.ahm').length); }
-      check('team calendar: without the list of ahmash (before the database knows it) nothing is marked and nothing breaks', (() => { const b2 = document.createElement('div'); b2.innerHTML = weekCalHtml(ctx, asg, { me:'c', week:sun }); return b2.querySelectorAll('.ahm').length === 0 && b2.querySelectorAll('.pchip:not(.missing)').length === 8; })(), '');
+      const two = { [`${mon}|e`]:['a', 'b', 'd'], [`${tue}|e`]:['a', 'b'], [`${wed}|e`]:['a', 'b'] };
+      const b3 = draw(two, { me:'c', ahmash:{ a:1, b:1, d:2 } }), who = (date) => { const x = shiftOf(b3, date, 1).querySelector('.ahm'); return x ? x.textContent : ''; };
+      check('team calendar: only ONE ahmash is marked in a shift, even with three on it (a second-rank one is not preferred over a main one)', shiftOf(b3, mon, 1).querySelectorAll('.ahm').length === 1 && /דנה/.test(who(mon)), who(mon));
+      check('team calendar: the ahmash of the day before is not marked again when the other one can be (and so they take turns)', /רונית/.test(who(tue)) && /דנה/.test(who(wed)), who(tue) + ' / ' + who(wed));
+      const board = document.createElement('div'); board.innerHTML = boardHtml(Object.assign({}, ctx, { instructors:people }), two, { ahmash:{ a:1, b:1, d:2 } });
+      check('team calendar: the coordinator\'s board marks one ahmash per shift in the same way', board.querySelectorAll('.pchip.ahm').length === 3, board.querySelectorAll('.pchip.ahm').length);
+      const b2 = draw(asg, { me:'c' });
+      check('team calendar: without the list of ahmash (before the database knows it) nothing is marked and nothing breaks', b2.querySelectorAll('.ahm').length === 0 && b2.querySelectorAll('.mcal-name').length === 8, '');
+      [box, b2, b3].forEach(x => x.remove());
     });
 
     // ---- the portal on the real (test) database: personal sign-in, what each kind of person may see, preferences kept on the server
@@ -1231,7 +1235,7 @@
         document.querySelector('[data-goal="weekly45"]').click(); await sleep(60);
         check('portal server: choosing a goal marks it on the screen', portalMonth(next).goals[srv.me] === 'weekly45' && document.querySelector('[data-goal="weekly45"]').classList.contains('on'), JSON.stringify(portalMonth(next).goals));
         document.querySelector('[data-goal=""]').click(); await sleep(60);
-        check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
+        check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pday:not(.absent) .pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
         check('portal server: the two small questions use the normal question style (no green/red)', ![...document.querySelectorAll('.pconsents button')].some(b => /rgb\(123, 224, 160\)|rgb\(255, 138, 128\)/.test(getComputedStyle(b).color)), [...document.querySelectorAll('.pconsents button')].map(b => getComputedStyle(b).color).join(' '));
         const day = daysOfMonth(next)[9], key = `${day}|n`;
         document.querySelector('[data-plevel="no"]').click(); await sleep(50);
@@ -1332,7 +1336,7 @@
         portalServerOn = true; if(!(await srvLoad())) return false;
         portalUi.persona = srv.me; return true;
       };
-      const waitFor = async fn => { for(let i = 0; i < 50; i++){ if(fn()) return true; await sleep(150); } return false; };
+      const waitFor = async fn => { for(let i = 0; i < 160; i++){ if(fn()) return true; await sleep(150); } return false; };          // (24 seconds: a reload of the whole portal can be slow)
       if(!(await sign('instructor'))){ check('portal swaps: the instructor test account signs in', false, 'cannot sign in'); portalServerOn = false; return; }
       const i1 = srv.me;
       if(!(await sign('instructor2'))){ check('(info) portal swaps: skipped — the second instructor test account does not exist yet (supabase/scheduling-test-users.sql)', true, ''); portalServerOn = false; return; }
@@ -1351,7 +1355,7 @@
         const want = document.getElementById('want-change');
         check('portal swaps: the instructor has one "רוצה שינוי" button, and no swap / cannot-come buttons on every shift', !!want && !document.querySelector('[data-said], [data-cant]'), 'want ' + !!want);
         { const folds = [...document.querySelectorAll('details.pfold')].map(d => d.dataset.fold);
-          check('portal swaps: under "הצוות כולו" (a weekly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.wcal') && folds.indexOf('openshifts') === folds.indexOf('team') + 1 && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.wcal-dayhead').length === 7, folds.join(',')); }
+          check('portal swaps: under "הצוות כולו" (a monthly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.mcal') && folds.indexOf('openshifts') === folds.indexOf('team') + 1 && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.mcal-head').length === 7, folds.join(',')); }
         const aid = portalLoad().rows.find(r => r.staff === i1 && r.day === day).id, cr = await sbPersonal.rpc('swap_candidates', { p_assignment:aid });
         if(cr.error) check('(info) portal swaps: the list of colleagues who could take a shift needs supabase/scheduling-v5.sql (not run yet)', true, '');
         else check('portal swaps: the list of colleagues who could take the shift is returned, and it does not include the person herself', Array.isArray(cr.data) && cr.data.length >= 1 && !cr.data.some(x => x.name === srv.meRow.first), JSON.stringify(cr.data).slice(0, 100));
