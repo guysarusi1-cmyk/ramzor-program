@@ -1,10 +1,10 @@
 // ---------- TOAST ----------
-function toast(msg){
+function toast(msg, ms){
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(()=> t.remove(), 3200);
+  setTimeout(()=> t.remove(), ms || 3200);
 }
 
 // A message with a "ביטול" button, for actions that can be taken back (a star, a step, a bonus).

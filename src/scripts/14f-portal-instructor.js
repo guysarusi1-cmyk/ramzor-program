@@ -201,7 +201,8 @@ function renderInstructorPrefs(body){
     if(portalServerOn){
       if(cons.extend === null || cons.pull === null){ toast(tx('consent_needed')); const box = body.querySelector('.pconsents'); if(box) box.scrollIntoView({ block:'center' }); return; }
       try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim(), m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
-      toast(neutral > 0 ? tx('submit_neutral', neutral) : tx('submit_ok')); renderInstructorPrefs(body); return;
+      if(neutral > 0) toast(tx('submit_neutral', neutral), 8000); else toast(tx('submit_ok'));          // (the "not complete yet" message stays long enough to be read)
+      renderInstructorPrefs(body); return;
     }
     m.submitted[me.id] = true; portalSave(); toast(tx('submit_ok')); renderInstructorPrefs(body);
   });
