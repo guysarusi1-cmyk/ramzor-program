@@ -34,35 +34,55 @@ function srvRenderSchedule(body){
     ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
       <summary><span>המשמרות שלי</span><span class="pcount">${mine.length}</span></summary>
-      <div class="pfold-body"><div class="pmine">${mine.length ? mine.map(r => {
+      <div class="pfold-body">${isInstr && mine.length ? `<div class="pchange"><button type="button" class="btn ghost small" id="want-change">רוצה שינוי</button></div>` : ''}<div class="pmine">${mine.length ? mine.map(r => {
         const upcoming = r.day >= today, isNext = next && next.id === r.id, req = openByAid[r.id];
-        const canAct = isInstr && upcoming && r.shift !== 'L' && st.assignmentIds[r.id];
         return `<div class="pmine-row${upcoming ? '' : ' past'}${isNext ? ' next' : ''}">
           <div class="pmine-main">${isNext ? '<span class="pnext-badge">המשמרת הבאה שלך</span>' : ''}${srvRowLine(r)}</div>
-          ${req ? `<em class="pst pst-${req.status}">${SWAP_STATUS[req.status]}</em>` : canAct ? `<span class="pmine-actions"><button type="button" class="btn ghost small" data-said="${r.id}">בקשת החלפה</button><button type="button" class="btn ghost small" data-cant="${r.id}">לא יכול/ה להגיע</button></span>` : ''}
+          ${req ? `<em class="pst pst-${req.status}">${SWAP_STATUS[req.status]}</em>` : ''}
         </div>`; }).join('') : `<div class="pnote">${tx('sch_none')}</div>`}</div>
         ${isInstr ? `<div class="pnote">${tx('sch_help')}</div>` : ''}</div>
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
-      <div class="pfold-body">${boardHtml(ctx, m.assignments, { me:me.id, nextDate:next ? next.day : null })}</div>
-    </details>`}`;
+      <div class="pfold-body">${weekCalHtml(ctx, m.assignments, { me:me.id, week:portalUi.weekMonth === mk ? portalUi.week : null, ahmash:srv.ahmash })}</div>
+    </details>
+    ${isInstr ? `<details class="pfold" data-fold="openshifts"${openFold('openshifts') ? ' open' : ''}>
+      <summary><span>משמרות פתוחות</span><span class="pcount" id="open-count"></span></summary>
+      <div class="pfold-body" id="open-fold-body"><div class="pnote">רק רגע...</div></div>
+    </details>` : ''}`}`;
+  if(portalUi.weekMonth !== mk){ portalUi.weekMonth = mk; portalUi.week = null; }
+  body.querySelectorAll('[data-wkgo]').forEach(b => b.addEventListener('click', () => { if(!b.dataset.wkgo) return; portalUi.week = b.dataset.wkgo; portalUi.weekMonth = mk; srvRenderSchedule(body); }));
   wireMonthNav(body); wireFolds(body);
+  if(isInstr && m.published) srvFillOpenFold(body, mk); else { const ob = document.getElementById('open-fold-body'); if(ob) ob.innerHTML = `<div class="pnote">${tx('open_none')}</div>`; }
   body.querySelectorAll('[data-notice-ok]').forEach(b => b.addEventListener('click', () => { const n = st.notices.find(x => x.id === b.dataset.noticeOk); if(n) n.seen = true; portalSave(); srvRenderSchedule(body); }));
-  body.querySelectorAll('[data-said]').forEach(b => b.addEventListener('click', async () => {
-    const r = st.rows.find(x => x.id === b.dataset.said); if(!r) return;
-    const cand = await srvSwapCandidates(r.id);
-    if(!(await confirmSheet({ title:'לבקש החלפה?', text:tx('swap_confirm', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
-    try { await srvSwapAction('request_swap', { p_assignment:r.id }); toast(tx('swap_posted')); } catch(e){ toast(tx('swap_fail')); }
-    srvRenderSchedule(body);
-  }));
-  body.querySelectorAll('[data-cant]').forEach(b => b.addEventListener('click', async () => {
-    const r = st.rows.find(x => x.id === b.dataset.cant); if(!r) return;
-    const cand = await srvSwapCandidates(r.id);
-    if(!(await confirmSheet({ title:tx('cant_title'), text:tx('cant_text', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לדווח', cancelLabel:'חזרה' }))) return;
-    try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:null }); toast(tx('cant_done')); } catch(e){ toast(tx('cant_fail')); }
-    srvRenderSchedule(body);
-  }));
+  // "רוצה שינוי": one button, then the kind of change, then the question "which shift?" with the person's own upcoming shifts
+  const wantBtn = document.getElementById('want-change');
+  if(wantBtn) wantBtn.addEventListener('click', () => {
+    const fem = !(srv.profile && srv.profile.female === false);
+    const sh = portalSheet(`<h2>${tx('change_title')}</h2>
+      <div class="pchange-opts"><button type="button" class="btn" data-change="swap"><b>בקשת החלפה</b><small>${tx('change_swap_sub')}</small></button>
+      <button type="button" class="btn ghost" data-change="cant"><b>${fem ? 'לא יכולה להגיע' : 'לא יכול להגיע'}</b><small>${tx('change_cant_sub')}</small></button></div>
+      <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>חזרה</button></div>`);
+    sh.querySelectorAll('[data-change]').forEach(opt => opt.addEventListener('click', () => {
+      const kind = opt.dataset.change; sh.close();
+      const cur = portalLoad(), pickable = cur.rows.filter(r => r.staff === me.id && r.day >= today && r.shift !== 'L' && cur.assignmentIds[r.id] && !cur.swaps.some(s => s.aid === r.id && ['open', 'offered'].includes(s.status))).sort((a, b) => (a.day + (a.from || '')).localeCompare(b.day + (b.from || '')));
+      const q = tx(kind === 'swap' ? 'pick_swap_q' : 'pick_cant_q', fem);
+      const ps = portalSheet(`<h2>${q}</h2>${pickable.length ? `<div class="pchange-list">${pickable.map(r => `<button type="button" class="pmine-row pick" data-pick-shift="${r.id}" data-day="${r.day}"><div class="pmine-main">${srvRowLine(r)}</div></button>`).join('')}</div>` : `<div class="pnote">${tx('change_none')}</div>`}
+        <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>חזרה</button></div>`);
+      ps.querySelectorAll('[data-pick-shift]').forEach(pb => pb.addEventListener('click', async () => {
+        const r = cur.rows.find(x => x.id === pb.dataset.pickShift); ps.close(); if(!r) return;
+        const cand = await srvSwapCandidates(r.id);
+        if(kind === 'swap'){
+          if(!(await confirmSheet({ title:'לבקש החלפה?', text:tx('swap_confirm', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+          try { await srvSwapAction('request_swap', { p_assignment:r.id }); toast(tx('swap_posted')); } catch(e){ toast(tx('swap_fail')); }
+        } else {
+          if(!(await confirmSheet({ title:tx('cant_title'), text:tx('cant_text', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לדווח', cancelLabel:'חזרה' }))) return;
+          try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:null }); toast(tx('cant_done')); } catch(e){ toast(tx('cant_fail')); }
+        }
+        srvRenderSchedule(body);
+      }));
+    }));
+  });
 }
 
 // ---------------------------------------------------------------- long vacation requests (instructors and service girls)
@@ -159,21 +179,46 @@ async function srvRenderTeacherHours(body){
   });
 }
 
-// ---------------------------------------------------------------- the instructors who are not scheduled automatically: open shifts they can take
+// ---------------------------------------------------------------- open shifts: shifts that are still below the minimum after the publishing.
+// The database offers each instructor only the ones she could fill; she sends a request, and she is placed only after the coordinator approves.
+async function srvOpenShiftList(mk){
+  try { const r = await sbPersonal.rpc('open_shifts', { p_month:firstOf(mk) }); return r.error || !r.data ? [] : r.data; } catch(e){ return []; }
+}
+function srvOpenShiftsHtml(list){
+  return list.length ? list.map(o => `<div class="pmine-row"><span><b>${dayLabel(o.day)}</b> · ${SRV_SHIFT_WORD[o.shift]} <small>(חסר/ים ${o.need - o.have})</small></span>${o.req
+    ? `<span class="pmine-actions"><em class="pst pst-offered">${tx('open_waiting')}</em><button type="button" class="btn ghost small" data-ocancel="${o.req}">ביטול</button></span>`
+    : `<button type="button" class="btn small" data-ojoin="${o.day}|${o.shift}">אשמח להצטרף</button>`}</div>`).join('') : `<div class="pnote">${tx('open_none')}</div>`;
+}
+function srvWireOpenShifts(root, refresh){
+  root.querySelectorAll('[data-ojoin]').forEach(b => b.addEventListener('click', async () => {
+    const [day, shift] = b.dataset.ojoin.split('|');
+    if(!(await confirmSheet({ title:tx('open_confirm_title'), text:tx('open_confirm', dayLabel(day), SRV_SHIFT_WORD[shift]), okLabel:'כן, לשלוח', cancelLabel:'חזרה' }))) return;
+    const r = await sbPersonal.rpc('request_open_shift', { p_day:day, p_shift:shift });
+    toast(r.error ? tx('open_fail') : tx('open_ok')); refresh();
+  }));
+  root.querySelectorAll('[data-ocancel]').forEach(b => b.addEventListener('click', async () => {
+    const r = await sbPersonal.rpc('cancel_open_request', { p_id:b.dataset.ocancel });
+    toast(r.error ? tx('cancel_fail') : tx('cancel_ok')); refresh();
+  }));
+}
+// the fold in the schedule screen (filled after the screen is drawn, because the list comes from the database)
+async function srvFillOpenFold(body, mk){
+  const list = await srvOpenShiftList(mk), box = document.getElementById('open-fold-body');
+  if(!box || !body.isConnected || !portalServerOn || portalUi.month !== mk) return;
+  box.innerHTML = `<div class="pnote">${tx('open_intro')}</div>${srvOpenShiftsHtml(list)}`;
+  const cnt = document.getElementById('open-count'); if(cnt) cnt.textContent = list.length;
+  srvWireOpenShifts(box, async () => { await srvReloadSafe(); srvFillOpenFold(body, mk); });
+}
+// the same list as a screen of its own (for an instructor who is not scheduled automatically)
 async function srvRenderOpenShifts(body){
   body.innerHTML = '<div class="pnote">רק רגע...</div>';
-  const st = portalLoad(), cur = monthKeyOf(srvToday()), months = [cur, addMonths(cur, 1)].filter(mk => st.months[mk] && ['sent', 'published'].includes(st.months[mk].status));
+  const st = portalLoad(), cur = monthKeyOf(srvToday()), months = [cur, addMonths(cur, 1)].filter(mk => st.months[mk] && st.months[mk].status === 'published');
   const lists = [];
-  for(const mk of months){ try { const r = await sbPersonal.rpc('open_shifts', { p_month:firstOf(mk) }); if(!r.error && r.data) lists.push(...r.data); } catch(e){} }
-  if(!body.isConnected) return;
+  for(const mk of months) lists.push(...(await srvOpenShiftList(mk)));
+  if(!body.isConnected || !portalServerOn) return;
   body.innerHTML = `
     <h2 class="psec">משמרות שמחכות לעזרה שלך</h2>
     <div class="pnote">${tx('open_intro')}</div>
-    ${lists.length ? lists.map(o => `<div class="pmine-row"><span><b>${dayLabel(o.day)}</b> · ${SRV_SHIFT_WORD[o.shift]} <small>(חסר/ים ${o.need - o.have})</small></span><button type="button" class="btn small" data-take="${o.day}|${o.shift}">אשמח לקחת</button></div>`).join('') : `<div class="pnote">${tx('open_none')}</div>`}`;
-  body.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', async () => {
-    const [day, shift] = b.dataset.take.split('|');
-    if(!(await confirmSheet({ title:'למלא את המשמרת?', text:`נשבץ אותך למשמרת ${dayLabel(day)} (${SRV_SHIFT_WORD[shift]}). תודה על העזרה!`, okLabel:'כן, אשמח', cancelLabel:'חזרה' }))) return;
-    const r = await sbPersonal.rpc('take_open_shift', { p_day:day, p_shift:shift });
-    toast(r.error ? tx('open_fail') : tx('open_ok')); await srvReloadSafe(); srvRenderOpenShifts(body);
-  }));
+    ${srvOpenShiftsHtml(lists)}`;
+  srvWireOpenShifts(body, async () => { await srvReloadSafe(); srvRenderOpenShifts(body); });
 }

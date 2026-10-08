@@ -66,6 +66,17 @@ async function srvLoadCoord(){
   st.priv = {}; priv.forEach(r => { st.priv[r.staff_id] = r; });
   st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}          // (each person's chosen voice, so that her feedback is written in it)
   st.flags = flags; st.vacations = vac;
+  st.openReqs = []; try { const r = await sbPersonal.from('open_shift_requests').select('id,staff_id,day,shift,created_at').eq('status', 'pending').order('created_at'); st.openReqs = r.error ? [] : (r.data || []); } catch(e){}          // (the requests to join an open shift; they come with scheduling-v11.sql)
+}
+
+// the shifts that are below the minimum number of instructors (the same standard numbers as the database): after publishing they are offered to the instructors who could fill them
+function srvOpenShiftsOf(mk){
+  const st = portalLoad(), isInstr = id => { const p = st.instructors.find(x => x.id === id); return p && p.role === 'instructor'; };
+  const need = (d, sh) => sh === 'M' ? ([5, 6].includes(dowOf(d)) ? 5 : 1) : sh === 'A' ? ([4, 5, 6].includes(dowOf(d)) ? 5 : 4) : 2;
+  const have = (d, sh) => st.rows.filter(r => isInstr(r.staff) && ((r.shift !== 'L' && r.day === d && (r.shift === 'S' ? 'M' : r.shift) === sh) || (r.shift === 'L' && ((r.day === d && sh === 'A') || (addDays(r.day, 1) === d && ['M', 'A'].includes(sh)))))).length;
+  const out = [];
+  daysOfMonth(mk).forEach(d => ['M', 'A', 'N'].forEach(sh => { const h = have(d, sh), n = need(d, sh); if(h < n) out.push({ day:d, shift:sh, missing:n - h }); }));
+  return out;
 }
 
 // ---- the screen
@@ -106,11 +117,12 @@ function srvRenderCoordSchedule(body){
   const pub = document.getElementById('cs-publish');
   if(pub) pub.addEventListener('click', async () => {
     const open = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk && !['service_absent', 'service'].includes(f.kind)).length;
-    if(!(await confirmSheet({ title:'לפרסם את הסידור?', text:`מרגע הפרסום כל המדריכים רואים אותו, ובכל מסך אישי מופיע הסעיף "איך הלכו הבקשות שלך"${open ? ` (עדיין יש ${open} דברים שדורשים תשומת לב)` : ''}. כל שינוי אחר כך שולח הודעה ומייל למי שהושפע.`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    const openShifts = srvOpenShiftsOf(mk);
+    if(!(await confirmSheet({ title:'לפרסם את הסידור?', text:`מרגע הפרסום כל המדריכים רואים אותו, ובכל מסך אישי מופיע הסעיף "איך הלכו הבקשות שלך"${open ? ` (עדיין יש ${open} דברים שדורשים תשומת לב)` : ''}.${openShifts.length ? ` יש ${openShifts.length} משמרות שעדיין לא הושלמו (חסרים בהן מדריכים). אחרי הפרסום הן יופיעו למדריכים כמשמרות פתוחות: רק מי שיכול לאייש אותן (לפי המנוחה, המקסימום של מי שאינם מובילים ועוד) יוכל לבקש להצטרף, וכל בקשה תגיע אלייך לאישור. מדריך ישובץ רק אחרי שתאשרי.` : ''} כל שינוי אחר כך שולח הודעה ומייל למי שהושפע.`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
     const u = await sbPersonal.from('schedule').update({ status:'published', published_at:new Date().toISOString() }).eq('month', firstOf(mk));
     if(u.error){ toast('הפרסום נכשל. נסו שוב.'); return; }
     await srvReloadSafe();
-    toast('הסידור פורסם'); srvRenderCoordSchedule(body);          // (each person sees how her requests went in her own schedule screen, so no separate message is sent)
+    toast(openShifts.length ? `הסידור פורסם. ${openShifts.length} משמרות פתוחות הופיעו למדריכים, ובקשות להצטרף יגיעו אלייך לאישור` : 'הסידור פורסם', openShifts.length ? 6000 : 0); srvRenderCoordSchedule(body);          // (each person sees how her requests went in her own schedule screen, so no separate message is sent)
   });
   document.getElementById('cs-xlsx').addEventListener('click', () => { downloadScheduleXlsx(ctx, m.assignments); toast('קובץ האקסל נוצר'); });
   document.getElementById('cs-print').addEventListener('click', () => printSchedule(ctx, m.assignments));

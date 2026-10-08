@@ -241,6 +241,33 @@
   .plong small{ display:block; font-size:10px; font-weight:400; margin-top:3px; opacity:.9; }
   .ppick{ border-radius:8px; border:1px solid var(--p-line); background:transparent; color:var(--p-text); font-family:inherit; font-size:11px; font-weight:700; padding:5px 4px; cursor:pointer; }
   .ppick.on{ background:var(--gold); color:#1b1b1b; border-color:var(--gold); }
+  /* "רוצה שינוי" (my shifts): one button, then two choices, then the list of shifts */
+  .pchange{ margin:2px 0 8px; }
+  .pchange-opts{ display:flex; flex-direction:column; gap:10px; margin:8px 0 12px; }
+  .pchange-opts .btn{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:start; padding:12px 14px; height:auto; line-height:1.4; }
+  .pchange-opts .btn small{ font-weight:400; opacity:.85; font-size:12.5px; }
+  .pchange-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0 12px; max-height:52vh; overflow-y:auto; }
+  .pmine-row.pick{ width:100%; cursor:pointer; font-family:inherit; color:var(--p-text); text-align:start; }
+  /* the team as a weekly calendar: days across, shifts down; scrolls sideways on a phone */
+  .pweek{ display:flex; align-items:center; justify-content:center; gap:14px; margin:4px 0 10px; font-size:15px; }
+  .pweek button{ width:40px; height:40px; border-radius:50%; border:1px solid var(--p-line); background:var(--p-panel2); color:var(--p-text); font-size:20px; cursor:pointer; }
+  .pweek button:disabled{ opacity:.35; cursor:default; }
+  .wcal-scroll{ overflow-x:auto; padding-bottom:4px; }
+  .wcal{ display:grid; grid-template-columns:72px repeat(7, minmax(104px, 1fr)); gap:4px; min-width:800px; direction:rtl; }
+  .wcal-dayhead, .wcal-rowhead{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:6px 2px; background:var(--p-panel2); border-radius:8px; font-size:13px; }
+  .wcal-dayhead small, .wcal-rowhead small{ color:var(--p-muted); font-size:11px; }
+  .wcal-dayhead span{ color:var(--p-muted); font-size:12px; }
+  .wcal-dayhead.today{ background:var(--gold); color:#1b1b1b; } .wcal-dayhead.today span{ color:#1b1b1b; }
+  .wcal-dayhead.weekend{ background:rgba(128,128,128,.18); }
+  .wcal-cell{ display:flex; flex-direction:column; align-items:stretch; gap:3px; padding:4px; min-height:64px; background:var(--p-panel); border:1px solid var(--p-line); border-radius:8px; }
+  .wcal-cell.weekend{ background:rgba(128,128,128,.08); } .wcal-cell.today{ border-color:var(--gold); }
+  .wcal-cell.off{ align-items:center; justify-content:center; color:var(--p-muted); background:transparent; border-style:dashed; }
+  .wcal-cell .pchip{ display:block; text-align:center; font-size:12.5px; line-height:1.3; padding:3px 4px; }
+  .wcal-cell .pchip small{ color:var(--p-muted); font-size:10px; }
+  .pchip.ahm{ border:1.5px solid var(--gold); background:rgba(232,185,74,.14); font-weight:800; }
+  .pchip .ahm-tag{ display:block; color:var(--gold) !important; font-weight:800; font-size:10px; letter-spacing:.3px; }
+  .ahm-star{ color:var(--gold); font-style:normal; margin-inline-end:3px; }
+  .wcal-legend{ margin-top:8px; }
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
   body.portal-big .portal-shell{ zoom:1.14; }

@@ -245,14 +245,19 @@ function renderInstructorSwaps(body){
   body.innerHTML = `
     ${approvalsForMe.length ? '<h2 class="psec">בקשות אליי</h2>' : ''}
     ${approvalsForMe.map(a => `<div class="preq warn"><div>הרכזת שיבצה אותך למשמרת שסימנת עליה "לא":<br><b>${slotLabel(a.key)}</b><br>האם את/ה מאשר/ת?</div><div class="preq-actions"><button type="button" class="btn" data-appr-ok="${a.mk}|${a.k}">מאשר/ת</button><button type="button" class="btn ghost" data-appr-no="${a.mk}|${a.k}">לא מאשר/ת</button></div></div>`).join('')}
-    <h2 class="psec">בקשות החלפה פתוחות</h2>
-    <div class="pnote">${tx('swaps_intro')}</div>
-    ${open.length ? open.map(s => {
-      const own = s.from === me.id, can = !own && canTakeShift(me.id, s.key);
-      return `<div class="preq swap"><div>${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}<b>${pEsc(name(s.from))}</b> מחפש/ת מחליף/ה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">אי אפשר לשבץ אותך כרגע</em>'}</div></div>`;
-    }).join('') : `<div class="pnote">${tx('swaps_none')}</div>`}
-    <h2 class="psec">הבקשות שלי</h2>
-    ${mineReq.length ? mineReq.map(s => `<div class="pmine-row"><span>${slotLabel(s.key)}<br><small>${s.from === me.id ? 'ביקשתם החלפה' + (s.to ? ' · מוכן/ה לעזור: ' + pEsc(name(s.to)) : '') : 'הצעתם להחליף את ' + pEsc(name(s.from))}</small></span><span class="pmine-actions">${portalServerOn && s.from === me.id && s.status === 'open' ? `<button type="button" class="btn ghost small" data-cands="${s.aid}">מי זמין/ה?</button>` : ''}<em class="pst pst-${s.status}">${SWAP_STATUS[s.status]}</em></span></div>`).join('') : '<div class="pnote">אין בקשות.</div>'}`;
+    <details class="pfold" data-fold="swmine"${openFold('swmine') ? ' open' : ''}>
+      <summary><span>הבקשות שלי</span><span class="pcount">${mineReq.length}</span></summary>
+      <div class="pfold-body">${mineReq.length ? mineReq.map(s => `<div class="pmine-row"><span>${slotLabel(s.key)}<br><small>${s.from === me.id ? 'ביקשתם החלפה' + (s.to ? ' · מוכן/ה לעזור: ' + pEsc(name(s.to)) : '') : 'הצעתם להחליף את ' + pEsc(name(s.from))}</small></span><span class="pmine-actions">${portalServerOn && s.from === me.id && s.status === 'open' ? `<button type="button" class="btn ghost small" data-cands="${s.aid}">מי זמין/ה?</button>` : ''}<em class="pst pst-${s.status}">${SWAP_STATUS[s.status]}</em></span></div>`).join('') : '<div class="pnote">אין בקשות.</div>'}</div>
+    </details>
+    <details class="pfold" data-fold="swopen"${openFold('swopen') ? ' open' : ''}>
+      <summary><span>בקשות החלפה פתוחות</span><span class="pcount">${open.length}</span></summary>
+      <div class="pfold-body"><div class="pnote">${tx('swaps_intro')}</div>
+      ${open.length ? open.map(s => {
+        const own = s.from === me.id, can = !own && canTakeShift(me.id, s.key);
+        return `<div class="preq swap"><div>${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}<b>${pEsc(name(s.from))}</b> מחפש/ת מחליף/ה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">אי אפשר לשבץ אותך כרגע</em>'}</div></div>`;
+      }).join('') : `<div class="pnote">${tx('swaps_none')}</div>`}</div>
+    </details>`;
+  wireFolds(body);
   body.querySelectorAll('[data-swap-take]').forEach(b => b.addEventListener('click', async () => {
     const sw = st.swaps.find(x => x.id === b.dataset.swapTake); if(!sw || sw.status !== 'open') return;
     if(portalServerOn){

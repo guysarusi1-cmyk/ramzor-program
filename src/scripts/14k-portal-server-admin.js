@@ -61,11 +61,20 @@ function srvRenderCoordSwaps(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad();
   const agreed = st.swaps.filter(s => s.status === 'offered'), waiting = st.swaps.filter(s => s.status === 'open');
+  const oreqs = st.openReqs || [];
   body.innerHTML = `
+    ${oreqs.length ? `<h2 class="psec">בקשות להצטרף למשמרות פתוחות</h2>${oreqs.map(o => `<div class="preq"><div><b>${pEsc(nameOf(o.staff_id))}</b> מבקש/ת להצטרף למשמרת<br>${dayLabel(o.day)} · ${SRV_SHIFT_WORD[o.shift]}</div><div class="preq-actions"><button type="button" class="btn" data-oapprove="${o.id}">אישור</button><button type="button" class="btn ghost" data-oreject="${o.id}">דחייה</button></div></div>`).join('')}` : ''}
     <h2 class="psec">ממתינות לאישורך</h2>
     ${agreed.length ? agreed.map(s => `<div class="preq">${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}<div><b>${pEsc(nameOf(s.from))}</b> מבקש/ת החלפה, <b>${pEsc(nameOf(s.to))}</b> מוכן/ה להחליף<br>${slotLabel(s.key)}</div><div class="preq-actions"><button type="button" class="btn" data-approve="${s.id}">אישור</button><button type="button" class="btn ghost" data-reject="${s.id}">דחייה</button></div></div>`).join('') : '<div class="pnote">אין החלפות שממתינות לאישור.</div>'}
     <h2 class="psec">בקשות פתוחות (עדיין אין מחליף/ה)</h2>
     ${waiting.length ? waiting.map(s => `<div class="pmine-row"><span>${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}${pEsc(nameOf(s.from))} · ${slotLabel(s.key)}</span><em class="pst pst-open">${SWAP_STATUS.open}</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
+  body.querySelectorAll('[data-oapprove], [data-oreject]').forEach(b => b.addEventListener('click', async () => {
+    const approve = !!b.dataset.oapprove, id = b.dataset.oapprove || b.dataset.oreject;
+    const r = await sbPersonal.rpc('decide_open_shift', { p_id:id, p_approve:approve });
+    if(r.error){ toast(/covered/.test(r.error.message || '') ? 'המשמרת כבר מלאה, אי אפשר לאשר' : /already working/.test(r.error.message || '') ? 'המדריך כבר משובץ באותו יום' : 'הפעולה לא הצליחה. נסו שוב.'); }
+    else toast(approve ? 'אושר. המדריך שובץ למשמרת וקיבל עדכון.' : 'נדחה. המדריך קיבל עדכון.');
+    await srvReloadSafe(); srvRenderCoordSwaps(body);
+  }));
   body.querySelectorAll('[data-approve], [data-reject]').forEach(b => b.addEventListener('click', async () => {
     const approve = !!b.dataset.approve, s = st.swaps.find(x => x.id === (b.dataset.approve || b.dataset.reject));
     if(approve && s){                                              // a rest problem only warns; the answer stays hers

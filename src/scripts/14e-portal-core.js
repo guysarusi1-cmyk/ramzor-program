@@ -148,3 +148,31 @@ function boardHtml(ctx, assignments, opts){
   }).join('')}</tr>`).join('');
   return `<div class="board-scroll"><table class="pboard"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
+
+// the whole team as a weekly calendar: seven days across, one row per shift. In the afternoon shifts and on Friday and Saturday mornings the ahmash
+// (who is in charge of the shift) is shown first, with a star and the word אחמ"ש. opts: me, week (the Sunday that is shown), ahmash ({ staff id: rank })
+function weekCalHtml(ctx, assignments, opts){
+  opts = opts || {};
+  const table = scheduleTable(ctx, assignments), today = isoDate(new Date()), rowOf = {}, weeks = [];
+  table.forEach(r => { rowOf[r.date] = r; const ws = addDays(r.date, -dowOf(r.date)); if(!weeks.includes(ws)) weeks.push(ws); });
+  if(!weeks.length) return '';
+  let wi = weeks.indexOf(opts.week); if(wi < 0) wi = Math.max(0, weeks.indexOf(addDays(today, -dowOf(today))));
+  const ws = weeks[wi], dates = [0, 1, 2, 3, 4, 5, 6].map(k => addDays(ws, k)), rank = opts.ahmash || {};
+  const dm = iso => { const d = parseIso(iso); return d.getDate() + '/' + (d.getMonth() + 1); };
+  const inCharge = (id, date) => id === 'e' || ([5, 6].includes(dowOf(date)) && id === 'm');
+  const cell = (s, date) => {
+    const r = rowOf[date], c = r && r.cells[ctx.shiftTypes.indexOf(s)];
+    if(!c || !c.slot) return `<div class="wcal-cell off${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}">${r ? '—' : ''}</div>`;
+    const ranks = inCharge(s.id, date) ? c.people.map(p => rank[p.iid] || 0).filter(x => x > 0) : [], best = ranks.length ? Math.min(...ranks) : 0;
+    const chip = (p, lead) => {
+      const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
+      return `<span class="pchip lv-neutral${mine ? ' me' : ''}${lead ? ' ahm' : ''}">${lead ? '<i class="ahm-star" aria-hidden="true">★</i>' : ''}${pEsc(p.name)}${ann ? ` <small>${pEsc(ann)}</small>` : ''}${lead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}</span>`;
+    };
+    const lead = best ? c.people.filter(p => rank[p.iid] === best) : [], rest = c.people.filter(p => !lead.includes(p));
+    return `<div class="wcal-cell${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${date === today ? ' today' : ''}">${lead.map(p => chip(p, true)).join('')}${rest.map(p => chip(p, false)).join('')}${c.missing ? `<span class="pchip missing">חסר ${c.missing}</span>` : ''}</div>`;
+  };
+  const nav = `<div class="pweek"><button type="button" data-wkgo="${weeks[wi - 1] || ''}"${wi === 0 ? ' disabled' : ''} aria-label="שבוע קודם"><bdi dir="ltr">›</bdi></button><b>שבוע ${dm(ws)} – ${dm(addDays(ws, 6))}</b><button type="button" data-wkgo="${weeks[wi + 1] || ''}"${wi === weeks.length - 1 ? ' disabled' : ''} aria-label="שבוע הבא"><bdi dir="ltr">‹</bdi></button></div>`;
+  const head = `<div class="wcal-corner"></div>${dates.map(d => `<div class="wcal-dayhead${d === today ? ' today' : ''}${[5, 6].includes(dowOf(d)) ? ' weekend' : ''}"><b>${DOW_SHORT[dowOf(d)]}</b><span>${dm(d)}</span></div>`).join('')}`;
+  const rows = ctx.shiftTypes.map(s => `<div class="wcal-rowhead"><b>${pEsc(s.label)}</b><small>${rangeHtml(s.start, s.end)}</small></div>${dates.map(d => cell(s, d)).join('')}`).join('');
+  return `${nav}<div class="wcal-scroll"><div class="wcal">${head}${rows}</div></div><div class="pnote wcal-legend"><i class="ahm-star" aria-hidden="true">★</i> אחמ"ש: מי שאחראי/ת על המשמרת (בצהריים, ובשישי ובשבת גם בבוקר)</div>`;
+}

@@ -39,7 +39,9 @@ async function srvAll(build){
     from += 1000;
   }
 }
+// every load takes a number; a load that is overtaken by a newer one (another person signed in meanwhile, or a second reload started) must not write anything
 async function srvLoad(){
+  const epoch = srv.epoch = (srv.epoch || 0) + 1, fresh = () => epoch === srv.epoch;
   const meId = (await sbPersonal.rpc('my_staff_id')).data;
   if(!meId) return false;
   const staff = await srvAll(() => sbPersonal.from('staff').select('id,display_name,kind,active,sort_order').order('sort_order').order('display_name'));
@@ -60,6 +62,7 @@ async function srvLoad(){
     notices:notices.map(n => ({ id:n.id, to:meId, at:n.created_at, text:n.text, kind:n.kind, seen:n.seen, sent:!!n.seen, fromServer:true })),
     settings:{ theme:(function(){ try { return localStorage.getItem('ramzor-portal-theme') || 'dark'; } catch(e){ return 'dark'; } })() }
   };
+  if(!fresh()) return false;
   portalState = st; srv.me = meId; srv.meRow = st.instructors.find(p => p.id === meId) || null;
   months.forEach(mk => {
     const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, goals:{}, assignments:{}, annot:{}, approvals:{}, published:false, status:null };
@@ -78,7 +81,8 @@ async function srvLoad(){
   goalRows.forEach(r => { const m = st.months[monthOf(r.month)]; if(m && r.goal) m.goals[r.staff_id] = r.goal; });
   let pickRows = []; try { pickRows = await srvAll(() => sbPersonal.from('prefs_pickone').select('staff_id,friday').gte('friday', from).lte('friday', to)); } catch(e){ pickRows = []; }          // ("only one of these weekends" comes with scheduling-v8.sql)
   pickRows.forEach(r => { const m = st.months[monthOf(r.friday)]; if(m) srvPrefsOf(m, r.staff_id).pick.push(r.friday); });
-  if(srv.profileFor !== meId){ srv.profileFor = meId; srv.me = meId; try { const pr = await sbPersonal.rpc('my_profile'); srv.profile = pr.error ? null : pr.data; } catch(e){ srv.profile = null; } await srvLoadSettings(); applyPortalSize(); }
+  if(srv.profileFor !== meId){ srv.profileFor = meId; srv.me = meId; srv.ahmash = {}; try { const ar = await sbPersonal.rpc('ahmash_staff'); if(!ar.error && ar.data) ar.data.forEach(x => { srv.ahmash[x.staff_id] = x.rank; }); } catch(e){}          // (who is an ahmash, for the star on the team calendar; comes with scheduling-v10.sql)
+    try { const pr = await sbPersonal.rpc('my_profile'); srv.profile = pr.error ? null : pr.data; } catch(e){ srv.profile = null; } await srvLoadSettings(); applyPortalSize(); }
   sched.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.status = r.status; m.published = r.status === 'published'; } });
   st.rows = [];
   if(sched.length){                                       // (the database shows a person only the published schedules; the coordinator sees the drafts too)
@@ -87,6 +91,7 @@ async function srvLoad(){
   }
   const swapRows = await srvAll(() => sbPersonal.from('swap_requests').select('id,assignment_id,from_staff,to_staff,status,urgent,created_at').order('created_at', { ascending:false })).catch(() => []);
   st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
+  if(!fresh()) return false;
   srv.saved = {};
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
   if(srv.meRow && srv.meRow.role === 'coordinator') await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)

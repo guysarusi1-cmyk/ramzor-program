@@ -17,6 +17,26 @@
   window.addEventListener('error', e => errors.push('error: ' + e.message));
   window.addEventListener('unhandledrejection', e => errors.push('promise: ' + (e.reason && e.reason.message || e.reason) + (e.reason && e.reason.stack ? ' @ ' + e.reason.stack.split('\n').slice(1, 4).map(s => s.trim().replace(/^at /, '')).join(' < ') : '')));
 
+  // signing in with a password is limited by the server (about 30 sign-ins per 5 minutes from one address); when that happens, wait and try again instead of failing
+  async function signInRetry(email, password){
+    let r;
+    for(let i = 0; i < 10; i++){
+      r = await sbPersonal.auth.signInWithPassword({ email, password });
+      if(!r.error || !(r.error.status === 429 || /rate|too many|limit/i.test(r.error.message || ''))) return r;
+      await sleep(20000);
+    }
+    return r;
+  }
+  // "רוצה שינוי" -> the kind of change -> "which shift?" -> the shift of that day -> the question sheet is answered; remembers the question that was asked
+  let lastQuestion = '';
+  async function changeFlow(kind, day){
+    const want = document.getElementById('want-change'); if(!want) return false;
+    want.click(); await sleep(150);
+    const opt = document.querySelector(`.psheet [data-change="${kind}"]`); if(!opt) return false; opt.click(); await sleep(200);
+    const q = document.querySelector('.psheet h2'); lastQuestion = q ? q.textContent : '';
+    const pick = document.querySelector(`.psheet [data-pick-shift][data-day="${day}"]`); if(!pick) return false;
+    pick.click(); await answerSheet(); return true;
+  }
   // answers the question sheet that replaced the browser's confirm box (typing the word when one is asked for)
   async function answerSheet(word){
     for(let i = 0; i < 90 && !document.querySelector('.confirm-sheet'); i++) await sleep(100);
@@ -1138,13 +1158,31 @@
       srv.voice = keep;
     });
 
+    // ---- the team as a weekly calendar and the ahmash mark: pure functions, made-up people, no server
+    await step('team calendar', async () => {
+      if(!PORTAL_ENABLED) return;
+      const mk = addMonths(monthKeyOf(isoDate(new Date())), 2), ds = daysOfMonth(mk), sun = ds.find(d => dowOf(d) === 0), fri = addDays(sun, 5), mon = addDays(sun, 1);
+      const people = [['a', 'דנה'], ['b', 'רונית'], ['c', 'יוסי'], ['d', 'מיכל']].map(([id, first]) => ({ id, first, last:'', active:true, role:'instructor' }));
+      const ctx = { month:mk, instructors:people, shiftTypes:JSON.parse(JSON.stringify(SRV_SHIFTS)), prefs:{}, rules:{}, annot:{} };
+      const asg = { [`${mon}|e`]:['a', 'b'], [`${mon}|m`]:['b', 'c'], [`${fri}|m`]:['a', 'c'], [`${fri}|e`]:['c', 'd'] };
+      const box = document.createElement('div'); box.innerHTML = weekCalHtml(ctx, asg, { me:'c', week:sun, ahmash:{ b:1, d:2, a:2 } });
+      const cells = [...box.querySelectorAll('.wcal-cell')], heads = box.querySelectorAll('.wcal-dayhead'), rowheads = [...box.querySelectorAll('.wcal-rowhead')].map(x => x.textContent);
+      check('team calendar: a week with seven days across and a row for each shift', heads.length === 7 && rowheads.length === 3 && /בוקר/.test(rowheads[0]) && /צהריים/.test(rowheads[1]) && /לילה/.test(rowheads[2]), heads.length + ' / ' + rowheads.join('|'));
+      const noonMon = cells[1 * 7 + 1], morningMon = cells[0 * 7 + 1], morningFri = cells[0 * 7 + 5], noonFri = cells[1 * 7 + 5];
+      check('team calendar: in the afternoon shift the ahmash is first, marked with a star and the word אחמ"ש', noonMon.querySelector('.pchip').classList.contains('ahm') && /רונית/.test(noonMon.querySelector('.pchip').textContent) && /אחמ"ש/.test(noonMon.querySelector('.pchip').textContent) && noonMon.querySelectorAll('.ahm').length === 1, noonMon.innerHTML.slice(0, 300));
+      check('team calendar: on a weekday morning nobody is marked', morningMon.querySelectorAll('.ahm').length === 0, morningMon.innerHTML.slice(0, 200));
+      check('team calendar: on Friday morning and afternoon the ahmash is marked too (the higher rank only)', morningFri.querySelectorAll('.ahm').length === 1 && /דנה/.test(morningFri.querySelector('.ahm').textContent) && noonFri.querySelectorAll('.ahm').length === 1 && /מיכל/.test(noonFri.querySelector('.ahm').textContent), morningFri.innerHTML.slice(0, 200));
+      check('team calendar: the person herself is highlighted, and a week can be left and entered', !!box.querySelector('.pchip.me') && box.querySelectorAll('[data-wkgo]').length === 2, box.querySelectorAll('.pchip.me').length);
+      check('team calendar: without the list of ahmash (before the database knows it) nothing is marked and nothing breaks', (() => { const b2 = document.createElement('div'); b2.innerHTML = weekCalHtml(ctx, asg, { me:'c', week:sun }); return b2.querySelectorAll('.ahm').length === 0 && b2.querySelectorAll('.pchip:not(.missing)').length === 8; })(), '');
+    });
+
     // ---- the portal on the real (test) database: personal sign-in, what each kind of person may see, preferences kept on the server
     await step('portal server', async () => {
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', MAIL = { instructor:'instructor-test@merkaz-cherum.local', coordinator:'coordinator-test@merkaz-cherum.local', service:'service-test@merkaz-cherum.local' };
       const asPerson = async kind => {
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
-        const { error } = await sbPersonal.auth.signInWithPassword({ email:MAIL[kind], password:PW });
+        const { error } = await signInRetry(MAIL[kind], PW);
         if(error){ check(`portal server: the ${kind} test account can sign in (supabase/scheduling-test-users.sql was run?)`, false, error.message); return false; }
         portalServerOn = true; return await srvLoad();
       };
@@ -1281,7 +1319,7 @@
       const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local';
       const sign = async kind => {
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
-        const { error } = await sbPersonal.auth.signInWithPassword({ email:M(kind), password:PW });
+        const { error } = await signInRetry(M(kind), PW);
         if(error) return false;
         portalServerOn = true; if(!(await srvLoad())) return false;
         portalUi.persona = srv.me; return true;
@@ -1302,15 +1340,20 @@
         if(r.error) throw r.error;
         // 1. the instructor publishes her shift
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(150);
-        const btn = document.querySelector('[data-said]');
-        check('portal swaps: the instructor sees her published shift with a swap button', !!btn, 'no button');
+        const want = document.getElementById('want-change');
+        check('portal swaps: the instructor has one "רוצה שינוי" button, and no swap / cannot-come buttons on every shift', !!want && !document.querySelector('[data-said], [data-cant]'), 'want ' + !!want);
+        { const folds = [...document.querySelectorAll('details.pfold')].map(d => d.dataset.fold);
+          check('portal swaps: under "הצוות כולו" (a weekly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.wcal') && folds.indexOf('openshifts') === folds.indexOf('team') + 1 && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.wcal-dayhead').length === 7, folds.join(',')); }
         const aid = portalLoad().rows.find(r => r.staff === i1 && r.day === day).id, cr = await sbPersonal.rpc('swap_candidates', { p_assignment:aid });
         if(cr.error) check('(info) portal swaps: the list of colleagues who could take a shift needs supabase/scheduling-v5.sql (not run yet)', true, '');
         else check('portal swaps: the list of colleagues who could take the shift is returned, and it does not include the person herself', Array.isArray(cr.data) && cr.data.length >= 1 && !cr.data.some(x => x.name === srv.meRow.first), JSON.stringify(cr.data).slice(0, 100));
-        btn.click(); await answerSheet();
+        const flowOk = await changeFlow('swap', day);
+        check('portal swaps: "רוצה שינוי" -> request a swap -> asked which shift (in the right gender) -> picking it asks to confirm', flowOk && /איזו משמרת תרצ[הי] להחליף\?/.test(lastQuestion), flowOk + ' / ' + lastQuestion);
         check('portal swaps: the request is created on the server', await waitFor(() => portalLoad().swaps.some(s => s.status === 'open' && s.from === i1)), 'not created');
         // 2. a colleague offers to take it
         await sign('instructor2'); showPortal('swaps'); await sleep(150);
+        { const ds = [...document.querySelectorAll('#portal-body details.pfold')];
+          check('portal swaps: in the swaps tab "הבקשות שלי" comes first, then the open requests, and both are folded', ds.length === 2 && /הבקשות שלי/.test(ds[0].textContent) && /בקשות החלפה פתוחות/.test(ds[1].textContent) && ds.every(d => d.open === false), ds.map(d => d.dataset.fold + ':' + d.open).join(',')); }
         const take = document.querySelector('[data-swap-take]');
         check('portal swaps: the colleague sees the open request with a button to take it', !!take, 'no button');
         take.click();
@@ -1341,9 +1384,9 @@
       const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local';
       const sign = async kind => {
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
-        const { error } = await sbPersonal.auth.signInWithPassword({ email:M(kind), password:PW });
-        if(error) return false;
-        portalServerOn = true; if(!(await srvLoad())) return false;
+        const { error } = await signInRetry(M(kind), PW);
+        if(error){ window.__signErr = kind + ': ' + error.message; return false; }
+        portalServerOn = true; if(!(await srvLoad())){ window.__signErr = kind + ': no person'; return false; }
         portalUi.persona = srv.me; return true;
       };
       const waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
@@ -1391,8 +1434,7 @@
         await waitFor(() => [...document.querySelectorAll('.toast')].some(t => /הסידור פורסם/.test(t.textContent)), 400);          // (the personal messages to everybody are sent after the publishing; wait until that is over before changing the user)
         // ---- an instructor reports "I cannot come" (the shift opens at once)
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(200);
-        const cant = document.querySelector('[data-cant]'); check('portal people: the instructor sees "cannot come" next to her shift', !!cant, 'no button');
-        if(cant){ cant.click(); await answerSheet(); }
+        const cantOk = await changeFlow('cant', day); check('portal people: "רוצה שינוי" -> cannot come -> asked which shift -> picking it asks to confirm', cantOk && /לאיזו משמרת לא תוכל[י]? להגיע\?/.test(lastQuestion), cantOk + ' / ' + lastQuestion);
         check('portal people: the report opens an urgent swap request at once', await waitFor(() => portalLoad().swaps.some(s => s.urgent && s.status === 'open' && s.from === i1)), 'not opened');
         // ---- the long vacation: asked by the instructor, approved by the coordinator, entered as absence
         showPortal('vacation'); await sleep(500);
@@ -1416,7 +1458,7 @@
         check('portal people: the settings list the staff with their e-mail fields and the priority arrows', document.querySelectorAll('[data-mail]').length >= 20 && document.querySelectorAll('[data-up]').length >= 15, document.querySelectorAll('[data-mail]').length);
         await sign('instructor2'); showPortal('inbox'); await sleep(700);
         for(let i = 0; i < 12 && !/הודעת בדיקה אוטומטית/.test(document.getElementById('portal-body').textContent); i++){ showPortal('inbox'); await sleep(500); }          // (a late redraw of the coordinator's last screen may land after the switch: ask again)
-        check('portal people: the other instructor reads the announcement in her messages', /הודעת בדיקה אוטומטית/.test(document.getElementById('portal-body').textContent), document.getElementById('portal-body').textContent.slice(0, 100));
+        check('portal people: the other instructor reads the announcement in her messages', /הודעת בדיקה אוטומטית/.test(document.getElementById('portal-body').textContent), 'signErr ' + window.__signErr + ' / persona ' + portalUi.persona + ' / me ' + srv.me + ' / tab ' + portalUi.tab + ' / role ' + (portalMe() && portalMe().role) + ' / body ' + document.getElementById('portal-body').textContent.replace(/\s+/g, ' ').slice(0, 160));
         // ---- the service girl: availability for every day, then submit
         if(srvPrefsOpen(next) && await sign('service')){
           portalUi.pmonth = next; showPortal('avail'); await sleep(700);
@@ -1429,23 +1471,26 @@
           check('portal people: the availability is submitted', await waitFor(async () => { const s = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return s.data && s.data.length === 1 && Date.now() - new Date(s.data[0].submitted_at).getTime() < 60000; }), 'not submitted');
           await sbPersonal.from('prefs_service').delete().eq('staff_id', srv.me).gte('day', firstOf(next));
         }
-        // ---- an instructor who is not scheduled automatically places herself on a shift where somebody is missing (needs scheduling-v5.sql)
+        // ---- open shifts: an instructor asks to join a shift that is below the minimum; she is placed only after the coordinator approves (needs scheduling-v11.sql)
         await sign('coordinator');
-        const probe = await sbPersonal.rpc('take_open_shift', { p_day:day, p_shift:'M' });             // (refused for the coordinator; this only shows whether the function exists)
-        if(probe.error && /Could not find the function|does not exist/i.test(probe.error.message || '')) check('(info) portal people: open shifts for the not-automatic instructors need supabase/scheduling-v5.sql (not run yet)', true, '');
+        const probe = await sbPersonal.rpc('request_open_shift', { p_day:day, p_shift:'M' });             // (refused for the coordinator; this only shows whether the function exists)
+        if(probe.error && /Could not find the function|does not exist/i.test(probe.error.message || '')) check('(info) portal people: open shifts with approval need supabase/scheduling-v11.sql (not run yet)', true, '');
         else {
-          await sbPersonal.from('staff_private').update({ manual_only:true }).eq('staff_id', i2);
-          await sign('instructor2'); portalUi.month = mkT; showPortal('open'); await waitFor(async () => !!document.querySelector('[data-take]'), 40);
-          const take = document.querySelector('[data-take]');
-          check('portal people: a not-automatic instructor sees the shifts that are missing someone, in a warm voice', !!take && /משמרות שמחכות לעזרה/.test(txt()), txt().slice(0, 100));
-          if(take){
-            const [td, ts] = take.dataset.take.split('|'); take.click(); await answerSheet();
-            check('portal people: taking an open shift places her on it', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', td).eq('shift', ts); return a.data && a.data.length === 1; }), 'not placed');
+          await sign('instructor2'); portalUi.month = mkT; portalUi.fold.openshifts = true; showPortal('schedule'); await waitFor(async () => !!document.querySelector('[data-ojoin]'), 60);
+          const join = document.querySelector('[data-ojoin]');
+          check('portal people: the schedule has a section of open shifts, and the instructor is offered the ones she could fill', !!join && /משמרות פתוחות/.test(document.getElementById('portal-body').textContent), txt().slice(0, 100));
+          if(join){
+            const [td, ts] = join.dataset.ojoin.split('|'); join.click(); await answerSheet();
+            const reqs = async () => { const q = await sbPersonal.from('open_shift_requests').select('id,status').eq('staff_id', i2).eq('day', td).eq('shift', ts); return q.data || []; };
+            check('portal people: asking to join sends a request, and she is NOT placed yet', await waitFor(async () => (await reqs()).some(r => r.status === 'pending'), 40) && !((await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', td).eq('shift', ts)).data || []).length, 'no request');
+            await sign('coordinator'); showPortal('swaps'); await waitFor(async () => !!document.querySelector('[data-oapprove]'), 40);
+            check('portal people: the coordinator sees the request and can approve it', !!document.querySelector('[data-oapprove]'), 'nothing waiting');
+            const ap = document.querySelector('[data-oapprove]'); if(ap) ap.click();
+            check('portal people: after the approval she is placed on the shift', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', td).eq('shift', ts); return a.data && a.data.length === 1; }, 40), 'not placed');
           }
         }
       } finally {
         await sign('coordinator');
-        await sbPersonal.from('staff_private').update({ manual_only:false }).eq('staff_id', i2);
         await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
         await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
         await sbPersonal.from('coordinator_flags').delete().eq('text', 'בדיקה אוטומטית');
