@@ -107,16 +107,12 @@ function openPortalSettings(){
     <h3 class="psec">מראה</h3>
     <div class="pchoice wrap"><button type="button" class="${dark ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark ? '' : 'on'}" data-set-theme="light">מצב בהיר</button></div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big ? '' : 'on'}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big ? 'on' : ''}" data-set-big="1">טקסט גדול</button></div>
-    ${srv.meRow && srv.meRow.role !== 'coordinator' ? `<h3 class="psec">מיילים</h3>
-    <div class="pchoice wrap"><button type="button" class="${srv.reminders === false ? '' : 'on'}" data-set-rem="1">תזכורות להגשת העדפות: כן</button><button type="button" class="${srv.reminders === false ? 'on' : ''}" data-set-rem="0">תזכורות: לא</button></div>
-    <div class="pnote">עדכונים על שינויים במשמרות שלך יישלחו תמיד, כדי שלא תפספסו.</div>` : ''}
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
   sh.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', async () => {
     await srvSaveSetting({ voice:b.dataset.voice }); sh.close(); toast(({ warm:'בחרנו בשפה החמה והרכה', light:'עברנו לשפה הקלילה. נתראה בבדיחות!', brief:'עברנו לשפה קצרה ועניינית' })[b.dataset.voice]); showPortal();
   }));
   sh.querySelectorAll('[data-set-theme]').forEach(b => b.addEventListener('click', () => { st.settings.theme = b.dataset.setTheme; try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} sh.close(); showPortal(); }));
   sh.querySelectorAll('[data-set-big]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-portal-big', b.dataset.setBig); } catch(e){} applyPortalSize(); sh.close(); openPortalSettings(); }));
-  sh.querySelectorAll('[data-set-rem]').forEach(b => b.addEventListener('click', async () => { await srvSaveSetting({ reminders:b.dataset.setRem === '1' }); sh.close(); openPortalSettings(); }));
 }
 function applyPortalSize(){
   let big = false; try { big = localStorage.getItem('ramzor-portal-big') === '1'; } catch(e){}

@@ -1171,6 +1171,9 @@
       check('portal server: there is a gear (system settings) in the top bar', !!document.getElementById('portal-gear'), 'no gear');
       document.getElementById('portal-gear').click(); await sleep(150);
       check('portal server: the settings offer the three voices (warm, light, brief)', document.querySelectorAll('.psheet [data-voice]').length === 3 && /חמה ורכה/.test(document.querySelector('.psheet').textContent) && /קלילה והומוריסטית/.test(document.querySelector('.psheet').textContent) && /קצרה ועניינית/.test(document.querySelector('.psheet').textContent), 'no options');
+      const gcard = document.querySelector('.psheet .sheet-card');
+      check('portal server: the settings sheet scrolls inside itself and stays within the screen (a small phone must reach the last voice)', getComputedStyle(gcard).overflowY === 'auto' && gcard.getBoundingClientRect().height <= window.innerHeight, getComputedStyle(gcard).overflowY + ' / ' + gcard.getBoundingClientRect().height + ' / ' + window.innerHeight);
+      check('portal server: the settings do not offer to switch the reminders off', !document.querySelector('.psheet [data-set-rem]') && !/תזכורות/.test(document.querySelector('.psheet').textContent), '');
       document.querySelector('.psheet [data-voice="brief"]').click(); await sleep(400);
       check('portal server: choosing the brief voice changes the screen at once', srv.voice === 'brief' && /נא להגיש העדפות|ההעדפות הוגשו\./.test(document.getElementById('portal-body').textContent), srv.voice + ' / ' + document.querySelector('.pstatus').textContent);
       document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-voice="light"]').click(); await sleep(400);
@@ -1380,7 +1383,7 @@
         document.querySelector('[data-vac-ok]').click();
         check('portal people: approving the vacation enters the days as absence', await waitFor(async () => { const a = await sbPersonal.from('prefs_absence').select('day').eq('staff_id', i1).eq('reason', 'vacation').gte('day', vf).lte('day', vt); return a.data && a.data.length === 3; }), 'no absence');
         // ---- an announcement from the coordinator, read by the instructor
-        showPortal('settings'); await sleep(800);
+        showPortal('settings'); await waitFor(() => !!document.querySelector('details[data-sfold="ann"]'), 100);          // (the settings load several lists first; wait for the screen instead of a fixed time)
         const det = document.querySelector('details[data-sfold="ann"]'); det.open = true;
         document.querySelector('#an-text').value = 'הודעת בדיקה אוטומטית'; document.querySelector('#an-send').click(); await answerSheet(); created.announcements = true;
         check('portal people: the announcement is sent', await waitFor(async () => { const a = await sbPersonal.from('announcements').select('id').eq('text', 'הודעת בדיקה אוטומטית'); return a.data && a.data.length === 1; }), 'not sent');
