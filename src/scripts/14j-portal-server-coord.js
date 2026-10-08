@@ -102,7 +102,7 @@ function srvRenderCoordSchedule(body){
     ${needLook.length ? `<details class="pissues" open><summary>${needLook.length} דברים שדורשים תשומת לב</summary>${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
     <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בטבלה.</div>
-    ${boardHtml(ctx, m.assignments, { edit:true, colour:true })}` : ''}`;
+    ${boardHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash })}` : ''}`;
   wireMonthNav(body);
   if(!has) return;
   body.querySelectorAll('td.editable').forEach(td => {

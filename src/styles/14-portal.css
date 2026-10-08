@@ -264,9 +264,8 @@
   .wcal-cell.off{ align-items:center; justify-content:center; color:var(--p-muted); background:transparent; border-style:dashed; }
   .wcal-cell .pchip{ display:block; text-align:center; font-size:12.5px; line-height:1.3; padding:3px 4px; }
   .wcal-cell .pchip small{ color:var(--p-muted); font-size:10px; }
-  .pchip.ahm{ border:1.5px solid var(--gold); background:rgba(232,185,74,.14); font-weight:800; }
-  .pchip .ahm-tag{ display:block; color:var(--gold) !important; font-weight:800; font-size:10px; letter-spacing:.3px; }
-  .ahm-star{ color:var(--gold); font-style:normal; margin-inline-end:3px; }
+  .pchip.ahm{ font-weight:700; }
+  .pchip .ahm-tag{ display:block; color:var(--p-muted) !important; font-weight:400; font-size:10.5px; }
   .wcal-legend{ margin-top:8px; }
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }

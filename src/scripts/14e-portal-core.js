@@ -125,6 +125,24 @@ function portalSheet(html){
   return wrap;
 }
 
+// Who is THE ahmash of a shift (the one that is marked): in the afternoon shifts, and on Friday and Saturday mornings. Only one is marked, even when several ahmash are on the shift.
+// The choice goes through the month in order: a main ahmash (rank 1) before a second-rank one (who is chosen only when no main one is on the shift); then somebody who was NOT the
+// ahmash the day before; then the one who has been the ahmash the fewest times so far this month; then by id, so that everybody sees the same.  rank = { staff id: 1 | 2 }
+function ahmashInCharge(id, date){ return id === 'e' || ([5, 6].includes(dowOf(date)) && id === 'm'); }
+function ahmashPicks(table, ctx, rank){
+  const picks = {}, count = {}, was = {};
+  table.forEach(r => r.cells.forEach((c, i) => {
+    const s = ctx.shiftTypes[i]; if(!c.slot || !s || !ahmashInCharge(s.id, r.date)) return;
+    const cand = c.people.filter(p => (rank[p.iid] || 0) > 0); if(!cand.length) return;
+    const best = Math.min(...cand.map(p => rank[p.iid]));
+    let pool = cand.filter(p => rank[p.iid] === best);
+    const fresh = pool.filter(p => !(was[p.iid] && was[p.iid].has(addDays(r.date, -1)))); if(fresh.length) pool = fresh;
+    pool.sort((a, b) => (count[a.iid] || 0) - (count[b.iid] || 0) || String(a.iid).localeCompare(String(b.iid)));
+    const pick = pool[0]; picks[c.slot.key] = pick.iid; count[pick.iid] = (count[pick.iid] || 0) + 1; (was[pick.iid] = was[pick.iid] || new Set()).add(r.date);
+  }));
+  return picks;
+}
+
 // the schedule table: one row per day, one column per shift. In the coordinator's view every name is coloured by how
 // well the wish was kept; instructors see the whole team's schedule with only their own name highlighted.
 function boardHtml(ctx, assignments, opts){
@@ -132,7 +150,7 @@ function boardHtml(ctx, assignments, opts){
   const byId = {}; ctx.instructors.forEach(p => { byId[p.id] = p; });
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date());
   const head = `<tr><th></th>${ctx.shiftTypes.map(s => `<th>${pEsc(s.label)}<small>${rangeHtml(s.start, s.end)}</small></th>`).join('')}</tr>`;
-  const approvals = (portalMonth(ctx.month).approvals) || {};
+  const approvals = (portalMonth(ctx.month).approvals) || {}, picks = opts.ahmash ? ahmashPicks(table, ctx, opts.ahmash) : {};
   const body = table.map(r => `<tr class="${r.date === today ? 'today' : ''}${opts.nextDate === r.date ? ' next-row' : ''}${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}"><th scope="row"><b>${DOW_SHORT[dowOf(r.date)]}</b> ${parseIso(r.date).getDate()}</th>${r.cells.map((c, i) => {
     if(!c.slot) return '<td class="off">—</td>';
     const chips = c.people.map(p => {
@@ -141,7 +159,8 @@ function boardHtml(ctx, assignments, opts){
       const cls = opts.colour ? 'lv-' + p.level : 'lv-neutral';
       const pending = approvals[c.slot.key + '|' + pid] === 'pending';
       const ann = ctx.annot && ctx.annot[c.slot.key + '|' + pid];
-      return `<span class="pchip ${cls}${mine ? ' me' : ''}${pending ? ' pending' : ''}">${pEsc(p.name)}${ann ? ` <small>${pEsc(ann)}</small>` : ''}${pending ? ' ⏳' : ''}</span>`;
+      const lead = picks[c.slot.key] === pid;
+      return `<span class="pchip ${cls}${mine ? ' me' : ''}${pending ? ' pending' : ''}${lead ? ' ahm' : ''}">${pEsc(p.name)}${lead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? ` <small>${pEsc(ann)}</small>` : ''}${pending ? ' ⏳' : ''}</span>`;
     }).join('');
     const miss = c.missing ? `<span class="pchip missing">חסר ${c.missing}</span>` : '';
     return `<td${opts.edit ? ` class="editable" data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : ''}>${chips}${miss}</td>`;
@@ -159,20 +178,20 @@ function weekCalHtml(ctx, assignments, opts){
   let wi = weeks.indexOf(opts.week); if(wi < 0) wi = Math.max(0, weeks.indexOf(addDays(today, -dowOf(today))));
   const ws = weeks[wi], dates = [0, 1, 2, 3, 4, 5, 6].map(k => addDays(ws, k)), rank = opts.ahmash || {};
   const dm = iso => { const d = parseIso(iso); return d.getDate() + '/' + (d.getMonth() + 1); };
-  const inCharge = (id, date) => id === 'e' || ([5, 6].includes(dowOf(date)) && id === 'm');
+  const picks = ahmashPicks(table, ctx, rank);
   const cell = (s, date) => {
     const r = rowOf[date], c = r && r.cells[ctx.shiftTypes.indexOf(s)];
     if(!c || !c.slot) return `<div class="wcal-cell off${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}">${r ? '—' : ''}</div>`;
-    const ranks = inCharge(s.id, date) ? c.people.map(p => rank[p.iid] || 0).filter(x => x > 0) : [], best = ranks.length ? Math.min(...ranks) : 0;
+
     const chip = (p, lead) => {
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
-      return `<span class="pchip lv-neutral${mine ? ' me' : ''}${lead ? ' ahm' : ''}">${lead ? '<i class="ahm-star" aria-hidden="true">★</i>' : ''}${pEsc(p.name)}${ann ? ` <small>${pEsc(ann)}</small>` : ''}${lead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}</span>`;
+      return `<span class="pchip lv-neutral${mine ? ' me' : ''}${lead ? ' ahm' : ''}">${pEsc(p.name)}${ann ? ` <small>${pEsc(ann)}</small>` : ''}${lead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}</span>`;
     };
-    const lead = best ? c.people.filter(p => rank[p.iid] === best) : [], rest = c.people.filter(p => !lead.includes(p));
+    const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
     return `<div class="wcal-cell${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${date === today ? ' today' : ''}">${lead.map(p => chip(p, true)).join('')}${rest.map(p => chip(p, false)).join('')}${c.missing ? `<span class="pchip missing">חסר ${c.missing}</span>` : ''}</div>`;
   };
   const nav = `<div class="pweek"><button type="button" data-wkgo="${weeks[wi - 1] || ''}"${wi === 0 ? ' disabled' : ''} aria-label="שבוע קודם"><bdi dir="ltr">›</bdi></button><b>שבוע ${dm(ws)} – ${dm(addDays(ws, 6))}</b><button type="button" data-wkgo="${weeks[wi + 1] || ''}"${wi === weeks.length - 1 ? ' disabled' : ''} aria-label="שבוע הבא"><bdi dir="ltr">‹</bdi></button></div>`;
   const head = `<div class="wcal-corner"></div>${dates.map(d => `<div class="wcal-dayhead${d === today ? ' today' : ''}${[5, 6].includes(dowOf(d)) ? ' weekend' : ''}"><b>${DOW_SHORT[dowOf(d)]}</b><span>${dm(d)}</span></div>`).join('')}`;
   const rows = ctx.shiftTypes.map(s => `<div class="wcal-rowhead"><b>${pEsc(s.label)}</b><small>${rangeHtml(s.start, s.end)}</small></div>${dates.map(d => cell(s, d)).join('')}`).join('');
-  return `${nav}<div class="wcal-scroll"><div class="wcal">${head}${rows}</div></div><div class="pnote wcal-legend"><i class="ahm-star" aria-hidden="true">★</i> אחמ"ש: מי שאחראי/ת על המשמרת (בצהריים, ובשישי ובשבת גם בבוקר)</div>`;
+  return `${nav}<div class="wcal-scroll"><div class="wcal">${head}${rows}</div></div><div class="pnote wcal-legend">אחמ"ש: מי שאחראי/ת על המשמרת (בצהריים, ובשישי ובשבת גם בבוקר)</div>`;
 }

@@ -1169,10 +1169,18 @@
       const cells = [...box.querySelectorAll('.wcal-cell')], heads = box.querySelectorAll('.wcal-dayhead'), rowheads = [...box.querySelectorAll('.wcal-rowhead')].map(x => x.textContent);
       check('team calendar: a week with seven days across and a row for each shift', heads.length === 7 && rowheads.length === 3 && /בוקר/.test(rowheads[0]) && /צהריים/.test(rowheads[1]) && /לילה/.test(rowheads[2]), heads.length + ' / ' + rowheads.join('|'));
       const noonMon = cells[1 * 7 + 1], morningMon = cells[0 * 7 + 1], morningFri = cells[0 * 7 + 5], noonFri = cells[1 * 7 + 5];
-      check('team calendar: in the afternoon shift the ahmash is first, marked with a star and the word אחמ"ש', noonMon.querySelector('.pchip').classList.contains('ahm') && /רונית/.test(noonMon.querySelector('.pchip').textContent) && /אחמ"ש/.test(noonMon.querySelector('.pchip').textContent) && noonMon.querySelectorAll('.ahm').length === 1, noonMon.innerHTML.slice(0, 300));
+      check('team calendar: in the afternoon shift the ahmash is first, with the word אחמ"ש under her name (no star, no colour)', !noonMon.querySelector('.ahm-star') && /אחמ"ש/.test(noonMon.querySelector('.ahm-tag').textContent) && noonMon.querySelector('.pchip').classList.contains('ahm') && /רונית/.test(noonMon.querySelector('.pchip').textContent) && /אחמ"ש/.test(noonMon.querySelector('.pchip').textContent) && noonMon.querySelectorAll('.ahm').length === 1, noonMon.innerHTML.slice(0, 300));
       check('team calendar: on a weekday morning nobody is marked', morningMon.querySelectorAll('.ahm').length === 0, morningMon.innerHTML.slice(0, 200));
       check('team calendar: on Friday morning and afternoon the ahmash is marked too (the higher rank only)', morningFri.querySelectorAll('.ahm').length === 1 && /דנה/.test(morningFri.querySelector('.ahm').textContent) && noonFri.querySelectorAll('.ahm').length === 1 && /מיכל/.test(noonFri.querySelector('.ahm').textContent), morningFri.innerHTML.slice(0, 200));
       check('team calendar: the person herself is highlighted, and a week can be left and entered', !!box.querySelector('.pchip.me') && box.querySelectorAll('[data-wkgo]').length === 2, box.querySelectorAll('.pchip.me').length);
+      // several ahmash on one shift: only one is marked, a main one before a second-rank one, not the one who was the ahmash the day before, and the one who served less
+      { const tue = addDays(sun, 2), wed = addDays(sun, 3), two = { [`${mon}|e`]:['a', 'b', 'd'], [`${tue}|e`]:['a', 'b'], [`${wed}|e`]:['a', 'b'] };
+        const b3 = document.createElement('div'); b3.innerHTML = weekCalHtml(ctx, two, { me:'c', week:sun, ahmash:{ a:1, b:1, d:2 } });
+        const cl = [...b3.querySelectorAll('.wcal-cell')], mk1 = cl[1 * 7 + 1], mk2 = cl[1 * 7 + 2], mk3 = cl[1 * 7 + 3], who = c => c.querySelector('.ahm') ? c.querySelector('.ahm').textContent : '';
+        check('team calendar: only ONE ahmash is marked in a shift, even with three on it (a second-rank one is not preferred over a main one)', mk1.querySelectorAll('.ahm').length === 1 && /דנה/.test(who(mk1)), who(mk1));
+        check('team calendar: the ahmash of the day before is not marked again when the other one can be (and so they take turns)', mk2.querySelectorAll('.ahm').length === 1 && /רונית/.test(who(mk2)) && /דנה/.test(who(mk3)), who(mk2) + ' / ' + who(mk3));
+        const board = document.createElement('div'); board.innerHTML = boardHtml(Object.assign({}, ctx, { instructors:people }), two, { ahmash:{ a:1, b:1, d:2 } });
+        check('team calendar: the coordinator\\'s board marks one ahmash per shift in the same way', board.querySelectorAll('.pchip.ahm').length === 3, board.querySelectorAll('.pchip.ahm').length); }
       check('team calendar: without the list of ahmash (before the database knows it) nothing is marked and nothing breaks', (() => { const b2 = document.createElement('div'); b2.innerHTML = weekCalHtml(ctx, asg, { me:'c', week:sun }); return b2.querySelectorAll('.ahm').length === 0 && b2.querySelectorAll('.pchip:not(.missing)').length === 8; })(), '');
     });
 
@@ -1223,7 +1231,7 @@
         document.querySelector('[data-goal="weekly45"]').click(); await sleep(60);
         check('portal server: choosing a goal marks it on the screen', portalMonth(next).goals[srv.me] === 'weekly45' && document.querySelector('[data-goal="weekly45"]').classList.contains('on'), JSON.stringify(portalMonth(next).goals));
         document.querySelector('[data-goal=""]').click(); await sleep(60);
-        check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note'));
+        check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
         check('portal server: the two small questions use the normal question style (no green/red)', ![...document.querySelectorAll('.pconsents button')].some(b => /rgb\(123, 224, 160\)|rgb\(255, 138, 128\)/.test(getComputedStyle(b).color)), [...document.querySelectorAll('.pconsents button')].map(b => getComputedStyle(b).color).join(' '));
         const day = daysOfMonth(next)[9], key = `${day}|n`;
         document.querySelector('[data-plevel="no"]').click(); await sleep(50);
@@ -1373,6 +1381,7 @@
         await sign('coordinator');
         await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
         await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
+        for(const k of ['instructor', 'instructor2']){ if(await sign(k)) await sbPersonal.from('notices').update({ seen:true }).eq('seen', false); }          // (the coordinator cannot delete notices, so the test accounts mark what the checks created as read: a demo of these accounts stays clean)
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
         portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = null; portalUi.fold = { mine:false, team:false, swap:false }; showHub();
       }
@@ -1464,7 +1473,11 @@
           portalUi.pmonth = next; showPortal('avail'); await sleep(700);
           const opts = [...document.querySelectorAll('[data-svc$="|both"]')];
           check('portal people: the service girl is asked about every Sunday-Thursday of the open month', opts.length >= 18 && opts.length <= 23, opts.length);
-          for(let k = 0; k < opts.length; k++){ const b = document.querySelector(`[data-svc="${opts[k].dataset.svc}"]`); if(b) b.click(); await sleep(450); }
+          for(let pass = 0; pass < 5; pass++){          // (each tap saves to the server and redraws; on a slow moment a tap can land on a screen that is being redrawn, so what is still empty is tapped again)
+            const todo = [...document.querySelectorAll('.psvc-row.empty [data-svc$="|both"]')]; if(!todo.length && pass > 0) break;
+            for(const o of (pass === 0 ? opts : todo)){ const b = document.querySelector(`[data-svc="${o.dataset.svc}"]`); if(b) b.click(); await sleep(450); }
+            await sleep(700);
+          }
           const left = document.body.textContent.match(/נשארו (\d+) ימים/);
           check('portal people: after choosing every day nothing is left to choose', !left, left && left[0]);
           const sub = document.querySelector('#svc-submit'); if(sub) sub.click();
@@ -1493,6 +1506,7 @@
         await sign('coordinator');
         await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
         await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
+        for(const k of ['instructor', 'instructor2']){ if(await sign(k)) await sbPersonal.from('notices').update({ seen:true }).eq('seen', false); }          // (the coordinator cannot delete notices, so the test accounts mark what the checks created as read: a demo of these accounts stays clean)
         await sbPersonal.from('coordinator_flags').delete().eq('text', 'בדיקה אוטומטית');
         await sbPersonal.from('prefs_absence').delete().eq('staff_id', i1).eq('reason', 'vacation');
         await sbPersonal.from('vacation_requests').delete().eq('staff_id', i1);
