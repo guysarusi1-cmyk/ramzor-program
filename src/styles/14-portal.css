@@ -248,24 +248,24 @@
   .pchange-opts .btn small{ font-weight:400; opacity:.85; font-size:12.5px; }
   .pchange-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0 12px; max-height:52vh; overflow-y:auto; }
   .pmine-row.pick{ width:100%; cursor:pointer; font-family:inherit; color:var(--p-text); text-align:start; }
-  /* the team as a monthly calendar: a rectangle for each day (morning, noon, night inside), seven columns, no sideways scrolling */
-  .mcal{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:3px; direction:rtl; }
+  /* the team as a monthly calendar: the days across, every week = a row of day numbers and the morning / noon / night under it; the shift names are written once per week, at its start */
+  .mcal{ display:grid; grid-template-columns:36px repeat(7, minmax(0, 1fr)); column-gap:3px; row-gap:0; direction:rtl; }
   .mcal-head{ text-align:center; font-size:11px; font-weight:700; color:var(--p-muted); padding:2px 0; }
-  .mcal-day{ display:flex; flex-direction:column; gap:2px; min-width:0; padding:3px 2px; background:var(--p-panel); border:1px solid var(--p-line); border-radius:8px; }
-  .mcal-day.blank{ background:transparent; border:none; }
-  .mcal-day.weekend{ background:rgba(128,128,128,.10); }
-  .mcal-day.today{ border-color:var(--gold); }
-  .mcal-num{ font-size:11px; font-weight:800; color:var(--p-text); padding-inline:2px; }
-  .mcal-shift{ display:flex; align-items:flex-start; gap:2px; min-width:0; padding-top:2px; border-top:1px dashed var(--p-line); }
-  .mcal-shift > i{ flex:none; width:9px; font-style:normal; font-size:8.5px; font-weight:800; color:var(--p-muted); line-height:1.5; }
-  .mcal-names{ display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
+  .mcal-corner, .mcal-blank{ min-width:0; }
+  .mcal-num{ margin-top:8px; padding:3px 2px; text-align:center; font-size:11px; font-weight:800; color:var(--p-text); background:var(--p-panel); border:1px solid var(--p-line); border-bottom:none; border-radius:8px 8px 0 0; }
+  .mcal-cell{ min-width:0; display:flex; flex-direction:column; gap:1px; padding:3px 2px; background:var(--p-panel); border:1px solid var(--p-line); border-top:1px dashed var(--p-line); border-bottom:none; }
+  .mcal-cell.last{ border-bottom:1px solid var(--p-line); border-radius:0 0 8px 8px; }
+  .mcal-num.weekend, .mcal-cell.weekend{ background:rgba(128,128,128,.12); }
+  .mcal-num.today, .mcal-cell.today{ border-color:var(--gold); }
+  .mcal-label{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:4px; line-height:1.15; }
+  .mcal-label b{ font-size:9.5px; color:var(--p-text); } .mcal-label small{ font-size:8.5px; color:var(--p-muted); }
   .mcal-name{ display:block; min-width:0; font-size:9.5px; line-height:1.2; padding:1px 2px; border-radius:4px; background:var(--p-panel2); color:var(--p-text); overflow-wrap:anywhere; }          /* (a name made of two words may wrap to two lines; it is never cut) */
   .mcal-name small{ display:block; font-size:8px; line-height:1.15; color:var(--p-muted); font-weight:400; }
   .mcal-name.ahm{ font-weight:800; }
   .mcal-name.me{ background:var(--gold); color:#1b1b1b; font-weight:800; } .mcal-name.me small{ color:#3a3000; }
   .mcal-missing{ font-size:8.5px; color:var(--p-no, #ff8a80); font-weight:700; }
   .wcal-legend{ margin-top:8px; }
-  @media (min-width:700px){ .mcal{ gap:5px; } .mcal-head{ font-size:14px; } .mcal-day{ padding:6px 5px; gap:4px; } .mcal-num{ font-size:14px; } .mcal-shift > i{ width:14px; font-size:12px; } .mcal-name{ font-size:13px; padding:2px 5px; } .mcal-name small{ font-size:10.5px; } .mcal-missing{ font-size:12px; } }
+  @media (min-width:700px){ .mcal{ grid-template-columns:70px repeat(7, minmax(0, 1fr)); column-gap:5px; } .mcal-head{ font-size:14px; } .mcal-num{ font-size:14px; padding:5px 3px; margin-top:12px; } .mcal-cell{ padding:5px; gap:3px; } .mcal-label b{ font-size:14px; } .mcal-label small{ font-size:12px; } .mcal-name{ font-size:13px; padding:2px 5px; } .mcal-name small{ font-size:10.5px; } .mcal-missing{ font-size:12px; } }
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
   body.portal-big .portal-shell{ zoom:1.14; }
