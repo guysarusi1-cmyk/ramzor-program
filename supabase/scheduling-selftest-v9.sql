@@ -1,4 +1,4 @@
--- ================================================================
+﻿-- ================================================================
 -- Self-test of scheduling-v9.sql. Run in the SQL Editor after scheduling-v9.sql. Made-up people; everything is rolled back at the end
 -- (the result is shown as an "error" whose text starts with SELFTEST-V9 — that is how it undoes its own changes).
 -- ================================================================
@@ -6,8 +6,8 @@ do $$
 declare
   res text := ''; ok int := 0; bad int := 0; line text; n int;
   sa uuid; sb uuid;
-  m date := (date_trunc('month', now() at time zone 'Asia/Jerusalem') + interval '1 month')::date;
-  day date := ((date_trunc('month', now() at time zone 'Asia/Jerusalem') + interval '1 month')::date + 8);
+  m date := (date_trunc('month', now() at time zone 'Asia/Jerusalem') + interval '3 months')::date;
+  day date := ((date_trunc('month', now() at time zone 'Asia/Jerusalem') + interval '3 months')::date + 8);
   asg uuid;
 begin
   insert into staff (display_name, kind) values ('test-A', 'instructor') returning id into sa;

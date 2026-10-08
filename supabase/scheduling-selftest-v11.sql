@@ -1,4 +1,4 @@
--- ================================================================
+﻿-- ================================================================
 -- Self-test of scheduling-v11.sql (open shifts with approval). Run in the SQL Editor after scheduling-v11.sql. Made-up people; everything is rolled back at
 -- the end (the result is shown as an "error" whose text starts with SELFTEST-V11 — that is how it undoes its own changes).
 -- ================================================================
@@ -7,7 +7,7 @@ declare
   res text := ''; ok int := 0; bad int := 0; line text; n int; rid uuid;
   ua uuid := gen_random_uuid(); ub uuid := gen_random_uuid(); ud uuid := gen_random_uuid(); uc uuid := gen_random_uuid(); ul uuid := gen_random_uuid();
   sa uuid; sb uuid; sd uuid; sc uuid; sl uuid; x1 uuid; x2 uuid;
-  m date := (date_trunc('month', now() at time zone 'Asia/Jerusalem') + interval '1 month')::date;
+  m date := (date_trunc('month', now() at time zone 'Asia/Jerusalem') + interval '3 months')::date;
   tue date; fri date;
 begin
   select d::date into tue from generate_series(m, m + 27, interval '1 day') d where extract(dow from d) = 2 limit 1;
