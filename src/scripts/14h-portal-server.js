@@ -67,8 +67,8 @@ async function srvLoad(){
   });
   const monthOf = d => monthKeyOf(d);
   slots.forEach(r => {
-    const m = st.months[monthOf(r.day)], id = SRV_PREF_UI[r.shift]; if(!m || !id || r.level === 'yes') return;
-    srvPrefsOf(m, r.staff_id).slots[`${r.day}|${id}`] = r.level === 'can' ? 'avoid' : r.level;       // the screen's "avoid" = the database's "can" (יכול)
+    const m = st.months[monthOf(r.day)], id = SRV_PREF_UI[r.shift]; if(!m || !id) return;
+    srvPrefsOf(m, r.staff_id).slots[`${r.day}|${id}`] = r.level === 'can' ? 'avoid' : r.level;       // the screen's "avoid" = the database's "can" (יכול); a shift with no row is neutral (the person did not say)
   });
   abs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); if(r.reason === 'self') pr.absent.push(r.day); else pr.fixed.push({ day:r.day, reason:r.reason, note:r.note }); });      // (a vacation, sick leave... that the coordinator entered cannot be changed here)
   hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); (pr.hours[r.day] = pr.hours[r.day] || []).push([parseInt(r.from_time, 10), parseInt(r.to_time, 10) || 24]); });
@@ -76,6 +76,8 @@ async function srvLoad(){
   subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
   let goalRows = []; try { goalRows = await srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,goal').gte('month', from).lte('month', to)); } catch(e){ goalRows = []; }          // (the goal column comes with scheduling-v5.sql; until then there is none)
   goalRows.forEach(r => { const m = st.months[monthOf(r.month)]; if(m && r.goal) m.goals[r.staff_id] = r.goal; });
+  let pickRows = []; try { pickRows = await srvAll(() => sbPersonal.from('prefs_pickone').select('staff_id,friday').gte('friday', from).lte('friday', to)); } catch(e){ pickRows = []; }          // ("only one of these weekends" comes with scheduling-v8.sql)
+  pickRows.forEach(r => { const m = st.months[monthOf(r.friday)]; if(m) srvPrefsOf(m, r.staff_id).pick.push(r.friday); });
   if(srv.profileFor !== meId){ srv.profileFor = meId; srv.me = meId; try { const pr = await sbPersonal.rpc('my_profile'); srv.profile = pr.error ? null : pr.data; } catch(e){ srv.profile = null; } await srvLoadSettings(); applyPortalSize(); }
   sched.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.status = r.status; m.published = r.status === 'published'; } });
   st.rows = [];
@@ -125,8 +127,8 @@ function srvAddRow(st, r){
   });
   if(r.shift !== 'L'){ const key = keys[0].join('|'); st.assignmentIds[r.id] = { key, staff:r.staff_id }; st.assignmentIds[`${key}|${r.staff_id}`] = r.id; }       // (both ways: id -> shift, and shift + person -> id)
 }
-const srvPrefsOf = (m, id) => (m.prefs[id] = m.prefs[id] || { slots:{}, absent:[] }, Object.assign(m.prefs[id], { fixed:m.prefs[id].fixed || [], hours:m.prefs[id].hours || {}, consent:m.prefs[id].consent || { extend:null, pull:null } }));
-const srvSnapshot = mk => { const p = srvPrefsOf(portalMonth(mk), srv.me); return JSON.stringify({ s:Object.keys(p.slots).sort().map(k => k + '=' + p.slots[k]), a:p.absent.slice().sort(), h:Object.keys(p.hours).sort().map(k => k + '=' + JSON.stringify(p.hours[k])), c:p.consent.extend !== null && p.consent.pull !== null ? p.consent : null }); };
+const srvPrefsOf = (m, id) => (m.prefs[id] = m.prefs[id] || { slots:{}, absent:[] }, Object.assign(m.prefs[id], { fixed:m.prefs[id].fixed || [], hours:m.prefs[id].hours || {}, pick:m.prefs[id].pick || [], consent:m.prefs[id].consent || { extend:null, pull:null } }));
+const srvSnapshot = mk => { const p = srvPrefsOf(portalMonth(mk), srv.me); return JSON.stringify({ s:Object.keys(p.slots).sort().map(k => k + '=' + p.slots[k]), a:p.absent.slice().sort(), h:Object.keys(p.hours).sort().map(k => k + '=' + JSON.stringify(p.hours[k])), k:p.pick.slice().sort(), c:p.consent.extend !== null && p.consent.pull !== null ? p.consent : null }); };
 
 // ---- writing the person's own preferences (the database accepts only their own rows, only while the month is open)
 async function srvSyncPrefs(mk){
@@ -142,6 +144,11 @@ async function srvSyncPrefs(mk){
   if(r.error) throw r.error;
   const hourRows = []; Object.keys(p.hours).forEach(d => p.hours[d].forEach(([a, b]) => hourRows.push({ staff_id:srv.me, day:d, from_time:String(a).padStart(2, '0') + ':00', to_time:b >= 24 ? '23:59' : String(b).padStart(2, '0') + ':00' })));
   if(hourRows.length){ r = await sbPersonal.from('prefs_hours').insert(hourRows); if(r.error) throw r.error; }
+  if(srv.pickOk !== false){                                          // ("only one of these weekends"; before scheduling-v8.sql the table does not exist, and nothing is lost)
+    r = await sbPersonal.from('prefs_pickone').delete().eq('staff_id', srv.me).gte('friday', first).lte('friday', last);
+    if(r.error){ if(/prefs_pickone|relation|schema cache/i.test(r.error.message || '')) srv.pickOk = false; else throw r.error; }
+    else if((p.pick || []).length){ r = await sbPersonal.from('prefs_pickone').insert(p.pick.map(f => ({ staff_id:srv.me, friday:f }))); if(r.error) throw r.error; }
+  }
   if(p.consent.extend !== null && p.consent.pull !== null){          // the two consents are asked again every month; saved once both are answered
     r = await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(mk), extend_morning:p.consent.extend, pull_to_sunday:p.consent.pull, answered_at:new Date().toISOString() });
     if(r.error) throw r.error;

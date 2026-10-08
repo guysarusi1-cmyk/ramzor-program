@@ -74,10 +74,10 @@ function renderInstructorSchedule(body){
 // ---- preferences: every shift is "כן" until you mark otherwise; choose a level at the bottom, then tap days or shifts
 const LEVEL_BUTTONS = [['yes', 'כן'], ['avoid', 'יכול'], ['no', 'לא'], ['absent', 'היעדרות']];
 const SRV_LEVEL_BUTTONS = [['yes', 'כן'], ['avoid', 'יכול'], ['no', 'לא'], ['hours', 'שעות אחרות']];
-const SRV_LONG = { id:'l', label:'סופ"ש ארוך', letter:'🕯️' };            // the long weekend (Friday late afternoon, Saturday morning and noon, until after Shabbat ends): one more button on Fridays AND on Saturdays, the same mark
-const prefShiftsFor = date => portalServerOn && [5, 6].includes(dowOf(date)) ? portalLoad().shiftTypes.concat([SRV_LONG]) : portalLoad().shiftTypes;
-// the long-weekend mark is kept on the Friday; a tap on the Saturday button is a tap on the Friday one
-const prefKeyOf = key => { const [d, id] = key.split('|'); return id === 'l' && dowOf(d) === 6 ? `${addDays(d, -1)}|l` : key; };
+const SRV_LONG = { id:'l', label:'סופ"ש ארוך', letter:'🕯️', sub:'שישי לפני כניסת שבת, לינה במרכז החירום, שבת בוקר עד צאת שבת' };            // the long weekend: ONE button across the Friday and the Saturday (under them), kept on the Friday; it has nothing to do with what is chosen for the Friday or Saturday shifts
+const prefShiftsFor = date => portalLoad().shiftTypes;
+const prefKeyOf = key => key;
+const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? 'neutral' : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
 const DEFAULT_SHIFT_LEGEND = types => types.map(s => (s.letter || s.label.charAt(0)) + ' = ' + s.label);
 const FIXED_REASON = { vacation:'חופשה', sick:'מחלה', reserve:'מילואים', leave:'חופשה מיוחדת', other:'היעדרות', self:'היעדרות' };
 function renderInstructorPrefs(body){
@@ -87,19 +87,27 @@ function renderInstructorPrefs(body){
   const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalServerOn ? srvPrefsOf(m, me.id) : portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
   const days = daysOfMonth(mk), lead = dowOf(days[0]);
   const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
-  const marked = Object.keys(prefs.slots).length + prefs.absent.length + (portalServerOn ? Object.keys(prefs.hours).length : 0);
   const dl = m.deadline ? parseIso(m.deadline) : null;
   const fixedOn = date => portalServerOn ? prefs.fixed.find(f => f.day === date) : null;
-  let cells = '';
+  // the long weekend: one button under the Friday and the Saturday of a weekend (and, when the person switched it on in the settings, the small "only one of these" next to it)
+  const longBar = fri => {
+    const gone = !!fixedOn(fri) || prefs.absent.includes(fri), lv = gone ? 'no' : prefLevelOf(prefs, `${fri}|l`), picked = prefs.pick.includes(fri);
+    return `<div class="plong-row"><button type="button" class="plong lv-${lv}" data-plong="${fri}" aria-label="${pEsc(SRV_LONG.label)}"><b>${SRV_LONG.letter} ${pEsc(SRV_LONG.label)}</b><small>${pEsc(SRV_LONG.sub)}</small></button>${srv.pickOne ? `<button type="button" class="ppick${picked ? ' on' : ''}" data-ppick="${fri}" aria-pressed="${picked}">רק אחד מאלה</button>` : ''}</div>`;
+  };
+  let cells = '', neutral = 0;
   for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
     const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
+    if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`]).length;
     cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${hrs ? `<span class="pday-hrs" title="שעות אחרות">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</span>` : ''}
-      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const lv = absent ? 'no' : (prefs.slots[prefKeyOf(`${date}|${s.id}`)] || 'yes'); return `<button type="button" class="pshift lv-${lv}${s.id === 'l' ? ' pshift-long' : ''}" data-pslot="${date}|${s.id}" aria-label="${pEsc(s.label)}">${pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>
+      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const lv = absent ? 'no' : prefLevelOf(prefs, `${date}|${s.id}`); return `<button type="button" class="pshift lv-${lv}" data-pslot="${date}|${s.id}" aria-label="${pEsc(s.label)}">${pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>
     </div>`;
+    if(portalServerOn && dowOf(date) === 6 && days.includes(addDays(date, -1))) cells += longBar(addDays(date, -1));
+    else if(portalServerOn && dowOf(date) === 5 && date === days[days.length - 1]) cells += longBar(date);
   });
+  const marked = Object.keys(prefs.slots).length + prefs.absent.length + (portalServerOn ? Object.keys(prefs.hours).length : 0);
   const fixedList = portalServerOn ? prefs.fixed.filter(f => daysOfMonth(mk).includes(f.day)) : [];
   const cons = prefs.consent || { extend:null, pull:null };
   const choice = (name, v) => `<div class="pchoice" role="group"><button type="button" class="${cons[name] === true ? 'on' : ''}" data-consent="${name}:1"${locked ? ' disabled' : ''}>כן</button><button type="button" class="${cons[name] === false ? 'on' : ''}" data-consent="${name}:0"${locked ? ' disabled' : ''}>לא</button></div>`;
@@ -107,17 +115,18 @@ function renderInstructorPrefs(body){
   const goal = portalServerOn ? ((m.goals || {})[me.id] || null) : null, minInfo = portalServerOn ? fbMinimum(srv.profile, mk) : null;
   let availHint = '';
   if(portalServerOn && minInfo && minInfo.total){                  // a gentle word when the marks leave little room for the minimum
-    const free = days.filter(d => !fixedOn(d) && !prefs.absent.includes(d)).reduce((n, d) => n + ['m', 'e', 'n'].filter(id => !prefs.slots[`${d}|${id}`]).length, 0);
+    const free = days.filter(d => !fixedOn(d) && !prefs.absent.includes(d)).reduce((n, d) => n + ['m', 'e', 'n'].filter(id => ['yes', undefined].includes(prefs.slots[`${d}|${id}`])).length, 0);
     if(free < minInfo.total * 2) availHint = `<div class="pnote pnote-soft">${tx('hint_low', free, minInfo.total)}</div>`;
   }
+  const neutralHint = portalServerOn && !locked && neutral > 0 ? `<div class="pnote pnote-soft" id="neutral-note">${tx('neutral_note', neutral)}</div>` : '';
   const goalBtn = (v, label, sub) => `<button type="button" class="pgoal-opt${goal === v ? ' on' : ''}" data-goal="${v || ''}"${locked ? ' disabled' : ''}><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
   body.innerHTML = `
     ${monthNavHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
     ${locked ? `<div class="pnote">${tx('locked')}</div>` : ''}
     ${fixedList.length ? `<div class="pnote">הימים שאושרו לך או שהרכזת סימנה: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
-    <details class="pfold" data-fold="prefhelp"${openFold('prefhelp') ? ' open' : ''}><summary><span>איך ממלאים? (לחצו להסבר)</span></summary><div class="pfold-body"><div class="pnote">כל המשמרות מסומנות "כן", כלומר שאתם זמינים. נשמח לדעת אם יש משמרות שפחות מתאימות לכם: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. ${[...DEFAULT_SHIFT_LEGEND(st.shiftTypes)].join(' · ')}${portalServerOn ? ` · 🕯️ = סופ"ש ארוך (שישי צהריים מאוחר, בשבת בוקר וצהריים, עד אחרי יציאת שבת). אותה בחירה מופיעה גם ביום שישי וגם ביום שבת. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.` : ''}</div></div></details>
-    ${availHint}
+    <details class="pfold" data-fold="prefhelp"${openFold('prefhelp') ? ' open' : ''}><summary><span>איך ממלאים? (לחצו להסבר)</span></summary><div class="pfold-body"><div class="pnote">${portalServerOn ? 'בהתחלה אף משמרת לא מסומנת. נשמח שתעברו על כל החודש: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "כן" אומר שתשמחו לקבל אותה, "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. לחיצה נוספת על אותו סימון מחזירה את המשמרת למצב שלא סומן.' : 'כל המשמרות מסומנות "כן", כלומר שאתם זמינים. נשמח לדעת אם יש משמרות שפחות מתאימות לכם: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים.'} ${[...DEFAULT_SHIFT_LEGEND(st.shiftTypes)].join(' · ')}${portalServerOn ? ` · 🕯️ = סופ"ש ארוך (${SRV_LONG.sub}). הוא כפתור אחד לכל סופ"ש, מתחת לשישי ולשבת, ולא תלוי בסימונים של שישי או של שבת. אם לא סימנתם אותו, לא נשבץ אתכם אליו. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.` : ''}</div></div></details>
+    ${availHint}${neutralHint}
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
     ${portalServerOn ? `
     <div class="pgoal">
@@ -137,7 +146,7 @@ function renderInstructorPrefs(body){
       <div class="pconsent"><span>אם נצטרך, האם יהיה לך נוח להמשיך משבת בלילה עד יום ראשון ב-11:00?</span>${choice('pull')}</div>
     </div>
     <label class="pfield">יש משהו שחשוב לך שנדע? (לא חובה)<textarea id="prefs-note" rows="2" maxlength="400"${locked ? ' disabled' : ''}>${pEsc(m.notes && m.notes[me.id] || '')}</textarea></label>` : ''}
-    <div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"'}</span></div>
+    <div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
     <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
   body.querySelectorAll('[data-plevel]').forEach(b => b.addEventListener('click', () => { portalUi.level = b.dataset.plevel; renderInstructorPrefs(body); }));
@@ -155,8 +164,21 @@ function renderInstructorPrefs(body){
     if(fixedOn(date) || fixedOn(shown)) return;
     if(lv === 'hours'){ openHoursSheet(shown, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
-    else if(lv === 'yes'){ delete prefs.slots[key]; }                      // "כן" is the default, so nothing needs to be stored
+    else if(lv === 'yes' && !portalServerOn){ delete prefs.slots[key]; }                      // (the demo: "כן" is the default, so nothing needs to be stored; on the server "כן" is a mark like the others)
     else if(prefs.slots[key] === lv){ delete prefs.slots[key]; } else { prefs.slots[key] = lv; }
+    portalSave(); renderInstructorPrefs(body);
+  }));
+  body.querySelectorAll('[data-plong]').forEach(b => b.addEventListener('click', () => {          // the long weekend: kept on the Friday, independent of the other shifts
+    if(locked) return;
+    const fri = b.dataset.plong, key = `${fri}|l`, lv = portalUi.level;
+    if(fixedOn(fri) || prefs.absent.includes(fri)) return;
+    if(lv === 'hours' || lv === 'absent'){ toast(tx('long_levels')); return; }
+    if(prefs.slots[key] === lv) delete prefs.slots[key]; else prefs.slots[key] = lv;
+    portalSave(); renderInstructorPrefs(body);
+  }));
+  body.querySelectorAll('[data-ppick]').forEach(b => b.addEventListener('click', () => {          // "only one of these weekends": the Fridays that belong to the group
+    if(locked) return;
+    const fri = b.dataset.ppick; prefs.pick = prefs.pick.includes(fri) ? prefs.pick.filter(f => f !== fri) : prefs.pick.concat(fri);
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-pday]').forEach(b => b.addEventListener('click', () => {
@@ -165,21 +187,21 @@ function renderInstructorPrefs(body){
     if(fixedOn(date)) return;
     if(lv === 'hours'){ openHoursSheet(date, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
-    else if(lv === 'yes'){ keys.forEach(k => delete prefs.slots[k]); prefs.absent = prefs.absent.filter(d => d !== date); if(portalServerOn) delete prefs.hours[date]; }
+    else if(lv === 'yes' && !portalServerOn){ keys.forEach(k => delete prefs.slots[k]); prefs.absent = prefs.absent.filter(d => d !== date); }
     else if(keys.every(k => prefs.slots[k] === lv)){ keys.forEach(k => delete prefs.slots[k]); } else { keys.forEach(k => { prefs.slots[k] = lv; }); }
     portalSave(); renderInstructorPrefs(body);
   }));
   document.getElementById('prefs-clear-all').addEventListener('click', async () => {
     if(locked) return;
     if(!(await confirmSheet({ title:'לנקות את כל ההעדפות?', text:tx('clear_text', portalServerOn ? ' ושעות אחרות' : ', היעדרויות'), okLabel:'כן, לנקות הכל', cancelLabel:'חזרה', danger:true }))) return;
-    prefs.slots = {}; prefs.absent = []; if(portalServerOn) prefs.hours = {}; portalSave(); toast(tx('clear_done')); renderInstructorPrefs(body);
+    prefs.slots = {}; prefs.absent = []; if(portalServerOn){ prefs.hours = {}; prefs.pick = []; } portalSave(); toast(tx('clear_done')); renderInstructorPrefs(body);
   });
   document.getElementById('prefs-submit').addEventListener('click', async () => {
     if(locked) return;
     if(portalServerOn){
       if(cons.extend === null || cons.pull === null){ toast(tx('consent_needed')); const box = body.querySelector('.pconsents'); if(box) box.scrollIntoView({ block:'center' }); return; }
       try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim(), m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
-      toast(tx('submit_ok')); renderInstructorPrefs(body); return;
+      toast(neutral > 0 ? tx('submit_neutral', neutral) : tx('submit_ok')); renderInstructorPrefs(body); return;
     }
     m.submitted[me.id] = true; portalSave(); toast(tx('submit_ok')); renderInstructorPrefs(body);
   });

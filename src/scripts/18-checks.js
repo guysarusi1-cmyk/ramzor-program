@@ -1185,6 +1185,8 @@
         document.querySelector('[data-goal="weekly45"]').click(); await sleep(60);
         check('portal server: choosing a goal marks it on the screen', portalMonth(next).goals[srv.me] === 'weekly45' && document.querySelector('[data-goal="weekly45"]').classList.contains('on'), JSON.stringify(portalMonth(next).goals));
         document.querySelector('[data-goal=""]').click(); await sleep(60);
+        check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note'));
+        check('portal server: the two small questions use the normal question style (no green/red)', ![...document.querySelectorAll('.pconsents button')].some(b => /rgb\(123, 224, 160\)|rgb\(255, 138, 128\)/.test(getComputedStyle(b).color)), [...document.querySelectorAll('.pconsents button')].map(b => getComputedStyle(b).color).join(' '));
         const day = daysOfMonth(next)[9], key = `${day}|n`;
         document.querySelector('[data-plevel="no"]').click(); await sleep(50);
         document.querySelector(`[data-pslot="${key}"]`).click(); await sleep(50);
@@ -1193,15 +1195,31 @@
         document.querySelector('[data-plevel="no"]').click(); await sleep(50);
         document.querySelector(`[data-pslot="${daysOfMonth(next)[20]}|m"]`).click(); await sleep(50);
         check('portal server: tapping a shift marks it with the chosen level', Object.keys(srvPrefsOf(portalMonth(next), srv.me).slots).length === 3, JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots) + ' / locked? ' + !srvPrefsOpen(next) + ' / button ' + (document.querySelector(`[data-pslot="${key}"]`) || {}).outerHTML);
-        // the long weekend button exists on Fridays and Saturdays; custom hours; the two consents
+        // the long weekend: ONE button under the Friday and the Saturday; the other shifts; custom hours; the two consents
+        // (a marked yes: it is saved like any other mark)
+        const yesKey = `${daysOfMonth(next)[12]}|e`; document.querySelector('[data-plevel="yes"]').click(); await sleep(50); document.querySelector(`[data-pslot="${yesKey}"]`).click(); await sleep(50);
+        check('portal server: "כן" is a mark of its own (kept, shown green)', srvPrefsOf(portalMonth(next), srv.me).slots[yesKey] === 'yes' && document.querySelector(`[data-pslot="${yesKey}"]`).classList.contains('lv-yes'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
         const fri = daysOfMonth(next).find(d => dowOf(d) === 5), sun = daysOfMonth(next).find(d => dowOf(d) === 0);
         const sat = daysOfMonth(next).find(d => dowOf(d) === 6);
-        check('portal server: Friday and Saturday have a fourth button (the long weekend, with candles), other days three', document.querySelectorAll(`[data-pslot^="${fri}|"]`).length === 4 && document.querySelectorAll(`[data-pslot^="${sat}|"]`).length === 4 && document.querySelectorAll(`[data-pslot^="${sun}|"]`).length === 3 && /🕯/.test(document.querySelector(`[data-pslot="${sat}|l"]`).textContent), 'wrong buttons');
+        const longBtns = [...document.querySelectorAll('.plong')], firstLong = document.querySelector(`[data-plong="${fri}"]`);
+        check('portal server: every day has the three shifts, and the long weekend is ONE button per weekend (under Friday and Saturday), with candles and a sub-title', document.querySelectorAll(`[data-pslot^="${fri}|"]`).length === 3 && document.querySelectorAll(`[data-pslot^="${sat}|"]`).length === 3 && document.querySelectorAll(`[data-pslot^="${sun}|"]`).length === 3 && longBtns.length >= 4 && !document.querySelector('[data-pslot$="|l"]') && /🕯/.test(firstLong.textContent) && /סופ"ש ארוך/.test(firstLong.textContent) && /שישי לפני כניסת שבת, לינה במרכז החירום, שבת בוקר עד צאת שבת/.test(firstLong.textContent), longBtns.length + ' / ' + (firstLong ? firstLong.textContent : 'none'));
+        { const fr = firstLong.getBoundingClientRect(), fc = document.querySelector(`[data-pday="${fri}"]`).getBoundingClientRect(), sc = document.querySelector(`[data-pday="${sat}"]`).getBoundingClientRect();
+          check('portal server: the long-weekend button spreads across the Friday and the Saturday columns', fr.left <= Math.min(fc.left, sc.left) + 3 && fr.right >= Math.max(fc.right, sc.right) - 3, JSON.stringify([fr.left, fr.right, fc.left, sc.left])); }
+        check('portal server: the long weekend starts neutral and is not touched by marking the Friday', firstLong.classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], '');
         check('portal server: the shift of noon is called צהריים and marked צ', st.shiftTypes[1].label === 'צהריים' && document.querySelector(`[data-pslot="${sun}|e"]`).textContent === 'צ', st.shiftTypes[1].label);
         check('portal server: the explanation is folded away until it is asked for', document.querySelector('details[data-fold="prefhelp"]') && document.querySelector('details[data-fold="prefhelp"]').open === false, 'open');
         check('portal server: the bottom buttons are כן / יכול / לא / שעות אחרות / נקה הכל (no absence, no all-month button)', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|') === 'כן|יכול|לא|שעות אחרות|נקה הכל', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|'));
-        document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-pslot="${fri}|l"]`).click(); await sleep(50);
-        check('portal server: the Saturday long-weekend button shows the same mark as Friday\'s', document.querySelector(`[data-pslot="${sat}|l"]`).classList.contains('lv-no'), 'not mirrored: ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots) + ' / level ' + portalUi.level + ' / ' + document.querySelector(`[data-pslot="${sat}|l"]`).outerHTML + ' / fri ' + document.querySelector(`[data-pslot="${fri}|l"]`).outerHTML);
+        document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-pday="${fri}"]`).click(); await sleep(50);
+        check('portal server: marking the whole Friday "לא" does not change the long weekend (it stays neutral)', [...document.querySelectorAll(`[data-pslot^="${fri}|"]`)].every(b => b.classList.contains('lv-no')) && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
+        document.querySelector('[data-plevel="avoid"]').click(); await sleep(50); document.querySelector(`[data-plong="${fri}"]`).click(); await sleep(50);
+        check('portal server: the long-weekend button takes the chosen level (יכול)', srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`] === 'avoid' && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-avoid'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
+        document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-plong="${fri}"]`).click(); await sleep(50);
+        check('portal server: "only one of these" is not offered by default', !document.querySelector('.ppick') && !srv.pickOne, document.querySelectorAll('.ppick').length);
+        document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-set-pick="1"]').click(); await sleep(400);
+        const fris = daysOfMonth(next).filter(d => dowOf(d) === 5), chips = [...document.querySelectorAll('.ppick')];
+        check('portal server: switching it on in the settings shows a small "רק אחד מאלה" button for every weekend', srv.pickOne === true && chips.length === document.querySelectorAll('.plong').length && /רק אחד מאלה/.test(chips[0].textContent), chips.length + ' / ' + srv.pickOne);
+        document.querySelector(`[data-ppick="${fris[0]}"]`).click(); await sleep(50); document.querySelector(`[data-ppick="${fris[2]}"]`).click(); await sleep(50);
+        check('portal server: tapping the button marks the weekend (and tapping again takes it back)', srvPrefsOf(portalMonth(next), srv.me).pick.length === 2 && document.querySelector(`[data-ppick="${fris[0]}"]`).classList.contains('on'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).pick));
         document.querySelector('[data-plevel="hours"]').click(); await sleep(50);
         const hday = daysOfMonth(next).find(d => dowOf(d) === 2); document.querySelector(`[data-pday="${hday}"]`).click(); await sleep(80);
         document.querySelector('[data-hfrom="0"]').value = '11'; document.querySelector('[data-hto="0"]').value = '15'; document.querySelector('#hours-save').click(); await sleep(80);
@@ -1212,6 +1230,9 @@
         const back = portalPrefsOf(next, srv.me);
         check('portal server: after reloading from the server the marks are still there (לא / יכול / היעדרות)', back.slots[key] === 'no' && back.slots[`${daysOfMonth(next)[10]}|m`] === 'avoid' && back.slots[`${daysOfMonth(next)[20]}|m`] === 'no', JSON.stringify(back));
         check('portal server: the long weekend mark, the custom hours and the two consents are kept too', back.slots[`${fri}|l`] === 'no' && JSON.stringify(back.hours[hday]) === '[[11,15]]' && back.consent.extend === true && back.consent.pull === false, JSON.stringify([back.slots[`${fri}|l`], back.hours[hday], back.consent]));
+        check('portal server: a "כן" is kept on the server too', back.slots[yesKey] === 'yes', JSON.stringify(back.slots[yesKey]));
+        if(srv.pickOk === false) check('(info) portal server: the weekend choice is kept on the server only after supabase/scheduling-v8.sql was run (not run yet)', true, '');
+        else check('portal server: the weekends marked "רק אחד מאלה" are kept on the server', JSON.stringify(back.pick.slice().sort()) === JSON.stringify([fris[0], fris[2]].sort()), JSON.stringify(back.pick));
         portalUi.persona = srv.me; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
         const subAt = async () => { const r = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return r.data && r.data.length ? r.data[0].submitted_at : null; };
         const sub0 = await subAt();
@@ -1224,7 +1245,8 @@
         check('portal server: the submission is refused until both consent questions are answered', (await subAt()) === sub1, 'accepted');
         pc.consent = keepC;
         // clean up: everything back to "כן", and the consents back to "לא"
-        const p = portalPrefsOf(next, srv.me); p.slots = {}; p.absent = []; p.hours = {}; p.consent = { extend:false, pull:false }; portalSave();
+        const p = portalPrefsOf(next, srv.me); p.slots = {}; p.absent = []; p.hours = {}; p.pick = []; p.consent = { extend:false, pull:false }; portalSave();
+        await srvSaveSetting({ pickOne:false });
         for(let i = 0; i < 120 && (srvSnapshot(next) !== srv.saved[next] || srv.busy); i++) await sleep(150);
         await srvLoad();
         check('portal server: clearing everything is saved too', Object.keys(portalPrefsOf(next, srv.me).slots).length === 0 && portalPrefsOf(next, srv.me).absent.length === 0 && Object.keys(portalPrefsOf(next, srv.me).hours).length === 0, 'still marked: ' + JSON.stringify(portalPrefsOf(next, srv.me)));

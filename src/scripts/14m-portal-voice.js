@@ -23,6 +23,10 @@ const VOICES = {
   clear_text: { warm:(a) => `כל הסימונים שלך בחודש הזה (כן, יכול, לא${a}) יחזרו ל"כן", כלומר זמינים. אפשר תמיד לסמן שוב.`, light:(a) => `כל הסימונים (כן, יכול, לא${a}) יחזרו ל"כן". דף חלק, התחלה חדשה. אפשר תמיד לסמן שוב.`, brief:(a) => `כל הסימונים יימחקו (כן, יכול, לא${a}) ויחזרו ל"כן".` },
   clear_done: { warm:() => 'ניקינו הכול. הכל "כן" שוב', light:() => 'הכול נוקה, הכל "כן" שוב. דף חדש!', brief:() => 'נוקה. הכל "כן"' },
   hint_low:   { warm:(f, m) => `שמנו לב שבסימונים הנוכחיים נשארו ${f} משמרות שמתאימות לך. כדי שנצליח לשבץ אותך במינימום (בערך ${m} משמרות) כדאי להשאיר קצת יותר גמישות. אם משהו מגביל אותך, נשמח לשמוע ולמצוא פתרון יחד.`, light:(f, m) => `ספרנו, ונשארו ${f} משמרות שמתאימות לך, והמינימום הוא בערך ${m}. קצת יותר גמישות והחשבון יסתדר. ואם משהו באמת מגביל, ספרו לנו.`, brief:(f, m) => `נשארו ${f} משמרות זמינות, והמינימום הוא ${m}. כדאי להוסיף גמישות.` },
+  neutral_note:{ warm:(n) => `נשארו ${n} משמרות שעוד לא סימנתם. נשמח אם תעברו על כל החודש ותסמנו לכל משמרת "כן", "יכול" או "לא", כדי שנוכל לבנות סידור שמתאים לכם.`, light:(n) => `נשארו ${n} משמרות בלי סימון. כל אחת מחכה ל"כן", ל"יכול" או ל"לא", ואז הסידור כבר יידע מה לעשות איתכם.`, brief:(n) => `${n} משמרות ללא סימון. יש למלא את כל החודש.` },
+  submit_neutral:{ warm:(n) => `ההעדפות הוגשו, תודה! נשארו ${n} משמרות בלי סימון, ונשמח אם תשלימו אותן עד סגירת ההגשה`, light:(n) => `הוגש! רק ${n} משמרות עוד מחכות לסימון, אפשר להשלים עד הסגירה`, brief:(n) => `הוגש. ${n} משמרות ללא סימון, יש להשלים` },
+  long_levels:{ warm:() => 'לסופ"ש ארוך אפשר לבחור "כן", "יכול" או "לא"', light:() => 'לסופ"ש ארוך בוחרים "כן", "יכול" או "לא". בלי שעות מיוחדות', brief:() => 'כאן: כן, יכול או לא' },
+  pick_setting:{ warm:() => 'כשהאפשרות פעילה, בכל סופ"ש במסך ההעדפות מופיע כפתור קטן "רק אחד מאלה". מסמנים כמה סופי שבוע שמתאימים לכם, והמערכת תשבץ אתכם באחד מהם בלבד.', light:() => 'כשזה פעיל, כל סופ"ש מקבל כפתור קטן "רק אחד מאלה". פותחים למערכת כמה אפשרויות, והיא בוחרת אחת בלבד.', brief:() => 'מוסיף כפתור "רק אחד מאלה" בסופי שבוע. המערכת תשבץ אחד מהם בלבד.' },
   // ---- the schedule tab
   sch_unpub:  { warm:() => 'הסידור לחודש הזה עוד בהכנה. ברגע שהוא יפורסם נעדכן אותך כאן ובמייל.', light:() => 'הסידור עוד בתנור. כשהוא יצא נעדכן כאן ובמייל.', brief:() => 'הסידור טרם פורסם.' },
   sch_none:   { warm:() => 'בחודש הזה עדיין לא שובצו לך משמרות. אם זה לא מה שציפיתם, נשמח לשמוע ולעזור.', light:() => 'החודש אין לך משמרות (בינתיים). אם זה לא מה שציפית, תגיד לנו ונבדוק.', brief:() => 'אין משמרות החודש.' },
@@ -87,14 +91,21 @@ const txFor = (voice, key, ...args) => { const k = VOICES[key]; return (k && (k[
 
 // ---------------------------------------------------------------- the settings (the gear)
 async function srvLoadSettings(){
-  try { const r = await sbPersonal.from('staff_settings').select('voice,reminders').eq('staff_id', srv.me).maybeSingle(); if(!r.error && r.data){ srv.voice = r.data.voice || null; srv.reminders = r.data.reminders !== false; } } catch(e){}
+  let hasPick = false; srv.pickOne = false;
+  try {
+    let r = await sbPersonal.from('staff_settings').select('voice,reminders,pick_one').eq('staff_id', srv.me).maybeSingle();
+    if(!r.error) hasPick = true; else r = await sbPersonal.from('staff_settings').select('voice,reminders').eq('staff_id', srv.me).maybeSingle();          // (before scheduling-v8.sql there is no pick_one column)
+    if(!r.error && r.data){ srv.voice = r.data.voice || null; srv.reminders = r.data.reminders !== false; srv.pickOne = !!r.data.pick_one; }
+  } catch(e){}
   if(!srv.voice){ try { srv.voice = localStorage.getItem('ramzor-portal-voice') || null; } catch(e){} }
+  if(!hasPick){ try { srv.pickOne = localStorage.getItem('ramzor-portal-pickone') === '1'; } catch(e){} }          // (only until the column exists)
 }
 async function srvSaveSetting(patch){
   Object.assign(srv, patch);
   if(patch.voice){ try { localStorage.setItem('ramzor-portal-voice', patch.voice); } catch(e){} }
+  if('pickOne' in patch){ try { localStorage.setItem('ramzor-portal-pickone', patch.pickOne ? '1' : '0'); } catch(e){} }
   try {
-    const row = { staff_id:srv.me }; if('voice' in patch) row.voice = patch.voice; if('reminders' in patch) row.reminders = patch.reminders;
+    const row = { staff_id:srv.me }; if('voice' in patch) row.voice = patch.voice; if('reminders' in patch) row.reminders = patch.reminders; if('pickOne' in patch) row.pick_one = !!patch.pickOne;
     const r = await sbPersonal.from('staff_settings').upsert(row);
     return !r.error;
   } catch(e){ return false; }
@@ -107,11 +118,19 @@ function openPortalSettings(){
     <h3 class="psec">מראה</h3>
     <div class="pchoice wrap"><button type="button" class="${dark ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark ? '' : 'on'}" data-set-theme="light">מצב בהיר</button></div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big ? '' : 'on'}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big ? 'on' : ''}" data-set-big="1">טקסט גדול</button></div>
+    ${srv.meRow && srv.meRow.role === 'instructor' ? `<h3 class="psec">סופי שבוע</h3>
+    <div class="pchoice wrap"><button type="button" class="${srv.pickOne ? 'on' : ''}" data-set-pick="1">להציג "רק אחד מאלה": כן</button><button type="button" class="${srv.pickOne ? '' : 'on'}" data-set-pick="0">לא</button></div>
+    <div class="pnote">${tx('pick_setting')}</div>` : ''}
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
   sh.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', async () => {
     await srvSaveSetting({ voice:b.dataset.voice }); sh.close(); toast(({ warm:'בחרנו בשפה החמה והרכה', light:'עברנו לשפה הקלילה. נתראה בבדיחות!', brief:'עברנו לשפה קצרה ועניינית' })[b.dataset.voice]); showPortal();
   }));
   sh.querySelectorAll('[data-set-theme]').forEach(b => b.addEventListener('click', () => { st.settings.theme = b.dataset.setTheme; try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} sh.close(); showPortal(); }));
+  sh.querySelectorAll('[data-set-pick]').forEach(b => b.addEventListener('click', async () => {
+    const on = b.dataset.setPick === '1';
+    if(!on){ Object.keys(st.months).forEach(mk => { if(srvPrefsOpen(mk)) srvPrefsOf(st.months[mk], srv.me).pick = []; }); portalSave(); }          // (switching the option off takes the marks back, so the system does not act on what is no longer shown)
+    await srvSaveSetting({ pickOne:on }); sh.close(); showPortal();
+  }));
   sh.querySelectorAll('[data-set-big]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-portal-big', b.dataset.setBig); } catch(e){} applyPortalSize(); sh.close(); openPortalSettings(); }));
 }
 function applyPortalSize(){

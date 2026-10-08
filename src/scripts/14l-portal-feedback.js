@@ -40,7 +40,7 @@ function srvFeedbackFor(p, mk, input){
   const on = (day, id) => mine.filter(r => r.day === day && fbRowShiftId(r) === id);
   Object.keys(prefs.slots || {}).sort().forEach(key => {
     const [day, id] = key.split('|'), lv = prefs.slots[key];
-    if(!days.includes(day)) return;
+    if(!days.includes(day) || (lv !== 'no' && lv !== 'avoid')) return;          // ("כן" is a wish to work, not a request to keep away from a shift)
     const hit = on(day, id).length > 0, label = `${dayLabel(day)} (${FB_SHIFT_WORD[id]})`;
     if(!hit) honored.push(label);
     else unmet.push(lv === 'no' ? `${label}: סימנת "לא", והיינו צריכים להשלים את הצוות` : `${label}: סימנת "יכול", ושובצת כי חיפשנו מישהו שיוכל`);
