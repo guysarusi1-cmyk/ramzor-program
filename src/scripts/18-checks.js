@@ -1430,12 +1430,13 @@
         await srvReload(); portalUi.month = mkT; portalUi.tab = 'schedule'; showPortal('schedule'); await sleep(200);
         const txt = () => document.getElementById('portal-body').textContent;
         check('portal people: the coordinator sees the schedule that was sent to her, and its status', /נשלח אלייך/.test(txt()) && !!document.querySelector('#cs-publish') && !document.querySelector('#cs-publish').disabled, txt().slice(0, 80));
-        check('portal people: the board shows the two people, and there is no automatic build button', document.querySelectorAll('.pboard .pchip').length >= 2 && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.pboard .pchip').length + ' / ' + JSON.stringify(portalMonth(mkT).assignments) + ' / rows ' + portalLoad().rows.length + ' / ' + (document.querySelector('.pboard') ? document.querySelector('.pboard').outerHTML.slice(0, 500) : 'no board'));
+        check('portal people: the coordinator sees the schedule as the monthly calendar of the instructors (the two people are on it, no automatic build button)', document.querySelectorAll('.mcal .mcal-name').length >= 2 && !!document.querySelector('.mcal-label') && !document.querySelector('.pboard') && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.mcal .mcal-name').length + ' / rows ' + portalLoad().rows.length);
+        check('portal people: a person who did not mark that shift is coloured (and the colours are explained under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('.mcal-key .wish-can') && !!document.querySelector('.mcal-key .wish-no'), document.querySelectorAll('.mcal-name').length);
         check('portal people: what needs her attention is listed', /בדיקה אוטומטית/.test(txt()), txt().slice(0, 120));
         document.querySelector('[data-flag-done]').click();
         check('portal people: marking an item as handled is saved', await waitFor(async () => { const f = await sbPersonal.from('coordinator_flags').select('resolved').eq('text', 'בדיקה אוטומטית'); return f.data && f.data.length && f.data[0].resolved === true; }), 'not saved');
         // edit a shift: add the second instructor to the morning, then remove her
-        document.querySelector(`td.editable[data-key="${day}|m"]`).click(); await sleep(150);
+        document.querySelector(`.mcal-cell.editable[data-key="${day}|m"]`).click(); await sleep(150);
         const who = document.querySelector('#add-who'); who.value = i2; who.dispatchEvent(new Event('change')); document.querySelector('#add-go').click(); await maybeSheet();
         check('portal people: the coordinator adds a person to a shift and it is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return a.data && a.data.length === 1; }), 'not added');
         await waitFor(async () => !!document.querySelector('[data-rm]'), 60);

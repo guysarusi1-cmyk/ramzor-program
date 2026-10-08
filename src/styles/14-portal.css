@@ -265,6 +265,12 @@
   .mcal-name small{ display:block; font-size:8px; line-height:1.15; color:var(--p-muted); font-weight:400; }
   .mcal-name.ahm{ font-weight:800; }
   .mcal-name.me{ background:var(--gold); color:#1b1b1b; font-weight:800; } .mcal-name.me small{ color:#3a3000; }
+  .mcal-cell.editable{ cursor:pointer; min-height:34px; } .mcal-cell.editable:hover, .mcal-cell.editable:focus-visible{ background:rgba(232,185,74,.12); outline:none; }
+  .mcal-name.wish-can{ background:var(--p-avoid-bg, #3A3314); color:var(--p-avoid, #f0c239); box-shadow:inset 0 0 0 1px var(--p-avoid, #f0c239); }
+  .mcal-name.wish-no{ background:var(--p-no-bg, #3a1a18); color:var(--p-no, #ff8a80); box-shadow:inset 0 0 0 1px var(--p-no, #ff8a80); }
+  .mcal-name.wish-none{ background:rgba(110,168,254,.16); color:#8ec0ff; box-shadow:inset 0 0 0 1px #8ec0ff; }
+  .mcal-key{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .mcal-key .mcal-name{ display:inline-block; font-size:12px; padding:2px 8px; }
   .mcal-missing{ font-size:8.5px; color:var(--p-no, #ff8a80); font-weight:700; }
   .wcal-legend{ margin-top:8px; }
   @media (min-width:700px){ .mcal{ grid-template-columns:70px repeat(7, minmax(0, 1fr)); column-gap:5px; } .mcal-head{ font-size:14px; } .mcal-num{ font-size:14px; padding:5px 3px; margin-top:12px; } .mcal-cell{ padding:5px; gap:3px; } .mcal-label b{ font-size:14px; } .mcal-label small{ font-size:12px; } .mcal-name{ font-size:13px; padding:2px 5px; } .mcal-name small{ font-size:10.5px; } .mcal-missing{ font-size:12px; } }

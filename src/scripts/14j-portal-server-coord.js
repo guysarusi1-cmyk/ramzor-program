@@ -101,11 +101,11 @@ function srvRenderCoordSchedule(body){
     ${m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>'}
     ${needLook.length ? `<details class="pissues" open><summary>${needLook.length} דברים שדורשים תשומת לב</summary>${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
-    <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בטבלה.</div>
-    ${boardHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash })}` : ''}`;
+    <div class="pnote">לחיצה על משמרת בלוח פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בלוח.</div>
+    ${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash })}` : ''}`;
   wireMonthNav(body);
   if(!has) return;
-  body.querySelectorAll('td.editable').forEach(td => {
+  body.querySelectorAll('.mcal-cell.editable').forEach(td => {
     const open = () => srvOpenSlot(mk, td.dataset.key, body);
     td.addEventListener('click', open); td.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
   });
