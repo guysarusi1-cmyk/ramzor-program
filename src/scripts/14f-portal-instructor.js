@@ -90,16 +90,18 @@ function renderInstructorPrefs(body){
   const dl = m.deadline ? parseIso(m.deadline) : null;
   const fixedOn = date => portalServerOn ? prefs.fixed.find(f => f.day === date) : null;
   // the long weekend: one button under the Friday and the Saturday of a weekend (and, when the person switched it on in the settings, the small "only one of these" next to it)
+  const barOn = portalServerOn && (srv.showLong || srv.pickOne);          // (the long weekend is shown only when the person asked for it in the settings; so is "only one of these")
   const longBar = fri => {
+    if(!barOn) return '';
     const gone = !!fixedOn(fri) || prefs.absent.includes(fri), lv = gone ? 'no' : prefLevelOf(prefs, `${fri}|l`), picked = prefs.pick.includes(fri);
-    return `<div class="plong-row"><button type="button" class="plong lv-${lv}" data-plong="${fri}" aria-label="${pEsc(SRV_LONG.label)}"><b>${SRV_LONG.letter} ${pEsc(SRV_LONG.label)}</b><small>${pEsc(SRV_LONG.sub)}</small></button>${srv.pickOne ? `<button type="button" class="ppick${picked ? ' on' : ''}" data-ppick="${fri}" aria-pressed="${picked}">רק אחד מאלה</button>` : ''}</div>`;
+    return `<div class="plong-row"><span class="plong-link" aria-hidden="true">▲ שייך לשישי ולשבת שמעל</span>${srv.showLong ? `<button type="button" class="plong lv-${lv}" data-plong="${fri}" aria-label="${pEsc(SRV_LONG.label)} של ${dayLabel(fri)} והשבת שאחריו"><b>${SRV_LONG.letter} ${pEsc(SRV_LONG.label)}</b><small>${pEsc(SRV_LONG.sub)}</small></button>` : ''}${srv.pickOne ? `<button type="button" class="ppick${picked ? ' on' : ''}" data-ppick="${fri}" aria-pressed="${picked}">רק אחד מאלה</button>` : ''}</div>`;
   };
   let cells = '', neutral = 0;
   for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
     const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
     if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`]).length;
-    cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
+    cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${barOn && [5, 6].includes(dowOf(date)) && days.includes(dowOf(date) === 5 ? date : addDays(date, -1)) ? ' linked' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${hrs ? `<span class="pday-hrs" title="שעות אחרות">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</span>` : ''}
       <div class="pday-shifts">${prefShiftsFor(date).map(s => { const lv = absent ? 'no' : prefLevelOf(prefs, `${date}|${s.id}`); return `<button type="button" class="pshift lv-${lv}" data-pslot="${date}|${s.id}" aria-label="${pEsc(s.label)}">${pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>

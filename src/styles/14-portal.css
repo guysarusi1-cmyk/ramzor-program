@@ -234,7 +234,9 @@
   /* a shift nobody marked is neutral: grey and dashed, until the person says yes / can / no */
   .pshift.lv-neutral, .plong.lv-neutral{ background:transparent; color:var(--p-muted); border:1px dashed var(--p-line); font-weight:600; }
   /* the long weekend: one button under the Friday and the Saturday, with a sub-title; "only one of these" sits below it */
-  .plong-row{ grid-column:6 / 8; display:flex; flex-direction:column; gap:4px; margin-bottom:6px; }
+  .plong-row{ grid-column:6 / 8; display:flex; flex-direction:column; gap:4px; margin-bottom:6px; padding:4px; border:1px dashed var(--gold); border-top:none; border-radius:0 0 10px 10px; }
+  .plong-link{ text-align:center; font-size:10px; color:var(--gold); font-weight:700; line-height:1.2; }
+  .pday.linked{ border-color:var(--gold); border-style:dashed; border-bottom-style:none; border-radius:10px 10px 0 0; }
   .plong{ border-radius:10px; border:1px solid var(--p-line); font-family:inherit; padding:6px 4px; cursor:pointer; text-align:center; line-height:1.25; color:var(--p-text); background:var(--p-panel2); }
   .plong.lv-neutral{ background:transparent; }
   .plong b{ display:block; font-size:13px; }

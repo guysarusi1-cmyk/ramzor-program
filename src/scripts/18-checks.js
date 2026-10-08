@@ -1253,6 +1253,9 @@
         check('portal server: "כן" is a mark of its own (kept, shown green)', srvPrefsOf(portalMonth(next), srv.me).slots[yesKey] === 'yes' && document.querySelector(`[data-pslot="${yesKey}"]`).classList.contains('lv-yes'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
         const fri = daysOfMonth(next).find(d => dowOf(d) === 5), sun = daysOfMonth(next).find(d => dowOf(d) === 0);
         const sat = daysOfMonth(next).find(d => dowOf(d) === 6);
+        check('portal server: the long weekend is not shown by default (it is switched on in the settings)', !document.querySelector('.plong') && !document.querySelector('.plong-row') && !srv.showLong, document.querySelectorAll('.plong').length);
+        document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-set-long="1"]').click(); await sleep(400);
+        check('portal server: switching it on shows the button under every weekend, and it is clear that it belongs to the Friday and Saturday above it', srv.showLong === true && document.querySelectorAll('.plong').length >= 4 && document.querySelectorAll('.plong-row .plong-link').length === document.querySelectorAll('.plong').length && document.querySelectorAll('.pday.linked').length >= 2 * document.querySelectorAll('.plong').length - 2, document.querySelectorAll('.plong').length + ' / ' + document.querySelectorAll('.pday.linked').length);
         const longBtns = [...document.querySelectorAll('.plong')], firstLong = document.querySelector(`[data-plong="${fri}"]`);
         check('portal server: every day has the three shifts, and the long weekend is ONE button per weekend (under Friday and Saturday), with candles and a sub-title', document.querySelectorAll(`[data-pslot^="${fri}|"]`).length === 3 && document.querySelectorAll(`[data-pslot^="${sat}|"]`).length === 3 && document.querySelectorAll(`[data-pslot^="${sun}|"]`).length === 3 && longBtns.length >= 4 && !document.querySelector('[data-pslot$="|l"]') && /🕯/.test(firstLong.textContent) && /סופ"ש ארוך/.test(firstLong.textContent) && /שישי לפני כניסת שבת, לינה במרכז החירום, שבת בוקר עד צאת שבת/.test(firstLong.textContent), longBtns.length + ' / ' + (firstLong ? firstLong.textContent : 'none'));
         { const fr = firstLong.getBoundingClientRect(), fc = document.querySelector(`[data-pday="${fri}"]`).getBoundingClientRect(), sc = document.querySelector(`[data-pday="${sat}"]`).getBoundingClientRect();
@@ -1298,7 +1301,7 @@
         pc.consent = keepC;
         // clean up: everything back to "כן", and the consents back to "לא"
         const p = portalPrefsOf(next, srv.me); p.slots = {}; p.absent = []; p.hours = {}; p.pick = []; p.consent = { extend:false, pull:false }; portalSave();
-        await srvSaveSetting({ pickOne:false });
+        await srvSaveSetting({ pickOne:false }); await srvSaveSetting({ showLong:false });
         for(let i = 0; i < 120 && (srvSnapshot(next) !== srv.saved[next] || srv.busy); i++) await sleep(150);
         await srvLoad();
         check('portal server: clearing everything is saved too', Object.keys(portalPrefsOf(next, srv.me).slots).length === 0 && portalPrefsOf(next, srv.me).absent.length === 0 && Object.keys(portalPrefsOf(next, srv.me).hours).length === 0, 'still marked: ' + JSON.stringify(portalPrefsOf(next, srv.me)));
