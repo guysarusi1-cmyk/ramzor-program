@@ -259,7 +259,7 @@
   .mcal-shift{ display:flex; align-items:flex-start; gap:2px; min-width:0; padding-top:2px; border-top:1px dashed var(--p-line); }
   .mcal-shift > i{ flex:none; width:9px; font-style:normal; font-size:8.5px; font-weight:800; color:var(--p-muted); line-height:1.5; }
   .mcal-names{ display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
-  .mcal-name{ display:block; min-width:0; font-size:9.5px; line-height:1.25; padding:1px 2px; border-radius:4px; background:var(--p-panel2); color:var(--p-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mcal-name{ display:block; min-width:0; font-size:9.5px; line-height:1.2; padding:1px 2px; border-radius:4px; background:var(--p-panel2); color:var(--p-text); overflow-wrap:anywhere; }          /* (a name made of two words may wrap to two lines; it is never cut) */
   .mcal-name small{ display:block; font-size:8px; line-height:1.15; color:var(--p-muted); font-weight:400; }
   .mcal-name.ahm{ font-weight:800; }
   .mcal-name.me{ background:var(--gold); color:#1b1b1b; font-weight:800; } .mcal-name.me small{ color:#3a3000; }
