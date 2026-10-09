@@ -102,9 +102,12 @@ function srvRenderCoordSchedule(body){
     ${needLook.length ? `<details class="pissues" open><summary>${needLook.length} דברים שדורשים תשומת לב</summary>${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
     <div class="pnote">לחיצה על משמרת בלוח פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בלוח.</div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csPerson })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
   wireMonthNav(body);
   if(!has) return;
+  const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
+  if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });
+  if(csClose) csClose.addEventListener('click', () => { portalUi.csOpen = false; portalUi.csPerson = null; srvRenderCoordSchedule(body); });
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
     const open = () => srvOpenSlot(mk, td.dataset.key, body);
@@ -227,8 +230,9 @@ function srvPersonRequestsHtml(p, mk){
 }
 function srvSidePanelHtml(mk){
   const st = portalLoad(), m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role === 'instructor'), sel = people.find(p => p.id === portalUi.csPerson);
+  if(!portalUi.csOpen) return `<button type="button" class="cs-tab" id="cs-open" aria-expanded="false">בקשות המדריכים</button>`;          // (folded: a slim tab at the left of the schedule)
   return `<aside class="cs-side" aria-label="בקשות המדריכים">
-    <h3 class="cs-side-title">בקשות המדריכים</h3>
+    <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3><button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
     <div class="cs-names">${people.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
   </aside>`;

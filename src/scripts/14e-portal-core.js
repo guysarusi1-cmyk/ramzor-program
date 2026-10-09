@@ -199,6 +199,7 @@ function monthCalHtml(ctx, assignments, opts){
   let out = `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head">${d}</div>`).join('')}`;
   for(let w = 0; w < flat.length; w += 7){
     const week = flat.slice(w, w + 7);
+    if(w > 0) out += `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head mini" aria-hidden="true">${d}</div>`).join('')}`;          // (the days of the week again, small, above every later week: the screen scrolls down)
     out += `<div class="mcal-corner"></div>` + week.map(r => r ? `<div class="mcal-num${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}">${parseIso(r.date).getDate()}</div>` : blank).join('');
     ctx.shiftTypes.forEach((s, i) => { out += `<div class="mcal-label"><b>${pEsc(s.label)}</b><small>${hours(s)}</small></div>` + week.map(r => r ? shiftCell(r, i) : blank).join(''); });
   }

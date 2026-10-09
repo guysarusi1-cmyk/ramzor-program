@@ -1170,7 +1170,7 @@
       const box = draw(asg, { me:'c', ahmash:{ b:1, d:2, a:2 } });
       const grid = box.querySelector('.mcal');
       const weeks = Math.ceil((dowOf(ds[0]) + ds.length) / 7), labels = [...box.querySelectorAll('.mcal-label')].map(x => x.textContent);
-      check('team calendar: a column for every day of the month, with the morning, noon and night of that day, and the seven days of the week above', box.querySelectorAll('.mcal-num').length === ds.length && ds.every(d => box.querySelectorAll(`.mcal-cell[data-day="${d}"]`).length === 3) && box.querySelectorAll('.mcal-head').length === 7, box.querySelectorAll('.mcal-num').length + ' / ' + ds.length);
+      check('team calendar: a column for every day of the month, with the morning, noon and night of that day, the seven days of the week above, and again (small) above every later week', box.querySelectorAll('.mcal-num').length === ds.length && ds.every(d => box.querySelectorAll(`.mcal-cell[data-day="${d}"]`).length === 3) && box.querySelectorAll('.mcal-head:not(.mini)').length === 7 && box.querySelectorAll('.mcal-head.mini').length === 7 * (Math.ceil((dowOf(ds[0]) + ds.length) / 7) - 1), box.querySelectorAll('.mcal-num').length + ' / ' + ds.length);
       check('team calendar: the shift names with their hours are written once, at the start of every week (not in every day)', labels.length === weeks * 3 && /בוקר7-15/.test(labels[0]) && /צהריים14-22/.test(labels[1]) && /לילה22-8/.test(labels[2]) && !box.querySelector('.mcal-cell i, .mcal-num i'), labels.length + ' / ' + weeks * 3 + ' / ' + labels.slice(0, 3).join('|'));
       check('team calendar: the whole month fits the width of the screen (no sideways scrolling)', grid.scrollWidth <= grid.clientWidth + 1 && !box.querySelector('.wcal-scroll, .board-scroll'), grid.scrollWidth + ' > ' + grid.clientWidth);
       const noonMon = shiftOf(box, mon, 1), morningMon = shiftOf(box, mon, 0), morningFri = shiftOf(box, fri, 0), noonFri = shiftOf(box, fri, 1);
@@ -1360,7 +1360,7 @@
         const want = document.getElementById('want-change');
         check('portal swaps: the instructor has one "בקשת החלפה" button, and no swap / cannot-come buttons on every shift', !!want && !document.querySelector('[data-said], [data-cant]'), 'want ' + !!want);
         { const folds = [...document.querySelectorAll('details.pfold')].map(d => d.dataset.fold);
-          check('portal swaps: under "הצוות כולו" (a monthly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.mcal') && folds.indexOf('openshifts') === folds.indexOf('team') + 1 && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.mcal-head').length === 7, folds.join(',')); }
+          check('portal swaps: under "הצוות כולו" (a monthly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.mcal') && folds.indexOf('openshifts') === folds.indexOf('team') + 1 && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.mcal-head:not(.mini)').length === 7 && document.querySelectorAll('.mcal-head.mini').length >= 7, folds.join(',')); }
         const aid = portalLoad().rows.find(r => r.staff === i1 && r.day === day).id, cr = await sbPersonal.rpc('swap_candidates', { p_assignment:aid });
         if(cr.error) check('(info) portal swaps: the list of colleagues who could take a shift needs supabase/scheduling-v5.sql (not run yet)', true, '');
         else check('portal swaps: the list of colleagues who could take the shift is returned, and it does not include the person herself', Array.isArray(cr.data) && cr.data.length >= 1 && !cr.data.some(x => x.name === srv.meRow.first), JSON.stringify(cr.data).slice(0, 100));
@@ -1431,11 +1431,14 @@
         const txt = () => document.getElementById('portal-body').textContent;
         check('portal people: the coordinator sees the schedule that was sent to her, and its status', /נשלח אלייך/.test(txt()) && !!document.querySelector('#cs-publish') && !document.querySelector('#cs-publish').disabled, txt().slice(0, 80));
         check('portal people: the coordinator sees the schedule as the monthly calendar of the instructors (the two people are on it, no automatic build button)', document.querySelectorAll('.mcal .mcal-name').length >= 2 && !!document.querySelector('.mcal-label') && !document.querySelector('.pboard') && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.mcal .mcal-name').length + ' / rows ' + portalLoad().rows.length);
+        check('portal people: the instructors panel is folded, a slim tab at the left of the schedule (after the calendar in the page, so it is on the left)', !!document.getElementById('cs-open') && !document.querySelector('.cs-side') && !!document.querySelector('.cs-layout .cs-main + #cs-open'), 'not folded');
+        document.getElementById('cs-open').click(); await sleep(120);
         { const names = [...document.querySelectorAll('.cs-side .cs-name')], first = names.find(b => b.dataset.csPerson === i1) || names[0];
           check('portal people: at the left of the schedule there is a panel with the instructors\' names', names.length >= 15 && !!document.querySelector('.cs-layout .cs-main .mcal'), names.length);
           if(first){ first.click(); await sleep(150);
             check('portal people: a tap on a name shows her requests for the month that is shown, and outlines her names in the schedule', !!document.querySelector('.cs-person .cs-req') && /\d{4}|[א-ת]/.test(document.querySelector('.cs-person-head').textContent) && document.querySelectorAll('.mcal-name.sel').length >= 1 && document.querySelector('.cs-name.on') === document.querySelector(`.cs-name[data-cs-person="${first.dataset.csPerson}"]`), document.querySelectorAll('.mcal-name.sel').length + ' outlined');
-            document.querySelector('.cs-name.on').click(); await sleep(100); } }
+            document.querySelector('.cs-name.on').click(); await sleep(100); }
+          document.getElementById('cs-close').click(); await sleep(100); }
         check('portal people: a person who did not mark that shift is coloured (and the colours are explained under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('.mcal-key .wish-yes') && !!document.querySelector('.mcal-key .wish-can') && !!document.querySelector('.mcal-key .wish-no') && !!document.querySelector('.mcal-key .wish-none') && /לא סומן/.test(document.querySelector('.mcal-key').textContent), document.querySelectorAll('.mcal-name').length);
         check('portal people: what needs her attention is listed', /בדיקה אוטומטית/.test(txt()), txt().slice(0, 120));
         document.querySelector('[data-flag-done]').click();
@@ -1529,6 +1532,7 @@
         await sbPersonal.from('notices').delete().in('to_staff', [i1, i2]);
         for(const k of ['instructor', 'instructor2']){ if(await sign(k)) await sbPersonal.from('notices').update({ seen:true }).eq('seen', false); }          // (the coordinator cannot delete notices, so the test accounts mark what the checks created as read: a demo of these accounts stays clean)
         await sbPersonal.from('coordinator_flags').delete().eq('text', 'בדיקה אוטומטית');
+        await sbPersonal.from('coordinator_flags').delete().eq('staff_id', i1).ilike('text', '%חופשה%');          // (the approved vacation of the check clashes with a shift: that note is the check's own, so it goes too)
         await sbPersonal.from('prefs_absence').delete().eq('staff_id', i1).eq('reason', 'vacation');
         await sbPersonal.from('vacation_requests').delete().eq('staff_id', i1);
         if(created.announcements) await sbPersonal.from('announcements').delete().eq('text', 'הודעת בדיקה אוטומטית');
