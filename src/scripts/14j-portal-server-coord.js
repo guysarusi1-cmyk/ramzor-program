@@ -155,6 +155,10 @@ function srvOpenSlot(mk, key, body){
   const draw = () => {
     if(!wrap.isConnected) return;                                   // (the sheet was closed while the data was reloading)
     const rows = rowsHere(), people = portalLoad().instructors.filter(p => p.active && p.role === 'instructor' && !rows.some(r => r.staff === p.id));
+    // what each of them wrote for THIS shift: yes (green), can (yellow), not marked (blue), no / away (red); the list is ordered the same way
+    const mprefs = portalMonth(monthKeyOf(date)).prefs || {}, LV = { yes:['yes', 'כן'], avoid:['can', 'יכול'], none:['none', 'לא סומן'], no:['no', 'לא'] }, RANK = { yes:0, avoid:1, none:2, no:3 };
+    const levelFor = id => { const pr = mprefs[id] || { slots:{}, absent:[], fixed:[] }; if((pr.absent || []).includes(date) || (pr.fixed || []).some(f => f.day === date)) return 'no'; return (pr.slots || {})[key] || 'none'; };
+    const ranked = people.map((p, i) => ({ p, lv:levelFor(p.id), i })).sort((a, b) => RANK[a.lv] - RANK[b.lv] || a.i - b.i);
     const warn = srvShiftWarnings(date, code, rows);
     wrap.querySelector('#slot-body').innerHTML = `<h2>${dayLabel(date)} · ${pEsc(sh.label)} ${rangeHtml(sh.start, sh.end)}</h2>
       ${warn.length ? `<div class="pwarn">${warn.map(w => `<div>⚠ ${pEsc(w)}</div>`).join('')}</div>` : ''}
@@ -163,13 +167,14 @@ function srvOpenSlot(mk, key, body){
         : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
       ${others().length ? `<div class="pnote">בנות שירות ומורות במשמרת: ${others().map(r => pEsc(nm(r.staff)) + ' ' + (r.from || '') + '–' + (r.to || '')).join(', ')}</div>` : ''}
       <h3 class="psec">הוספה</h3>
-      <div class="phours-row"><select id="add-who" aria-label="מי">${'<option value="">בחרו מדריך/ה</option>' + people.map(p => `<option value="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</option>`).join('')}</select></div>
+      <div class="phours-row"><select id="add-who" aria-label="מי">${'<option value="">בחרו מדריך/ה</option>' + ranked.map(({ p, lv }) => `<option value="${p.id}" class="opt-${LV[lv][0]}">${pEsc(instrName(p, portalLoad().instructors))} · ${LV[lv][1]}</option>`).join('')}</select></div>
       <div class="phours-row"><select id="add-from" aria-label="משעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.start ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select><span>עד</span><select id="add-to" aria-label="עד שעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.end ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></div>
       <div id="add-warn" class="pwarn" aria-live="polite"></div>
       <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button><button type="button" class="btn" id="add-go">הוספה</button></div>`;
     const who = wrap.querySelector('#add-who'), from = wrap.querySelector('#add-from'), to = wrap.querySelector('#add-to'), aw = wrap.querySelector('#add-warn');
     const upd = () => { const w = who.value ? srvWarnings(who.value, date, code, from.value, to.value) : []; aw.innerHTML = w.map(x => `<div>⚠ ${pEsc(x)}</div>`).join(''); };
-    who.addEventListener('change', upd); from.addEventListener('change', upd); to.addEventListener('change', upd);
+    const tint = () => { const o = who.selectedOptions[0]; who.className = o && o.className ? 'sel-' + o.className.replace('opt-', '') : ''; };          // (the closed list shows the chosen name in the same colour)
+    who.addEventListener('change', () => { tint(); upd(); }); from.addEventListener('change', upd); to.addEventListener('change', upd);
     wrap.querySelector('#add-go').addEventListener('click', async () => {
       if(!who.value){ toast('בחרו מדריך/ה'); return; }
       const w = srvWarnings(who.value, date, code, from.value, to.value);

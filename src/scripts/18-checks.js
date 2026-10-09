@@ -1457,6 +1457,8 @@
         check('portal people: marking an item as handled is saved', await waitFor(async () => { const f = await sbPersonal.from('coordinator_flags').select('resolved').eq('text', 'בדיקה אוטומטית'); return f.data && f.data.length && f.data[0].resolved === true; }), 'not saved');
         // edit a shift: add the second instructor to the morning, then remove her
         document.querySelector(`.mcal-cell.editable[data-key="${day}|m"]`).click(); await sleep(150);
+        { const rk = { 'opt-yes':0, 'opt-can':1, 'opt-none':2, 'opt-no':3 }, opts = [...document.querySelectorAll('#add-who option')].filter(o => o.value).map(o => rk[o.className]);
+          check('portal people: the list of instructors to add is coloured by what each wrote for this shift, and ordered green, yellow, blue, red', opts.length >= 10 && opts.every(x => x !== undefined) && opts.every((x, i) => i === 0 || x >= opts[i - 1]) && !!document.querySelector('#add-who option.opt-none') && /לא סומן|כן|יכול|לא/.test(document.querySelector('#add-who option.opt-none').textContent), opts.join('')); }
         const who = document.querySelector('#add-who'); who.value = i2; who.dispatchEvent(new Event('change')); document.querySelector('#add-go').click(); await maybeSheet();
         check('portal people: the coordinator adds a person to a shift and it is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return a.data && a.data.length === 1; }), 'not added');
         await waitFor(async () => !!document.querySelector('[data-rm]'), 200);          // (after an addition the whole portal is reloaded, which can take a while)
