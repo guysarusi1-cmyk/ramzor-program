@@ -1438,6 +1438,15 @@
           if(first){ first.click(); await sleep(150);
             check('portal people: a tap on a name shows her requests for the month that is shown, and outlines her names in the schedule', !!document.querySelector('.cs-person .cs-req') && /\d{4}|[א-ת]/.test(document.querySelector('.cs-person-head').textContent) && document.querySelectorAll('.mcal-name.sel').length >= 1 && document.querySelector('.cs-name.on') === document.querySelector(`.cs-name[data-cs-person="${first.dataset.csPerson}"]`), document.querySelectorAll('.mcal-name.sel').length + ' outlined');
             document.querySelector('.cs-name.on').click(); await sleep(100); }
+          // a name dragged from the panel and dropped on a shift places that instructor on it (after the question)
+          const dragged = document.querySelector(`.cs-name[data-cs-person="${i2}"]`), target = document.querySelector(`.mcal-cell.editable[data-key="${day}|m"]`);
+          check('portal people: the names in the panel can be dragged', !!dragged && dragged.getAttribute('draggable') === 'true' && !!target, 'not draggable');
+          if(dragged && target){
+            const dt = new DataTransfer(); dragged.dispatchEvent(new DragEvent('dragstart', { dataTransfer:dt, bubbles:true }));
+            target.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true })); const marked = target.classList.contains('drop-ok');
+            target.dispatchEvent(new DragEvent('drop', { dataTransfer:dt, bubbles:true, cancelable:true })); await answerSheet();
+            check('portal people: dropping a name on a shift places that instructor on it', marked && await waitFor(async () => { const q = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', day).eq('shift', 'M'); return q.data && q.data.length === 1; }, 60), 'not placed (target marked: ' + marked + ')');
+            await sbPersonal.from('assignment').delete().eq('staff_id', i2).eq('day', day).eq('shift', 'M'); await srvReloadSafe(); await srvLoadCoord(); srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(200); }
           document.getElementById('cs-close').click(); await sleep(100); }
         check('portal people: a person who did not mark that shift is coloured (and the colours are explained under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('.mcal-key .wish-yes') && !!document.querySelector('.mcal-key .wish-can') && !!document.querySelector('.mcal-key .wish-no') && !!document.querySelector('.mcal-key .wish-none') && /לא סומן/.test(document.querySelector('.mcal-key').textContent), document.querySelectorAll('.mcal-name').length);
         check('portal people: what needs her attention is listed', /בדיקה אוטומטית/.test(txt()), txt().slice(0, 120));
