@@ -1431,6 +1431,11 @@
         const txt = () => document.getElementById('portal-body').textContent;
         check('portal people: the coordinator sees the schedule that was sent to her, and its status', /נשלח אלייך/.test(txt()) && !!document.querySelector('#cs-publish') && !document.querySelector('#cs-publish').disabled, txt().slice(0, 80));
         check('portal people: the coordinator sees the schedule as the monthly calendar of the instructors (the two people are on it, no automatic build button)', document.querySelectorAll('.mcal .mcal-name').length >= 2 && !!document.querySelector('.mcal-label') && !document.querySelector('.pboard') && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.mcal .mcal-name').length + ' / rows ' + portalLoad().rows.length);
+        { const names = [...document.querySelectorAll('.cs-side .cs-name')], first = names.find(b => b.dataset.csPerson === i1) || names[0];
+          check('portal people: at the left of the schedule there is a panel with the instructors\' names', names.length >= 15 && !!document.querySelector('.cs-layout .cs-main .mcal'), names.length);
+          if(first){ first.click(); await sleep(150);
+            check('portal people: a tap on a name shows her requests for the month that is shown, and outlines her names in the schedule', !!document.querySelector('.cs-person .cs-req') && /\d{4}|[א-ת]/.test(document.querySelector('.cs-person-head').textContent) && document.querySelectorAll('.mcal-name.sel').length >= 1 && document.querySelector('.cs-name.on') === document.querySelector(`.cs-name[data-cs-person="${first.dataset.csPerson}"]`), document.querySelectorAll('.mcal-name.sel').length + ' outlined');
+            document.querySelector('.cs-name.on').click(); await sleep(100); } }
         check('portal people: a person who did not mark that shift is coloured (and the colours are explained under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('.mcal-key .wish-yes') && !!document.querySelector('.mcal-key .wish-can') && !!document.querySelector('.mcal-key .wish-no') && !!document.querySelector('.mcal-key .wish-none') && /לא סומן/.test(document.querySelector('.mcal-key').textContent), document.querySelectorAll('.mcal-name').length);
         check('portal people: what needs her attention is listed', /בדיקה אוטומטית/.test(txt()), txt().slice(0, 120));
         document.querySelector('[data-flag-done]').click();
@@ -1441,6 +1446,12 @@
         check('portal people: the coordinator adds a person to a shift and it is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return a.data && a.data.length === 1; }), 'not added');
         await waitFor(async () => !!document.querySelector('[data-rm]'), 60);
         const rm = document.querySelector('[data-rm]'); check('portal people: the shift shows the person with a remove button', !!rm, 'no button');
+        { const hb = document.querySelector('[data-hrs]');
+          check('portal people: next to "הסרה" there is "שינוי שעות" for each person on the shift', !!hb && !!document.querySelector('[data-rm]'), 'no button');
+          if(hb){ const rid = hb.dataset.hrs; hb.click(); await sleep(120);
+            const a = document.querySelector('[data-hfrom]'), b = document.querySelector('[data-hto]'); a.value = '09:30'; a.dispatchEvent(new Event('change')); b.value = '13:00'; b.dispatchEvent(new Event('change'));
+            document.querySelector('[data-hsave]').click(); await maybeSheet();
+            check('portal people: the hours of that person are changed by hand and saved', await waitFor(async () => { const q = await sbPersonal.from('assignment').select('from_time,to_time').eq('id', rid); return q.data && q.data[0] && q.data[0].from_time.slice(0, 5) === '09:30' && q.data[0].to_time.slice(0, 5) === '13:00'; }), 'not changed'); } }
         if(rm){ rm.click(); await maybeSheet(); }
         check('portal people: removing the person is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M'); return a.data && a.data.length === 0; }), 'not removed');
         document.querySelector('#slot-body [data-close]').click();

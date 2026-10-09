@@ -171,7 +171,7 @@ function boardHtml(ctx, assignments, opts){
 // the whole team as a monthly calendar (the structure of the paper schedule): the days of the week above; in every week a row with the day numbers and under it the morning,
 // noon and night, with the name of each shift (and its hours) written once, at the start of the week. Everything fits the width of the screen (no sideways scrolling).
 // In the afternoon shifts, and on Friday and Saturday mornings, the ahmash is written first and marked אחמ"ש (one per shift, see ahmashPicks); the person herself is highlighted.
-// opts: me, ahmash ({ staff id: rank }); for the coordinator: colour (names coloured by how the wish was kept) and edit (a tap on a shift opens its editor)
+// opts: me, ahmash ({ staff id: rank }); for the coordinator: sel (the person whose requests are open at the side; her names are outlined), colour (names coloured by how the wish was kept) and edit (a tap on a shift opens its editor)
 function monthCalHtml(ctx, assignments, opts){
   opts = opts || {};
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date()), picks = ahmashPicks(table, ctx, opts.ahmash || {});
@@ -192,7 +192,7 @@ function monthCalHtml(ctx, assignments, opts){
     const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
     const name = (p, isLead) => {
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
-      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}">${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
+      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}">${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
     };
     return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${c.missing ? `<span class="mcal-missing">חסר ${c.missing}</span>` : ''}</div>`;
   };

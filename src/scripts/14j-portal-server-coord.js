@@ -102,9 +102,10 @@ function srvRenderCoordSchedule(body){
     ${needLook.length ? `<details class="pissues" open><summary>${needLook.length} דברים שדורשים תשומת לב</summary>${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
     <div class="pnote">לחיצה על משמרת בלוח פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בלוח.</div>
-    ${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash })}` : ''}`;
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csPerson })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
   wireMonthNav(body);
   if(!has) return;
+  body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
     const open = () => srvOpenSlot(mk, td.dataset.key, body);
     td.addEventListener('click', open); td.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
@@ -135,13 +136,17 @@ function srvOpenSlot(mk, key, body){
   const others = () => portalLoad().rows.filter(r => r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')) && ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role !== 'instructor'));
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
   const wrap = portalSheet('<div id="slot-body"></div>');
+  let editing = null;                                             // (the row whose hours are being changed by hand)
+  const timeOpts = sel => Array.from({ length:48 }, (_, i) => { const v = String(Math.floor(i / 2)).padStart(2, '0') + (i % 2 ? ':30' : ':00'); return `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`; }).join('');
   const draw = () => {
     if(!wrap.isConnected) return;                                   // (the sheet was closed while the data was reloading)
     const rows = rowsHere(), people = portalLoad().instructors.filter(p => p.active && p.role === 'instructor' && !rows.some(r => r.staff === p.id));
     const warn = srvShiftWarnings(date, code, rows);
     wrap.querySelector('#slot-body').innerHTML = `<h2>${dayLabel(date)} · ${pEsc(sh.label)} ${rangeHtml(sh.start, sh.end)}</h2>
       ${warn.length ? `<div class="pwarn">${warn.map(w => `<div>⚠ ${pEsc(w)}</div>`).join('')}</div>` : ''}
-      <div class="pedit-list">${rows.length ? rows.map(r => `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></div>`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
+      <div class="pedit-list">${rows.length ? rows.map(r => r.id === editing
+        ? `<div class="pedit-row editing"><span>${pEsc(nm(r.staff))}</span><span class="phours-edit"><select data-hfrom aria-label="משעה">${timeOpts((r.from || sh.start).slice(0, 5))}</select><span>עד</span><select data-hto aria-label="עד שעה">${timeOpts((r.to || sh.end).slice(0, 5))}</select></span><span class="pedit-btns"><button type="button" class="btn small" data-hsave="${r.id}">שמירה</button><button type="button" class="btn ghost small" data-hcancel>ביטול</button></span></div><div id="hrs-warn" class="pwarn" aria-live="polite"></div>`
+        : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
       ${others().length ? `<div class="pnote">בנות שירות ומורות במשמרת: ${others().map(r => pEsc(nm(r.staff)) + ' ' + (r.from || '') + '–' + (r.to || '')).join(', ')}</div>` : ''}
       <h3 class="psec">הוספה</h3>
       <div class="phours-row"><select id="add-who" aria-label="מי">${'<option value="">בחרו מדריך/ה</option>' + people.map(p => `<option value="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</option>`).join('')}</select></div>
@@ -160,6 +165,26 @@ function srvOpenSlot(mk, key, body){
       if(ins.error){ toast('השיבוץ נכשל'); return; }
       await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body);
     });
+    wrap.querySelectorAll('[data-hrs]').forEach(b => b.addEventListener('click', () => { editing = b.dataset.hrs; draw(); }));
+    wrap.querySelectorAll('[data-hcancel]').forEach(b => b.addEventListener('click', () => { editing = null; draw(); }));
+    const hf = wrap.querySelector('[data-hfrom]'), ht = wrap.querySelector('[data-hto]');
+    if(hf && ht){                                                    // the warnings of the new hours are shown while she chooses (she may still go ahead)
+      const row = portalLoad().rows.find(x => x.id === editing), hw = wrap.querySelector('#hrs-warn');
+      const upd = () => { const w = row ? srvWarnings(row.staff, date, code, hf.value, ht.value, row.id) : []; if(hw) hw.innerHTML = w.map(x => `<div>⚠ ${pEsc(x)}</div>`).join(''); };
+      hf.addEventListener('change', upd); ht.addEventListener('change', upd); upd();
+    }
+    wrap.querySelectorAll('[data-hsave]').forEach(b => b.addEventListener('click', async () => {
+      const row = portalLoad().rows.find(x => x.id === b.dataset.hsave); if(!row) return;
+      const from = hf.value, to = ht.value;
+      if(from === to){ toast('בדקו את השעות'); return; }
+      const w = srvWarnings(row.staff, date, code, from, to, row.id);
+      if(w.length && !(await confirmSheet({ title:'לשנות את השעות למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשנות', cancelLabel:'חזרה', danger:true }))) return;
+      const flags = Array.from(new Set((row.flags || []).concat('manual')));
+      const u = await sbPersonal.from('assignment').update({ from_time:from, to_time:to, flags }).eq('id', row.id);
+      if(u.error){ toast('השינוי נכשל'); return; }
+      editing = null; toast('השעות עודכנו. מי שנוגע בעניין קיבל עדכון.');
+      await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body);
+    }));
     wrap.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => {
       const r = portalLoad().rows.find(x => x.id === b.dataset.rm); if(!r) return;
       const after = portalLoad().rows.filter(x => x.id !== r.id);
@@ -171,4 +196,40 @@ function srvOpenSlot(mk, key, body){
     }));
   };
   draw();
+}
+
+
+// ---------------------------------------------------------------- the panel at the side of the schedule: the instructors, and (after a tap on a name) her requests for the month that is shown
+function srvPersonRequestsHtml(p, mk){
+  const st = portalLoad(), m = portalMonth(mk), pr = (m.prefs[p.id] || { slots:{}, absent:[], hours:{}, fixed:[], pick:[], consent:{ extend:null, pull:null } });
+  const shiftWord = id => ({ m:'בוקר', e:'צהריים', n:'לילה', l:'סופ"ש ארוך' })[id] || id;
+  const by = { no:[], avoid:[], yes:[] };
+  Object.keys(pr.slots || {}).sort().forEach(k => { const [d, id] = k.split('|'); if(by[pr.slots[k]] && daysOfMonth(mk).includes(d)) by[pr.slots[k]].push(`${shortDate(d)} ${shiftWord(id)}`); });
+  const mine = st.rows.filter(r => r.staff === p.id && monthKeyOf(r.day) === mk);
+  const counts = { yes:0, avoid:0, no:0, none:0 };
+  mine.forEach(r => { const id = SRV_SHIFT_UI[r.shift === 'S' ? 'M' : r.shift]; if(!id) return; const lv = (pr.slots || {})[`${r.day}|${id}`]; counts[lv === 'avoid' ? 'avoid' : lv === 'no' ? 'no' : lv === 'yes' ? 'yes' : 'none']++; });
+  const line = (cls, title, list) => `<div class="cs-req ${cls}"><b>${title}${list.length ? ` (${list.length})` : ''}</b><span>${list.length ? list.map(pEsc).join(' · ') : 'אין'}</span></div>`;
+  const note = m.notes && m.notes[p.id], goal = (m.goals || {})[p.id], cons = pr.consent || {};
+  const GOAL = { min:'רק את המינימום', max:'כמה שיותר', weekly45:'4-5 משמרות בשבוע' };
+  const fixed = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day));
+  return `<div class="cs-person">
+    <div class="cs-person-head"><img src="${p.photo}" alt=""><div><b>${pEsc(instrName(p, st.instructors))}</b><small>${m.submitted[p.id] ? 'הגיש/ה ✓' : 'עוד לא הגיש/ה'} · ${monthLabel(mk)}</small></div></div>
+    ${mine.length ? `<div class="cs-req"><b>שובצו ${mine.length} משמרות</b><span><span class="mcal-name wish-yes">כן ${counts.yes}</span> <span class="mcal-name wish-can">יכול ${counts.avoid}</span> <span class="mcal-name wish-no">לא ${counts.no}</span> <span class="mcal-name wish-none">לא סומן ${counts.none}</span></span></div>` : ''}
+    ${line('no', 'לא', by.no)}${line('can', 'יכול', by.avoid)}${line('yes', 'כן', by.yes)}
+    ${(pr.absent || []).length || fixed.length ? `<div class="cs-req"><b>היעדרות</b><span>${[...(fixed.length ? [[...new Set(fixed.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ') + ': ' + dayRanges(fixed.map(f => f.day))] : []), ...((pr.absent || []).length ? ['סומן על ידו/ה: ' + dayRanges(pr.absent)] : [])].join(' · ')}</span></div>` : ''}
+    ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
+    ${(pr.pick || []).length ? `<div class="cs-req"><b>רק אחד מסופי השבוע</b><span>${pr.pick.map(shortDate).join(' · ')}</span></div>` : ''}
+    <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    ${goal ? `<div class="cs-req"><b>יעד</b><span>${GOAL[goal] || goal}</span></div>` : ''}
+    ${note ? `<div class="cs-req"><b>הערה</b><span>${pEsc(note)}</span></div>` : ''}
+  </div>`;
+}
+function srvSidePanelHtml(mk){
+  const st = portalLoad(), m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role === 'instructor'), sel = people.find(p => p.id === portalUi.csPerson);
+  return `<aside class="cs-side" aria-label="בקשות המדריכים">
+    <h3 class="cs-side-title">בקשות המדריכים</h3>
+    <div class="cs-names">${people.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>
+    ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
+  </aside>`;
 }
