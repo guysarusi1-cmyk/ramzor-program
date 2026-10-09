@@ -111,13 +111,13 @@ function srvRenderCoordSchedule(body){
   // drag a name from the panel into a shift of the schedule
   body.querySelectorAll('.cs-name[data-cs-person]').forEach(b => {
     b.setAttribute('draggable', 'true');
-    b.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', b.dataset.csPerson); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
-    b.addEventListener('dragend', () => b.classList.remove('dragging'));
+    b.addEventListener('dragstart', e => { srvDragWho = b.dataset.csPerson; e.dataTransfer.setData('text/plain', b.dataset.csPerson); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
+    b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); });
   });
   body.querySelectorAll('.mcal-cell.editable').forEach(c => {
-    c.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; c.classList.add('drop-ok'); });
-    c.addEventListener('dragleave', () => c.classList.remove('drop-ok'));
-    c.addEventListener('drop', e => { e.preventDefault(); c.classList.remove('drop-ok'); const who = e.dataTransfer.getData('text/plain'); if(who) srvAddToSlot(mk, c.dataset.key, who, body); });
+    c.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; srvDropShow(c); });
+    c.addEventListener('dragleave', () => srvDropClear(c));
+    c.addEventListener('drop', e => { e.preventDefault(); srvDropClear(c); const who = e.dataTransfer.getData('text/plain') || srvDragWho; if(who) srvAddToSlot(mk, c.dataset.key, who, body); });
   });
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
@@ -246,9 +246,22 @@ function srvSidePanelHtml(mk){
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3><button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
     <div class="cs-names">${people.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
+    ${mcalKeyHtml()}
   </aside>`;
 }
 
+
+// while a name is dragged, the shift under it is coloured by what that instructor wrote for it: yes = green, can = yellow, no (or away) = red, not marked = blue
+let srvDragWho = null;
+function srvDropLevel(cell){
+  if(!srvDragWho) return 'none';
+  const { date } = splitKey(cell.dataset.key), pr = (portalMonth(monthKeyOf(date)).prefs || {})[srvDragWho] || { slots:{}, absent:[], fixed:[] };
+  if((pr.absent || []).includes(date) || (pr.fixed || []).some(f => f.day === date)) return 'no';
+  const lv = (pr.slots || {})[cell.dataset.key];
+  return lv === 'yes' ? 'yes' : lv === 'avoid' ? 'can' : lv === 'no' ? 'no' : 'none';
+}
+function srvDropShow(cell){ const c = 'drop-' + srvDropLevel(cell); if(!cell.classList.contains(c)){ srvDropClear(cell); cell.classList.add('drop-ok', c); } }
+function srvDropClear(cell){ cell.classList.remove('drop-ok', 'drop-yes', 'drop-can', 'drop-no', 'drop-none'); }
 
 // put an instructor on a shift (a name dragged from the panel and dropped on the shift): the warnings are shown first, and the coordinator may go ahead anyway
 async function srvAddToSlot(mk, key, staffId, body){
@@ -258,8 +271,9 @@ async function srvAddToSlot(mk, key, staffId, body){
   if(st.rows.some(r => r.staff === staffId && r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')))){ toast(`${nm} כבר במשמרת הזו`); return; }
   const w = srvWarnings(staffId, date, code, sh.start, sh.end);
   if(!(await confirmSheet({ title:`לשבץ את ${nm}?`, text:`${dayLabel(date)} · ${sh.label} ${sh.start}–${sh.end}.${w.length ? ' שימי לב: ' + w.join('. ') + '.' : ''}`, okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:w.length > 0 }))) return;
-  const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] });
+  const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
   if(ins.error){ toast('השיבוץ נכשל'); return; }
+  srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
   toast(`${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`);
-  await srvReloadSafe(); await srvLoadCoord(); srvRenderCoordSchedule(body);
+  srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }

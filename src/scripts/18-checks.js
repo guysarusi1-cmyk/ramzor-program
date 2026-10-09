@@ -1431,8 +1431,11 @@
         const txt = () => document.getElementById('portal-body').textContent;
         check('portal people: the coordinator sees the schedule that was sent to her, and its status', /נשלח אלייך/.test(txt()) && !!document.querySelector('#cs-publish') && !document.querySelector('#cs-publish').disabled, txt().slice(0, 80));
         check('portal people: the coordinator sees the schedule as the monthly calendar of the instructors (the two people are on it, no automatic build button)', document.querySelectorAll('.mcal .mcal-name').length >= 2 && !!document.querySelector('.mcal-label') && !document.querySelector('.pboard') && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.mcal .mcal-name').length + ' / rows ' + portalLoad().rows.length);
+        { const bg = s => getComputedStyle(document.querySelector(`.mcal-cell[data-shift="${s}"]:not(.weekend)`)).backgroundColor, bt = getComputedStyle(document.querySelector('.mcal-cell[data-shift="e"]')).borderTopWidth;
+          check('portal people: the morning, noon and night shifts have clearly different backgrounds, with a thick line between them', bg('m') !== bg('e') && bg('e') !== bg('n') && bg('m') !== bg('n') && parseFloat(bt) >= 2, [bg('m'), bg('e'), bg('n'), bt].join(' | ')); }
         check('portal people: the instructors panel is folded, a slim tab at the left of the schedule (after the calendar in the page, so it is on the left)', !!document.getElementById('cs-open') && !document.querySelector('.cs-side') && !!document.querySelector('.cs-layout .cs-main + #cs-open'), 'not folded');
         document.getElementById('cs-open').click(); await sleep(120);
+        check('portal people: the colour key is in the opened panel (yes, can, no, not marked)', !!document.querySelector('.cs-side .mcal-key .wish-yes') && !!document.querySelector('.cs-side .mcal-key .wish-can') && !!document.querySelector('.cs-side .mcal-key .wish-no') && !!document.querySelector('.cs-side .mcal-key .wish-none') && /לא סומן/.test(document.querySelector('.cs-side .mcal-key').textContent), 'no key');
         { const names = [...document.querySelectorAll('.cs-side .cs-name')], first = names.find(b => b.dataset.csPerson === i1) || names[0];
           check('portal people: at the left of the schedule there is a panel with the instructors\' names', names.length >= 15 && !!document.querySelector('.cs-layout .cs-main .mcal'), names.length);
           if(first){ first.click(); await sleep(150);
@@ -1443,12 +1446,12 @@
           check('portal people: the names in the panel can be dragged', !!dragged && dragged.getAttribute('draggable') === 'true' && !!target, 'not draggable');
           if(dragged && target){
             const dt = new DataTransfer(); dragged.dispatchEvent(new DragEvent('dragstart', { dataTransfer:dt, bubbles:true }));
-            target.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true })); const marked = target.classList.contains('drop-ok');
+            target.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true })); const marked = target.classList.contains('drop-ok') && /drop-(yes|can|no|none)/.test(target.className);
             target.dispatchEvent(new DragEvent('drop', { dataTransfer:dt, bubbles:true, cancelable:true })); await answerSheet();
             check('portal people: dropping a name on a shift places that instructor on it', marked && await waitFor(async () => { const q = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', day).eq('shift', 'M'); return q.data && q.data.length === 1; }, 60), 'not placed (target marked: ' + marked + ')');
             await sbPersonal.from('assignment').delete().eq('staff_id', i2).eq('day', day).eq('shift', 'M'); await srvReloadSafe(); await srvLoadCoord(); srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(200); }
           document.getElementById('cs-close').click(); await sleep(100); }
-        check('portal people: a person who did not mark that shift is coloured (and the colours are explained under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('.mcal-key .wish-yes') && !!document.querySelector('.mcal-key .wish-can') && !!document.querySelector('.mcal-key .wish-no') && !!document.querySelector('.mcal-key .wish-none') && /לא סומן/.test(document.querySelector('.mcal-key').textContent), document.querySelectorAll('.mcal-name').length);
+        check('portal people: a person who did not mark that shift is coloured (and the colours are explained in the instructors panel, not under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !document.querySelector('.cs-main .mcal-key') && true, document.querySelectorAll('.mcal-name').length);
         check('portal people: what needs her attention is listed', /בדיקה אוטומטית/.test(txt()), txt().slice(0, 120));
         document.querySelector('[data-flag-done]').click();
         check('portal people: marking an item as handled is saved', await waitFor(async () => { const f = await sbPersonal.from('coordinator_flags').select('resolved').eq('text', 'בדיקה אוטומטית'); return f.data && f.data.length && f.data[0].resolved === true; }), 'not saved');
