@@ -161,6 +161,7 @@
 
   @media (min-width:900px){
     .portal-shell{ max-width:980px; margin:0 auto; }
+    #protected-app:has(.portal-shell.wide){ max-width:none; padding-inline:24px; }          /* (the whole app sits in a narrow column made for phones; the coordinator's portal lifts that limit, for as long as it is on the screen) */
     .portal-shell.wide{ max-width:1700px; }          /* the coordinator works on a computer: her screens use the width (only inside the portal, only for her; nothing else on the site changes) */
     .pcal .pday{ min-height:96px; }
     .plevelbar{ max-width:560px; left:50%; right:auto; transform:translateX(-50%); border-radius:16px 16px 0 0; }
