@@ -68,7 +68,7 @@ function showPortal(tab){
   if(!portalUi.month) portalUi.month = today;
   const view = document.getElementById('view-portal');
   view.innerHTML = `
-    <div class="portal-shell" data-ptheme="${st.settings.theme}">
+    <div class="portal-shell${portalServerOn && me.role === 'coordinator' ? ' wide' : ''}" data-ptheme="${st.settings.theme}">
       <div class="portal-top">
         <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn ? 'יציאה' : '→ מסך ראשי'}</button>
         <h1 class="portal-title">פורטל המדריך</h1>
@@ -187,7 +187,7 @@ function monthCalHtml(ctx, assignments, opts){
       if(!opts.colour) return '';
       const pr = (ctx.prefs && ctx.prefs[p.iid]) || { slots:{} }, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       const key = ann === 'סופ"ש ארוך' ? `${dowOf(c.slot.date) === 5 ? c.slot.date : addDays(c.slot.date, -1)}|l` : c.slot.key, lv = (pr.slots || {})[key];
-      return lv === 'avoid' ? ' wish-can' : lv === 'no' ? ' wish-no' : lv === 'yes' ? '' : ' wish-none';
+      return lv === 'avoid' ? ' wish-can' : lv === 'no' ? ' wish-no' : lv === 'yes' ? ' wish-yes' : ' wish-none';
     };
     const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
     const name = (p, isLead) => {
@@ -202,5 +202,5 @@ function monthCalHtml(ctx, assignments, opts){
     out += `<div class="mcal-corner"></div>` + week.map(r => r ? `<div class="mcal-num${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}">${parseIso(r.date).getDate()}</div>` : blank).join('');
     ctx.shiftTypes.forEach((s, i) => { out += `<div class="mcal-label"><b>${pEsc(s.label)}</b><small>${hours(s)}</small></div>` + week.map(r => r ? shiftCell(r, i) : blank).join(''); });
   }
-  return `<div class="mcal">${out}</div>${opts.colour ? '<div class="pnote mcal-key"><span class="mcal-name wish-can">יכול</span> <span class="mcal-name wish-no">לא</span> <span class="mcal-name wish-none">לא בחר/ה</span> שובץ/ה במשמרת שסימן/ה כך. בלי צבע: שובץ/ה איפה שרצה.</div>' : ''}`;
+  return `<div class="mcal">${out}</div>${opts.colour ? '<div class="pnote mcal-key"><span class="mcal-name wish-yes">כן</span> <span class="mcal-name wish-can">יכול</span> <span class="mcal-name wish-no">לא</span> <span class="mcal-name wish-none">לא סומן</span> שובץ/ה במשמרת שסימן/ה כך.</div>' : ''}`;
 }

@@ -1318,7 +1318,7 @@
         const priv2 = await sbPersonal.from('staff_private').select('staff_id');
         check('portal server: the coordinator sees the private staff data', !priv2.error && priv2.data.length >= 20, priv2.error ? priv2.error.message : priv2.data.length);
         portalUi.persona = srv.me; portalUi.tab = 'submissions'; portalUi.smonth = next; showPortal('submissions'); await sleep(100);
-        check('portal server: the coordinator\'s submissions screen lists the instructors', document.querySelectorAll('#portal-body .psub-row').length >= 15, document.querySelectorAll('#portal-body .psub-row').length);
+        check('portal server: the coordinator\'s submissions screen has two folded groups, those who submitted first and then those who did not, and lists the instructors', [...document.querySelectorAll('#portal-body details.pfold')].map(d => d.dataset.fold).join() === 'sdone,smiss' && [...document.querySelectorAll('#portal-body details.pfold')].every(d => d.open === false) && document.querySelectorAll('#portal-body .psub-row').length >= 15, document.querySelectorAll('#portal-body .psub-row').length);
         check('portal server: the coordinator has no "build the schedule automatically" button', !/[Aa]uto|אוטומט/.test(document.getElementById('view-portal').textContent), 'found');
       }
       // --- a service girl sees only her own place
@@ -1377,10 +1377,10 @@
         check('portal swaps: the offer moves the request to the coordinator', await waitFor(() => portalLoad().swaps.some(s => s.status === 'offered' && s.to === i2)), 'not offered');
         // 3. the coordinator approves
         await sign('coordinator'); showPortal('swaps'); await sleep(150);
-        const ok = document.querySelector('[data-approve]');
+        const mine = portalLoad().swaps.find(s => s.status === 'offered' && s.from === i1 && s.to === i2), ok = mine && document.querySelector(`[data-approve="${mine.id}"]`);          // (only the request of this check: other requests on the test server, such as the demo month, are not touched)
         check('portal swaps: the coordinator sees it waiting for her answer', !!ok, 'nothing waiting');
         ok.click();
-        check('portal swaps: after the approval the request is closed', await waitFor(() => portalLoad().swaps.every(s => s.status !== 'offered')), 'still waiting');
+        check('portal swaps: after the approval the request is closed', await waitFor(() => !portalLoad().swaps.some(s => s.from === i1 && s.to === i2 && s.status === 'offered')), 'still waiting');
         const now = await sbPersonal.from('assignment').select('staff_id').eq('day', day).eq('shift', 'M');
         check('portal swaps: the shift now belongs to the colleague', !now.error && now.data.length === 1 && now.data[0].staff_id === i2, JSON.stringify(now.data));
         // 4. both people got a notice
@@ -1431,7 +1431,7 @@
         const txt = () => document.getElementById('portal-body').textContent;
         check('portal people: the coordinator sees the schedule that was sent to her, and its status', /נשלח אלייך/.test(txt()) && !!document.querySelector('#cs-publish') && !document.querySelector('#cs-publish').disabled, txt().slice(0, 80));
         check('portal people: the coordinator sees the schedule as the monthly calendar of the instructors (the two people are on it, no automatic build button)', document.querySelectorAll('.mcal .mcal-name').length >= 2 && !!document.querySelector('.mcal-label') && !document.querySelector('.pboard') && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.mcal .mcal-name').length + ' / rows ' + portalLoad().rows.length);
-        check('portal people: a person who did not mark that shift is coloured (and the colours are explained under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('.mcal-key .wish-can') && !!document.querySelector('.mcal-key .wish-no'), document.querySelectorAll('.mcal-name').length);
+        check('portal people: a person who did not mark that shift is coloured (and the colours are explained under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('.mcal-key .wish-yes') && !!document.querySelector('.mcal-key .wish-can') && !!document.querySelector('.mcal-key .wish-no') && !!document.querySelector('.mcal-key .wish-none') && /לא סומן/.test(document.querySelector('.mcal-key').textContent), document.querySelectorAll('.mcal-name').length);
         check('portal people: what needs her attention is listed', /בדיקה אוטומטית/.test(txt()), txt().slice(0, 120));
         document.querySelector('[data-flag-done]').click();
         check('portal people: marking an item as handled is saved', await waitFor(async () => { const f = await sbPersonal.from('coordinator_flags').select('resolved').eq('text', 'בדיקה אוטומטית'); return f.data && f.data.length && f.data[0].resolved === true; }), 'not saved');
