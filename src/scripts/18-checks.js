@@ -1447,7 +1447,7 @@
         document.querySelector(`.mcal-cell.editable[data-key="${day}|m"]`).click(); await sleep(150);
         const who = document.querySelector('#add-who'); who.value = i2; who.dispatchEvent(new Event('change')); document.querySelector('#add-go').click(); await maybeSheet();
         check('portal people: the coordinator adds a person to a shift and it is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return a.data && a.data.length === 1; }), 'not added');
-        await waitFor(async () => !!document.querySelector('[data-rm]'), 60);
+        await waitFor(async () => !!document.querySelector('[data-rm]'), 200);          // (after an addition the whole portal is reloaded, which can take a while)
         const rm = document.querySelector('[data-rm]'); check('portal people: the shift shows the person with a remove button', !!rm, 'no button');
         { const hb = document.querySelector('[data-hrs]');
           check('portal people: next to "הסרה" there is "שינוי שעות" for each person on the shift', !!hb && !!document.querySelector('[data-rm]'), 'no button');
