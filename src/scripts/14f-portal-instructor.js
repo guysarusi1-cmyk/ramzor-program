@@ -77,7 +77,8 @@ const SRV_LEVEL_BUTTONS = [['yes', 'כן'], ['avoid', 'יכול'], ['no', 'לא'
 const SRV_LONG = { id:'l', label:'סופ"ש ארוך', letter:'🕯️', sub:'שישי לפני כניסת שבת, לינה במרכז החירום, שבת בוקר עד צאת שבת' };            // the long weekend: ONE button across the Friday and the Saturday (under them), kept on the Friday; it has nothing to do with what is chosen for the Friday or Saturday shifts
 const prefShiftsFor = date => portalLoad().shiftTypes;
 const prefKeyOf = key => key;
-const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? 'neutral' : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
+const prefNoNight = key => portalServerOn && /\|n$/.test(key) && !!(srv.profile && srv.profile.no_nights);          // somebody who does not do nights: her nights start as "no" (she may still change them)
+const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? (prefNoNight(key) ? 'no' : 'neutral') : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
 const DEFAULT_SHIFT_LEGEND = types => types.map(s => (s.letter || s.label.charAt(0)) + ' = ' + s.label);
 const FIXED_REASON = { vacation:'חופשה', sick:'מחלה', reserve:'מילואים', leave:'חופשה מיוחדת', other:'היעדרות', self:'היעדרות' };
 function renderInstructorPrefs(body){
@@ -100,7 +101,7 @@ function renderInstructorPrefs(body){
   for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
     const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
-    if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`]).length;
+    if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`] && !prefNoNight(`${date}|${s.id}`)).length;
     cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${barOn && [5, 6].includes(dowOf(date)) && days.includes(dowOf(date) === 5 ? date : addDays(date, -1)) ? ' linked' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${hrs ? `<span class="pday-hrs" title="שעות אחרות">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</span>` : ''}
@@ -117,7 +118,7 @@ function renderInstructorPrefs(body){
   const goal = portalServerOn ? ((m.goals || {})[me.id] || null) : null, minInfo = portalServerOn ? fbMinimum(srv.profile, mk) : null;
   let availHint = '';
   if(portalServerOn && minInfo && minInfo.total){                  // a gentle word when the marks leave little room for the minimum
-    const free = days.filter(d => !fixedOn(d) && !prefs.absent.includes(d)).reduce((n, d) => n + ['m', 'e', 'n'].filter(id => ['yes', undefined].includes(prefs.slots[`${d}|${id}`])).length, 0);
+    const free = days.filter(d => !fixedOn(d) && !prefs.absent.includes(d)).reduce((n, d) => n + ['m', 'e', 'n'].filter(id => prefs.slots[`${d}|${id}`] === 'yes' || (prefs.slots[`${d}|${id}`] === undefined && !prefNoNight(`${d}|${id}`))).length, 0);
     if(free < minInfo.total * 2) availHint = `<div class="pnote pnote-soft">${tx('hint_low', free, minInfo.total)}</div>`;
   }
   const neutralHint = portalServerOn && !locked && neutral > 0 ? `<div class="pnote pnote-soft" id="neutral-note">${tx('neutral_note', neutral)}</div>` : '';
@@ -128,7 +129,7 @@ function renderInstructorPrefs(body){
     ${locked ? `<div class="pnote">${tx('locked')}</div>` : ''}
     ${fixedList.length ? `<div class="pnote">הימים שאושרו לך או שהרכזת סימנה: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
     <details class="pfold" data-fold="prefhelp"${openFold('prefhelp') ? ' open' : ''}><summary><span>איך ממלאים? (לחצו להסבר)</span></summary><div class="pfold-body"><div class="pnote">${portalServerOn ? 'בהתחלה אף משמרת לא מסומנת. נשמח שתעברו על כל החודש: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "כן" אומר שתשמחו לקבל אותה, "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. לחיצה נוספת על אותו סימון מחזירה את המשמרת למצב שלא סומן.' : 'כל המשמרות מסומנות "כן", כלומר שאתם זמינים. נשמח לדעת אם יש משמרות שפחות מתאימות לכם: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים.'} ${[...DEFAULT_SHIFT_LEGEND(st.shiftTypes)].join(' · ')}${portalServerOn ? ` · 🕯️ = סופ"ש ארוך (${SRV_LONG.sub}). הוא כפתור אחד לכל סופ"ש, מתחת לשישי ולשבת, ולא תלוי בסימונים של שישי או של שבת. אם לא סימנתם אותו, לא נשבץ אתכם אליו. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.` : ''}</div></div></details>
-    ${availHint}${neutralHint}
+    ${availHint}${neutralHint}${portalServerOn && srv.profile && srv.profile.no_nights && !locked ? '<div class="pnote pnote-soft" id="nonight-note">הלילות מסומנים אצלך "לא", כי לפי ההגדרות את/ה לא עושה לילות. אם בא לך לילה מסוים, אפשר לשנות אותו.</div>' : ''}
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
     ${portalServerOn ? `
     <div class="pgoal">

@@ -275,6 +275,7 @@ function srvWishFor(staffId, key){
   const date = splitKey(key).date, pr = (portalMonth(monthKeyOf(date)).prefs || {})[staffId] || { slots:{}, absent:[], fixed:[] };
   if((pr.absent || []).includes(date) || (pr.fixed || []).some(f => f.day === date)) return 'no';
   const lv = (pr.slots || {})[key];
+  if(!lv && /\|n$/.test(key) && ((portalLoad().priv || {})[staffId] || {}).no_nights) return 'no';          // (somebody who does not do nights: a night she did not mark counts as "no")
   return lv === 'yes' ? 'yes' : lv === 'avoid' ? 'can' : lv === 'no' ? 'no' : 'none';
 }
 const srvDropLevel = cell => srvDragWho ? srvWishFor(srvDragWho, cell.dataset.key) : 'none';

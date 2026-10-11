@@ -1258,6 +1258,11 @@
         // (a marked yes: it is saved like any other mark)
         const yesKey = `${daysOfMonth(next)[12]}|e`; document.querySelector('[data-plevel="yes"]').click(); await sleep(50); document.querySelector(`[data-pslot="${yesKey}"]`).click(); await sleep(50);
         check('portal server: "כן" is a mark of its own (kept, shown green)', srvPrefsOf(portalMonth(next), srv.me).slots[yesKey] === 'yes' && document.querySelector(`[data-pslot="${yesKey}"]`).classList.contains('lv-yes'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
+        { const was = srv.profile; srv.profile = Object.assign({}, was || {}, { no_nights:true }); showPortal('prefs'); await sleep(150);
+          const freeNight = daysOfMonth(next).map(d => `${d}|n`).find(k => !srvPrefsOf(portalMonth(next), srv.me).slots[k] && document.querySelector(`[data-pslot="${k}"]`) && !document.querySelector(`[data-pslot="${k}"]`).closest('.absent'));
+          check('portal server: for somebody who does not do nights, the nights she did not mark show "no" (not locked), with a short note', !!freeNight && document.querySelector(`[data-pslot="${freeNight}"]`).classList.contains('lv-no') && !document.querySelector(`[data-pslot="${freeNight}"]`).disabled && !!document.getElementById('nonight-note'), freeNight);
+          srv.profile = was; showPortal('prefs'); await sleep(150);
+          check('portal server: ... and for everybody else they stay unmarked', (was && was.no_nights) || !freeNight || !document.querySelector(`[data-pslot="${freeNight}"]`).classList.contains('lv-no') && !document.getElementById('nonight-note'), 'still no'); }
         const fri = daysOfMonth(next).find(d => dowOf(d) === 5), sun = daysOfMonth(next).find(d => dowOf(d) === 0);
         const sat = daysOfMonth(next).find(d => dowOf(d) === 6);
         check('portal server: the long weekend is not shown by default (it is switched on in the settings)', !document.querySelector('.plong') && !document.querySelector('.plong-row') && !srv.showLong, document.querySelectorAll('.plong').length);
