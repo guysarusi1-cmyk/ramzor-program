@@ -164,7 +164,9 @@ function srvRenderCoordSettings(body){
         box.querySelectorAll('[data-login]').forEach(b => b.addEventListener('click', async () => {
           const mail = (st.priv[b.dataset.login] || {}).email; if(!mail){ toast('קודם מזינים כתובת מייל'); return; }
           b.disabled = true; const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:b.dataset.login } });
-          toast(r.error || (r.data && r.data.error) ? 'יצירת ההתחברות נכשלה' : 'ההתחברות נוצרה. אפשר להיכנס עם קוד שנשלח למייל.'); again();
+          const ok = !(r.error || (r.data && r.data.error));
+          let welcomed = false; if(ok){ try { const w = await sbPersonal.rpc('welcome_staff', { p_staff:b.dataset.login, p_url:location.origin + location.pathname }); welcomed = !w.error && w.data === true; } catch(e){} }          // (a welcome e-mail: what the system is and how to enter; scheduling-v17.sql)
+          toast(!ok ? 'יצירת ההתחברות נכשלה' : welcomed ? 'ההתחברות נוצרה. בשעה הקרובה יישלח מייל "ברוכים הבאים" עם הסבר איך נכנסים.' : 'ההתחברות נוצרה. אפשר להיכנס עם קוד שנשלח למייל.', 6000); again();
         }));
         const move = async (id, dir) => {
           const ids = instr.map(p => p.id), i = ids.indexOf(id), j = i + dir; if(j < 0 || j >= ids.length) return;
