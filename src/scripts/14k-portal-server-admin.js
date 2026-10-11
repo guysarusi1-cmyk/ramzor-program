@@ -22,17 +22,15 @@ function srvRenderSubmissions(body){
   const subRow = p => { const pr = m.prefs[p.id] || { slots:{}, absent:[], hours:{} }, c = { avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { if(c[v] !== undefined) c[v]++; });
     const note = m.notes && m.notes[p.id];
     return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>${KIND_WORD[p.role] || ''}${p.role === 'instructor' ? ` · יכול ${c.avoid} · לא ${c.no} · היעדרות ${(pr.absent || []).length}${Object.keys(pr.hours || {}).length ? ' · שעות אחרות ' + Object.keys(pr.hours).length : ''}${pr.consent && pr.consent.extend ? ' · מסכים להארכה' : ''}${pr.consent && pr.consent.pull ? ' · מסכים למשיכה' : ''}` : ''}</small>${note ? `<div class="psub-note">הערה: ${pEsc(note)}</div>` : ''}</div>`; };
-  const away = people.map(p => { const pr = m.prefs[p.id] || {}; const fx = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day)); return { p, fx, self:(pr.absent || []) }; }).filter(x => x.fx.length || x.self.length);
+  const away = people.map(p => { const pr = m.prefs[p.id] || {}; const fx = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day)); return { p, fx }; }).filter(x => x.fx.length);
   body.innerHTML = `
     ${monthNavHtml(mk)}
     <div class="pnote">ההגשה נסגרת ב-24 בחודש הקודם בשעה 22:30. עד ה-23 נשלחת אלייך רשימה של מי שעוד לא הגיש.</div>
     <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
-    ${[['sdone', 'הגישו', done], ['smiss', 'לא הגישו', missing]].map(([key, title, list]) => `<details class="pfold" data-fold="${key}"${openFold(key) ? ' open' : ''}>
-      <summary><span>${title}</span><span class="pcount">${list.length}</span></summary>
-      <div class="pfold-body"><div class="psubs">${list.length ? list.map(subRow).join('') : '<div class="pnote">אין.</div>'}</div></div>
+    ${[['sdone', 'הגישו', done.map(subRow).join('') || '<div class="pnote">אין.</div>', done.length], ['smiss', 'לא הגישו', missing.map(subRow).join('') || '<div class="pnote">אין.</div>', missing.length], ['sabs', 'מי נעדר החודש', (away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'), away.length]].map(([key, title, inner, count]) => `<details class="pfold" data-fold="${key}"${openFold(key) ? ' open' : ''}>
+      <summary><span>${title}</span><span class="pcount">${count}</span></summary>
+      <div class="pfold-body"><div class="psubs">${inner}</div></div>
     </details>`).join('')}
-    <h2 class="psec">מי נעדר החודש</h2>
-    ${away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}${x.self.length ? (x.fx.length ? ' · ' : '') + 'לא זמין/ה (סימן/ה בהגשה): ' + dayRanges(x.self) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'}
     <button type="button" class="btn ghost" id="abs-add">הוספת היעדרות (מחלה, מילואים, לידה...)</button>`;
   wireMonthNav(body, 'smonth'); wireFolds(body);
   document.getElementById('abs-add').addEventListener('click', () => srvAbsenceSheet(body));
@@ -110,100 +108,130 @@ function srvRenderCoordVacations(body){
 }
 
 // ---------------------------------------------------------------- settings: staff, special days, announcements, the log
-async function srvRenderCoordSettings(body){
+function srvRenderCoordSettings(body){
+  // the screen opens at once with the four folded parts; a part is loaded and drawn only when it is opened, and opening one folds the others
   const st = portalLoad(); portalUi.setFold = portalUi.setFold || {};
   const today = srvToday();
-  const [days, ann, log] = await Promise.all([
-    sbPersonal.from('special_days').select('day,kind,label,min_staff,max_staff').gte('day', today).order('day').limit(60),
-    sbPersonal.from('announcements').select('created_at,text,via').order('created_at', { ascending:false }).limit(8),
-    sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(40)
-  ]);
-  if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
-  const staff = st.instructors.filter(p => p.active || true), priv = st.priv || {};
-  const instr = staff.filter(p => p.role === 'instructor').sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
-  const fold = (id, title, inner) => `<details class="pfold" data-sfold="${id}"${portalUi.setFold[id] ? ' open' : ''}><summary><span>${title}</span></summary><div class="pfold-body">${inner}</div></details>`;
   const KIND_DAY = { holiday:'חג (כמו שבת)', eve:'ערב חג (כמו שישי)', special:'יום מיוחד' };
-  body.innerHTML = `
-    ${fold('staff', 'הצוות, מיילים וסדר עדיפות', `
+  const again = async () => { await srvReloadSafe(); srvRenderCoordSettings(body); };
+  const sections = {
+    staff: [() => 'הצוות, מיילים וסדר עדיפות', async () => {
+      const priv = st.priv || {};
+      const instr = st.instructors.filter(p => p.role === 'instructor').sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
+      const html = `
       <div class="pnote">כאן מזינים כתובת מייל לכל אחד ויוצרים לו התחברות. סדר המדריכים הוא סדר העדיפות בחלוקת המשמרות מעבר למינימום (למעלה = עדיפות גבוהה). המדריכים לא רואים אותו.</div>
       ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
-      ${staff.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${KIND_WORD[p.role]}</small></span>
+      ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${KIND_WORD[p.role]}</small></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
-      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`)}
-    ${fold('days', 'חגים וימים מיוחדים', `
+      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
+      const wire = box => {
+        box.querySelectorAll('[data-mail]').forEach(inp => inp.addEventListener('change', async () => {
+          const mail = inp.value.trim().toLowerCase() || null;
+          const u = await sbPersonal.from('staff_private').update({ email:mail }).eq('staff_id', inp.dataset.mail);
+          toast(u.error ? 'המייל לא נשמר (אולי הוא כבר בשימוש)' : 'המייל נשמר'); if(!u.error) (st.priv[inp.dataset.mail] = st.priv[inp.dataset.mail] || {}).email = mail;
+        }));
+        box.querySelectorAll('[data-photo]').forEach(inp => inp.addEventListener('change', async () => {
+          const file = inp.files && inp.files[0]; if(!file) return;
+          try {
+            const uri = await resizePhoto(file, 200);
+            const u = await sbPersonal.from('staff').update({ photo_url:uri }).eq('id', inp.dataset.photo);
+            if(u.error) throw u.error;
+            if(srv.photos) srv.photos[inp.dataset.photo] = uri; const pp = portalPerson(inp.dataset.photo); if(pp) pp.photo = uri;
+            toast('התמונה נשמרה');
+          } catch(e){ toast('התמונה לא נשמרה'); }
+          srvRenderCoordSettings(body);
+        }));
+        box.querySelectorAll('[data-login]').forEach(b => b.addEventListener('click', async () => {
+          const mail = (st.priv[b.dataset.login] || {}).email; if(!mail){ toast('קודם מזינים כתובת מייל'); return; }
+          b.disabled = true; const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:b.dataset.login } });
+          toast(r.error || (r.data && r.data.error) ? 'יצירת ההתחברות נכשלה' : 'ההתחברות נוצרה. אפשר להיכנס עם קוד שנשלח למייל.'); again();
+        }));
+        const move = async (id, dir) => {
+          const ids = instr.map(p => p.id), i = ids.indexOf(id), j = i + dir; if(j < 0 || j >= ids.length) return;
+          [ids[i], ids[j]] = [ids[j], ids[i]];
+          for(let k = 0; k < ids.length; k++) await sbPersonal.from('staff_private').update({ leader_priority:k + 1 }).eq('staff_id', ids[k]);
+          again();
+        };
+        box.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => move(b.dataset.up, -1)));
+        box.querySelectorAll('[data-down]').forEach(b => b.addEventListener('click', () => move(b.dataset.down, 1)));
+        box.querySelector('#new-go').addEventListener('click', async () => {
+          const name = box.querySelector('#new-name').value.trim(), kind = box.querySelector('#new-kind').value, mail = box.querySelector('#new-mail').value.trim().toLowerCase() || null;
+          if(!name){ toast('צריך שם'); return; }
+          const maxOrder = Math.max(0, ...st.instructors.map((p, i) => i + 1));
+          const s = await sbPersonal.from('staff').insert({ display_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
+          if(s.error){ toast('ההוספה נכשלה'); return; }
+          const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, leader_priority:kind === 'instructor' ? instr.length + 1 : null });
+          toast(pr.error ? 'האדם נוסף, אבל המייל לא נשמר' : 'נוסף. אפשר ליצור לו התחברות.'); again();
+        });
+      };
+      return { html, wire };
+    }],
+    days: [() => 'חגים וימים מיוחדים', async () => {
+      const days = await sbPersonal.from('special_days').select('day,kind,label,min_staff,max_staff').gte('day', today).order('day').limit(60);
+      const html = `
       <div class="pnote">חגים וערבי חג מסומנים אוטומטית. כאן אפשר לערוך, למחוק או להוסיף יום מיוחד (עם מספר מדריכים משלו).</div>
       ${(days.data || []).map(d => `<div class="pmine-row"><span><b>${dayLabel(d.day)}</b> · ${KIND_DAY[d.kind] || d.kind}${d.label ? ' · ' + pEsc(d.label) : ''}${d.min_staff ? ` · ${d.min_staff}–${d.max_staff || d.min_staff + 1} מדריכים` : ''}</span><button type="button" class="btn ghost small" data-day-del="${d.day}">מחיקה</button></div>`).join('') || '<div class="pnote">אין ימים מיוחדים קרובים.</div>'}
       <h3 class="psec">הוספה</h3>
-      <div class="pstaff-add"><input type="date" id="sd-day" min="${today}"><select id="sd-kind"><option value="special">יום מיוחד</option><option value="holiday">חג (כמו שבת)</option><option value="eve">ערב חג (כמו שישי)</option></select><input type="text" id="sd-label" placeholder="שם"><input type="number" id="sd-min" min="1" max="12" placeholder="מינימום"><input type="number" id="sd-max" min="1" max="12" placeholder="מקסימום"><button type="button" class="btn small" id="sd-go">הוספה</button></div>`)}
-    ${fold('ann', 'הודעה לצוות', `
+      <div class="pstaff-add"><input type="date" id="sd-day" min="${today}"><select id="sd-kind"><option value="special">יום מיוחד</option><option value="holiday">חג (כמו שבת)</option><option value="eve">ערב חג (כמו שישי)</option></select><input type="text" id="sd-label" placeholder="שם"><input type="number" id="sd-min" min="1" max="12" placeholder="מינימום"><input type="number" id="sd-max" min="1" max="12" placeholder="מקסימום"><button type="button" class="btn small" id="sd-go">הוספה</button></div>`;
+      const wire = box => {
+        box.querySelectorAll('[data-day-del]').forEach(b => b.addEventListener('click', async () => { await sbPersonal.from('special_days').delete().eq('day', b.dataset.dayDel); srvRenderCoordSettings(body); }));
+        box.querySelector('#sd-go').addEventListener('click', async () => {
+          const day = box.querySelector('#sd-day').value; if(!day){ toast('בחרו תאריך'); return; }
+          const mn = parseInt(box.querySelector('#sd-min').value, 10) || null, mx = parseInt(box.querySelector('#sd-max').value, 10) || null;
+          const u = await sbPersonal.from('special_days').upsert({ day, kind:box.querySelector('#sd-kind').value, label:box.querySelector('#sd-label').value.trim() || null, min_staff:mn, max_staff:mx });
+          toast(u.error ? 'השמירה נכשלה' : 'נשמר'); srvRenderCoordSettings(body);
+        });
+      };
+      return { html, wire };
+    }],
+    ann: [() => 'הודעה לצוות', async () => {
+      const ann = await sbPersonal.from('announcements').select('created_at,text,via').order('created_at', { ascending:false }).limit(8);
+      const html = `
       <label class="pfield">הודעה<textarea id="an-text" rows="3" maxlength="800"></textarea></label>
       <div class="pchoice wrap" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
       <button type="button" class="btn" id="an-send">שליחה</button>
       <h3 class="psec">הודעות אחרונות</h3>
-      ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`)}
-    ${fold('log', 'יומן שינויים בסידור', `
+      ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
+      const wire = box => {
+        let via = 'portal';
+        box.querySelectorAll('[data-via]').forEach(b => b.addEventListener('click', () => { via = b.dataset.via; box.querySelectorAll('[data-via]').forEach(x => x.classList.toggle('on', x === b)); }));
+        box.querySelector('#an-send').addEventListener('click', async () => {
+          const text = box.querySelector('#an-text').value.trim(); if(!text){ toast('כתבו הודעה'); return; }
+          if(!(await confirmSheet({ title:'לשלוח את ההודעה?', text:via === 'portal' ? 'ההודעה תופיע בפורטל של כל הצוות.' : via === 'email' ? 'ההודעה תישלח במייל לכל הצוות.' : 'ההודעה תופיע בפורטל ותישלח במייל לכל הצוות.', okLabel:'כן, לשלוח', cancelLabel:'חזרה' }))) return;
+          const r = await sbPersonal.rpc('post_announcement', { p_text:text, p_via:via });
+          toast(r.error ? 'השליחה נכשלה' : 'ההודעה נשלחה'); srvRenderCoordSettings(body);
+        });
+      };
+      return { html, wire };
+    }],
+    log: [() => 'יומן שינויים בסידור', async () => {
+      const log = await sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(40);
+      const html = `
       <div class="pnote">מי שינה משמרת ומתי (שינויים ידניים, החלפות והבנייה האוטומטית).</div>
-      ${(log.data || []).map(l => { const d = (l.detail && (l.detail.new || l.detail.old)) || {}; const who = l.by_staff ? nameOf(l.by_staff) : 'המערכת / המנהל'; return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')}</small><br>${pEsc(who)}: ${l.what === 'insert shift' ? 'נוספה' : l.what === 'delete shift' ? 'הוסרה' : 'עודכנה'} משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${pEsc(nameOf(d.staff_id))}</span></div>`; }).join('') || '<div class="pnote">אין שינויים.</div>'}`)}`;
-  body.querySelectorAll('details[data-sfold]').forEach(d => d.addEventListener('toggle', () => { portalUi.setFold[d.dataset.sfold] = d.open; }));
-  const again = async () => { await srvReloadSafe(); srvRenderCoordSettings(body); };
-  body.querySelectorAll('[data-mail]').forEach(inp => inp.addEventListener('change', async () => {
-    const mail = inp.value.trim().toLowerCase() || null;
-    const u = await sbPersonal.from('staff_private').update({ email:mail }).eq('staff_id', inp.dataset.mail);
-    toast(u.error ? 'המייל לא נשמר (אולי הוא כבר בשימוש)' : 'המייל נשמר'); if(!u.error) (st.priv[inp.dataset.mail] = st.priv[inp.dataset.mail] || {}).email = mail;
-  }));
-  body.querySelectorAll('[data-photo]').forEach(inp => inp.addEventListener('change', async () => {
-    const file = inp.files && inp.files[0]; if(!file) return;
-    try {
-      const uri = await resizePhoto(file, 200);
-      const u = await sbPersonal.from('staff').update({ photo_url:uri }).eq('id', inp.dataset.photo);
-      if(u.error) throw u.error;
-      if(srv.photos) srv.photos[inp.dataset.photo] = uri; const pp = portalPerson(inp.dataset.photo); if(pp) pp.photo = uri;
-      toast('התמונה נשמרה');
-    } catch(e){ toast('התמונה לא נשמרה'); }
-    srvRenderCoordSettings(body);
-  }));  body.querySelectorAll('[data-login]').forEach(b => b.addEventListener('click', async () => {
-    const mail = (st.priv[b.dataset.login] || {}).email; if(!mail){ toast('קודם מזינים כתובת מייל'); return; }
-    b.disabled = true; const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:b.dataset.login } });
-    toast(r.error || (r.data && r.data.error) ? 'יצירת ההתחברות נכשלה' : 'ההתחברות נוצרה. אפשר להיכנס עם קוד שנשלח למייל.'); again();
-  }));
-  const move = async (id, dir) => {
-    const ids = instr.map(p => p.id), i = ids.indexOf(id), j = i + dir; if(j < 0 || j >= ids.length) return;
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-    for(let k = 0; k < ids.length; k++) await sbPersonal.from('staff_private').update({ leader_priority:k + 1 }).eq('staff_id', ids[k]);
-    again();
+      ${(log.data || []).map(l => { const d = (l.detail && (l.detail.new || l.detail.old)) || {}; const who = l.by_staff ? nameOf(l.by_staff) : 'המערכת / המנהל'; return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')}</small><br>${pEsc(who)}: ${l.what === 'insert shift' ? 'נוספה' : l.what === 'delete shift' ? 'הוסרה' : 'עודכנה'} משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${pEsc(nameOf(d.staff_id))}</span></div>`; }).join('') || '<div class="pnote">אין שינויים.</div>'}`;
+      return { html, wire:() => {} };
+    }]
   };
-  body.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => move(b.dataset.up, -1)));
-  body.querySelectorAll('[data-down]').forEach(b => b.addEventListener('click', () => move(b.dataset.down, 1)));
-  document.getElementById('new-go').addEventListener('click', async () => {
-    const name = document.getElementById('new-name').value.trim(), kind = document.getElementById('new-kind').value, mail = document.getElementById('new-mail').value.trim().toLowerCase() || null;
-    if(!name){ toast('צריך שם'); return; }
-    const maxOrder = Math.max(0, ...st.instructors.map((p, i) => i + 1));
-    const s = await sbPersonal.from('staff').insert({ display_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
-    if(s.error){ toast('ההוספה נכשלה'); return; }
-    const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, leader_priority:kind === 'instructor' ? instr.length + 1 : null });
-    toast(pr.error ? 'האדם נוסף, אבל המייל לא נשמר' : 'נוסף. אפשר ליצור לו התחברות.'); again();
-  });
-  body.querySelectorAll('[data-day-del]').forEach(b => b.addEventListener('click', async () => { await sbPersonal.from('special_days').delete().eq('day', b.dataset.dayDel); srvRenderCoordSettings(body); }));
-  document.getElementById('sd-go').addEventListener('click', async () => {
-    const day = document.getElementById('sd-day').value; if(!day){ toast('בחרו תאריך'); return; }
-    const mn = parseInt(document.getElementById('sd-min').value, 10) || null, mx = parseInt(document.getElementById('sd-max').value, 10) || null;
-    const u = await sbPersonal.from('special_days').upsert({ day, kind:document.getElementById('sd-kind').value, label:document.getElementById('sd-label').value.trim() || null, min_staff:mn, max_staff:mx });
-    toast(u.error ? 'השמירה נכשלה' : 'נשמר'); srvRenderCoordSettings(body);
-  });
-  let via = 'portal';
-  body.querySelectorAll('[data-via]').forEach(b => b.addEventListener('click', () => { via = b.dataset.via; body.querySelectorAll('[data-via]').forEach(x => x.classList.toggle('on', x === b)); }));
-  document.getElementById('an-send').addEventListener('click', async () => {
-    const text = document.getElementById('an-text').value.trim(); if(!text){ toast('כתבו הודעה'); return; }
-    if(!(await confirmSheet({ title:'לשלוח את ההודעה?', text:via === 'portal' ? 'ההודעה תופיע בפורטל של כל הצוות.' : via === 'email' ? 'ההודעה תישלח במייל לכל הצוות.' : 'ההודעה תופיע בפורטל ותישלח במייל לכל הצוות.', okLabel:'כן, לשלוח', cancelLabel:'חזרה' }))) return;
-    const r = await sbPersonal.rpc('post_announcement', { p_text:text, p_via:via });
-    toast(r.error ? 'השליחה נכשלה' : 'ההודעה נשלחה'); srvRenderCoordSettings(body);
-  });
+  const fill = async id => {
+    const box = body.querySelector(`[data-sbody="${id}"]`); if(!box || box.dataset.filled) return;
+    box.dataset.filled = '1'; box.innerHTML = '<div class="pnote">טוען…</div>';
+    try { const r = await sections[id][1](); if(!body.isConnected) return; box.innerHTML = r.html; r.wire(box); }
+    catch(e){ box.dataset.filled = ''; box.innerHTML = '<div class="pnote">הטעינה נכשלה. נסו לפתוח שוב.</div>'; }
+  };
+  body.innerHTML = Object.keys(sections).map(id => `<details class="pfold" data-sfold="${id}"${portalUi.setFold[id] ? ' open' : ''}><summary><span>${sections[id][0]()}</span></summary><div class="pfold-body" data-sbody="${id}"></div></details>`).join('');
+  body.querySelectorAll('details[data-sfold]').forEach(d => d.addEventListener('toggle', () => {
+    portalUi.setFold[d.dataset.sfold] = d.open;
+    if(!d.open) return;
+    body.querySelectorAll('details[data-sfold]').forEach(o => { if(o !== d && o.open){ o.open = false; portalUi.setFold[o.dataset.sfold] = false; } });          // (one part open at a time)
+    fill(d.dataset.sfold);
+  }));
+  Object.keys(sections).forEach(id => { if(portalUi.setFold[id]) fill(id); });
 }
 
 // a photo from the phone or computer -> a small square JPEG (centre cut), so that it stays light for everybody

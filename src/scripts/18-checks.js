@@ -1325,7 +1325,7 @@
         const priv2 = await sbPersonal.from('staff_private').select('staff_id');
         check('portal server: the coordinator sees the private staff data', !priv2.error && priv2.data.length >= 20, priv2.error ? priv2.error.message : priv2.data.length);
         portalUi.persona = srv.me; portalUi.tab = 'submissions'; portalUi.smonth = next; showPortal('submissions'); await sleep(100);
-        check('portal server: the coordinator\'s submissions screen has two folded groups, those who submitted first and then those who did not, and lists the instructors', [...document.querySelectorAll('#portal-body details.pfold')].map(d => d.dataset.fold).join() === 'sdone,smiss' && [...document.querySelectorAll('#portal-body details.pfold')].every(d => d.open === false) && document.querySelectorAll('#portal-body .psub-row').length >= 15, document.querySelectorAll('#portal-body .psub-row').length);
+        check('portal server: the coordinator\'s submissions screen has two folded groups, those who submitted first, then those who did not, then who is away, and lists the instructors', [...document.querySelectorAll('#portal-body details.pfold')].map(d => d.dataset.fold).join() === 'sdone,smiss,sabs' && [...document.querySelectorAll('#portal-body details.pfold')].every(d => d.open === false) && document.querySelectorAll('#portal-body .psub-row').length >= 15, document.querySelectorAll('#portal-body .psub-row').length);
         check('portal server: the coordinator has no "build the schedule automatically" button', !/[Aa]uto|אוטומט/.test(document.getElementById('view-portal').textContent), 'found');
       }
       // --- a service girl sees only her own place
@@ -1508,14 +1508,18 @@
         document.querySelector('[data-vac-ok]').click();
         check('portal people: approving the vacation enters the days as absence', await waitFor(async () => { const a = await sbPersonal.from('prefs_absence').select('day').eq('staff_id', i1).eq('reason', 'vacation').gte('day', vf).lte('day', vt); return a.data && a.data.length === 3; }), 'no absence');
         // ---- an announcement from the coordinator, read by the instructor
-        showPortal('settings'); await waitFor(() => !!document.querySelector('details[data-sfold="ann"]'), 100);          // (the settings load several lists first; wait for the screen instead of a fixed time)
-        const det = document.querySelector('details[data-sfold="ann"]'); det.open = true;
+        showPortal('settings'); await waitFor(() => !!document.querySelector('details[data-sfold="ann"]'), 100);          // (the settings screen opens folded; each part loads when it is opened)
+        check('portal people: the settings screen opens with all four parts folded', [...document.querySelectorAll('#portal-body details[data-sfold]')].length === 4 && [...document.querySelectorAll('#portal-body details[data-sfold]')].every(d => !d.open), 'not folded');
+        const det = document.querySelector('details[data-sfold="ann"]'); det.open = true; await waitFor(() => !!document.querySelector('#an-text'), 100);
         document.querySelector('#an-text').value = 'הודעת בדיקה אוטומטית'; document.querySelector('#an-send').click(); await answerSheet(); created.announcements = true;
         check('portal people: the announcement is sent', await waitFor(async () => { const a = await sbPersonal.from('announcements').select('id').eq('text', 'הודעת בדיקה אוטומטית'); return a.data && a.data.length === 1; }), 'not sent');
         // ---- a special day
-        await sleep(600); const sd = addDays(today, 20);
+        const sd = addDays(today, 20);
+        document.querySelector('details[data-sfold="days"]').open = true; await waitFor(() => !!document.querySelector('#sd-day'), 100);
+        check('portal people: opening one part of the settings folds the other', !document.querySelector('details[data-sfold="ann"]').open, 'still open');
         document.querySelector('#sd-day').value = sd; document.querySelector('#sd-label').value = 'בדיקה'; document.querySelector('#sd-go').click();
         check('portal people: a special day can be added', await waitFor(async () => { const d = await sbPersonal.from('special_days').select('day').eq('day', sd); return d.data && d.data.length === 1; }), 'not added'); created.day = sd;
+        document.querySelector('details[data-sfold="staff"]').open = true; await waitFor(() => document.querySelectorAll('[data-mail]').length > 0, 100);
         check('portal people: the settings list the staff with their e-mail fields and the priority arrows', document.querySelectorAll('[data-mail]').length >= 20 && document.querySelectorAll('[data-up]').length >= 15, document.querySelectorAll('[data-mail]').length);
         await sign('instructor2'); showPortal('inbox'); await sleep(700);
         for(let i = 0; i < 12 && !/הודעת בדיקה אוטומטית/.test(document.getElementById('portal-body').textContent); i++){ showPortal('inbox'); await sleep(500); }          // (a late redraw of the coordinator's last screen may land after the switch: ask again)
