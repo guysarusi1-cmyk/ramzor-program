@@ -28,10 +28,11 @@ function srvRenderSchedule(body){
   const openByAid = {}; st.swaps.filter(s => s.from === me.id && ['open', 'offered'].includes(s.status)).forEach(s => { openByAid[s.aid] = s; });
   const fb = (isInstr && m.published && !(srv.profile && srv.profile.manual_only)) ? srvFeedbackFor(me, mk, { prefs:srvPrefsOf(m, me.id), rows:st.rows.filter(r => r.staff === me.id), profile:srv.profile, goal:(m.goals || {})[me.id] || null }) : null;
   body.innerHTML = `
-    ${notices.map(n => `<div class="pnotice ${n.kind}" role="status"><span>${pEsc(n.text)}</span><button type="button" class="btn small" data-notice-ok="${n.id}">הבנתי, תודה</button></div>`).join('')}
+    ${notices.length ? `<details class="pfold pnotices" data-fold="notices"${openFold('notices') ? ' open' : ''}><summary><span>הודעות חדשות</span><span class="pcount">${notices.length}</span></summary><div class="pfold-body">
+      ${notices.map(n => `<div class="pnotice ${n.kind}" role="status"><span>${pEsc(n.text)}</span><button type="button" class="btn small" data-notice-ok="${n.id}">הבנתי, תודה</button></div>`).join('')}
+      ${notices.length > 1 ? '<button type="button" class="btn ghost small" id="notices-all-ok">סימון של כולן כנקראו</button>' : ''}</div></details>` : ''}
     ${monthNavHtml(mk)}
     ${!m.published ? `<div class="pnote">${tx('sch_unpub')}</div>` : `
-    ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
       <summary><span>המשמרות שלי</span><span class="pcount">${mine.length}</span></summary>
       <div class="pfold-body">${isInstr && mine.length ? `<div class="pchange"><button type="button" class="btn ghost small" id="want-change">בקשת החלפה</button></div>` : ''}<div class="pmine">${mine.length ? mine.map(r => {
@@ -46,6 +47,7 @@ function srvRenderSchedule(body){
       <summary><span>הצוות כולו</span></summary>
       <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}${monthCalHtml(ctx, m.assignments, { me:me.id, ahmash:srv.ahmash })}</div>
     </details>
+    ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
     ${isInstr ? `<details class="pfold" data-fold="openshifts"${openFold('openshifts') ? ' open' : ''}>
       <summary><span>משמרות פתוחות</span><span class="pcount" id="open-count"></span></summary>
       <div class="pfold-body" id="open-fold-body"><div class="pnote">רק רגע...</div></div>
@@ -53,6 +55,7 @@ function srvRenderSchedule(body){
   wireMonthNav(body); wireFolds(body);
   if(isInstr && m.published) srvFillOpenFold(body, mk); else { const ob = document.getElementById('open-fold-body'); if(ob) ob.innerHTML = `<div class="pnote">${tx('open_none')}</div>`; }
   body.querySelectorAll('[data-notice-ok]').forEach(b => b.addEventListener('click', () => { const n = st.notices.find(x => x.id === b.dataset.noticeOk); if(n) n.seen = true; portalSave(); srvRenderSchedule(body); }));
+  const allOk = document.getElementById('notices-all-ok'); if(allOk) allOk.addEventListener('click', () => { st.notices.forEach(n => { n.seen = true; }); portalSave(); srvRenderSchedule(body); });
   // "רוצה שינוי": one button, then the kind of change, then the question "which shift?" with the person's own upcoming shifts
   const wantBtn = document.getElementById('want-change');
   if(wantBtn) wantBtn.addEventListener('click', () => {

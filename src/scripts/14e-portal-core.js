@@ -76,7 +76,7 @@ function showPortal(tab){
   const today = monthKeyOf(isoDate(new Date()));
   if(!portalUi.month) portalUi.month = today;
   const view = document.getElementById('view-portal');
-  const leopard = portalServerOn && me.role === 'coordinator' && !me.admin && srv.portalTheme === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
+  const leopard = portalServerOn && !portalUi.viewAs && me.role === 'coordinator' && !me.admin && srv.portalTheme === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
   document.body.classList.toggle('leopard-bg', leopard);
   view.innerHTML = `
     <div class="portal-shell${portalServerOn && portalAsCoord(me) ? ' wide' : ''}" data-ptheme="${theme}">
@@ -90,8 +90,16 @@ function showPortal(tab){
         <span class="portal-demo-tag">דמו</span>
       </label>`}
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
+      ${portalServerOn && portalUi.viewAs ? `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>` : ''}
       <div id="portal-body"></div>
     </div>`;
+  if(portalServerOn && portalUi.viewAs){          // (the admin looks at somebody's portal: folds, months and tabs work; nothing can be changed)
+    document.getElementById('viewas-end').addEventListener('click', adminViewAsEnd);
+    document.getElementById('portal-body').addEventListener('click', ev => {
+      if(ev.target.closest('summary, [data-pmonth], .pfold > summary')) return;
+      if(ev.target.closest('button, input, select, textarea, a, [data-pslot], [data-pday], [role=button]')){ ev.preventDefault(); ev.stopPropagation(); toast('זו צפייה בלבד'); }
+    }, true);
+  }
   document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });

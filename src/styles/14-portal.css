@@ -353,3 +353,15 @@
   .login-or::before, .login-or::after{ content:''; flex:1; height:1px; background:var(--line); }
   .apphome-hello{ font-weight:700; font-size:17px; margin-bottom:2px; }
   .home-portal{ left:58px; }          /* next to "יציאה" on the Ramzor home, only after the personal sign-in */
+  /* the management portal (the admin) */
+  .adm-viewas{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 10px; padding:8px 12px; border-radius:12px; background:rgba(232,185,74,.16); border:1px solid var(--gold); font-weight:700; }
+  .adm-row.inactive{ opacity:.55; }
+  .adm-checks{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:6px 12px; margin:8px 0; }
+  .adm-check{ display:flex; align-items:center; gap:6px; font-size:14px; } .adm-check input{ width:18px; height:18px; }
+  .adm-people{ display:flex; flex-wrap:wrap; gap:6px; }
+  .adm-shift{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:6px 0; } .adm-shift b{ min-width:90px; }
+  .adm-shift label{ display:inline-flex; align-items:center; gap:4px; color:var(--p-muted); font-size:13px; }
+  .adm-shift input, .adm-weight input{ min-height:38px; background:var(--p-panel2); color:var(--p-text); border:1px solid var(--p-line); border-radius:8px; padding:4px 8px; font:inherit; }
+  .adm-weights{ display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:6px 14px; }
+  .adm-weight{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 8px; border-radius:8px; font-size:13.5px; }
+  .adm-weight input{ width:90px; text-align:center; } .adm-weight.changed{ background:rgba(232,185,74,.14); }

@@ -1219,6 +1219,13 @@
       check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
       check('personal sign-in: ... and the management portal has the coordinator tabs', !!document.querySelector('[data-ptab="submissions"]') && !!document.querySelector('[data-ptab="settings"]') && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      document.querySelector('[data-ptab="admin"]') && document.querySelector('[data-ptab="admin"]').click(); await sleep(200);
+      check('management portal: a "ניהול" tab with the staff details, looking as somebody, the system settings, building again and the full log', document.querySelectorAll('#portal-body details[data-afold]').length === 5, document.querySelectorAll('#portal-body details[data-afold]').length);
+      { const other = portalLoad().instructors.find(p => p.active && p.id !== srv.me && p.role === 'instructor');
+        portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.manager = false; portalUi.tab = null; showPortal(); await sleep(200);
+        check('management portal: looking as somebody shows a clear "only to look" bar, with the way back', !!document.querySelector('.adm-viewas') && !!document.getElementById('viewas-end'), 'no bar');
+        document.getElementById('viewas-end').click(); await sleep(200);
+        check('management portal: ... and the way back returns to the management tab', !portalUi.viewAs && portalUi.persona === srv.me && !!document.querySelector('[data-ptab="admin"].active'), String(portalUi.viewAs)); }
       srv.meRow.admin = false; portalUi.manager = false; showAppHome();
       await personalLeave();
       check('personal sign-in: leaving returns the Ramzor to the staff login of this device', sb === sbShared && !ramzorPersonal, 'still personal');
@@ -1440,7 +1447,7 @@
         const want = document.getElementById('want-change');
         check('portal swaps: the instructor has one "בקשת החלפה" button, and no swap / cannot-come buttons on every shift', !!want && !document.querySelector('[data-said], [data-cant]'), 'want ' + !!want);
         { const folds = [...document.querySelectorAll('details.pfold')].map(d => d.dataset.fold);
-          check('portal swaps: under "הצוות כולו" (a monthly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.mcal') && folds.indexOf('openshifts') === folds.indexOf('team') + 1 && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.mcal-head:not(.mini)').length === 7 && document.querySelectorAll('.mcal-head.mini').length >= 7, folds.join(',')); }
+          check('portal swaps: under "הצוות כולו" (a monthly calendar) there is a folded "משמרות פתוחות" section', !!document.querySelector('.mcal') && folds.indexOf('openshifts') > folds.indexOf('team') && (folds.indexOf('fb') < 0 || folds.indexOf('fb') === folds.indexOf('team') + 1) && document.querySelector('details[data-fold="openshifts"]').open === false && document.querySelectorAll('.mcal-head:not(.mini)').length === 7 && document.querySelectorAll('.mcal-head.mini').length >= 7, folds.join(',')); }
         const aid = portalLoad().rows.find(r => r.staff === i1 && r.day === day).id, cr = await sbPersonal.rpc('swap_candidates', { p_assignment:aid });
         if(cr.error) check('(info) portal swaps: the list of colleagues who could take a shift needs supabase/scheduling-v5.sql (not run yet)', true, '');
         else check('portal swaps: the list of colleagues who could take the shift is returned, and it does not include the person herself', Array.isArray(cr.data) && cr.data.length >= 1 && !cr.data.some(x => x.name === srv.meRow.first), JSON.stringify(cr.data).slice(0, 100));
