@@ -222,7 +222,7 @@ function srvRenderCoordSettings(body){
       const ann = await sbPersonal.from('announcements').select('created_at,text,via').order('created_at', { ascending:false }).limit(8);
       const html = `
       <label class="pfield">הודעה<textarea id="an-text" rows="3" maxlength="800"></textarea></label>
-      <div class="an-actions"><div class="pchoice" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
+      <div class="an-actions"><div class="pchoice wrap" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
       <button type="button" class="btn" id="an-send">שליחה</button></div>
       <h3 class="psec">הודעות אחרונות</h3>
       ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
