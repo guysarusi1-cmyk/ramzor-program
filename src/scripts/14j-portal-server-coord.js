@@ -259,7 +259,7 @@ function srvPersonRequestsHtml(p, mk){
 }
 function srvSidePanelHtml(mk){
   const st = portalLoad(), m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role === 'instructor'), sel = people.find(p => p.id === portalUi.csPerson);
-  if(!portalUi.csOpen) return `<button type="button" class="cs-tab" id="cs-open" aria-expanded="false">${mcalKeyHtml('tab')}<span class="cs-tab-text">בקשות המדריכים</span></button>`;          // (folded: a slim tab, with a small colour key on top of it, above the text)          // (folded: a slim tab at the left of the schedule)
+  if(!portalUi.csOpen) return `<button type="button" class="cs-tab" id="cs-open" aria-expanded="false"><span class="cs-tab-text">בקשות המדריכים</span>${mcalKeyHtml('tab')}</button>`;          // (folded: a slim tab, with the colour key as plain coloured words under the text)          // (folded: a slim tab at the left of the schedule)
   return `<aside class="cs-side" aria-label="בקשות המדריכים">
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3>${sel ? '' : mcalKeyHtml(true)}<button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
     <div class="cs-names">${people.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>
