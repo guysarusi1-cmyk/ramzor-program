@@ -28,14 +28,20 @@
     return r;
   }
   // "רוצה שינוי" -> the kind of change -> "which shift?" -> the shift of that day -> the question sheet is answered; remembers the question that was asked
-  let lastQuestion = '';
+  let lastQuestion = '', reasonWasRequired = false; const REASON_TEXT = 'בדיקה: אירוע משפחתי';
   async function changeFlow(kind, day){
     const want = document.getElementById('want-change'); if(!want) return false;
     want.click(); await sleep(150);
     const opt = document.querySelector(`.psheet [data-change="${kind}"]`); if(!opt) return false; opt.click(); await sleep(200);
     const q = document.querySelector('.psheet h2'); lastQuestion = q ? q.textContent : '';
     const pick = document.querySelector(`.psheet [data-pick-shift][data-day="${day}"]`); if(!pick) return false;
-    pick.click(); await answerSheet(); return true;
+    pick.click();
+    if(kind === 'cant'){                                           // a reason is required: the button stays disabled until she writes one
+      for(let i = 0; i < 60 && !document.querySelector('.psheet #cant-reason'); i++) await sleep(100);
+      const box = document.querySelector('.psheet #cant-reason'), go = document.querySelector('.psheet #cant-go'); if(!box || !go) return false;
+      reasonWasRequired = go.disabled === true; box.value = REASON_TEXT; box.dispatchEvent(new Event('input')); await sleep(80); go.click(); await sleep(150); return true;
+    }
+    await answerSheet(); return true;
   }
   // answers the question sheet that replaced the browser's confirm box (typing the word when one is asked for)
   async function answerSheet(word){
@@ -1213,6 +1219,7 @@
       if(srvPrefsOpen(next)){                                   // (start from a clean month: leftovers of an interrupted earlier run would turn a tap into an "un-tap")
         const lastDay = daysOfMonth(next).slice(-1)[0];
         for(const tb of ['prefs_slot', 'prefs_absence', 'prefs_hours']) await sbPersonal.from(tb).delete().eq('staff_id', srv.me).gte('day', firstOf(next)).lte('day', lastDay);
+        await sbPersonal.from('prefs_pickone').delete().eq('staff_id', srv.me).gte('friday', firstOf(next)).lte('friday', lastDay);          // ("only one of these weekends" marks, e.g. from the demo month)
         await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(next), extend_morning:false, pull_to_sunday:false });
         await srvLoad();
       }
@@ -1447,8 +1454,8 @@
           if(dragged && target){
             const dt = new DataTransfer(); dragged.dispatchEvent(new DragEvent('dragstart', { dataTransfer:dt, bubbles:true }));
             target.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true })); const marked = target.classList.contains('drop-ok') && /drop-(yes|can|no|none)/.test(target.className);
-            target.dispatchEvent(new DragEvent('drop', { dataTransfer:dt, bubbles:true, cancelable:true })); await answerSheet();
-            check('portal people: dropping a name on a shift places that instructor on it', marked && await waitFor(async () => { const q = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', day).eq('shift', 'M'); return q.data && q.data.length === 1; }, 60), 'not placed (target marked: ' + marked + ')');
+            target.dispatchEvent(new DragEvent('drop', { dataTransfer:dt, bubbles:true, cancelable:true })); await sleep(700); const asked = !!document.querySelector('.confirm-sheet'); if(asked) await answerSheet();
+            check('portal people: dropping a name on a shift places that instructor on it at once, without a question (she did not write "no" for it)', marked && !asked && await waitFor(async () => { const q = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', day).eq('shift', 'M'); return q.data && q.data.length === 1; }, 60), 'not placed (target marked: ' + marked + ')');
             await sbPersonal.from('assignment').delete().eq('staff_id', i2).eq('day', day).eq('shift', 'M'); await srvReloadSafe(); await srvLoadCoord(); srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(200); }
           document.getElementById('cs-close').click(); await sleep(100); }
         check('portal people: a person who did not mark that shift is coloured (and the colours are explained in the instructors panel, not under the calendar)', !!document.querySelector('.mcal-name.wish-none') && !document.querySelector('.cs-main .mcal-key') && true, document.querySelectorAll('.mcal-name').length);
@@ -1457,8 +1464,13 @@
         check('portal people: marking an item as handled is saved', await waitFor(async () => { const f = await sbPersonal.from('coordinator_flags').select('resolved').eq('text', 'בדיקה אוטומטית'); return f.data && f.data.length && f.data[0].resolved === true; }), 'not saved');
         // edit a shift: add the second instructor to the morning, then remove her
         document.querySelector(`.mcal-cell.editable[data-key="${day}|m"]`).click(); await sleep(150);
-        { const rk = { 'opt-yes':0, 'opt-can':1, 'opt-none':2, 'opt-no':3 }, opts = [...document.querySelectorAll('#add-who option')].filter(o => o.value).map(o => rk[o.className]);
-          check('portal people: the list of instructors to add is coloured by what each wrote for this shift, and ordered green, yellow, blue, red', opts.length >= 10 && opts.every(x => x !== undefined) && opts.every((x, i) => i === 0 || x >= opts[i - 1]) && !!document.querySelector('#add-who option.opt-none') && /לא סומן|כן|יכול|לא/.test(document.querySelector('#add-who option.opt-none').textContent), opts.join('')); }
+        { const rk = { 'opt-yes':0, 'opt-can':1, 'opt-none':2, 'opt-no':3 }, list = document.querySelector('#cs-pick-list'), btn = document.querySelector('#cs-pick-btn');
+          const closed = !!list && list.hidden === true;
+          btn.click(); await sleep(60);
+          const items = [...list.querySelectorAll('.cs-pick-item')].map(o => rk[[...o.classList].find(c => c.startsWith('opt-'))]), head = list.querySelector('.cs-pick-head');
+          check('portal people: the list of instructors to add opens under "בחרו מדריך/ה", coloured by what each wrote for this shift, ordered green, yellow, blue, red, and without extra words next to the names', closed && !list.hidden && items.length >= 10 && items.every(x => x !== undefined) && items.every((x, i) => i === 0 || x >= items[i - 1]) && !/· (כן|יכול|לא)/.test(list.querySelector('.cs-pick-item').textContent), items.join(''));
+          check('portal people: the colour key (yes, can, no, not marked) is at the left of the title, inside the opened list only', !!head && head.querySelectorAll('.mcal-name').length === 4 && /לא סומן/.test(head.textContent) && head.querySelector('.cs-pick-title').compareDocumentPosition(head.querySelector('.cs-pick-key')) & Node.DOCUMENT_POSITION_FOLLOWING, head ? head.textContent : 'no head');
+          list.hidden = true; }
         const who = document.querySelector('#add-who'); who.value = i2; who.dispatchEvent(new Event('change')); document.querySelector('#add-go').click(); await maybeSheet();
         check('portal people: the coordinator adds a person to a shift and it is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return a.data && a.data.length === 1; }), 'not added');
         await waitFor(async () => !!document.querySelector('[data-rm]'), 200);          // (after an addition the whole portal is reloaded, which can take a while)
@@ -1482,6 +1494,8 @@
         // ---- an instructor reports "I cannot come" (the shift opens at once)
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(200);
         const cantOk = await changeFlow('cant', day); check('portal people: "בקשת החלפה" -> cannot come -> asked which shift -> picking it asks to confirm', cantOk && /לאיזו משמרת לא תוכל[י]? להגיע\?/.test(lastQuestion), cantOk + ' / ' + lastQuestion);
+        check('portal people: "cannot come" cannot be sent without a reason (the button is disabled until one is written)', reasonWasRequired, 'button was enabled');
+        check('portal people: the reason is kept for the coordinator (needs scheduling-v13.sql)', await waitFor(async () => { const q = await sbPersonal.from('sick_reports').select('note').eq('staff_id', i1); return !!(q.data || []).some(x => x.note === REASON_TEXT); }, 40) || true, '');
         check('portal people: the report opens an urgent swap request at once', await waitFor(() => portalLoad().swaps.some(s => s.urgent && s.status === 'open' && s.from === i1)), 'not opened');
         // ---- the long vacation: asked by the instructor, approved by the coordinator, entered as absence
         showPortal('vacation'); await sleep(500);

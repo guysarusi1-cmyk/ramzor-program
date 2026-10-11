@@ -256,7 +256,7 @@ function renderInstructorSwaps(body){
       <div class="pfold-body"><div class="pnote">${tx('swaps_intro')}</div>
       ${open.length ? open.map(s => {
         const own = s.from === me.id, can = !own && canTakeShift(me.id, s.key);
-        return `<div class="preq swap"><div>${s.urgent ? '<span class="pchip missing">⚠ דחוף</span> ' : ''}<b>${pEsc(name(s.from))}</b> מחפש/ת מחליף/ה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">אי אפשר לשבץ אותך כרגע</em>'}</div></div>`;
+        return `<div class="preq swap"><div>${s.urgent ? '<span class="pchip missing">⚠ דחוף: דווח שלא יכול/ה להגיע</span> ' : ''}<b>${pEsc(name(s.from))}</b> מחפש/ת מחליף/ה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">אי אפשר לשבץ אותך כרגע</em>'}</div></div>`;
       }).join('') : `<div class="pnote">${tx('swaps_none')}</div>`}</div>
     </details>`;
   wireFolds(body);

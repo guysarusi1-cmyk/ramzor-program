@@ -74,8 +74,8 @@ function srvRenderSchedule(body){
           if(!(await confirmSheet({ title:'לבקש החלפה?', text:tx('swap_confirm', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
           try { await srvSwapAction('request_swap', { p_assignment:r.id }); toast(tx('swap_posted')); } catch(e){ toast(tx('swap_fail')); }
         } else {
-          if(!(await confirmSheet({ title:tx('cant_title'), text:tx('cant_text', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לדווח', cancelLabel:'חזרה' }))) return;
-          try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:null }); toast(tx('cant_done')); } catch(e){ toast(tx('cant_fail')); }
+          const why = await srvAskReason(dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand), fem); if(why === null) return;
+          try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:why }); toast(tx('cant_done')); } catch(e){ toast(tx('cant_fail')); }
         }
         srvRenderSchedule(body);
       }));
@@ -219,4 +219,20 @@ async function srvRenderOpenShifts(body){
     <div class="pnote">${tx('open_intro')}</div>
     ${srvOpenShiftsHtml(lists)}`;
   srvWireOpenShifts(body, async () => { await srvReloadSafe(); srvRenderOpenShifts(body); });
+}
+
+
+// "I cannot come" needs a reason: the report cannot be sent without one (the database refuses it too). -> the reason, or null when she goes back
+function srvAskReason(dayText, shiftText, candText, fem){
+  return new Promise(resolve => {
+    const sh = portalSheet(`<h2>${tx('cant_title')}</h2>
+      <div class="pnote">${tx('cant_text', dayText, shiftText, candText)}</div>
+      <label class="pfield">${tx('cant_reason_label', fem)}<textarea id="cant-reason" rows="3" maxlength="300" placeholder="${pEsc(tx('cant_reason_hint'))}"></textarea></label>
+      <div class="confirm-actions"><button type="button" class="btn ghost" id="cant-back">חזרה</button><button type="button" class="btn danger" id="cant-go" disabled>כן, לדווח</button></div>`);
+    const box = sh.querySelector('#cant-reason'), go = sh.querySelector('#cant-go');
+    box.addEventListener('input', () => { go.disabled = box.value.trim().length < 2; });
+    go.addEventListener('click', () => { const v = box.value.trim(); if(v.length < 2) return; sh.remove(); resolve(v); });
+    const back = () => { sh.remove(); resolve(null); };
+    sh.querySelector('#cant-back').addEventListener('click', back); sh.addEventListener('click', e => { if(e.target === sh) back(); });
+  });
 }
