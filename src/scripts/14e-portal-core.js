@@ -173,7 +173,7 @@ function boardHtml(ctx, assignments, opts){
 // In the afternoon shifts, and on Friday and Saturday mornings, the ahmash is written first and marked אחמ"ש (one per shift, see ahmashPicks); the person herself is highlighted.
 // opts: me, ahmash ({ staff id: rank }); for the coordinator: sel (the person whose requests are open at the side; her names are outlined), colour (names coloured by how the wish was kept) and edit (a tap on a shift opens its editor)
 // the key of the colours of the coordinator's calendar (shown under her panel of the instructors' requests)
-const mcalKeyHtml = () => '<div class="pnote mcal-key"><span class="mcal-name wish-yes">כן</span> <span class="mcal-name wish-can">יכול</span> <span class="mcal-name wish-no">לא</span> <span class="mcal-name wish-none">לא סומן</span> שובץ/ה במשמרת שסימן/ה כך.</div>';
+const mcalKeyHtml = compact => compact ? `<div class="mcal-key compact" title="שובץ/ה במשמרת שסימן/ה כך"><span class="mcal-name wish-yes">כן</span><span class="mcal-name wish-can">יכול</span><span class="mcal-name wish-no">לא</span><span class="mcal-name wish-none">לא סומן</span></div>` : '<div class="pnote mcal-key"><span class="mcal-name wish-yes">כן</span> <span class="mcal-name wish-can">יכול</span> <span class="mcal-name wish-no">לא</span> <span class="mcal-name wish-none">לא סומן</span> שובץ/ה במשמרת שסימן/ה כך.</div>';
 function monthCalHtml(ctx, assignments, opts){
   opts = opts || {};
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date()), picks = ahmashPicks(table, ctx, opts.ahmash || {});
