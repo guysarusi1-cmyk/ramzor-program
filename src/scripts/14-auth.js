@@ -89,7 +89,7 @@ document.getElementById('hub-manage-gear').addEventListener('click', openManagem
 document.getElementById('hub-logout-link').addEventListener('click', async ()=>{
   // signing out means typing the password again, which nobody wants in the middle of an incident
   const personal = typeof ramzorPersonal !== 'undefined' && ramzorPersonal;
-  if(await confirmSheet({ title:'לצאת מהמערכת?', text:personal ? 'כדי להיכנס שוב יישלח אלייך קוד חדש למייל.' : 'כדי להיכנס שוב יהיה צריך להקליד את הסיסמה.', okLabel:'כן, לצאת', cancelLabel:'להישאר' })) document.getElementById('logout-btn').click();
+  if(await confirmSheet({ title:'לצאת מהמערכת?', text:personal ? 'בדרך כלל אין צורך לצאת: המכשיר זוכר אותך. אם יוצאים, בכניסה הבאה יישלח קוד חדש למייל.' : 'כדי להיכנס שוב יהיה צריך להקליד את הסיסמה.', okLabel:'כן, לצאת', cancelLabel:'להישאר' })) document.getElementById('logout-btn').click();
 });
 document.getElementById('manage-back-to-hub').addEventListener('click', ()=>{
   location.hash = '';
