@@ -64,7 +64,7 @@ function activateDisplayView(){
 }
 
 function showHub(){
-  document.body.classList.remove('portal-mode');
+  document.body.classList.remove('portal-mode', 'leopard-bg');
   stopCarousel();
   const pl = document.getElementById('hub-portal-link'); if(pl) pl.hidden = !(typeof ramzorPersonal !== 'undefined' && ramzorPersonal);
   const cb = document.getElementById('hub-control-btn'); if(cb) cb.hidden = !(typeof canControl === 'function' && canControl());          // (the ahmash control: ahmash, coordinator, admin)

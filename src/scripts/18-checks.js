@@ -1240,6 +1240,13 @@
       if(w.data) await sb.from('bonus_day').delete().eq('id', w.data.id);
       const lg = await sb.from('control_log').select('what').order('at', { ascending:false }).limit(6);
       check('ahmash control: the changes are written in the log by the database', !lg.error && lg.data.some(l => /timetable_day/.test(l.what)) && lg.data.some(l => /bonus_day/.test(l.what)), (lg.error || {}).message || JSON.stringify(lg.data));
+      srvOpenPortal(); srv.portalTheme = 'leopard'; showPortal();
+      check('leopard: the coordinator portal can wear the leopard look (background, titles, frames)', document.querySelector('.portal-shell').dataset.ptheme === 'leopard' && document.body.classList.contains('leopard-bg'), document.querySelector('.portal-shell').dataset.ptheme);
+      document.getElementById('portal-gear').click(); await sleep(150);
+      check('leopard: it is a third choice in the coordinator gear', !!document.querySelector('.psheet [data-set-theme="leopard"]') && document.querySelectorAll('.psheet [data-set-theme]').length === 3, document.querySelectorAll('.psheet [data-set-theme]').length);
+      { const c = document.querySelector('.psheet [data-close]'); if(c) c.click(); await sleep(150); }
+      srv.portalTheme = null; showPortal();
+      check('leopard: back to the usual look, the leopard background is gone', document.querySelector('.portal-shell').dataset.ptheme !== 'leopard' && !document.body.classList.contains('leopard-bg'), document.querySelector('.portal-shell').dataset.ptheme);
       await personalLeave(); showHub();
       check('ahmash control: without the personal sign-in the button is not there', document.getElementById('hub-control-btn').hidden, 'still shown');
     });

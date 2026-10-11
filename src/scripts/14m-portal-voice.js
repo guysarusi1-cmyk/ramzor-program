@@ -109,6 +109,8 @@ async function srvLoadSettings(){
     if(!r.error) hasCols = true; else r = await sbPersonal.from('staff_settings').select('voice,reminders').eq('staff_id', srv.me).maybeSingle();          // (before scheduling-v8.sql / v12.sql the columns do not exist)
     if(!r.error && r.data){ srv.voice = r.data.voice || null; srv.reminders = r.data.reminders !== false; srv.pickOne = !!r.data.pick_one; srv.showLong = !!r.data.show_long; }
   } catch(e){}
+  srv.portalTheme = null;
+  try { const t = await sbPersonal.from('staff_settings').select('portal_theme').eq('staff_id', srv.me).maybeSingle(); if(!t.error && t.data) srv.portalTheme = t.data.portal_theme || null; } catch(e){}          // (comes with scheduling-v16.sql)
   if(!srv.voice){ try { srv.voice = localStorage.getItem('ramzor-portal-voice') || null; } catch(e){} }
   if(!hasCols){ try { srv.pickOne = localStorage.getItem('ramzor-portal-pickone') === '1'; srv.showLong = localStorage.getItem('ramzor-portal-showlong') === '1'; } catch(e){} }          // (only until the columns exist)
 }
@@ -118,18 +120,19 @@ async function srvSaveSetting(patch){
   if('pickOne' in patch){ try { localStorage.setItem('ramzor-portal-pickone', patch.pickOne ? '1' : '0'); } catch(e){} }
   if('showLong' in patch){ try { localStorage.setItem('ramzor-portal-showlong', patch.showLong ? '1' : '0'); } catch(e){} }
   try {
-    const row = { staff_id:srv.me }; if('voice' in patch) row.voice = patch.voice; if('reminders' in patch) row.reminders = patch.reminders; if('pickOne' in patch) row.pick_one = !!patch.pickOne; if('showLong' in patch) row.show_long = !!patch.showLong;
+    const row = { staff_id:srv.me }; if('voice' in patch) row.voice = patch.voice; if('reminders' in patch) row.reminders = patch.reminders; if('pickOne' in patch) row.pick_one = !!patch.pickOne; if('showLong' in patch) row.show_long = !!patch.showLong; if('portalTheme' in patch) row.portal_theme = patch.portalTheme;
     const r = await sbPersonal.from('staff_settings').upsert(row);
     return !r.error;
   } catch(e){ return false; }
 }
 function openPortalSettings(){
+  const coord = !!(srv.meRow && srv.meRow.role === 'coordinator'), leo = coord && srv.portalTheme === 'leopard';          // (the leopard look: only the coordinator's portal)
   const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') === '1'; } catch(e){ return false; } })();
   const sh = portalSheet(`<h2>העדפות מערכת</h2>
     <h3 class="psec">באיזו שפה נדבר איתך?</h3>
     <div class="pgoal-list" role="group" aria-label="שפת המערכת">${Object.keys(VOICE_NAMES).map(k => `<button type="button" class="pgoal-opt${v === k ? ' on' : ''}" data-voice="${k}"><b>${VOICE_NAMES[k]}</b><small>${VOICE_SAMPLE[k]}</small></button>`).join('')}</div>
     <h3 class="psec">מראה</h3>
-    <div class="pchoice wrap"><button type="button" class="${dark ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark ? '' : 'on'}" data-set-theme="light">מצב בהיר</button></div>
+    <div class="pchoice wrap"><button type="button" class="${dark && !leo ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark || leo ? '' : 'on'}" data-set-theme="light">מצב בהיר</button>${coord ? `<button type="button" class="${leo ? 'on' : ''}" data-set-theme="leopard">מצב מנומר 🐆</button>` : ''}</div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big ? '' : 'on'}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big ? 'on' : ''}" data-set-big="1">טקסט גדול</button></div>
     ${srv.meRow && srv.meRow.role === 'instructor' ? `<h3 class="psec">סופי שבוע</h3>
     <div class="pchoice wrap"><button type="button" class="${srv.showLong ? 'on' : ''}" data-set-long="1">להציג סופ"ש ארוך: כן</button><button type="button" class="${srv.showLong ? '' : 'on'}" data-set-long="0">לא</button></div>
@@ -140,7 +143,13 @@ function openPortalSettings(){
   sh.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', async () => {
     await srvSaveSetting({ voice:b.dataset.voice }); sh.close(); toast(({ warm:'בחרנו בשפה החמה והרכה', light:'עברנו לשפה הקלילה. נתראה בבדיחות!', brief:'עברנו לשפה קצרה ועניינית' })[b.dataset.voice]); showPortal();
   }));
-  sh.querySelectorAll('[data-set-theme]').forEach(b => b.addEventListener('click', () => { st.settings.theme = b.dataset.setTheme; try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} sh.close(); showPortal(); }));
+  sh.querySelectorAll('[data-set-theme]').forEach(b => b.addEventListener('click', async () => {
+    const th = b.dataset.setTheme;
+    if(th === 'leopard'){ srv.portalTheme = 'leopard'; sh.close(); showPortal(); await srvSaveSetting({ portalTheme:'leopard' }); return; }
+    st.settings.theme = th; try { localStorage.setItem('ramzor-portal-theme', th); } catch(e){}
+    const wasLeo = srv.portalTheme === 'leopard'; srv.portalTheme = null; sh.close(); showPortal();
+    if(wasLeo || coord) await srvSaveSetting({ portalTheme:th });
+  }));
   sh.querySelectorAll('[data-set-long]').forEach(b => b.addEventListener('click', async () => {
     const on = b.dataset.setLong === '1';
     if(!on){ Object.keys(st.months).forEach(mk => { if(srvPrefsOpen(mk)){ const p = srvPrefsOf(st.months[mk], srv.me); Object.keys(p.slots).filter(k => k.endsWith('|l')).forEach(k => { delete p.slots[k]; }); } }); portalSave(); }          // (hiding it takes its marks back, so the system does not act on what is no longer shown)
