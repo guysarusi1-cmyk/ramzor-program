@@ -142,7 +142,7 @@ function srvRenderCoordSettings(body){
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
-      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
+      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option></select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
         box.querySelectorAll('[data-mail]').forEach(inp => inp.addEventListener('change', async () => {
           const mail = inp.value.trim().toLowerCase() || null;
@@ -176,13 +176,16 @@ function srvRenderCoordSettings(body){
         };
         box.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => move(b.dataset.up, -1)));
         box.querySelectorAll('[data-down]').forEach(b => b.addEventListener('click', () => move(b.dataset.down, 1)));
+        const kindSel = box.querySelector('#new-kind'), roleSel = box.querySelector('#new-role');
+        kindSel.addEventListener('change', () => { roleSel.hidden = kindSel.value !== 'instructor'; });          // (the type - instructor, leader, ahmash - only for an instructor)
         box.querySelector('#new-go').addEventListener('click', async () => {
           const name = box.querySelector('#new-name').value.trim(), kind = box.querySelector('#new-kind').value, mail = box.querySelector('#new-mail').value.trim().toLowerCase() || null;
           if(!name){ toast('צריך שם'); return; }
           const maxOrder = Math.max(0, ...st.instructors.map((p, i) => i + 1));
           const s = await sbPersonal.from('staff').insert({ display_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
           if(s.error){ toast('ההוספה נכשלה'); return; }
-          const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, leader_priority:kind === 'instructor' ? instr.length + 1 : null });
+          const role = kind === 'instructor' ? roleSel.value : 'plain';
+          const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, is_leader:role === 'leader', ahmash_rank:role === 'ahmash' ? 1 : 0, leader_priority:kind === 'instructor' ? instr.length + 1 : null });
           toast(pr.error ? 'האדם נוסף, אבל המייל לא נשמר' : 'נוסף. אפשר ליצור לו התחברות.'); again();
         });
       };
