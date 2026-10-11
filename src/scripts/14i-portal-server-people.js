@@ -148,6 +148,8 @@ async function srvRenderVacation(body){
 
 // ---------------------------------------------------------------- service girls: availability for every day (Sunday-Thursday)
 const SVC_OPTS = [['early', '07:00–16:00'], ['late', '11:00–19:00'], ['both', 'שתיהן'], ['none', 'לא זמינה']];
+// the choices of one day: on Sunday they come at 11:00 (only 11:00-19:00), on Thursday nobody stays after 16:00 (only 07:00-16:00)
+const svcOptsFor = d => dowOf(d) === 0 ? SVC_OPTS.filter(o => o[0] === 'late' || o[0] === 'none') : dowOf(d) === 4 ? SVC_OPTS.filter(o => o[0] === 'early' || o[0] === 'none') : SVC_OPTS;
 async function srvRenderAvailability(body){
   const mk = portalUi.pmonth || (portalUi.pmonth = addMonths(monthKeyOf(srvToday()), 1)), m = portalMonth(mk), locked = !srvPrefsOpen(mk);
   body.innerHTML = '<div class="pnote">רק רגע...</div>';
@@ -161,8 +163,8 @@ async function srvRenderAvailability(body){
     ${monthNavHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'הזמינות שלכן אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.' : 'נשמח לדעת מתי אתן זמינות, ככה נוכל לסדר לכן את החודש.'} · אפשר להגיש עד 24/${addMonths(mk, -1).slice(5)} בשעה 22:30</div>
     ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע. לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.</div>' : ''}
-    <div class="pnote">לכל יום נשמח שתבחרו מתי נוח לכן. ביום ראשון מגיעות ב-11:00, וביום חמישי אין בנות שירות אחרי 16:00.</div>
-    <div class="psvc">${days.map(d => { const fx = fixed.includes(d); return `<div class="psvc-row${have[d] || fx ? '' : ' empty'}"><b>${dayLabel(d)}</b>${fx ? '<em>היעדרות שאושרה</em>' : `<div class="pchoice wrap">${SVC_OPTS.map(o => `<button type="button" class="${have[d] === o[0] ? 'on' : ''}" data-svc="${d}|${o[0]}"${locked ? ' disabled' : ''}>${o[1]}</button>`).join('')}</div>`}</div>`; }).join('')}</div>
+    <div class="pnote">לכל יום נשמח שתבחרו מתי נוח לכן. ביום ראשון מגיעות ב-11:00 (עד 19:00), וביום חמישי עד 16:00.</div>
+    <div class="psvc">${days.map(d => { const fx = fixed.includes(d); return `<div class="psvc-row${have[d] || fx ? '' : ' empty'}"><b>${dayLabel(d)}</b>${fx ? '<em>היעדרות שאושרה</em>' : `<div class="pchoice wrap">${svcOptsFor(d).map(o => `<button type="button" class="${have[d] === o[0] || (have[d] === 'both' && svcOptsFor(d).length === 2 && o[0] !== 'none') ? 'on' : ''}" data-svc="${d}|${o[0]}"${locked ? ' disabled' : ''}>${o[1]}</button>`).join('')}</div>`}</div>`; }).join('')}</div>
     <div class="pprefs-actions"><button type="button" class="btn" id="svc-submit"${locked ? ' disabled' : ''}>${submitted ? 'עדכון והגשה מחדש' : 'הגשה'}</button><span class="pnote">${left ? `נשארו ${left} ימים לבחירה` : 'כל הימים נבחרו, תודה!'}</span></div>`;
   wireMonthNav(body, 'pmonth');
   body.querySelectorAll('[data-svc]').forEach(b => b.addEventListener('click', async () => {

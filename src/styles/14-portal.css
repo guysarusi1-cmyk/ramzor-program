@@ -213,7 +213,7 @@
   .psvc{ display:flex; flex-direction:column; gap:8px; margin:10px 0; }
   .psvc-row{ display:flex; flex-direction:column; gap:6px; padding:8px 10px; border:1px solid var(--p-line); border-radius:12px; background:var(--p-panel); }
   .psvc-row.empty{ border-color:var(--gold); }
-  .pchoice.wrap{ flex-wrap:wrap; }
+  .pchoice.wrap{ flex-wrap:wrap; padding:0; margin:0; max-width:none; }          /* ("wrap" is also the page's container class: none of its padding here) */
   .an-actions{ display:grid; grid-template-columns:auto auto; justify-content:center; align-items:stretch; column-gap:8px; margin:14px 0; }          /* the three ways to send (in-portal and by-mail side by side, 'both' under them) and the send button right next to them, exactly as high as that block; the whole is centred */
   .an-actions .pchoice{ flex-wrap:wrap; align-content:flex-start; width:380px; max-width:100%; margin:0; padding:0; }
   .an-actions .pchoice button{ flex:1 1 40%; }
