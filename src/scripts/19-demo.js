@@ -52,6 +52,12 @@
       else if(/^guided-/.test(what)){ const [, key, n] = what.split('-'); document.getElementById('hub-daily-btn').click(); openGuidedScreen(key); for(let i=1;i<Number(n || 1);i++) document.getElementById('guided-next-btn').click(); }
       return;
     }
+    if(what === 'summary'){   // a child's summary on the TV (&kid=c6; the snapshot time picks the stage)
+      document.getElementById('login-screen').style.display = 'none'; document.getElementById('protected-app').style.display = '';
+      const kid = (location.search.match(/[?&]kid=(\w+)/) || [])[1] || (roster[5] || roster[0]).id;
+      activateDisplayView(); stopCarousel(); showChildSummary(kid);
+      return;
+    }
     if(what === 'ships'){   // every ship, for a visual check
       document.getElementById('protected-app').style.display = 'none';
       const box = document.createElement('div');

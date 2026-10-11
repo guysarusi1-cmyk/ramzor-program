@@ -1668,6 +1668,21 @@
       stopCarousel(); showHub(); PORTAL_TV_LIVE = liveWas; refreshPortalSlides();
       if(q){ q.hidden = true; q.innerHTML = ''; } tvQuietShown = null;
     });
+    await step('child summary', async () => {
+      const fold = document.getElementById('tv-summary-fold');
+      fold.open = true; await sleep(100);
+      check('child summary: under the TV card title there is a folded list of the children', !!fold && document.querySelectorAll('#tv-summary-list [data-sum]').length === roster.length, document.querySelectorAll('#tv-summary-list [data-sum]').length);
+      fold.open = false;
+      activateDisplayView(); stopCarousel();
+      const kid = roster[0]; await showChildSummary(kid.id);
+      const el = document.getElementById('tv-summary');
+      check('child summary: choosing a child opens the summary on the TV with a dramatic opening', !!el && !el.hidden && !!el.querySelector('.sum-open .sum-hero') && el.textContent.includes(displayName(kid)), el && el.className);
+      await sleep(SUMMARY_OPEN_MS + 300);
+      check('child summary: then a page for a program, with a picture', !!el.querySelector('.sum-page'), el.innerHTML.slice(0, 80));
+      closeChildSummary();
+      check('child summary: it closes by itself (here: closed by the check) and the rotation goes on', el.hidden && !summaryChild, 'still open');
+      stopCarousel(); showHub();
+    });
     await step('tv', async () => {
       activateDisplayView(); stopCarousel();
       for(const s of SLIDES){

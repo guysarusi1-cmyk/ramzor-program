@@ -46,6 +46,7 @@ function handleTvCommand(c){
   else if(c.cmd === 'show' && visibleSlideIds().includes(c.slide)){ tvHold(); showSlide(c.slide); }
   else if(c.cmd === 'next'){ tvHold(); tvStep(1); }
   else if(c.cmd === 'prev'){ tvHold(); tvStep(-1); }
+  else if(c.cmd === 'summary' && c.child && typeof showChildSummary === 'function') showChildSummary(c.child);          // (a child's summary: 14q-child-summary.js)
 }
 function announceTvStatus(){
   if(tvControlChannel && !IS_TV_PREVIEW) tvControlChannel.send({ type:'broadcast', event:'status', payload: tvStatusPayload() });
