@@ -103,7 +103,7 @@ function srvRenderCoordSchedule(body){
     ${needLook.length ? `<details class="pissues"><summary>${needLook.length} דברים שדורשים תשומת לב</summary>${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
     <div class="pnote">לחיצה על משמרת בלוח פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בלוח.</div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
+    <div class="cs-layout"><div class="cs-main">${mcalKeyHtml()}${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
   wireMonthNav(body);
   if(!has) return;
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
@@ -248,7 +248,7 @@ function srvPersonRequestsHtml(p, mk){
     <div class="cs-person-head"><img src="${p.photo}" alt=""><div><b>${pEsc(instrName(p, st.instructors))}</b><small>${m.submitted[p.id] ? 'הגיש/ה ✓' : 'עוד לא הגיש/ה'} · ${monthLabel(mk)}</small></div></div>
     ${mine.length ? `<div class="cs-req"><b>שובצו ${mine.length} משמרות</b><span><span class="mcal-name wish-yes">כן ${counts.yes}</span> <span class="mcal-name wish-can">יכול ${counts.avoid}</span> <span class="mcal-name wish-no">לא ${counts.no}</span> <span class="mcal-name wish-none">לא סומן ${counts.none}</span></span></div>` : ''}
     ${line('no', 'לא', by.no)}${line('can', 'יכול', by.avoid)}${line('yes', 'כן', by.yes)}
-    ${(pr.absent || []).length || fixed.length ? `<div class="cs-req"><b>היעדרות</b><span>${[...(fixed.length ? [[...new Set(fixed.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ') + ': ' + dayRanges(fixed.map(f => f.day))] : []), ...((pr.absent || []).length ? ['סומן על ידו/ה: ' + dayRanges(pr.absent)] : [])].join(' · ')}</span></div>` : ''}
+    ${(pr.absent || []).length || fixed.length ? `<div class="cs-req"><b>היעדרות</b><span>${[...(fixed.length ? [[...new Set(fixed.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ') + ': ' + dayRanges(fixed.map(f => f.day))] : []), ...((pr.absent || []).length ? ['לא זמין/ה (סימן/ה בהגשה): ' + dayRanges(pr.absent)] : [])].join(' · ')}</span></div>` : ''}
     ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
     ${(pr.pick || []).length ? `<div class="cs-req"><b>רק אחד מסופי השבוע</b><span>${pr.pick.map(shortDate).join(' · ')}</span></div>` : ''}
     <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
@@ -264,7 +264,6 @@ function srvSidePanelHtml(mk){
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3><button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
     <div class="cs-names">${people.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
-    ${mcalKeyHtml()}
   </aside>`;
 }
 

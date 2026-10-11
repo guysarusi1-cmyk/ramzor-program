@@ -32,7 +32,7 @@ function srvRenderSubmissions(body){
       <div class="pfold-body"><div class="psubs">${list.length ? list.map(subRow).join('') : '<div class="pnote">אין.</div>'}</div></div>
     </details>`).join('')}
     <h2 class="psec">מי נעדר החודש</h2>
-    ${away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}${x.self.length ? (x.fx.length ? ' · ' : '') + 'סומן על ידו/ה: ' + dayRanges(x.self) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'}
+    ${away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}${x.self.length ? (x.fx.length ? ' · ' : '') + 'לא זמין/ה (סימן/ה בהגשה): ' + dayRanges(x.self) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'}
     <button type="button" class="btn ghost" id="abs-add">הוספת היעדרות (מחלה, מילואים, לידה...)</button>`;
   wireMonthNav(body, 'smonth'); wireFolds(body);
   document.getElementById('abs-add').addEventListener('click', () => srvAbsenceSheet(body));
