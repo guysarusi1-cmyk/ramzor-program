@@ -72,10 +72,13 @@ function srvRenderCoordSwaps(body){
     ${waiting.length ? waiting.map(s => `<div class="pmine-row"><span>${s.urgent ? `<span class="pchip missing">⚠ דווח: לא יכול/ה להגיע</span> ${(st.reasons || {})[s.aid] ? `<small class="preason">הסיבה: ${pEsc(st.reasons[s.aid])}</small> ` : ''}` : ''}${pEsc(nameOf(s.from))} · ${slotLabel(s.key)}</span><em class="pst pst-open">${SWAP_STATUS.open}</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
   body.querySelectorAll('[data-oapprove], [data-oreject]').forEach(b => b.addEventListener('click', async () => {
     const approve = !!b.dataset.oapprove, id = b.dataset.oapprove || b.dataset.oreject;
+    const was = (st.openReqs || []).slice();
+    st.openReqs = was.filter(x => x.id !== id);          // (the answer shows at once; the server is asked right after, and the screen goes back if that fails)
+    srvRenderCoordSwaps(body);
     const r = await sbPersonal.rpc('decide_open_shift', { p_id:id, p_approve:approve });
-    if(r.error){ toast(/covered/.test(r.error.message || '') ? 'המשמרת כבר מלאה, אי אפשר לאשר' : /already working/.test(r.error.message || '') ? 'המדריך כבר משובץ באותו יום' : 'הפעולה לא הצליחה. נסו שוב.'); }
-    else toast(approve ? 'אושר. המדריך שובץ למשמרת וקיבל עדכון.' : 'נדחה. המדריך קיבל עדכון.');
-    await srvReloadSafe(); srvRenderCoordSwaps(body);
+    if(r.error){ st.openReqs = was; toast(/covered/.test(r.error.message || '') ? 'המשמרת כבר מלאה, אי אפשר לאשר' : /already working/.test(r.error.message || '') ? 'המדריך כבר משובץ באותו יום' : 'הפעולה לא הצליחה. נסו שוב.'); if(body.isConnected) srvRenderCoordSwaps(body); return; }
+    toast(approve ? 'אושר. המדריך שובץ למשמרת וקיבל עדכון.' : 'נדחה. המדריך קיבל עדכון.');
+    srvReloadSafe().then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSwaps(body); });
   }));
   body.querySelectorAll('[data-approve], [data-reject]').forEach(b => b.addEventListener('click', async () => {
     const approve = !!b.dataset.approve, s = st.swaps.find(x => x.id === (b.dataset.approve || b.dataset.reject));
@@ -83,9 +86,16 @@ function srvRenderCoordSwaps(body){
       const row = st.rows.find(r => r.id === s.aid), w = row ? srvWarnings(s.to, row.day, row.shift, row.from, row.to, row.id) : [];
       if(w.length && !(await confirmSheet({ title:'לאשר למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לאשר', cancelLabel:'חזרה', danger:true }))) return;
     }
-    try { await srvSwapAction('decide_swap', { p_swap:b.dataset.approve || b.dataset.reject, p_approve:approve }); toast(approve ? 'ההחלפה אושרה, והמשמרת עברה. כל מי שנוגע בעניין קיבל עדכון.' : 'ההחלפה נדחתה. שני האנשים קיבלו עדכון.'); }
-    catch(e){ toast(/ahmash/.test(String(e && e.message)) ? 'ההחלפה חסומה: המשמרת תישאר בלי אחמ"שית' : 'הפעולה לא הצליחה. נסו שוב.'); }
-    srvRenderCoordSwaps(body);
+    const row = s && st.rows.find(x => x.id === s.aid), was = st.swaps.slice(), wasStaff = row && row.staff;
+    if(s){ st.swaps = st.swaps.filter(x => x.id !== s.id); if(approve && row) row.staff = s.to; }          // (the answer shows at once; the server is asked right after, and the screen goes back if that fails)
+    srvRenderCoordSwaps(body); toast(approve ? 'ההחלפה אושרה, והמשמרת עברה. כל מי שנוגע בעניין קיבל עדכון.' : 'ההחלפה נדחתה. שני האנשים קיבלו עדכון.');
+    const r = await sbPersonal.rpc('decide_swap', { p_swap:b.dataset.approve || b.dataset.reject, p_approve:approve });
+    if(r.error){
+      st.swaps = was; if(row) row.staff = wasStaff;
+      toast(/ahmash/.test(String(r.error.message)) ? 'ההחלפה חסומה: המשמרת תישאר בלי אחמ"שית' : 'הפעולה לא הצליחה. ההחלפה חזרה לרשימה.');
+      if(body.isConnected) srvRenderCoordSwaps(body); return;
+    }
+    srvReloadSafe().then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSwaps(body); });
   }));
 }
 
@@ -101,9 +111,12 @@ function srvRenderCoordVacations(body){
     <h2 class="psec">בקשות קודמות</h2>
     ${rest.length ? rest.map(v => `<div class="pmine-row"><span>${line(v)}</span><em class="pst pst-${v.status === 'approved' ? 'approved' : 'rejected'}">${SRV_VAC_STATUS[v.status]}</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
   body.querySelectorAll('[data-vac-ok], [data-vac-no]').forEach(b => b.addEventListener('click', async () => {
-    const approve = !!b.dataset.vacOk, r = await sbPersonal.rpc('decide_vacation', { p_id:b.dataset.vacOk || b.dataset.vacNo, p_approve:approve });
-    toast(r.error ? 'הפעולה לא הצליחה' : approve ? 'החופשה אושרה, והימים נכנסו כהיעדרות' : 'הבקשה נדחתה');
-    await srvReloadSafe(); srvRenderCoordVacations(body);
+    const approve = !!b.dataset.vacOk, id = b.dataset.vacOk || b.dataset.vacNo, v = (st.vacations || []).find(x => x.id === id), was = v && v.status;
+    if(v) v.status = approve ? 'approved' : 'rejected';          // (the answer shows at once; the server is asked right after, and the screen goes back if that fails)
+    srvRenderCoordVacations(body); toast(approve ? 'החופשה אושרה, והימים נכנסו כהיעדרות' : 'הבקשה נדחתה');
+    const r = await sbPersonal.rpc('decide_vacation', { p_id:id, p_approve:approve });
+    if(r.error){ if(v) v.status = was; toast('הפעולה לא הצליחה, הבקשה חזרה לרשימה'); if(body.isConnected) srvRenderCoordVacations(body); return; }
+    srvReloadSafe().then(() => { if(body.isConnected && portalServerOn) srvRenderCoordVacations(body); });
   }));
 }
 
@@ -155,8 +168,11 @@ function srvRenderCoordSettings(body){
         const move = async (id, dir) => {
           const ids = instr.map(p => p.id), i = ids.indexOf(id), j = i + dir; if(j < 0 || j >= ids.length) return;
           [ids[i], ids[j]] = [ids[j], ids[i]];
-          for(let k = 0; k < ids.length; k++) await sbPersonal.from('staff_private').update({ leader_priority:k + 1 }).eq('staff_id', ids[k]);
-          again();
+          const changed = ids.filter((x, k) => (st.priv[x] || {}).leader_priority !== k + 1);          // (usually only the two who traded places)
+          ids.forEach((x, k) => { (st.priv[x] = st.priv[x] || {}).leader_priority = k + 1; });
+          srvRenderCoordSettings(body);          // (the list moves at once; the server is told right after)
+          const res = await Promise.all(changed.map(x => sbPersonal.from('staff_private').update({ leader_priority:st.priv[x].leader_priority }).eq('staff_id', x)));
+          if(res.some(r => r.error)){ toast('הסדר לא נשמר. נסו שוב.'); again(); }
         };
         box.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => move(b.dataset.up, -1)));
         box.querySelectorAll('[data-down]').forEach(b => b.addEventListener('click', () => move(b.dataset.down, 1)));
