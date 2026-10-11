@@ -239,10 +239,20 @@ function srvRenderCoordSettings(body){
       return { html, wire };
     }],
     log: [() => 'יומן שינויים בסידור', async () => {
-      const log = await sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(40);
+      const log = await sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(300);
+      const rows = log.data || [];
+      // the changes in groups: what the system built, and what people did (added / removed / changed or swapped)
+      const GROUPS = [['auto', 'בנייה אוטומטית של המערכת', l => !l.by_staff], ['ins', 'משמרות שנוספו', l => l.by_staff && l.what === 'insert shift'], ['del', 'משמרות שהוסרו', l => l.by_staff && l.what === 'delete shift'], ['upd', 'משמרות ששונו או הוחלפו', l => l.by_staff && l.what !== 'insert shift' && l.what !== 'delete shift']];
+      const line = l => {
+        const o = (l.detail && l.detail.old) || {}, n = (l.detail && l.detail.new) || {}, d = Object.keys(n).length ? n : o;
+        const who = l.by_staff ? nameOf(l.by_staff) : 'המערכת / המנהל';
+        const person = l.what === 'update shift' && o.staff_id && n.staff_id && o.staff_id !== n.staff_id ? `${pEsc(nameOf(o.staff_id))} ← ${pEsc(nameOf(n.staff_id))}` : pEsc(nameOf(d.staff_id));
+        const hours = l.what === 'update shift' && o.staff_id === n.staff_id && (o.from_time !== n.from_time || o.to_time !== n.to_time) ? ` · שעות ${String(o.from_time || '').slice(0, 5)}–${String(o.to_time || '').slice(0, 5)} ← ${String(n.from_time || '').slice(0, 5)}–${String(n.to_time || '').slice(0, 5)}` : '';
+        return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')} · ${pEsc(who)}</small><br>משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${person}${hours}</span></div>`;
+      };
       const html = `
-      <div class="pnote">מי שינה משמרת ומתי (שינויים ידניים, החלפות והבנייה האוטומטית).</div>
-      ${(log.data || []).map(l => { const d = (l.detail && (l.detail.new || l.detail.old)) || {}; const who = l.by_staff ? nameOf(l.by_staff) : 'המערכת / המנהל'; return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')}</small><br>${pEsc(who)}: ${l.what === 'insert shift' ? 'נוספה' : l.what === 'delete shift' ? 'הוסרה' : 'עודכנה'} משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${pEsc(nameOf(d.staff_id))}</span></div>`; }).join('') || '<div class="pnote">אין שינויים.</div>'}`;
+      <div class="pnote">מי שינה משמרת ומתי. מקובץ לפי סוג השינוי; פותחים קבוצה כדי לראות את השינויים בה (החדשים למעלה).</div>
+      ${GROUPS.map(([key, title, test]) => { const list = rows.filter(test); return `<details class="pfold pfold-in" data-lgroup="${key}"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">${list.slice(0, 60).map(line).join('') || '<div class="pnote">אין.</div>'}${list.length > 60 ? `<div class="pnote">ועוד ${list.length - 60} שינויים ישנים יותר.</div>` : ''}</div></details>`; }).join('')}`;
       return { html, wire:() => {} };
     }]
   };
