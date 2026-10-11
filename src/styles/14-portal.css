@@ -365,3 +365,4 @@
   .adm-weights{ display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:6px 14px; }
   .adm-weight{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 8px; border-radius:8px; font-size:13.5px; }
   .adm-weight input{ width:90px; text-align:center; } .adm-weight.changed{ background:rgba(232,185,74,.14); }
+  .pnotices-top{ display:flex; justify-content:flex-start; margin-bottom:8px; }          /* "mark all as read" at the top of the new messages */
