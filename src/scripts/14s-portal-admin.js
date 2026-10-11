@@ -114,16 +114,23 @@ async function adminRebuild(box){
 
 // ---- 5. everything that happened, in one list: the schedule's changes, the ahmash control, the rebuild requests
 async function adminLog(box){
-  const [a, c, q] = await Promise.all([
-    sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(80),
-    sbPersonal.from('control_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(80),
-    sbPersonal.from('sched_requests').select('at,requested_by,month,result,done_at').order('at', { ascending:false }).limit(20)
+  const [a, c, q, s, pv] = await Promise.all([
+    sbPersonal.from('audit_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(150),
+    sbPersonal.from('control_log').select('at,by_staff,what,detail').order('at', { ascending:false }).limit(150),
+    sbPersonal.from('sched_requests').select('at,requested_by,month,result,done_at').order('at', { ascending:false }).limit(30),
+    sbPersonal.from('staff').select('id,kind'),
+    sbPersonal.from('staff_private').select('staff_id,is_admin,ahmash_rank')
   ]);
+  // who did it decides the group: the admin, the coordinator, an ahmash, an instructor (and what the system did by itself)
+  const kind = {}, flag = {}; (s.data || []).forEach(x => { kind[x.id] = x.kind; }); (pv.data || []).forEach(x => { flag[x.staff_id] = x; });
+  const group = id => !id ? 'system' : (flag[id] && flag[id].is_admin) || kind[id] === 'admin' ? 'admin' : kind[id] === 'coordinator' ? 'coord' : flag[id] && flag[id].ahmash_rank > 0 ? 'ahmash' : 'instr';
   const who = id => id ? nameOf(id) : 'המערכת';
   const items = [
-    ...(a.data || []).map(l => { const d = (l.detail && (l.detail.new || l.detail.old)) || {}; return { at:l.at, who:who(l.by_staff), text:`סידור: ${l.what === 'insert shift' ? 'נוספה' : l.what === 'delete shift' ? 'הוסרה' : 'עודכנה'} משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${nameOf(d.staff_id)}` }; }),
-    ...(c.data || []).map(l => ({ at:l.at, who:who(l.by_staff), text:'בקרת אחמ"ש: ' + l.what.replace('tv_day_changes', 'מי במסך היום').replace('timetable_day', 'הלו"ז של היום').replace('timetable_fixed', 'הלו"ז הקבוע').replace('bonus_day', 'בונוסים היום').replace(' insert', ' (הוספה)').replace(' delete', ' (מחיקה)').replace(' update', ' (עדכון)') })),
-    ...(q.data || []).map(l => ({ at:l.at, who:who(l.requested_by), text:`בקשה לבנות מחדש את ${monthLabel(l.month.slice(0, 7))}${l.done_at ? ' · ' + (l.result || '') : ''}` }))
-  ].sort((x, y) => String(y.at).localeCompare(String(x.at))).slice(0, 150);
-  box.innerHTML = items.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL')} · ${pEsc(x.who)}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>';
+    ...(a.data || []).map(l => { const d = (l.detail && (l.detail.new || l.detail.old)) || {}; return { at:l.at, by:l.by_staff, text:`סידור: ${l.what === 'insert shift' ? 'נוספה' : l.what === 'delete shift' ? 'הוסרה' : 'עודכנה'} משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${nameOf(d.staff_id)}` }; }),
+    ...(c.data || []).map(l => ({ at:l.at, by:l.by_staff, text:'בקרת אחמ"ש: ' + l.what.replace('tv_day_changes', 'מי במסך היום').replace('timetable_day', 'הלו"ז של היום').replace('timetable_fixed', 'הלו"ז הקבוע').replace('bonus_day', 'בונוסים היום').replace(' insert', ' (הוספה)').replace(' delete', ' (מחיקה)').replace(' update', ' (עדכון)') })),
+    ...(q.data || []).map(l => ({ at:l.at, by:l.requested_by, text:`בקשה לבנות מחדש את ${monthLabel(l.month.slice(0, 7))}${l.done_at ? ' · ' + (l.result || '') : ''}` }))
+  ].sort((x, y) => String(y.at).localeCompare(String(x.at)));
+  const GROUPS = [['admin', 'מנהל'], ['coord', 'רכזת'], ['ahmash', 'אחמ"ש'], ['instr', 'מדריך'], ['system', 'המערכת (אוטומטי)']];
+  box.innerHTML = GROUPS.map(([g, title]) => { const list = items.filter(x => group(x.by) === g).slice(0, 100); return `<details class="pfold pfold-in"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">
+    ${list.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL')} · ${pEsc(who(x.by))}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('');
 }
