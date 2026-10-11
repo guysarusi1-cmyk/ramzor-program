@@ -222,6 +222,12 @@
   .pstaff-row input{ flex:2 1 160px; }
   .pstaff-add{ display:flex; flex-wrap:wrap; gap:8px; }
   .pstaff-add input, .pstaff-add select{ flex:1 1 120px; }
+  #sd-scope-row{ align-items:flex-end; }          /* special day: the "relevant to" choice, its hours and the add button on one line, the button as high as the fields */
+  #sd-scope-row .pfield{ margin:0; flex:0 1 220px; }
+  #sd-scope-row .pfield select, #sd-scope-row .pfield input{ flex:none; width:100%; }
+  #sd-hours{ display:flex; gap:8px; } #sd-hours[hidden], #sd-scope-row .pfield[hidden]{ display:none; }
+  #sd-hours .pfield{ flex:0 1 130px; }
+  #sd-scope-row .btn{ flex:none; min-height:44px; padding:0 24px; }
   .pstaff-order{ display:flex; gap:4px; }
   .pcell small, .pchip small{ opacity:.8; font-size:.8em; }
   .pstaff-photo{ flex:0 0 40px; cursor:pointer; }
