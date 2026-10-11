@@ -44,7 +44,7 @@ function srvRenderSchedule(body){
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
-      <div class="pfold-body">${monthCalHtml(ctx, m.assignments, { me:me.id, ahmash:srv.ahmash })}</div>
+      <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}${monthCalHtml(ctx, m.assignments, { me:me.id, ahmash:srv.ahmash })}</div>
     </details>
     ${isInstr ? `<details class="pfold" data-fold="openshifts"${openFold('openshifts') ? ' open' : ''}>
       <summary><span>משמרות פתוחות</span><span class="pcount" id="open-count"></span></summary>
@@ -67,20 +67,38 @@ function srvRenderSchedule(body){
       const q = tx(kind === 'swap' ? 'pick_swap_q' : 'pick_cant_q', fem);
       const ps = portalSheet(`<h2>${q}</h2>${pickable.length ? `<div class="pchange-list">${pickable.map(r => `<button type="button" class="pmine-row pick" data-pick-shift="${r.id}" data-day="${r.day}"><div class="pmine-main">${srvRowLine(r)}</div></button>`).join('')}</div>` : `<div class="pnote">${tx('change_none')}</div>`}
         <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>חזרה</button></div>`);
-      ps.querySelectorAll('[data-pick-shift]').forEach(pb => pb.addEventListener('click', async () => {
-        const r = cur.rows.find(x => x.id === pb.dataset.pickShift); ps.close(); if(!r) return;
-        const cand = await srvSwapCandidates(r.id);
-        if(kind === 'swap'){
-          if(!(await confirmSheet({ title:'לבקש החלפה?', text:tx('swap_confirm', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
-          try { await srvSwapAction('request_swap', { p_assignment:r.id }); toast(tx('swap_posted')); } catch(e){ toast(tx('swap_fail')); }
-        } else {
-          const why = await srvAskReason(dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand), fem); if(why === null) return;
-          try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:why }); toast(tx('cant_done')); } catch(e){ toast(tx('cant_fail')); }
-        }
-        srvRenderSchedule(body);
+      ps.querySelectorAll('[data-pick-shift]').forEach(pb => pb.addEventListener('click', () => {
+        const r = cur.rows.find(x => x.id === pb.dataset.pickShift); ps.close(); if(r) srvDoChange(kind, r, body, fem);
       }));
     }));
   });
+  // the team calendar: a tap on one's own name (an upcoming shift) offers the same two changes for that shift
+  const team = body.querySelector('[data-fold="team"] .pfold-body');
+  if(team && isInstr) team.addEventListener('click', ev => {
+    const nm = ev.target.closest('.mcal-name.me'), cell = nm && nm.closest('.mcal-cell'); if(!cell) return;
+    const cur = portalLoad(), r = cur.rows.find(x => x.staff === me.id && x.day === cell.dataset.day && x.shift !== 'L' && SRV_SHIFT_UI[x.shift === 'S' ? 'M' : x.shift] === cell.dataset.shift);
+    if(!r || r.day < today) return;
+    const fem = !(srv.profile && srv.profile.female === false), pending = cur.swaps.find(s => s.aid === r.id && ['open', 'offered'].includes(s.status));
+    if(pending){ toast(`כבר יש בקשה פתוחה למשמרת הזו (${SWAP_STATUS[pending.status]})`); return; }
+    const sh = portalSheet(`<h2>${dayLabel(r.day)} · ${SRV_SHIFT_WORD[r.shift]}</h2><div class="pnote">${srvRowLine(r)}</div>
+      <div class="pchange-opts"><button type="button" class="btn" data-change="swap"><b>בקשת החלפה</b><small>${tx('change_swap_sub')}</small></button>
+      <button type="button" class="btn ghost" data-change="cant"><b>${fem ? 'לא יכולה להגיע' : 'לא יכול להגיע'}</b><small>${tx('change_cant_sub')}</small></button></div>
+      <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>חזרה</button></div>`);
+    sh.querySelectorAll('[data-change]').forEach(opt => opt.addEventListener('click', () => { sh.close(); srvDoChange(opt.dataset.change, r, body, fem); }));
+  });
+}
+
+// a swap request or a "cannot come" report for one of the person's own shifts (asks first; a report needs a reason)
+async function srvDoChange(kind, r, body, fem){
+  const cand = await srvSwapCandidates(r.id);
+  if(kind === 'swap'){
+    if(!(await confirmSheet({ title:'לבקש החלפה?', text:tx('swap_confirm', dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand)), okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    try { await srvSwapAction('request_swap', { p_assignment:r.id }); toast(tx('swap_posted')); } catch(e){ toast(tx('swap_fail')); }
+  } else {
+    const why = await srvAskReason(dayLabel(r.day), SRV_SHIFT_WORD[r.shift], srvCandidatesText(cand), fem); if(why === null) return;
+    try { await srvSwapAction('report_cannot_come', { p_assignment:r.id, p_note:why }); toast(tx('cant_done')); } catch(e){ toast(tx('cant_fail')); }
+  }
+  if(body.isConnected) srvRenderSchedule(body);
 }
 
 // ---------------------------------------------------------------- long vacation requests (instructors and service girls)

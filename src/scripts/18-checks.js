@@ -1244,7 +1244,9 @@
         document.querySelector('[data-goal="weekly45"]').click(); await sleep(60);
         check('portal server: choosing a goal marks it on the screen', portalMonth(next).goals[srv.me] === 'weekly45' && document.querySelector('[data-goal="weekly45"]').classList.contains('on'), JSON.stringify(portalMonth(next).goals));
         document.querySelector('[data-goal=""]').click(); await sleep(60);
+        check('portal server: "אין לי העדפה מיוחדת" can be chosen, and it is the one marked when nothing else was chosen', !portalMonth(next).goals[srv.me] && document.querySelector('[data-goal=""]').classList.contains('on') && document.querySelectorAll('.pgoal-opt.on').length === 1, document.querySelectorAll('.pgoal-opt.on').length);
         check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pday:not(.absent) .pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
+        check('portal server: a locked day (vacation, sick leave...) has its reason written on it', [...document.querySelectorAll('.pday.fixed')].every(d => !!d.querySelector('.pday-fixed') && d.querySelector('.pday-fixed').textContent.trim().length > 1), document.querySelectorAll('.pday.fixed').length + ' locked days');
         check('portal server: the two small questions use the normal question style (no green/red)', ![...document.querySelectorAll('.pconsents button')].some(b => /rgb\(123, 224, 160\)|rgb\(255, 138, 128\)/.test(getComputedStyle(b).color)), [...document.querySelectorAll('.pconsents button')].map(b => getComputedStyle(b).color).join(' '));
         const day = daysOfMonth(next)[9], key = `${day}|n`;
         document.querySelector('[data-plevel="no"]').click(); await sleep(50);
@@ -1376,6 +1378,11 @@
         const aid = portalLoad().rows.find(r => r.staff === i1 && r.day === day).id, cr = await sbPersonal.rpc('swap_candidates', { p_assignment:aid });
         if(cr.error) check('(info) portal swaps: the list of colleagues who could take a shift needs supabase/scheduling-v5.sql (not run yet)', true, '');
         else check('portal swaps: the list of colleagues who could take the shift is returned, and it does not include the person herself', Array.isArray(cr.data) && cr.data.length >= 1 && !cr.data.some(x => x.name === srv.meRow.first), JSON.stringify(cr.data).slice(0, 100));
+        { const myName = document.querySelector(`[data-fold="team"] .mcal-cell[data-day="${day}"] .mcal-name.me`);
+          if(myName){ myName.click(); await sleep(200); }
+          const opened = !!document.querySelector('.psheet [data-change="swap"]') && !!document.querySelector('.psheet [data-change="cant"]');
+          check('portal swaps: a tap on the person own name in the team calendar offers "בקשת החלפה" and "לא יכול/ה להגיע" for that shift', !!myName && opened, 'name ' + !!myName + ' / sheet ' + opened);
+          const cl = document.querySelector('.psheet [data-close]'); if(cl){ cl.click(); await sleep(200); } }
         const flowOk = await changeFlow('swap', day);
         check('portal swaps: "בקשת החלפה" -> request a swap -> asked which shift (in the right gender) -> picking it asks to confirm', flowOk && /איזו משמרת תרצ[הי] להחליף\?/.test(lastQuestion), flowOk + ' / ' + lastQuestion);
         check('portal swaps: the request is created on the server', await waitFor(() => portalLoad().swaps.some(s => s.status === 'open' && s.from === i1)), 'not created');
@@ -1393,7 +1400,7 @@
         check('portal swaps: the coordinator sees it waiting for her answer', !!ok, 'nothing waiting');
         ok.click();
         check('portal swaps: after the approval the request is closed', await waitFor(() => !portalLoad().swaps.some(s => s.from === i1 && s.to === i2 && s.status === 'offered')), 'still waiting');
-        const now = await sbPersonal.from('assignment').select('staff_id').eq('day', day).eq('shift', 'M');
+        let now = null; for(let k = 0; k < 40; k++){ now = await sbPersonal.from('assignment').select('staff_id').eq('day', day).eq('shift', 'M'); if(!now.error && now.data.length === 1 && now.data[0].staff_id === i2) break; await sleep(250); }          // (the screen answers at once; the server finishes a moment later)
         check('portal swaps: the shift now belongs to the colleague', !now.error && now.data.length === 1 && now.data[0].staff_id === i2, JSON.stringify(now.data));
         // 4. both people got a notice
         await sign('instructor'); showPortal('inbox'); await sleep(500);
