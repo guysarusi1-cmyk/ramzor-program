@@ -59,6 +59,14 @@
       activateDisplayView(); stopCarousel(); showChildSummary(kid);
       return;
     }
+    if(what === 'faces'){   // the drawn characters of people without a photo, for a visual check
+      document.getElementById('protected-app').style.display = 'none';
+      const box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:900;background:#1d2340;display:flex;flex-wrap:wrap;gap:3vmin;align-content:center;justify-content:center;padding:4vmin';
+      box.innerHTML = Array.from({ length:16 }, (_, i) => `<div style="width:20vmin;height:20vmin;border-radius:50%;overflow:hidden;border:.6vmin solid #fff">${personArt({ id:'person-' + i * 7919, female:i < 8 })}</div>`).join('');
+      document.body.appendChild(box);
+      return;
+    }
     if(what === 'ships'){   // every ship, for a visual check
       document.getElementById('protected-app').style.display = 'none';
       const box = document.createElement('div');

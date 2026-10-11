@@ -40,7 +40,7 @@ function renderShiftsLive(){
   el.className = 'tv-instructors tvs';
   el.style.setProperty('--tvs-size', most <= 5 ? '15vh' : most <= 7 ? '12.5vh' : most <= 9 ? '10.5vh' : '9vh');
   el.innerHTML = ['M', 'A', 'N'].map(code => `<div class="tvs-band ${tvShiftPhase(code)}"><div class="tvs-art">${TV_SHIFT_ART[code]}</div>
-      <div class="tvs-people">${shown(code).map(p => `<div class="tvs-person">${p.photo ? `<img class="tvs-photo" src="${p.photo}" alt="">` : `<div class="tvs-photo tvs-face" aria-hidden="true">${personFace(p)}</div>`}<div class="tvs-name">${escapeHtml(p.label)}</div></div>`).join('') || '<div class="tvs-none">·</div>'}</div></div>`).join('');
+      <div class="tvs-people">${shown(code).map(p => `<div class="tvs-person">${p.photo ? `<img class="tvs-photo" src="${p.photo}" alt="">` : `<div class="tvs-photo tvs-face">${personArt(p)}</div>`}<div class="tvs-name">${escapeHtml(p.label)}</div></div>`).join('') || '<div class="tvs-none">·</div>'}</div></div>`).join('');
 }
 function renderTimetableLive(){
   const el = document.getElementById('tv-timetable'), list = (tvTimetable && tvTimetable.items) || [];

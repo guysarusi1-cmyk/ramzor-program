@@ -9,7 +9,8 @@
   .tvs-people{ display:flex; flex-wrap:wrap; align-items:center; gap:1.4vmin 2.6vmin; min-width:0; }
   .tvs-person{ display:flex; flex-direction:column; align-items:center; gap:.6vmin; width:calc(var(--tvs-size, 14vh) + 2vmin); }
   .tvs-photo{ width:var(--tvs-size, 14vh); height:var(--tvs-size, 14vh); border-radius:50%; object-fit:cover; border:.5vmin solid rgba(255,255,255,.85); box-shadow:0 .8vmin 2vmin rgba(0,0,0,.35); background:#2a3157; }
-  .tvs-face{ display:grid; place-items:center; font-size:calc(var(--tvs-size, 14vh) * .62); line-height:1; }
+  .tvs-face{ overflow:hidden; padding:0; } .tvs-face svg, .ctl-face-art svg{ width:100%; height:100%; display:block; }          /* the drawn character of a person without a photo */
+  .ctl-face-art{ overflow:hidden; display:inline-block; }
   .tvs-name{ font-family:'Rubik', sans-serif; font-weight:700; font-size:2.8vmin; color:#fff; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
   .tvs-band.now .tvs-name{ color:#ffe9ad; }
   .tvs-none{ color:rgba(255,255,255,.35); font-size:5vmin; }

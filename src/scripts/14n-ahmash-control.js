@@ -122,7 +122,7 @@ function personFace(p){
   let h = 0; String(p.id).split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
   return set[h % set.length];
 }
-const ctlFace = p => p.photo ? `<img class="ctl-face" src="${p.photo}" alt="">` : `<span class="ctl-face ctl-face-emoji" aria-hidden="true">${personFace(p)}</span>`;
+const ctlFace = p => p.photo ? `<img class="ctl-face" src="${p.photo}" alt="">` : `<span class="ctl-face ctl-face-art">${personArt(p)}</span>`;
 
 // ---- 2. today's timetable (and, for the coordinator, the fixed timetable of each weekday)
 async function ctlTimetable(box){
