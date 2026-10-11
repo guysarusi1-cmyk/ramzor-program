@@ -30,16 +30,19 @@ function shiftPeople(data){
     if(ch.action === 'remove' && m.has(ch.staff)) m.get(ch.staff).removed = true;
     if(ch.action === 'add' && byId[ch.staff] && !m.has(ch.staff)) m.set(ch.staff, Object.assign({}, byId[ch.staff], { added:true }));
   });
-  const order = list => {
+  const marked = data.ahmash && typeof data.ahmash === 'object' ? data.ahmash : null;          // (scheduling-v17.sql: THE ahmash of the shift, the one the schedule marks)
+  const order = (list, code) => {
     const rank = p => p.kind === 'teacher' ? 0 : p.kind === 'service' ? 3 : 1;
     const sorted = list.slice().sort((a, b) => rank(a) - rank(b) || String(a.label).localeCompare(String(b.label), 'he'));
-    const ahm = sorted.filter(p => !p.removed && p.kind !== 'teacher' && p.kind !== 'service' && p.ahmash > 0).sort((a, b) => a.ahmash - b.ahmash)[0];
+    const able = sorted.filter(p => !p.removed && p.kind !== 'teacher' && p.kind !== 'service' && p.ahmash > 0);
+    const ahm = marked ? (able.find(p => p.id === marked[code]) || (marked[code] ? able.sort((a, b) => a.ahmash - b.ahmash)[0] : null))          // (the marked one; if the control took him off the screen today, the next ahmash on the shift)
+                       : able.sort((a, b) => a.ahmash - b.ahmash)[0];
     if(!ahm) return sorted;
     const rest = sorted.filter(p => p !== ahm), firstNonTeacher = rest.findIndex(p => p.kind !== 'teacher');
     rest.splice(firstNonTeacher < 0 ? rest.length : firstNonTeacher, 0, ahm);
     return rest;
   };
-  return { M:order([...out.M.values()]), A:order([...out.A.values()]), N:order([...out.N.values()]) };
+  return { M:order([...out.M.values()], 'M'), A:order([...out.A.values()], 'A'), N:order([...out.N.values()], 'N') };
 }
 
 // ---- the screen

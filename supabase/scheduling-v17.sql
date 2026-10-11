@@ -26,4 +26,58 @@ begin
 end $$;
 revoke all on function public.welcome_staff(uuid, text) from public, anon;
 grant execute on function public.welcome_staff(uuid, text) to authenticated;
+
+-- ---------- the kids' TV: THE ahmash of today's shifts, the same one the schedule marks (the afternoon every day, the morning on Friday and Saturday) ----------
+-- The same rule as the portal (14e-portal-core.js, ahmashPicks), going through the month in order: a main ahmash before a second-rank one; then somebody
+-- who was not the ahmash the day before; then the one who has been the ahmash the fewest times this month; then by id.
+create or replace function public.tv_ahmash_picks(p_day date) returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare d date := date_trunc('month', p_day)::date; code text; cand record; best int; picked uuid; cnt jsonb := '{}'; seen jsonb := '{}'; out jsonb := '{}';
+begin
+  while d <= p_day loop
+    foreach code in array (case when extract(dow from d) in (5, 6) then array['M', 'A'] else array['A'] end) loop
+      select min(p.ahmash_rank) into best
+        from public.assignment a join public.staff s on s.id = a.staff_id join public.staff_private p on p.staff_id = s.id join public.schedule sc on sc.month = a.month and sc.status = 'published'
+        where s.active and p.ahmash_rank > 0 and (
+          (code = 'M' and ((a.day = d and a.shift in ('M', 'S')) or (a.shift = 'L' and a.day = d - 1))) or
+          (code = 'A' and ((a.day = d and a.shift = 'A') or (a.shift = 'L' and (a.day = d or a.day = d - 1)))));
+      picked := null;
+      if best is not null then
+        select x.staff_id into picked from (
+          select distinct a.staff_id from public.assignment a join public.staff s on s.id = a.staff_id join public.staff_private p on p.staff_id = s.id join public.schedule sc on sc.month = a.month and sc.status = 'published'
+          where s.active and p.ahmash_rank = best and (
+            (code = 'M' and ((a.day = d and a.shift in ('M', 'S')) or (a.shift = 'L' and a.day = d - 1))) or
+            (code = 'A' and ((a.day = d and a.shift = 'A') or (a.shift = 'L' and (a.day = d or a.day = d - 1)))))) x
+          order by seen ? (x.staff_id::text || '|' || (d - 1)::text), coalesce((cnt ->> x.staff_id::text)::int, 0), x.staff_id::text
+          limit 1;
+        cnt := jsonb_set(cnt, array[picked::text], to_jsonb(coalesce((cnt ->> picked::text)::int, 0) + 1));
+        seen := seen || jsonb_build_object(picked::text || '|' || d::text, true);
+      end if;
+      if d = p_day then out := out || jsonb_build_object(code, picked); end if;
+    end loop;
+    d := d + 1;
+  end loop;
+  return out;
+end $$;
+revoke all on function public.tv_ahmash_picks(date) from public, anon;
+-- who is on shift today, now with THE ahmash of each shift (see above)
+create or replace function public.tv_shifts_today() returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare d date := (now() at time zone 'Asia/Jerusalem')::date; sh jsonb;
+begin
+  select value into sh from public.sched_settings where key = 'shifts';
+  return jsonb_build_object(
+    'day', d,
+    'ahmash', public.tv_ahmash_picks(d),
+    'rows', coalesce((select jsonb_agg(jsonb_build_object('staff', a.staff_id, 'shift', a.shift, 'day', a.day,
+                        'from', to_char(coalesce(a.from_time, (sh -> a.shift ->> 'from')::time), 'HH24:MI'), 'to', to_char(coalesce(a.to_time, (sh -> a.shift ->> 'to')::time), 'HH24:MI')))
+                      from public.assignment a join public.staff s on s.id = a.staff_id join public.schedule sc on sc.month = a.month and sc.status = 'published'
+                      where s.active and (a.day = d or (a.shift = 'L' and a.day = d - 1))), '[]'),
+    'changes', coalesce((select jsonb_agg(jsonb_build_object('staff', c.staff_id, 'shift', c.shift, 'action', c.action)) from public.tv_day_changes c where c.day = d), '[]'),
+    'people', coalesce((select jsonb_agg(jsonb_build_object('id', s.id, 'label', public.tv_label(s.id), 'photo', s.photo_url, 'female', coalesce(p.female, true), 'kind', s.kind, 'ahmash', coalesce(p.ahmash_rank, 0)))
+                        from public.staff s left join public.staff_private p on p.staff_id = s.id
+                        where s.active and (s.id in (select a.staff_id from public.assignment a join public.schedule sc on sc.month = a.month and sc.status = 'published' where a.day = d or (a.shift = 'L' and a.day = d - 1))
+                                            or s.id in (select c.staff_id from public.tv_day_changes c where c.day = d))), '[]'));
+end $$;
+revoke all on function public.tv_shifts_today() from public;
+grant execute on function public.tv_shifts_today() to anon, authenticated;
+
 select 'scheduling_v17' as part, 'ok' as result;
