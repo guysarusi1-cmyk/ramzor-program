@@ -83,6 +83,7 @@ async function srvLoad(){
   pickRows.forEach(r => { const m = st.months[monthOf(r.friday)]; if(m) srvPrefsOf(m, r.staff_id).pick.push(r.friday); });
   if(srv.profileFor !== meId){ srv.profileFor = meId; srv.me = meId; srv.ahmash = {}; try { const ar = await sbPersonal.rpc('ahmash_staff'); if(!ar.error && ar.data) ar.data.forEach(x => { srv.ahmash[x.staff_id] = x.rank; }); } catch(e){}          // (who is an ahmash, for the star on the team calendar; comes with scheduling-v10.sql)
     try { const pr = await sbPersonal.rpc('my_profile'); srv.profile = pr.error ? null : pr.data; } catch(e){ srv.profile = null; } await srvLoadSettings(); applyPortalSize(); }
+  if(srv.meRow && srv.profile && srv.profile.admin) srv.meRow.admin = true;          // (the admin flag: the management portal; scheduling-v18.sql)
   sched.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.status = r.status; m.published = r.status === 'published'; } });
   st.rows = [];
   if(sched.length){                                       // (the database shows a person only the published schedules; the coordinator sees the drafts too)
@@ -94,7 +95,7 @@ async function srvLoad(){
   if(!fresh()) return false;
   srv.saved = {};
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
-  if(srv.meRow && srv.meRow.role === 'coordinator') await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)
+  if(srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)) await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)
   if(srv.photos === null) srvLoadPhotos();                                          // (the photos are heavy, so they come once, in the background)
   return true;
 }
@@ -199,7 +200,7 @@ async function srvSubmit(mk, note, goal){
 
 // ---- the screens in server mode
 function srvTabs(me){
-  if(me.role === 'coordinator') return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']];
+  if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']];
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
   if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
@@ -207,7 +208,7 @@ function srvTabs(me){
 }
 function srvRenderTab(me, body, t){
   const soon = what => { body.innerHTML = `<div class="pnote">${what} — עדיין בבנייה.</div>`; };
-  if(me.role === 'coordinator'){
+  if(portalAsCoord(me)){
     if(t === 'submissions') return srvRenderSubmissions(body);
     if(t === 'swaps') return srvRenderCoordSwaps(body);
     if(t === 'vacations') return srvRenderCoordVacations(body);
@@ -316,7 +317,7 @@ async function personalEnter(){
   showAppHome();
   return true;
 }
-function srvOpenPortal(){ portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null; showPortal(); }
+function srvOpenPortal(){ portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null; if(srv.meRow && srv.meRow.role === 'coordinator') portalUi.manager = !!srv.meRow.admin; showPortal(); }
 async function personalLeave(){
   try { await srvFlush(); } catch(e){}
   await sbPersonal.auth.signOut();

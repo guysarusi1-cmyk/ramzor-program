@@ -8,6 +8,8 @@ const portalUi = { persona:'c1', tab:null, month:null, level:'avoid', openDay:nu
 function portalPerson(id){ return portalLoad().instructors.find(p => p.id === id); }
 function portalMe(){ return portalPerson(portalUi.persona) || portalLoad().instructors[0]; }          // (in server mode persona = the signed-in person)
 function portalIsCoordinator(){ return portalMe().role === 'coordinator'; }
+// the coordinator's view of the portal: the coordinator herself, or the admin when he opened the management portal (an admin can also be an instructor)
+const portalAsCoord = me => !!me && (me.role === 'coordinator' || (!!portalUi.manager && !!me.admin));
 function pEsc(s){ return escapeHtml(s == null ? '' : s); }
 function portalActivateView(id){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -41,14 +43,20 @@ function showAppHome(){
         </button>
         <button type="button" class="home-card" id="apphome-portal">
           <span class="apphome-emoji" aria-hidden="true">👥</span>
-          <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'coordinator' ? 'פורטל הרכזת' : 'פורטל המדריך'}</span>
+          <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
           <span class="home-card-sub">משמרות, העדפות והודעות</span>
         </button>
+        ${portalServerOn && (portalMe() || {}).admin && (portalMe() || {}).role !== 'coordinator' ? `<button type="button" class="home-card" id="apphome-manage">
+          <span class="apphome-emoji" aria-hidden="true">🛠️</span>
+          <span class="home-card-title">פורטל ניהול</span>
+          <span class="home-card-sub">כל מה שהרכזת רואה ועושה, ועוד</span>
+        </button>` : ''}
       </div>
       ${portalServerOn ? '' : '<div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>'}
     </div>`;
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
-  document.getElementById('apphome-portal').addEventListener('click', () => portalServerOn ? srvOpenPortal() : showPortal());
+  document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else showPortal(); });
+  const mg = document.getElementById('apphome-manage'); if(mg) mg.addEventListener('click', () => { portalUi.manager = true; srvOpenPortal(); });
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
 }
 
@@ -71,10 +79,10 @@ function showPortal(tab){
   const leopard = portalServerOn && me.role === 'coordinator' && !me.admin && srv.portalTheme === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
   document.body.classList.toggle('leopard-bg', leopard);
   view.innerHTML = `
-    <div class="portal-shell${portalServerOn && me.role === 'coordinator' ? ' wide' : ''}" data-ptheme="${theme}">
+    <div class="portal-shell${portalServerOn && portalAsCoord(me) ? ' wide' : ''}" data-ptheme="${theme}">
       <div class="portal-top">
         <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
-        <h1 class="portal-title">פורטל המדריך</h1>
+        <h1 class="portal-title">${portalServerOn && portalAsCoord(me) && me.admin ? 'פורטל ניהול' : 'פורטל המדריך'}</h1>
         <span class="portal-top-actions">${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
       ${portalServerOn ? `<div class="portal-hello">שלום ${pEsc(me.first)}</div>` : `<label class="portal-as">צפייה כ:

@@ -23,7 +23,7 @@
       if(/[?&]leopard\b/.test(location.search)) srv.portalTheme = 'leopard';          // (&leopard: the coordinator's leopard look)
       if(/[?&]open\b/.test(location.search)) portalUi.fold = { mine:true, team:true, swap:true, fb:true, openshifts:true, swmine:true, swopen:true };          // (&open shows the folded parts opened)
       { const sf = location.search.match(/[?&]sfold=(\w+)/); if(sf){ portalUi.setFold = portalUi.setFold || {}; portalUi.setFold[sf[1]] = true; } }          // (&sfold=ann opens that part of the settings screen)
-      showPortal(({ 'psrv-prefs':'prefs', 'psrv-subs':'submissions', 'psrv-swaps':'swaps', 'psrv-cswaps':'swaps', 'psrv-cvac':'vacations', 'psrv-cset':'settings', 'psrv-inbox':'inbox' })[what] || 'schedule');
+      showPortal(({ 'psrv-prefs':'prefs', 'psrv-subs':'submissions', 'psrv-swaps':'swaps', 'psrv-cswaps':'swaps', 'psrv-cvac':'vacations', 'psrv-cset':'settings', 'psrv-inbox':'inbox' })[what] || (location.search.match(/[?&]ptab=(\w+)/) || [])[1] || 'schedule');          // (&ptab=avail opens that tab)
       return;
     }
     if(!/[?&]nochars/.test(location.search)) roster.forEach((c, i) => { childSettings[c.id] = Object.assign({}, childSettings[c.id], { id:c.id, character:CHARACTER_KEYS[i % CHARACTER_KEYS.length] }); });       // (the demo gives every child a character, in memory only)

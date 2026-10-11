@@ -1212,6 +1212,14 @@
       check('personal sign-in: the Ramzor home has a small link to the portal', !document.getElementById('hub-portal-link').hidden, 'hidden');
       document.getElementById('hub-portal-link').click(); await sleep(500);
       check('personal sign-in: ... which opens the portal of the same person, with a way back to the two choices', activeView() === 'view-portal' && /מסך ראשי/.test((document.getElementById('portal-home') || {}).textContent || ''), activeView());
+      // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
+      srv.meRow.admin = true; showAppHome();
+      check('personal sign-in: an instructor who is the admin gets three cards (Ramzor, his instructor portal, the management portal)', !!document.getElementById('apphome-manage') && document.querySelectorAll('#view-apphome .home-card').length === 3, document.querySelectorAll('#view-apphome .home-card').length);
+      document.getElementById('apphome-portal').click(); await sleep(300);
+      check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
+      check('personal sign-in: ... and the management portal has the coordinator tabs', !!document.querySelector('[data-ptab="submissions"]') && !!document.querySelector('[data-ptab="settings"]') && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      srv.meRow.admin = false; portalUi.manager = false; showAppHome();
       await personalLeave();
       check('personal sign-in: leaving returns the Ramzor to the staff login of this device', sb === sbShared && !ramzorPersonal, 'still personal');
       showHub();
