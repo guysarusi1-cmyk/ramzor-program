@@ -2,7 +2,7 @@
 // ---------- THE PORTAL ON THE SERVER: the coordinator's schedule (the board, editing a shift, publishing, what needs her attention) ----------
 // The schedule is built by the system once a month (the 25th, at night). From then on the coordinator edits it by hand; there is no "build" button.
 const SRV_STATUS_WORD = { collecting:'בהגשת העדפות', draft:'טיוטה', sent:'נשלח אלייך', published:'פורסם' };
-const SRV_FLAG_KIND = { ahmash:'אחמ"שית', night:'לילה', staffing:'איוש', composition:'הרכב', min:'מינימום אישי', pair:'שילוב', rest:'מנוחה', extension:'הארכה', from16:'מ-16:00', pull:'משיכה', double:'כפולה', partial:'שעות מותאמות', can:'"יכול"', ahmash2:'אחמ"שית שנייה', service:'בנות שירות', service_absent:'היעדרות בת שירות', vacation_conflict:'חופשה' };
+const SRV_FLAG_KIND = { ahmash:'אחמ"שית', night:'לילה', staffing:'איוש', composition:'הרכב', min:'מינימום אישי', pair:'שילוב', rest:'מנוחה', extension:'הארכה', from16:'מ-16:00', pull:'משיכה', double:'כפולה', partial:'שעות מותאמות', can:'"יכול"', ahmash2:'אחמ"שית שנייה', service:'בנות שירות', service_absent:'היעדרות בת שירות', vacation_conflict:'חופשה', nosubmit:'לא הגיש' };
 
 // ---- the rest rules in the browser (the same two numbers as in the server: 7 hours, and 8 after more than 11 hours in a row)
 const dayNum = date => Math.round(parseIso(date).getTime() / 86400000);
