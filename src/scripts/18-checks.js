@@ -1202,6 +1202,15 @@
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)';
       check('personal sign-in: the staff login offers a personal sign-in (e-mail + code) next to the password', !document.getElementById('login-personal').hidden && !!document.getElementById('login-personal-btn'), 'missing');
+      document.getElementById('protected-app').style.display = '';
+      srvShowLogin('email');
+      check('personal sign-in: the sign-in asks for the e-mail and the personal password, with a code by e-mail for the first entry or a forgotten password', !!document.getElementById('plogin-email') && !!document.getElementById('plogin-pw') && !!document.getElementById('plogin-pwbtn') && !!document.getElementById('plogin-send'), 'fields');
+      srvShowLogin('code', 'someone@example.com');
+      { const back = document.getElementById('plogin-back'), card = document.querySelector('.plogin .card').getBoundingClientRect(), r = back.getBoundingClientRect();
+        check('personal sign-in: the code step has a visible way back and a new code (not stuck when the code expired)', !!document.getElementById('plogin-resend') && r.width > 0 && r.top >= card.top && r.bottom <= card.bottom + 1, JSON.stringify([r.top, card.top, r.bottom, card.bottom])); }
+      srvShowLogin('setpw', 'someone@example.com');
+      check('personal sign-in: after the first code, a personal password is chosen (twice)', document.querySelectorAll('.plogin input[type=password]').length === 2 && !!document.getElementById('plogin-setpw'), 'no password step');
+      showHub();
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
       const { error } = await signInRetry('instructor-test@merkaz-cherum.local', PW);
       if(error){ check('personal sign-in: the instructor test account signs in', false, error.message); return; }
@@ -1614,10 +1623,11 @@
         // ---- the service girl: availability for every day, then submit
         if(srvPrefsOpen(next) && await sign('service')){
           portalUi.pmonth = next; showPortal('avail'); await sleep(700);
-          const opts = [...document.querySelectorAll('[data-svc$="|both"]')];
+          const firstOpt = sel => [...document.querySelectorAll(sel)].map(r => r.querySelector('[data-svc]:not([data-svc$="|none"])')).filter(Boolean);          // (one choice per day: Sunday has only 11-19, Thursday only 07-16)
+          const opts = firstOpt('.psvc-row');
           check('portal people: the service girl is asked about every Sunday-Thursday of the open month', opts.length >= 18 && opts.length <= 23, opts.length);
           for(let pass = 0; pass < 5; pass++){          // (each tap saves to the server and redraws; on a slow moment a tap can land on a screen that is being redrawn, so what is still empty is tapped again)
-            const todo = [...document.querySelectorAll('.psvc-row.empty [data-svc$="|both"]')]; if(!todo.length && pass > 0) break;
+            const todo = firstOpt('.psvc-row.empty'); if(!todo.length && pass > 0) break;
             for(const o of (pass === 0 ? opts : todo)){ const b = document.querySelector(`[data-svc="${o.dataset.svc}"]`); if(b) b.click(); await sleep(450); }
             await sleep(700);
           }

@@ -240,24 +240,32 @@ async function srvSwapAction(fn, args){
   if(r.error) throw r.error;
   await srvReload();
 }
-// ---- sign in
+// ---- sign in: the personal password (chosen at the first entry), or a code by e-mail (the first entry, or a forgotten password)
 function srvLoginHtml(step, email){
-  return `<div class="plogin"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">כניסה אישית</h1>
-    <div class="card">
-      ${step === 'email' ? `
-        <h2>ברוכים הבאים</h2><div class="pnote">נשלח אליכם קוד כניסה קצר למייל, בלי סיסמאות להיזכר בהן.</div>
-        <label class="pfield">כתובת מייל<input type="email" id="plogin-email" autocomplete="email" inputmode="email" dir="ltr"></label>
-        <button type="button" class="btn" id="plogin-send">שלחו לי קוד</button>
-        ${location.hash === '#portal' ? '' : '<button type="button" class="home-text-btn" id="plogin-staff">כניסה עם סיסמת צוות</button>'}
-        /*@TEST-ONLY*/
-        <label class="pfield">סיסמה (בדיקות בלבד)<input type="password" id="plogin-pw" autocomplete="current-password" dir="ltr"></label>
-        <button type="button" class="btn ghost" id="plogin-pwbtn">כניסה עם סיסמה</button>
-        /*@END-TEST-ONLY*/` : `
+  const staffLink = location.hash === '#portal' ? '' : '<button type="button" class="btn ghost plogin-link" id="plogin-staff">כניסה עם סיסמת צוות</button>';
+  let inner;
+  if(step === 'code') inner = `
         <h2>הקלידו את הקוד</h2>
-        <div class="pnote">שלחנו קוד בן 6 ספרות אל ${pEsc(email)}.</div>
-        <label class="pfield">קוד<input type="text" id="plogin-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" dir="ltr"></label>
+        <div class="pnote">שלחנו קוד אל ${pEsc(email)}. הוא מגיע תוך דקה (כדאי לבדוק גם בספאם).</div>
+        <label class="pfield">קוד<input type="text" id="plogin-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" dir="ltr"></label>
         <button type="button" class="btn" id="plogin-verify">כניסה</button>
-        <button type="button" class="home-text-btn" id="plogin-back">חזרה</button>`}
+        <div class="plogin-row"><button type="button" class="btn ghost" id="plogin-resend">שליחת קוד חדש</button><button type="button" class="btn ghost" id="plogin-back">חזרה</button></div>`;
+  else if(step === 'setpw') inner = `
+        <h2>בחירת סיסמה אישית</h2>
+        <div class="pnote">מהפעם הבאה נכנסים עם המייל והסיסמה הזו, בלי לחכות לקוד. אם שוכחים אותה, אפשר תמיד לקבל קוד למייל.</div>
+        <label class="pfield">סיסמה (לפחות 8 תווים)<input type="password" id="plogin-new" autocomplete="new-password" dir="ltr"></label>
+        <label class="pfield">שוב, לאימות<input type="password" id="plogin-new2" autocomplete="new-password" dir="ltr"></label>
+        <button type="button" class="btn" id="plogin-setpw">שמירה וכניסה</button>`;
+  else inner = `
+        <h2>ברוכים הבאים</h2>
+        <label class="pfield">כתובת מייל<input type="email" id="plogin-email" autocomplete="username" inputmode="email" dir="ltr" value="${pEsc(email || '')}"></label>
+        <label class="pfield">סיסמה<input type="password" id="plogin-pw" autocomplete="current-password" dir="ltr"></label>
+        <button type="button" class="btn" id="plogin-pwbtn">כניסה</button>
+        <div class="login-or"><span>כניסה ראשונה, או ששכחתם את הסיסמה?</span></div>
+        <button type="button" class="btn ghost" id="plogin-send">שלחו לי קוד למייל</button>
+        ${staffLink}`;
+  return `<div class="plogin"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">כניסה אישית</h1>
+    <div class="card">${inner}
       <div id="plogin-error" class="plogin-error" role="alert"></div>
     </div></div>`;
 }
@@ -265,35 +273,54 @@ function srvShowLogin(step, email){
   portalActivateView('view-portal');
   const view = document.getElementById('view-portal');
   view.innerHTML = srvLoginHtml(step || 'email', email);
-  const err = msg => { document.getElementById('plogin-error').textContent = msg || ''; };
+  const $ = id => document.getElementById(id);
+  const err = msg => { $('plogin-error').textContent = msg || ''; };
   const guard = async (btn, work) => { btn.disabled = true; err(''); try { await work(); } catch(e){ err('משהו קטן השתבש. אפשר לנסות שוב בעוד רגע.'); } btn.disabled = false; };
   const enter = async () => { if(await personalEnter()) return; err('עוד לא חיברנו את הכתובת הזו לרשימת הצוות. הרכזת תשמח לעזור לכם להיכנס.'); await sbPersonal.auth.signOut(); };
-  const staffBtn = document.getElementById('plogin-staff');
-  if(staffBtn) staffBtn.addEventListener('click', () => { document.getElementById('protected-app').style.display = 'none'; document.getElementById('login-screen').style.display = 'block'; });
+  const sendCode = async mail => {
+    const { error } = await sbPersonal.auth.signInWithOtp({ email:mail, options:{ shouldCreateUser:false } });
+    if(error){ err(/rate|seconds|limit/i.test(error.message || '') ? 'שלחנו קוד ממש עכשיו. אפשר לבקש קוד חדש בעוד דקה.' : 'לא הצלחנו לשלוח קוד לכתובת הזו. אפשר לבדוק שהיא נכונה, ואם זה ממשיך, הרכזת תשמח לעזור.'); return false; }
+    return true;
+  };
+  const staffBtn = $('plogin-staff');
+  if(staffBtn) staffBtn.addEventListener('click', () => { $('protected-app').style.display = 'none'; $('login-screen').style.display = 'block'; });
+  const onEnter = (inputId, btnId) => { const i = $(inputId); if(i) i.addEventListener('keydown', e => { if(e.key === 'Enter') $(btnId).click(); }); };
   if(step === 'code'){
-    document.getElementById('plogin-verify').addEventListener('click', ev => guard(ev.target, async () => {
-      const code = document.getElementById('plogin-code').value.trim();
+    $('plogin-verify').addEventListener('click', ev => guard(ev.target, async () => {
+      const code = $('plogin-code').value.trim();
       const { error } = await sbPersonal.auth.verifyOtp({ email, token:code, type:'email' });
       if(error){ err('הקוד לא התאים, או שהוא כבר לא בתוקף. אפשר לבקש קוד חדש.'); return; }
+      const { data:{ user } } = await sbPersonal.auth.getUser();
+      if(!(user && user.user_metadata && user.user_metadata.has_password)){ srvShowLogin('setpw', email); return; }          // (the first entry: a personal password for the next times)
       await enter();
     }));
-    document.getElementById('plogin-back').addEventListener('click', () => srvShowLogin('email'));
+    $('plogin-resend').addEventListener('click', ev => guard(ev.target, async () => { if(await sendCode(email)){ err(''); toast('נשלח קוד חדש'); } }));
+    $('plogin-back').addEventListener('click', () => srvShowLogin('email', email));
+    onEnter('plogin-code', 'plogin-verify');
+  } else if(step === 'setpw'){
+    $('plogin-setpw').addEventListener('click', ev => guard(ev.target, async () => {
+      const a = $('plogin-new').value, b = $('plogin-new2').value;
+      if(a.length < 8){ err('הסיסמה צריכה להיות באורך 8 תווים לפחות.'); return; }
+      if(a !== b){ err('שתי הסיסמאות לא זהות. אפשר להקליד שוב.'); return; }
+      const { error } = await sbPersonal.auth.updateUser({ password:a, data:{ has_password:true } });
+      if(error){ err('לא הצלחנו לשמור את הסיסמה (' + (error.message || '') + '). אפשר להמשיך ולנסות שוב בפעם הבאה.'); return; }
+      toast('הסיסמה נשמרה. מהפעם הבאה נכנסים איתה.'); await enter();
+    }));
+    onEnter('plogin-new2', 'plogin-setpw');
   } else {
-    document.getElementById('plogin-send').addEventListener('click', ev => guard(ev.target, async () => {
-      const mail = document.getElementById('plogin-email').value.trim().toLowerCase();
-      if(!mail){ err('הקלידו את כתובת המייל.'); return; }
-      const { error } = await sbPersonal.auth.signInWithOtp({ email:mail, options:{ shouldCreateUser:false } });
-      if(error){ err('לא הצלחנו לשלוח קוד לכתובת הזו. אפשר לבדוק שהיא נכונה, ואם זה ממשיך, הרכזת תשמח לעזור.'); return; }
-      srvShowLogin('code', mail);
-    }));
-    /*@TEST-ONLY*/
-    document.getElementById('plogin-pwbtn').addEventListener('click', ev => guard(ev.target, async () => {
-      const mail = document.getElementById('plogin-email').value.trim().toLowerCase(), pw = document.getElementById('plogin-pw').value;
+    $('plogin-pwbtn').addEventListener('click', ev => guard(ev.target, async () => {
+      const mail = $('plogin-email').value.trim().toLowerCase(), pw = $('plogin-pw').value;
+      if(!mail || !pw){ err('הקלידו מייל וסיסמה. בכניסה הראשונה, או אם שכחתם את הסיסמה, אפשר לקבל קוד למייל.'); return; }
       const { error } = await sbPersonal.auth.signInWithPassword({ email:mail, password:pw });
-      if(error){ err('מייל או סיסמה שגויים.'); return; }
+      if(error){ err('המייל או הסיסמה לא נכונים. אם שכחתם את הסיסמה, אפשר לקבל קוד למייל.'); return; }
       await enter();
     }));
-    /*@END-TEST-ONLY*/
+    $('plogin-send').addEventListener('click', ev => guard(ev.target, async () => {
+      const mail = $('plogin-email').value.trim().toLowerCase();
+      if(!mail){ err('הקלידו את כתובת המייל.'); return; }
+      if(await sendCode(mail)) srvShowLogin('code', mail);
+    }));
+    onEnter('plogin-pw', 'plogin-pwbtn');
   }
 }
 async function srvStart(){
