@@ -125,6 +125,7 @@ function srvRenderCoordSettings(body){
   // the screen opens at once with the four folded parts; a part is loaded and drawn only when it is opened, and opening one folds the others
   const st = portalLoad(); portalUi.setFold = portalUi.setFold || {};
   const today = srvToday();
+  const SCOPE_WORD = { morning:'בוקר', afternoon:'צהריים', night:'לילה', hours:'שעות' };
   const KIND_DAY = { holiday:'חג (כמו שבת)', eve:'ערב חג (כמו שישי)', special:'יום מיוחד' };
   const again = async () => { await srvReloadSafe(); srvRenderCoordSettings(body); };
   const sections = {
@@ -192,18 +193,26 @@ function srvRenderCoordSettings(body){
       return { html, wire };
     }],
     days: [() => 'חגים וימים מיוחדים', async () => {
-      const days = await sbPersonal.from('special_days').select('day,kind,label,min_staff,max_staff').gte('day', today).order('day').limit(60);
+      let days = await sbPersonal.from('special_days').select('day,kind,label,min_staff,max_staff,scope,from_time,to_time').gte('day', today).order('day').limit(60);
+      if(days.error) days = await sbPersonal.from('special_days').select('day,kind,label,min_staff,max_staff').gte('day', today).order('day').limit(60);          // (a project without scheduling-v14.sql yet)
       const html = `
       <div class="pnote">חגים וערבי חג מסומנים אוטומטית. כאן אפשר לערוך, למחוק או להוסיף יום מיוחד (עם מספר מדריכים משלו).</div>
-      ${(days.data || []).map(d => `<div class="pmine-row"><span><b>${dayLabel(d.day)}</b> · ${KIND_DAY[d.kind] || d.kind}${d.label ? ' · ' + pEsc(d.label) : ''}${d.min_staff ? ` · ${d.min_staff}–${d.max_staff || d.min_staff + 1} מדריכים` : ''}</span><button type="button" class="btn ghost small" data-day-del="${d.day}">מחיקה</button></div>`).join('') || '<div class="pnote">אין ימים מיוחדים קרובים.</div>'}
+      ${(days.data || []).map(d => `<div class="pmine-row"><span><b>${dayLabel(d.day)}</b> · ${KIND_DAY[d.kind] || d.kind}${d.label ? ' · ' + pEsc(d.label) : ''}${d.min_staff ? ` · ${d.min_staff}–${d.max_staff || d.min_staff + 1} מדריכים${SCOPE_WORD[d.scope] ? ' (' + SCOPE_WORD[d.scope] + (d.scope === 'hours' && d.from_time ? ' ' + String(d.from_time).slice(0, 5) + '–' + String(d.to_time).slice(0, 5) : '') + ')' : ''}` : ''}</span><button type="button" class="btn ghost small" data-day-del="${d.day}">מחיקה</button></div>`).join('') || '<div class="pnote">אין ימים מיוחדים קרובים.</div>'}
       <h3 class="psec">הוספה</h3>
-      <div class="pstaff-add"><input type="date" id="sd-day" min="${today}"><select id="sd-kind"><option value="special">יום מיוחד</option><option value="holiday">חג (כמו שבת)</option><option value="eve">ערב חג (כמו שישי)</option></select><input type="text" id="sd-label" placeholder="שם"><input type="number" id="sd-min" min="1" max="12" placeholder="מינימום"><input type="number" id="sd-max" min="1" max="12" placeholder="מקסימום"><button type="button" class="btn small" id="sd-go">הוספה</button></div>`;
+      <div class="pstaff-add"><input type="date" id="sd-day" min="${today}"><select id="sd-kind"><option value="special">יום מיוחד</option><option value="holiday">חג (כמו שבת)</option><option value="eve">ערב חג (כמו שישי)</option></select><input type="text" id="sd-label" placeholder="שם"><input type="number" id="sd-min" min="1" max="12" placeholder="מינימום"><input type="number" id="sd-max" min="1" max="12" placeholder="מקסימום"></div>
+      <div class="pstaff-add" id="sd-scope-row"><label class="pfield">המספר הזה רלוונטי ל<select id="sd-scope"><option value="all">כל היום</option><option value="morning">משמרת בוקר</option><option value="afternoon">משמרת צהריים</option><option value="night">לילה</option><option value="hours">שעות אחרות</option></select></label><span id="sd-hours" hidden><label class="pfield">משעה<input type="time" id="sd-from" value="10:00"></label><label class="pfield">עד שעה<input type="time" id="sd-to" value="14:00"></label></span><button type="button" class="btn small" id="sd-go">הוספה</button></div>`;
       const wire = box => {
         box.querySelectorAll('[data-day-del]').forEach(b => b.addEventListener('click', async () => { await sbPersonal.from('special_days').delete().eq('day', b.dataset.dayDel); srvRenderCoordSettings(body); }));
+        const scopeSel = box.querySelector('#sd-scope'), kindSel = box.querySelector('#sd-kind'), showScope = () => { box.querySelector('#sd-scope-row').querySelector('label').hidden = kindSel.value !== 'special'; box.querySelector('#sd-hours').hidden = kindSel.value !== 'special' || scopeSel.value !== 'hours'; };
+        scopeSel.addEventListener('change', showScope); kindSel.addEventListener('change', showScope); showScope();          // (the hours only for a special day with its own number, and only for "other hours")
         box.querySelector('#sd-go').addEventListener('click', async () => {
           const day = box.querySelector('#sd-day').value; if(!day){ toast('בחרו תאריך'); return; }
           const mn = parseInt(box.querySelector('#sd-min').value, 10) || null, mx = parseInt(box.querySelector('#sd-max').value, 10) || null;
-          const u = await sbPersonal.from('special_days').upsert({ day, kind:box.querySelector('#sd-kind').value, label:box.querySelector('#sd-label').value.trim() || null, min_staff:mn, max_staff:mx });
+          const scope = kindSel.value === 'special' && mn ? scopeSel.value : 'all', from = box.querySelector('#sd-from').value, to = box.querySelector('#sd-to').value;
+          if(scope === 'hours' && (!from || !to || to <= from)){ toast('בדקו את השעות: "עד" צריך להיות אחרי "משעה"'); return; }
+          const rec = { day, kind:kindSel.value, label:box.querySelector('#sd-label').value.trim() || null, min_staff:mn, max_staff:mx };
+          let u = await sbPersonal.from('special_days').upsert(Object.assign({ scope, from_time:scope === 'hours' ? from : null, to_time:scope === 'hours' ? to : null }, rec));
+          if(u.error && scope === 'all') u = await sbPersonal.from('special_days').upsert(rec);          // (a project without scheduling-v14.sql yet)
           toast(u.error ? 'השמירה נכשלה' : 'נשמר'); srvRenderCoordSettings(body);
         });
       };
@@ -213,8 +222,8 @@ function srvRenderCoordSettings(body){
       const ann = await sbPersonal.from('announcements').select('created_at,text,via').order('created_at', { ascending:false }).limit(8);
       const html = `
       <label class="pfield">הודעה<textarea id="an-text" rows="3" maxlength="800"></textarea></label>
-      <div class="pchoice wrap" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
-      <button type="button" class="btn" id="an-send">שליחה</button>
+      <div class="an-actions"><div class="pchoice" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
+      <button type="button" class="btn" id="an-send">שליחה</button></div>
       <h3 class="psec">הודעות אחרונות</h3>
       ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
       const wire = box => {

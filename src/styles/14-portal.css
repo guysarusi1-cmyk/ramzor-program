@@ -214,6 +214,8 @@
   .psvc-row{ display:flex; flex-direction:column; gap:6px; padding:8px 10px; border:1px solid var(--p-line); border-radius:12px; background:var(--p-panel); }
   .psvc-row.empty{ border-color:var(--gold); }
   .pchoice.wrap{ flex-wrap:wrap; }
+  .an-actions{ display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:14px; margin:14px 0; }          /* the three ways to send, in a row, with the send button at their left; the group is centred */
+  .an-actions .pchoice button{ flex:0 0 auto; padding:10px 22px; }
   .pchoice.wrap button{ flex:1 1 40%; }
   .pstaff-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--p-line); }
   .pstaff-name{ flex:1 1 90px; font-weight:700; }
