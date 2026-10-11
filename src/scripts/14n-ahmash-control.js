@@ -187,7 +187,7 @@ async function ctlBonuses(box){
   const hidden = new Set(bonusDay.filter(x => x.kind === 'hide').map(x => x.bonus_id));
   const hours = b => b.startTime && b.endTime ? ` <small>${b.startTime}–${b.endTime}</small>` : '';
   const row = (b, key) => `<div class="ctl-bonus${hidden.has(b.id) ? ' hidden-today' : ''}"><span class="ctl-bonus-icon">${bonusIcon(b)}</span><span class="ctl-bonus-text">${pEsc(b.text)}${hours(b)}${hidden.has(b.id) ? ' <em>מוסתר היום</em>' : ''}</span>
-      <span class="ctl-bonus-btns"><button type="button" class="btn ghost small" data-${hidden.has(b.id) ? 'show' : 'hide'}="${b.id}">${hidden.has(b.id) ? 'החזרה' : 'הסתרה להיום'}</button>${coord ? `<button type="button" class="btn ghost small" data-perm-del="${key}|${b.id}" title="מחיקה מהרשימה הקבועה">🗑</button>` : ''}</span></div>`;
+      <span class="ctl-bonus-btns"><button type="button" class="btn ghost small" data-${hidden.has(b.id) ? 'show' : 'hide'}="${b.id}">${hidden.has(b.id) ? 'החזרה' : 'הסתרה להיום'}</button>${coord ? `<button type="button" class="btn ghost small" data-perm-edit="${key}|${b.id}" title="עריכת הבונוס הקבוע">✏️</button><button type="button" class="btn ghost small" data-perm-del="${key}|${b.id}" title="מחיקה מהרשימה הקבועה">🗑</button>` : ''}</span></div>`;
   const daily = bonusesDaily.filter(bonusAppliesToday), weekly = bonusesWeekly.filter(bonusAppliesToday), specials = bonusDay.filter(x => x.kind === 'special');
   box.innerHTML = `
     <h3 class="psec">הבונוסים של היום</h3>
@@ -202,7 +202,11 @@ async function ctlBonuses(box){
       <label>משעה <input type="time" id="sp-from"></label><label>עד <input type="time" id="sp-to"></label>
       <button type="button" class="btn small" id="sp-go">הוספה</button>
     </div>
-    <div class="pnote">בונוס מיוחד מופיע מיד במסך הילדים ובמסך הבונוסים של הצוות, ונעלם לבד בסוף היום.</div>`;
+    <div class="pnote">בונוס מיוחד מופיע מיד במסך הילדים ובמסך הבונוסים של הצוות, ונעלם לבד בסוף היום.</div>
+    ${coord ? `<details class="pfold ctl-all-bonus"><summary><span>כל הבונוסים הקבועים</span><span class="pcount">${bonusesDaily.length + bonusesWeekly.length}</span></summary><div class="pfold-body">
+      ${[['bonusesDaily', 'יומיים', bonusesDaily], ['bonusesWeekly', 'שבועיים', bonusesWeekly]].map(([key, title, list]) => `<h3 class="psec">${title}</h3>${list.map(b => `<div class="ctl-bonus"><span class="ctl-bonus-icon">${bonusIcon(b)}</span><span class="ctl-bonus-text">${pEsc(b.text)}${hours(b)}${b.days && b.days.length ? ` <small>· ${b.days.map(d => WEEKDAY_NAMES[d]).join(', ')}</small>` : ''}</span>
+        <span class="ctl-bonus-btns"><button type="button" class="btn ghost small" data-perm-edit="${key}|${b.id}" title="עריכה">✏️</button><button type="button" class="btn ghost small" data-perm-del="${key}|${b.id}" title="מחיקה">🗑</button></span></div>`).join('') || '<div class="pnote">אין.</div>'}`).join('')}
+    </div></details>` : ''}`;
   const today = ctlToday(), redo = () => ctlBonuses(box);
   const ok = (res, msg) => { if(res.error){ toast('השינוי לא נשמר. נסו שוב.'); return false; } if(msg) toast(msg); return true; };
   box.querySelectorAll('[data-hide]').forEach(b => b.addEventListener('click', async () => { if(ok(await sb.from('bonus_day').insert({ day:today, kind:'hide', bonus_id:b.dataset.hide }), 'הבונוס מוסתר להיום.')) redo(); }));
@@ -237,6 +241,31 @@ async function ctlBonuses(box){
       await sb.from('bonus_day').delete().eq('id', x.id);
       toast('הבונוס נוסף לרשימה הקבועה.'); redo();
     }));
+  }));
+  // the coordinator edits a permanent bonus: the words, the hours, the picture, and on which days it is given
+  box.querySelectorAll('[data-perm-edit]').forEach(b => b.addEventListener('click', () => {
+    const [key, id] = b.dataset.permEdit.split('|'), list = (key === 'bonusesWeekly' ? bonusesWeekly : bonusesDaily).slice(), it = list.find(x => x.id === id); if(!it) return;
+    let icon = bonusIcon(it); const days = new Set(it.days || []);
+    const sh = portalSheet(`<h2>עריכת בונוס קבוע</h2>
+      <label class="pfield">שם הבונוס<input type="text" id="pe-text" maxlength="60" value="${pEsc(it.text)}"></label>
+      <div class="ctl-sp-add"><button type="button" class="ctl-tt-icon" id="pe-icon">${icon}</button><label>משעה <input type="time" id="pe-from" value="${pEsc(it.startTime || '')}"></label><label>עד <input type="time" id="pe-to" value="${pEsc(it.endTime || '')}"></label></div>
+      <div class="pnote">באילו ימים (בלי סימון = כל יום):</div>
+      <div class="pchoice wrap" id="pe-days">${WEEKDAY_NAMES.map((n, i) => `<button type="button" class="${days.has(i) ? 'on' : ''}" data-pe-day="${i}">${n}</button>`).join('')}</div>
+      <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="pe-save">שמירה</button></div>`);
+    sh.querySelectorAll('[data-pe-day]').forEach(x => x.addEventListener('click', () => { const d = +x.dataset.peDay; if(days.has(d)) days.delete(d); else days.add(d); x.classList.toggle('on', days.has(d)); }));
+    sh.querySelector('#pe-icon').addEventListener('click', () => {
+      const ic = portalSheet(`<h2>תמונה לבונוס</h2><div class="ctl-icons">${BONUS_ICONS.map(e => `<button type="button" class="ctl-icon-opt" data-bicon="${e}"><span>${e}</span></button>`).join('')}</div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+      ic.querySelectorAll('[data-bicon]').forEach(o => o.addEventListener('click', () => { icon = o.dataset.bicon; sh.querySelector('#pe-icon').textContent = icon; ic.close(); }));
+    });
+    sh.querySelector('#pe-save').addEventListener('click', async () => {
+      const text = sh.querySelector('#pe-text').value.trim(), from = sh.querySelector('#pe-from').value, to = sh.querySelector('#pe-to').value;
+      if(!text){ toast('כתבו שם לבונוס'); return; }
+      if((from && !to) || (!from && to) || (from && to && to <= from)){ toast('בדקו את השעות'); return; }
+      const next = Object.assign({}, it, { text, icon });
+      if(from && to){ next.startTime = from; next.endTime = to; } else { delete next.startTime; delete next.endTime; }
+      if(days.size) next.days = [...days].sort(); else delete next.days;
+      if(await ctlSaveList(key, list.map(x => x.id === id ? next : x))){ sh.close(); toast('הבונוס עודכן.'); redo(); }
+    });
   }));
   box.querySelectorAll('[data-perm-del]').forEach(b => b.addEventListener('click', async () => {
     const [key, id] = b.dataset.permDel.split('|'), list = (key === 'bonusesWeekly' ? bonusesWeekly : bonusesDaily), it = list.find(x => x.id === id);

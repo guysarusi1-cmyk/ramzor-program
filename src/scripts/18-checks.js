@@ -1238,6 +1238,11 @@
       await loadBonusDay();
       check('ahmash control: a special bonus joins the daily bonuses of today (kids screen and staff phones)', !w.error && bonusesForToday(bonusesDaily, false).some(b => b.special && b.text === 'בונוס בדיקה' && b.startTime === '10:00'), (w.error || {}).message);
       if(w.data) await sb.from('bonus_day').delete().eq('id', w.data.id);
+      { const d = document.querySelector('#view-control details[data-cfold="bonus"]'); d.open = true; await sleep(1200);
+        const ed = document.querySelector('#view-control [data-perm-edit]');
+        if(ed){ ed.click(); await sleep(150); }
+        check('ahmash control: the coordinator can edit a permanent bonus (words, hours, picture, days) and sees all of them', !!document.querySelector('#view-control .ctl-all-bonus') && (!bonusesDaily.length || (!!ed && !!document.querySelector('.psheet #pe-text'))), 'no editor');
+        const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(150); } }
       const lg = await sb.from('control_log').select('what').order('at', { ascending:false }).limit(6);
       check('ahmash control: the changes are written in the log by the database', !lg.error && lg.data.some(l => /timetable_day/.test(l.what)) && lg.data.some(l => /bonus_day/.test(l.what)), (lg.error || {}).message || JSON.stringify(lg.data));
       srvOpenPortal(); srv.portalTheme = 'leopard'; showPortal();
