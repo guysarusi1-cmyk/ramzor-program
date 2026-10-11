@@ -1,0 +1,41 @@
+
+/* ---------- the kids' TV from the database: who is on shift (three rows), today's timetable, the night and morning screens ---------- */
+  .tv-instructors.tvs{ display:flex; flex-direction:column; gap:1.6vmin; padding:1vmin 2vmin; }
+  .tvs-band{ flex:1; min-height:0; display:flex; align-items:center; gap:3vmin; padding:1.2vmin 2.4vmin; border-radius:2.6vmin; background:rgba(255,255,255,.045); transition:opacity .4s; }
+  .tvs-band.now{ background:rgba(232,185,74,.12); animation:bonus-glow-pulse 4s ease-in-out infinite; }
+  .tvs-band.past{ opacity:.35; filter:grayscale(.5); }
+  .tvs-art{ flex:none; height:100%; max-height:17vmin; aspect-ratio:1; }
+  .tvs-art svg{ width:100%; height:100%; display:block; }
+  .tvs-people{ display:flex; flex-wrap:wrap; align-items:center; gap:1.4vmin 2.6vmin; min-width:0; }
+  .tvs-person{ display:flex; flex-direction:column; align-items:center; gap:.6vmin; width:calc(var(--tvs-size, 14vh) + 2vmin); }
+  .tvs-photo{ width:var(--tvs-size, 14vh); height:var(--tvs-size, 14vh); border-radius:50%; object-fit:cover; border:.5vmin solid rgba(255,255,255,.85); box-shadow:0 .8vmin 2vmin rgba(0,0,0,.35); background:#2a3157; }
+  .tvs-face{ display:grid; place-items:center; font-size:calc(var(--tvs-size, 14vh) * .62); line-height:1; }
+  .tvs-name{ font-family:'Rubik', sans-serif; font-weight:700; font-size:2.8vmin; color:#fff; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .tvs-band.now .tvs-name{ color:#ffe9ad; }
+  .tvs-none{ color:rgba(255,255,255,.35); font-size:5vmin; }
+
+  .tv-timetable.tvt2{ display:flex; flex-direction:column; gap:2vmin; justify-content:center; }
+  .tvt2-title{ text-align:center; font-family:'Rubik', sans-serif; font-weight:800; font-size:5vmin; color:var(--gold); }
+  .tvt2-grid{ display:grid; grid-template-columns:repeat(var(--tvt-cols, 6), minmax(0, 1fr)); gap:2vmin; }
+  .tvt2-item{ display:flex; flex-direction:column; align-items:center; gap:.8vmin; padding:1.6vmin 1vmin; border-radius:2.4vmin; background:rgba(255,255,255,.05); }
+  .tvt2-item.past{ opacity:.4; }
+  .tvt2-item.now{ background:rgba(232,185,74,.16); transform:scale(1.06); animation:bonus-glow-pulse 4s ease-in-out infinite; }
+  .tvt2-time{ font-family:'Rubik', sans-serif; font-weight:700; font-size:2.6vmin; color:rgba(255,255,255,.75); direction:ltr; }
+  .tvt2-icon{ width:16vmin; height:16vmin; display:grid; place-items:center; }
+  .tvt2-icon svg{ width:100%; height:100%; display:block; }
+  .tvt2-emoji{ font-size:11vmin; line-height:1; }
+  .tvt2-name{ font-family:'Rubik', sans-serif; font-weight:700; font-size:2.7vmin; color:#fff; text-align:center; }
+  .tvt2-item.now .tvt2-name{ color:#ffe9ad; }
+
+  #tv-quiet{ position:fixed; inset:0; z-index:40; }
+  .tvq{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3vmin; overflow:hidden; font-family:'Rubik', sans-serif; color:#fff; text-align:center; }
+  .tvq-night{ background:radial-gradient(ellipse at 50% 30%, #2b3a7a 0%, #141b3d 60%, #0b0f26 100%); }
+  .tvq-morning{ background:linear-gradient(180deg, #ffd9a8 0%, #ffeccb 45%, #bfe6ff 100%); color:#5a3410; }
+  .tvq-moon{ font-size:24vmin; line-height:1; animation:kid-bob 6s ease-in-out infinite; }
+  .tvq-sun{ font-size:22vmin; line-height:1; animation:kid-bob 5s ease-in-out infinite; }
+  .tvq-title{ font-weight:800; font-size:12vmin; text-shadow:0 1vmin 3vmin rgba(0,0,0,.25); }
+  .tvq-row{ font-size:9vmin; letter-spacing:2vmin; }
+  .tvq-stars i{ position:absolute; width:.7vmin; height:.7vmin; border-radius:50%; background:#fff6c9; animation:star-twinkle 3s ease-in-out infinite; }
+  .tvq-steps{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:3vmin; width:min(90vw, 1600px); }
+  .tvq-steps div{ display:flex; flex-direction:column; align-items:center; gap:1vmin; padding:2.4vmin; border-radius:3vmin; background:rgba(255,255,255,.6); font-weight:700; font-size:3.6vmin; }
+  .tvq-steps span{ font-size:11vmin; line-height:1; }

@@ -28,7 +28,7 @@ function todayGroups(nowMs){
 }
 
 // the real data for the TV: who works today (first name + photo only), read with the one function that a visitor may call (supabase/scheduling-v2.sql: tv_today)
-const PORTAL_TV_LIVE = '@config(portalTv)' === 'True';
+let PORTAL_TV_LIVE = '@config(portalTv)' === 'True';          // (let: the checks of the demo screens switch it off for a moment)
 let tvLive = null, tvLiveAt = 0;
 async function loadTvLive(){ try { const r = await sb.rpc('tv_today'); tvLive = r.error ? null : r.data; } catch(e){ tvLive = null; } if(typeof refreshPortalSlides === 'function') refreshPortalSlides(); }
 const TV_GROUPS = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה'], ['L', 'סופ"ש ארוך']];
@@ -36,7 +36,8 @@ const tvPhoto = p => p.photo_url ? `<img class="tvi-photo" src="${p.photo_url}" 
 function tvLiveGroups(){ return TV_GROUPS.map(([code, label]) => ({ code, label, people:(tvLive || []).filter(p => p.kind === 'instructor' && (p.shift === code || (code === 'M' && p.shift === 'S'))) })).filter(g => g.people.length); }
 async function renderInstructorsToday(){
   const el = document.getElementById('tv-instructors'), st = portalLoad();
-  if(PORTAL_TV_LIVE){
+  if(PORTAL_TV_LIVE){ await loadTvToday(); renderShiftsLive(); return; }          // (the database: three rows, sunrise / sun / moon, with today's changes of the ahmash control — 14o-tv-today.js)
+  if(false){
     const gs = tvLiveGroups();
     if(!gs.length){ el.innerHTML = '<div class="empty">אין מדריכים משובצים להיום</div>'; return; }
     el.style.setProperty('--tvi-cols', gs.length);
@@ -54,6 +55,7 @@ async function renderInstructorsToday(){
 }
 
 async function renderTimetableToday(){
+  if(PORTAL_TV_LIVE){ await loadTvToday(); renderTimetableLive(); return; }
   const el = document.getElementById('tv-timetable'), list = timetableFor(isoDate(new Date()));
   if(!list.length){ el.innerHTML = '<div class="empty">אין לו"ז להיום</div>'; return; }
   const now = nowHHMM();
@@ -90,10 +92,16 @@ async function renderBirthdaysToday(){
 function refreshPortalSlides(){
   if(!PORTAL_ENABLED || !SLIDES[9]) return;
   const st = portalLoad(), today = isoDate(new Date());
-  if(PORTAL_TV_LIVE && Date.now() - tvLiveAt > 5 * 60 * 1000){ tvLiveAt = Date.now(); loadTvLive(); }          // (the TV asks again every five minutes)
-  SLIDES[9].hidden = PORTAL_TV_LIVE ? !tvLiveGroups().length : !todayGroups().some(g => g.people.length);
-  SLIDES[10].hidden = timetableFor(today).length === 0;
-  SLIDES[11].hidden = !st.timetable[monthKeyOf(today)];
+  if(PORTAL_TV_LIVE){          // (the database: who is on shift and the timetable of today; asked again every minute at most)
+    if(Date.now() - tvTodayAt > 60 * 1000) loadTvToday(true).then(() => { if(SLIDES[9].hidden || SLIDES[10].hidden) refreshPortalSlides(); });
+    SLIDES[9].hidden = !(tvShifts && (tvShifts.rows || []).length + (tvShifts.changes || []).length);
+    SLIDES[10].hidden = !(tvTimetable && (tvTimetable.items || []).length);
+    SLIDES[11].hidden = true;          // (the week ahead stays in the demo only)
+  } else {
+    SLIDES[9].hidden = !todayGroups().some(g => g.people.length);
+    SLIDES[10].hidden = timetableFor(today).length === 0;
+    SLIDES[11].hidden = !st.timetable[monthKeyOf(today)];
+  }
   SLIDES[12].hidden = !(typeof roster !== 'undefined' && roster.length && birthdaysToday().length);
 }
 

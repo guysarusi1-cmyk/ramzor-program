@@ -2,6 +2,12 @@
 (async function init(){
   if(location.hash === '#diag'){ showDiagnostics(); return; }   // device / TV check page, no login needed
   if(location.hash === '#portal' && PORTAL_ENABLED){ portalServerBoot(); return; }      // the personal sign-in of the portal (its own login, not the staff password)
+  if(PORTAL_ENABLED && location.hash !== '#tv'){                                          // somebody signed in personally on this device: straight in (the portal and the Ramzor), no password
+    try {
+      const { data:{ session } } = await sbPersonal.auth.getSession();
+      if(session && await personalEnter()){ maybeShowManageFromHash(); return; }
+    } catch(e){ /* the staff password screen, as usual */ }
+  }
   const authed = await checkAuth();
   if(authed){
     await loadApp();

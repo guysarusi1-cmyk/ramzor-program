@@ -33,6 +33,7 @@ function showAppHome(){
       <div class="eyebrow-gold">מרכז חירום</div>
       <h1 class="apphome-title">מה תרצו לפתוח?</h1>
       <div class="apphome-cards">
+        ${portalServerOn ? `<div class="apphome-hello">שלום ${pEsc((portalMe() || {}).first || '')}</div>` : ''}
         <button type="button" class="home-card" id="apphome-ramzor">
           <span class="apphome-emoji" aria-hidden="true">🚦</span>
           <span class="home-card-title">הרמזור</span>
@@ -40,14 +41,14 @@ function showAppHome(){
         </button>
         <button type="button" class="home-card" id="apphome-portal">
           <span class="apphome-emoji" aria-hidden="true">👥</span>
-          <span class="home-card-title">פורטל המדריך</span>
+          <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'coordinator' ? 'פורטל הרכזת' : 'פורטל המדריך'}</span>
           <span class="home-card-sub">משמרות, העדפות והודעות</span>
         </button>
       </div>
-      <div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>
+      ${portalServerOn ? '' : '<div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>'}
     </div>`;
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
-  document.getElementById('apphome-portal').addEventListener('click', showPortal);
+  document.getElementById('apphome-portal').addEventListener('click', () => portalServerOn ? srvOpenPortal() : showPortal());
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
 }
 
@@ -70,7 +71,7 @@ function showPortal(tab){
   view.innerHTML = `
     <div class="portal-shell${portalServerOn && me.role === 'coordinator' ? ' wide' : ''}" data-ptheme="${st.settings.theme}">
       <div class="portal-top">
-        <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn ? 'יציאה' : '→ מסך ראשי'}</button>
+        <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
         <h1 class="portal-title">פורטל המדריך</h1>
         <span class="portal-top-actions">${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
@@ -81,7 +82,7 @@ function showPortal(tab){
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
       <div id="portal-body"></div>
     </div>`;
-  document.getElementById('portal-home').addEventListener('click', portalServerOn ? srvSignOut : showAppHome);
+  document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
   document.getElementById('portal-theme').addEventListener('click', () => { st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
   if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });

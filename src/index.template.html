@@ -39,6 +39,10 @@
         style="width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:12px; color:var(--text); font-size:16px; font-family:inherit; margin-bottom:12px;">
       <button class="btn" id="login-submit-btn" style="width:100%;">כניסה</button>
       <div id="login-error" style="color:var(--red); font-size:13px; margin-top:10px; display:none;"></div>
+      <div class="login-personal" id="login-personal" hidden>
+        <div class="login-or"><span>או</span></div>
+        <button type="button" class="btn ghost" id="login-personal-btn" style="width:100%;">כניסה אישית (מייל וקוד)</button>
+      </div>
     </div>
   </div>
 </div>
@@ -75,6 +79,7 @@
   <!-- ============ APP HOME + INSTRUCTOR PORTAL (only when "portal" is on in the config) ============ -->
   <section class="view" id="view-apphome"></section>
   <section class="view" id="view-portal"></section>
+  <section class="view" id="view-control"></section>
 
   <!-- ============ HUB (post-login landing page) ============ -->
   <section class="view active" id="view-hub">
@@ -86,6 +91,7 @@
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="7.2" r="1.3"/><path d="M7 10.2l5 1 5-1M12 11.2v3.6M9.5 19l2.5-4.2 2.5 4.2"/></svg>
       </button>
       <button type="button" class="home-text-btn home-logout" id="hub-logout-link">יציאה</button>
+      <button type="button" class="home-text-btn home-portal" id="hub-portal-link" hidden>👥 לפורטל</button>
       <h1 class="home-title">תכנית הרמזור</h1>
       <p class="home-slogan">"אני יכול לחשוב מה שאני רוצה, אני יכול להרגיש מה שאני רוצה, אבל לא תמיד כדאי שאתנהג איך שאני רוצה"</p>
     </div>
@@ -110,6 +116,7 @@
         <span class="home-secondary-sub">לומדים את העקרונות והכלים של התכנית</span>
       </span>
     </button>
+    <button type="button" class="home-control" id="hub-control-btn" hidden>🎛️ בקרת אחמ"ש</button>
     <button type="button" class="home-link" id="hub-install-link" hidden>התקנה כאפליקציה על מסך הבית</button>
   </section>
 

@@ -230,7 +230,7 @@ function renderYellowScreen(ids){
 
   // The bonuses that can be revoked at this hour gently blink (like the active bonuses on the kids' TV),
   // and the blinking moves on after each revocation. Bonuses already revoked for this child are shown as revoked.
-  const todaysBonuses = () => [...bonusesDaily, ...bonusesWeekly].filter(bonusAppliesToday);
+  const todaysBonuses = () => [...bonusesForToday(bonusesDaily, false), ...bonusesForToday(bonusesWeekly, true)];
   const chipEls = () => [...document.querySelectorAll(`#${ids.dailyList} .bonus-chip, #${ids.weeklyList} .bonus-chip`)];
   function updateNextBonus(){
     const revokedIds = new Set(chipEls().filter(c => c.classList.contains('revoked')).map(c => c.dataset.id));
@@ -271,10 +271,14 @@ function renderYellowScreen(ids){
       });
     });
   }
-  renderBonusChips(ids.dailyList, bonusesDaily, 'אין בונוסים יומיים מוגדרים (הוסיפו במסך הניהול)');
-  renderBonusChips(ids.weeklyList, bonusesWeekly, 'אין בונוסים שבועיים מוגדרים (הוסיפו במסך הניהול)');
-  updateNextBonus();
-  markAlreadyRevoked();
+  const drawBonusChips = () => {
+    renderBonusChips(ids.dailyList, bonusesForToday(bonusesDaily, false), 'אין בונוסים יומיים מוגדרים (הוסיפו במסך הניהול)');
+    renderBonusChips(ids.weeklyList, bonusesForToday(bonusesWeekly, true), 'אין בונוסים שבועיים מוגדרים (הוסיפו במסך הניהול)');
+    updateNextBonus();
+    markAlreadyRevoked();
+  };
+  drawBonusChips();
+  loadBonusDay().then(changed => { if(changed && selectedStaffChild === child.id) drawBonusChips(); });          // (a bonus hidden or added today in the ahmash control)
   const dutyEl = document.getElementById(ids.dutyList);
   if(!dutyRoster.length){ dutyEl.innerHTML = '<div class="empty">אין תורנויות מוגדרות (הוסיפו במסך הניהול)</div>'; }
   else{

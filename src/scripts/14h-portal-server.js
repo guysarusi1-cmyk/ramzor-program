@@ -57,7 +57,7 @@ async function srvLoad(){
     srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday').gte('month', from).lte('month', to))
   ]);
   const st = {
-    version:2, serverMode:true, instructors:staff.map((s, i) => ({ id:s.id, first:s.display_name, last:'', role:s.kind, active:s.active, photo:(srv.photos && srv.photos[s.id]) || letterPhoto(s.display_name, i) })),
+    version:2, serverMode:true, instructors:staff.map((s, i) => ({ id:s.id, first:s.display_name, last:'', role:s.kind === 'admin' ? 'coordinator' : s.kind, admin:s.kind === 'admin', active:s.active, photo:(srv.photos && srv.photos[s.id]) || letterPhoto(s.display_name, i) })),
     shiftTypes:JSON.parse(JSON.stringify(SRV_SHIFTS)), rules:Object.assign({}, RULES_DEFAULT), months:{}, swaps:[], assignmentIds:{}, announcements:[], timetable:{}, birthdays:{}, outbox:[],
     notices:notices.map(n => ({ id:n.id, to:meId, at:n.created_at, text:n.text, kind:n.kind, seen:n.seen, sent:!!n.seen, fromServer:true })),
     settings:{ theme:(function(){ try { return localStorage.getItem('ramzor-portal-theme') || 'dark'; } catch(e){ return 'dark'; } })() }
@@ -240,12 +240,13 @@ async function srvSwapAction(fn, args){
 }
 // ---- sign in
 function srvLoginHtml(step, email){
-  return `<div class="plogin"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">פורטל המדריך</h1>
+  return `<div class="plogin"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">כניסה אישית</h1>
     <div class="card">
       ${step === 'email' ? `
         <h2>ברוכים הבאים</h2><div class="pnote">נשלח אליכם קוד כניסה קצר למייל, בלי סיסמאות להיזכר בהן.</div>
         <label class="pfield">כתובת מייל<input type="email" id="plogin-email" autocomplete="email" inputmode="email" dir="ltr"></label>
         <button type="button" class="btn" id="plogin-send">שלחו לי קוד</button>
+        ${location.hash === '#portal' ? '' : '<button type="button" class="home-text-btn" id="plogin-staff">כניסה עם סיסמת צוות</button>'}
         /*@TEST-ONLY*/
         <label class="pfield">סיסמה (בדיקות בלבד)<input type="password" id="plogin-pw" autocomplete="current-password" dir="ltr"></label>
         <button type="button" class="btn ghost" id="plogin-pwbtn">כניסה עם סיסמה</button>
@@ -264,7 +265,9 @@ function srvShowLogin(step, email){
   view.innerHTML = srvLoginHtml(step || 'email', email);
   const err = msg => { document.getElementById('plogin-error').textContent = msg || ''; };
   const guard = async (btn, work) => { btn.disabled = true; err(''); try { await work(); } catch(e){ err('משהו קטן השתבש. אפשר לנסות שוב בעוד רגע.'); } btn.disabled = false; };
-  const enter = async () => { if(await srvStart()) return; err('עוד לא חיברנו את הכתובת הזו לרשימת הצוות. הרכזת תשמח לעזור לכם להיכנס.'); await sbPersonal.auth.signOut(); };
+  const enter = async () => { if(await personalEnter()) return; err('עוד לא חיברנו את הכתובת הזו לרשימת הצוות. הרכזת תשמח לעזור לכם להיכנס.'); await sbPersonal.auth.signOut(); };
+  const staffBtn = document.getElementById('plogin-staff');
+  if(staffBtn) staffBtn.addEventListener('click', () => { document.getElementById('protected-app').style.display = 'none'; document.getElementById('login-screen').style.display = 'block'; });
   if(step === 'code'){
     document.getElementById('plogin-verify').addEventListener('click', ev => guard(ev.target, async () => {
       const code = document.getElementById('plogin-code').value.trim();
@@ -297,6 +300,27 @@ async function srvStart(){
   portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null;
   showPortal();
   return true;
+}
+// ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
+// (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
+let ramzorPersonal = false;
+const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
+async function personalEnter(){
+  portalServerOn = true;
+  if(!(await srvLoad())){ portalServerOn = false; return false; }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('protected-app').style.display = '';
+  if(!personalRamzorKind()){ srvOpenPortal(); return true; }          // (service girls and teachers: only the portal)
+  sb = sbPersonal; ramzorPersonal = true;
+  try { await initRoster(); await initMiniLists(); renderManageRoster(); } catch(e){ /* the Ramzor data loads again on the next screen */ }
+  showAppHome();
+  return true;
+}
+function srvOpenPortal(){ portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null; showPortal(); }
+async function personalLeave(){
+  try { await srvFlush(); } catch(e){}
+  await sbPersonal.auth.signOut();
+  sb = sbShared; ramzorPersonal = false; portalServerOn = false; portalState = null; srv.me = null; srv.profile = null; srv.profileFor = null;
 }
 async function srvSignOut(){
   await srvFlush();

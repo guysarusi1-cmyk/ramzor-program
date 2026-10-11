@@ -42,9 +42,19 @@ document.getElementById('login-password').addEventListener('keydown', (e)=>{
 });
 
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
-  await sb.auth.signOut();
+  if(typeof ramzorPersonal !== 'undefined' && ramzorPersonal) await personalLeave();          // (the personal sign-in: out of the portal and the Ramzor together)
+  else await sb.auth.signOut();
   await checkAuth();
 });
+// the personal sign-in (e-mail + code), next to the staff password; one sign-in opens the portal and the Ramzor
+if(PORTAL_ENABLED){
+  document.getElementById('login-personal').hidden = false;
+  document.getElementById('login-personal-btn').addEventListener('click', () => {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('protected-app').style.display = '';
+    srvShowLogin('email');
+  });
+}
 
 function activateDisplayView(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
@@ -56,6 +66,8 @@ function activateDisplayView(){
 function showHub(){
   document.body.classList.remove('portal-mode');
   stopCarousel();
+  const pl = document.getElementById('hub-portal-link'); if(pl) pl.hidden = !(typeof ramzorPersonal !== 'undefined' && ramzorPersonal);
+  const cb = document.getElementById('hub-control-btn'); if(cb) cb.hidden = !(typeof canControl === 'function' && canControl());          // (the ahmash control: ahmash, coordinator, admin)
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-hub').classList.add('active');
 }
@@ -66,6 +78,8 @@ document.getElementById('hub-daily-btn').addEventListener('click', ()=>{
   selectedStaffChild = null;
   showStaffScreen('pick');
 });
+document.getElementById('hub-portal-link').addEventListener('click', () => { if(typeof srvOpenPortal === 'function') srvOpenPortal(); });
+document.getElementById('hub-control-btn').addEventListener('click', () => { if(typeof showControl === 'function') showControl(); });
 document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
   toast('לומדת הרמזור בקרוב! 🎓');
 });
@@ -74,7 +88,8 @@ document.getElementById('hub-manage-gear').addEventListener('click', openManagem
 // home screen's quiet "logout" link just triggers the existing logout button (hidden on this screen)
 document.getElementById('hub-logout-link').addEventListener('click', async ()=>{
   // signing out means typing the password again, which nobody wants in the middle of an incident
-  if(await confirmSheet({ title:'לצאת מהמערכת?', text:'כדי להיכנס שוב יהיה צריך להקליד את הסיסמה.', okLabel:'כן, לצאת', cancelLabel:'להישאר' })) document.getElementById('logout-btn').click();
+  const personal = typeof ramzorPersonal !== 'undefined' && ramzorPersonal;
+  if(await confirmSheet({ title:'לצאת מהמערכת?', text:personal ? 'כדי להיכנס שוב יישלח אלייך קוד חדש למייל.' : 'כדי להיכנס שוב יהיה צריך להקליד את הסיסמה.', okLabel:'כן, לצאת', cancelLabel:'להישאר' })) document.getElementById('logout-btn').click();
 });
 document.getElementById('manage-back-to-hub').addEventListener('click', ()=>{
   location.hash = '';

@@ -348,3 +348,8 @@
   [data-fold="team"] .mcal-name.me{ cursor:pointer; }          /* one's own name in the team calendar opens the swap / cannot-come choice */
   [data-fold="team"] .mcal-name.me:hover{ outline:2px solid var(--gold); outline-offset:1px; }
   .pday-fixed{ display:block; text-align:center; font-size:11px; font-weight:700; color:var(--p-no, #ff8a80); margin:-2px 0 2px; }          /* a locked day (vacation, sick leave...): the reason written on the day itself */
+  /* the staff login: "or" and the personal sign-in under the password */
+  .login-or{ display:flex; align-items:center; gap:10px; margin:16px 0 12px; color:var(--muted); font-size:13px; }
+  .login-or::before, .login-or::after{ content:''; flex:1; height:1px; background:var(--line); }
+  .apphome-hello{ font-weight:700; font-size:17px; margin-bottom:2px; }
+  .home-portal{ left:58px; }          /* next to "יציאה" on the Ramzor home, only after the personal sign-in */

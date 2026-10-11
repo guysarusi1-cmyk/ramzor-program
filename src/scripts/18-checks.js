@@ -1098,7 +1098,8 @@
       check('theme: the portal can be switched between dark and light', document.querySelector('.portal-shell').dataset.ptheme !== light, document.querySelector('.portal-shell').dataset.ptheme);
       st.settings.theme = 'dark';
 
-      // --- the new kids' TV screens
+      // --- the new kids' TV screens (the demo data of this device; the database screens are checked in "tv today")
+      const liveWas = PORTAL_TV_LIVE; PORTAL_TV_LIVE = false;
       check('TV: four new screens are in the rotation list', [9, 10, 11, 12].every(id => !!SLIDES[id]), SLIDES.length);
       refreshPortalSlides();
       check('TV: they show when there is something to show (today has people, activities and a birthday)', SLIDES[9].hidden === false && SLIDES[10].hidden === false && SLIDES[11].hidden === false && SLIDES[12].hidden === false, [9, 10, 11, 12].map(i => SLIDES[i].hidden).join());
@@ -1111,7 +1112,7 @@
       check('TV: the week shows seven days and flags the special day', document.querySelectorAll('#tv-week .tvw-day').length === 7 && document.querySelectorAll('#tv-week .tvw-day.special').length === 1, 'week');
       await showSlide(12);
       check('TV: the birthday screen shows today\'s child with the age', document.querySelectorAll('#tv-birthdays .tvb-card').length === birthdaysToday().length && /גיל \d+/.test($('tv-birthdays').textContent), $('tv-birthdays').textContent);
-      stopCarousel(); showHub();
+      stopCarousel(); showHub(); PORTAL_TV_LIVE = liveWas; refreshPortalSlides();
 
       // --- the retention rule and the reset
       portalMonth(addMonths(mk, -6)).published = true; portalPrune();
@@ -1197,6 +1198,51 @@
     });
 
     // ---- the portal on the real (test) database: personal sign-in, what each kind of person may see, preferences kept on the server
+    await step('personal sign-in', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)';
+      check('personal sign-in: the staff login offers a personal sign-in (e-mail + code) next to the password', !document.getElementById('login-personal').hidden && !!document.getElementById('login-personal-btn'), 'missing');
+      await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
+      const { error } = await signInRetry('instructor-test@merkaz-cherum.local', PW);
+      if(error){ check('personal sign-in: the instructor test account signs in', false, error.message); return; }
+      const ok = await personalEnter();
+      check('personal sign-in: one sign-in shows the two choices, the Ramzor and the portal (no demo note)', ok && activeView() === 'view-apphome' && !!document.getElementById('apphome-ramzor') && !!document.getElementById('apphome-portal') && !document.querySelector('.apphome-demo'), activeView());
+      check('personal sign-in: the Ramzor now works with the personal session, and the children are read with it', sb === sbPersonal && ramzorPersonal && roster.length >= 1, roster.length);
+      document.getElementById('apphome-ramzor').click(); await sleep(150);
+      check('personal sign-in: the Ramzor home has a small link to the portal', !document.getElementById('hub-portal-link').hidden, 'hidden');
+      document.getElementById('hub-portal-link').click(); await sleep(500);
+      check('personal sign-in: ... which opens the portal of the same person, with a way back to the two choices', activeView() === 'view-portal' && /מסך ראשי/.test((document.getElementById('portal-home') || {}).textContent || ''), activeView());
+      await personalLeave();
+      check('personal sign-in: leaving returns the Ramzor to the staff login of this device', sb === sbShared && !ramzorPersonal, 'still personal');
+      showHub();
+    });
+    await step('ahmash control', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)';
+      await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
+      const { error } = await signInRetry('coordinator-test@merkaz-cherum.local', PW);
+      if(error){ check('ahmash control: the coordinator test account signs in', false, error.message); return; }
+      if(!(await personalEnter())){ check('ahmash control: the coordinator enters', false, 'no'); return; }
+      showHub();
+      check('ahmash control: the Ramzor home shows a small "בקרת אחמ״ש" button to the coordinator', !document.getElementById('hub-control-btn').hidden, 'hidden');
+      document.getElementById('hub-control-btn').click(); await sleep(1500);
+      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 4 && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
+      // the timetable of today: a change, read back as the kids TV reads it, then back to the fixed one
+      const today = isoDate(new Date()), items = [{ t:'08:00', n:'ארוחת בוקר בדיקה', i:'breakfast' }, { t:'09:00', n:'גן', i:'school' }];
+      let w = await sb.from('timetable_day').upsert({ day:today, items });
+      const tv = await sbShared.rpc('tv_timetable_today');
+      check('ahmash control: a change of the timetable of today is what the kids screen reads', !w.error && !tv.error && tv.data.changed === true && tv.data.items.length === 2 && tv.data.items[0].n === 'ארוחת בוקר בדיקה', (w.error || tv.error || {}).message || JSON.stringify(tv.data).slice(0, 120));
+      await sb.from('timetable_day').delete().eq('day', today);
+      // a special bonus for today: on the lists of today, then gone
+      w = await sb.from('bonus_day').insert({ day:today, kind:'special', name:'בונוס בדיקה', from_time:'10:00', to_time:'11:00', icon:'🎈' }).select('id').single();
+      await loadBonusDay();
+      check('ahmash control: a special bonus joins the daily bonuses of today (kids screen and staff phones)', !w.error && bonusesForToday(bonusesDaily, false).some(b => b.special && b.text === 'בונוס בדיקה' && b.startTime === '10:00'), (w.error || {}).message);
+      if(w.data) await sb.from('bonus_day').delete().eq('id', w.data.id);
+      const lg = await sb.from('control_log').select('what').order('at', { ascending:false }).limit(6);
+      check('ahmash control: the changes are written in the log by the database', !lg.error && lg.data.some(l => /timetable_day/.test(l.what)) && lg.data.some(l => /bonus_day/.test(l.what)), (lg.error || {}).message || JSON.stringify(lg.data));
+      await personalLeave(); showHub();
+      check('ahmash control: without the personal sign-in the button is not there', document.getElementById('hub-control-btn').hidden, 'still shown');
+    });
     await step('portal server', async () => {
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', MAIL = { instructor:'instructor-test@merkaz-cherum.local', coordinator:'coordinator-test@merkaz-cherum.local', service:'service-test@merkaz-cherum.local' };
@@ -1589,6 +1635,39 @@
     });
 
     // ---- kids' TV: every visible slide renders, names without age
+    await step('tv today', async () => {
+      if(!PORTAL_ENABLED) return;
+      const liveWas = PORTAL_TV_LIVE; PORTAL_TV_LIVE = true;
+      // the people of today, as the TV computes them: three rows, the ahmash first, teachers first and service girls last, a removed person not shown
+      const data = { day:'2026-11-06', rows:[{ staff:'t', shift:'M', day:'2026-11-06' }, { staff:'i1', shift:'M', day:'2026-11-06' }, { staff:'a2', shift:'A', day:'2026-11-06' }, { staff:'a1', shift:'A', day:'2026-11-06' }, { staff:'s', shift:'A', day:'2026-11-06' }, { staff:'l', shift:'L', day:'2026-11-06' }, { staff:'n', shift:'N', day:'2026-11-06' }],
+        changes:[{ staff:'n', shift:'N', action:'remove' }, { staff:'x', shift:'N', action:'add' }],
+        people:[{ id:'t', label:'גננת', kind:'teacher', ahmash:0 }, { id:'i1', label:'אבי', kind:'instructor', ahmash:0 }, { id:'a2', label:'בתיה', kind:'instructor', ahmash:2 }, { id:'a1', label:'תמר', kind:'instructor', ahmash:1 },
+                { id:'s', label:'אלה', kind:'service', ahmash:0 }, { id:'l', label:'דנה', kind:'instructor', ahmash:0 }, { id:'n', label:'נוי', kind:'instructor', ahmash:0 }, { id:'x', label:'רון', kind:'instructor', ahmash:0 }] };
+      const g = shiftPeople(data), ids = c => g[c].filter(p => !p.removed).map(p => p.id).join();
+      check('tv today: the morning puts the teacher first', ids('M') === 't,i1', ids('M'));
+      check('tv today: the afternoon puts the best ahmash first and the service girl last, and the long weekend joins the afternoon and the night of the Friday', ids('A') === 'a1,a2,l,s', ids('A'));
+      check('tv today: the night shows the change of the ahmash control (one removed, one added)', ids('N') === 'l,x', ids('N'));
+      // the real screens from the database
+      activateDisplayView(); stopCarousel(); await loadTvToday(true); refreshPortalSlides();
+      check('tv today: the TV reads who is on shift and the timetable of today without signing in', !!tvShifts && Array.isArray(tvShifts.rows) && !!tvTimetable && Array.isArray(tvTimetable.items), JSON.stringify(tvShifts).slice(0, 80));
+      await showSlide(9);
+      check('tv today: the shift screen has three rows (sunrise, sun, moon) with pictures and no shift words', document.querySelectorAll('#tv-instructors .tvs-band').length === 3 && document.querySelectorAll('#tv-instructors .tvs-art svg').length === 3 && !/בוקר|צהריים|לילה/.test($('tv-instructors').textContent), document.querySelectorAll('#tv-instructors .tvs-band').length);
+      // the timetable of today, from the database, with the current activity lit
+      const today = isoDate(new Date()), n = new Date(), pad = x => String(x).padStart(2, '0'), earlier = `${pad(Math.max(0, n.getHours() - 1))}:00`, later = `${pad(Math.min(23, n.getHours() + 1))}:59`;
+      await sbPersonal.auth.signOut();
+      const s = await signInRetry('coordinator-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(!s.error){
+        await sbPersonal.from('timetable_day').upsert({ day:today, items:[{ t:earlier, n:'פעילות בדיקה', i:'art' }, { t:later, n:'עוד פעילות', i:'park' }] });
+        await loadTvToday(true); await showSlide(10);
+        check('tv today: the timetable shows the activities with a big picture in the middle, the current one lit', document.querySelectorAll('#tv-timetable .tvt2-item').length === 2 && document.querySelectorAll('#tv-timetable .tvt2-icon').length === 2 && (!!document.querySelector('#tv-timetable .tvt2-item.now') || n.getHours() === 0), document.querySelectorAll('#tv-timetable .tvt2-item').length);
+        await sbPersonal.from('timetable_day').delete().eq('day', today); await sbPersonal.auth.signOut();
+      } else check('tv today: the coordinator test account signs in', false, s.error.message);
+      // the quiet hours
+      tvQuietTick(); const q = document.getElementById('tv-quiet');
+      check('tv today: the quiet screen ("good night" / "good morning") is shown exactly in the quiet hours', !!q && q.hidden === !tvQuietNow(), String(tvQuietNow()));
+      stopCarousel(); showHub(); PORTAL_TV_LIVE = liveWas; refreshPortalSlides();
+      if(q){ q.hidden = true; q.innerHTML = ''; } tvQuietShown = null;
+    });
     await step('tv', async () => {
       activateDisplayView(); stopCarousel();
       for(const s of SLIDES){

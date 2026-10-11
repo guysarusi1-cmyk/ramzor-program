@@ -7,7 +7,8 @@ const APP_ENV = '@env@';   // 'live' (what staff use) or 'test' (the safe sandbo
 const SUPABASE_URL = '@config(supabaseUrl)';
 const SUPABASE_ANON_KEY = '@config(anonKey)';
 const STAFF_EMAIL = 'staff@merkaz-cherum.local';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);          // the Ramzor's connection: the shared staff login; after a personal sign-in it becomes the personal one (see personalEnter)
+const sbShared = sb;
 
 // The manager has a login of his own (see supabase/roles.sql). Management screens write through this second
 // connection, which holds the manager's session only in memory for a few minutes — instructors can never

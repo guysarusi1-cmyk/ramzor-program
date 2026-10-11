@@ -12,6 +12,23 @@ async function setMiniList(key, list){
   return !error;
 }
 
+// today's changes of the bonuses (scheduling-v15.sql, made in the ahmash control): a bonus hidden for today, a special bonus for some hours
+let bonusDay = [];
+async function loadBonusDay(){
+  try {
+    const r = await sb.from('bonus_day').select('id,kind,bonus_id,name,from_time,to_time,icon').eq('day', isoDate(new Date())).order('at');
+    const next = r.error ? [] : (r.data || []), changed = JSON.stringify(next) !== JSON.stringify(bonusDay);
+    bonusDay = next; return changed;
+  } catch(e){ return false; }
+}
+// the bonuses of today as the kids' TV and the staff phones show them: without the ones hidden today; the special ones join the daily list
+function bonusesForToday(list, weekly){
+  const hidden = new Set(bonusDay.filter(x => x.kind === 'hide').map(x => x.bonus_id));
+  const out = list.filter(bonusAppliesToday).filter(b => !hidden.has(b.id));
+  if(!weekly) bonusDay.filter(x => x.kind === 'special').forEach(x => out.push({ id:'sp-' + x.id, text:x.name, icon:x.icon || undefined, special:true,
+    startTime:x.from_time ? x.from_time.slice(0, 5) : undefined, endTime:x.to_time ? x.to_time.slice(0, 5) : undefined }));
+  return out;
+}
 let bonusesDaily = [];
 let bonusesWeekly = [];
 let dutyRoster = [];
@@ -141,6 +158,7 @@ function wireBonusEditor(containerId, getList, setListFn, inputId, addBtnId){
 let renderBonusesDailyList, renderBonusesWeeklyList, renderDutyRosterList;
 
 async function initMiniLists(){
+  await loadBonusDay();
   bonusesDaily = await getMiniList('bonusesDaily');
   bonusesWeekly = await getMiniList('bonusesWeekly');
   dutyRoster = await getMiniList('dutyRoster');

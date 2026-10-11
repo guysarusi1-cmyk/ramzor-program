@@ -63,8 +63,9 @@ function bonusBoardSection(title, list, revocationsByBonus){
 }
 async function renderBonusesSlide(){
   const el = document.getElementById('bonuses-slide-content');
-  const todayDaily = bonusesDaily.filter(bonusAppliesToday);
-  const todayWeekly = bonusesWeekly.filter(bonusAppliesToday);
+  await loadBonusDay();          // (the ahmash control may have hidden or added a bonus a moment ago)
+  const todayDaily = bonusesForToday(bonusesDaily, false);
+  const todayWeekly = bonusesForToday(bonusesWeekly, true);
   if(!todayDaily.length && !todayWeekly.length){ el.innerHTML = '<div class="empty">אין בונוסים מוגדרים להיום</div>'; return; }
   const revocationsByBonus = groupRevocationsByBonus(await getActiveBonusRevocations());
   // few bonuses are shown big in one column; more than 4 switch to two columns so they all fit on the screen
@@ -231,6 +232,7 @@ function startCarousel(){
   resumeRotation();
   startFeedbackListener();
   startTvControlListener();
+  if(typeof startTvQuiet === 'function') startTvQuiet();          // (the "good night" and "good morning" screens)
 }
 function stopCarousel(){
   pauseRotation();
@@ -238,5 +240,6 @@ function stopCarousel(){
   clearTimeout(interruptTimer);
   preInterruptIndex = null;
   stopFeedbackListener();
+  if(typeof stopTvQuiet === 'function') stopTvQuiet();
 }
 
