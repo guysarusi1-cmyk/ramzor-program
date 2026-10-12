@@ -1,14 +1,12 @@
-
 // ---------- bottom navigation bar (phones) ----------
-// "בית" = the home screen, "שליטה במסך הילדים" = the kids-screen control area. Both just trigger the
-// same things the home screen's own buttons do, so there is a single behaviour for each.
-document.getElementById('bnav-home').addEventListener('click', showHub);
-document.getElementById('bnav-kids').addEventListener('click', ()=> document.getElementById('hub-kids-btn').click());
+// One button, "בית": back to the first screen — the choice between the Ramzor and the portal (when the portal is on), or the Ramzor's home.
+// It is there in the Ramzor and in the portal alike.
+function goHome(){ if(PORTAL_ENABLED && typeof showAppHome === 'function') showAppHome(); else showHub(); }
+document.getElementById('bnav-home').addEventListener('click', goHome);
 
 function updateBottomNav(){
-  const kidsActive = document.getElementById('view-kids-quick').classList.contains('active');
-  document.getElementById('bnav-kids').classList.toggle('active', kidsActive);
-  document.getElementById('bnav-home').classList.toggle('active', !kidsActive);
+  const atHome = document.getElementById('view-apphome').classList.contains('active') || (!PORTAL_ENABLED && document.getElementById('view-hub').classList.contains('active'));
+  document.getElementById('bnav-home').classList.toggle('active', atHome);
 }
 // views switch by toggling the "active" class from many places — watching it keeps the bar in sync
 // without touching each of them

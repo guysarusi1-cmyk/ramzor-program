@@ -3,7 +3,7 @@
   /* the app home and the portal replace the shared page header, like the רמזור home does */
   #protected-app:has(#view-apphome.active) > #shared-header, #protected-app:has(#view-apphome.active) > #shared-logout-row,
   #protected-app:has(#view-portal.active) > #shared-header, #protected-app:has(#view-portal.active) > #shared-logout-row{ display:none; }
-  body.portal-mode #bottom-nav{ display:none; }
+  #protected-app:has(.plogin) > #bottom-nav, #protected-app:has(#view-apphome.active) > #bottom-nav{ display:none; }          /* (the bar is there in the Ramzor and in the portal; not on the sign-in, nor on the first screen itself) */
 
   .apphome{ padding-top:30px; text-align:center; }
   .apphome-top{ text-align:left; }

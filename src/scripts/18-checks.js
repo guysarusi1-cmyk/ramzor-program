@@ -112,13 +112,11 @@
       check(phone ? 'bottom bar shows on phones' : 'bottom bar hidden on bigger screens', visible($('bottom-nav')) === phone, 'visible=' + visible($('bottom-nav')));
       if(!phone) return;
       const labels = [...document.querySelectorAll('#bottom-nav .bottom-nav-btn')].map(b => b.textContent.trim());
-      check('bottom bar has only "בית" and "שליטה במסך הילדים"', labels.join('|') === 'בית|שליטה במסך הילדים', labels.join('|'));
-      check('"בית" is highlighted on the home screen', $('bnav-home').classList.contains('active') && !$('bnav-kids').classList.contains('active'), 'wrong highlight');
-      $('bnav-kids').click(); await sleep(150);
-      check('bar: kids control opens', activeView() === 'view-kids-quick', activeView());
-      check('bar: kids control is highlighted', $('bnav-kids').classList.contains('active') && !$('bnav-home').classList.contains('active'), 'wrong highlight');
+      check('bottom bar has only "בית"', labels.join('|') === 'בית', labels.join('|'));
+      $('hub-kids-btn').click(); await sleep(150);
       $('bnav-home').click(); await sleep(150);
-      check('bar: home opens', activeView() === 'view-hub', activeView());
+      check('bar: "בית" goes to the first screen (the choice between the Ramzor and the portal)', activeView() === (PORTAL_ENABLED ? 'view-apphome' : 'view-hub'), activeView());
+      showHub();
       $('hub-daily-btn').click();
       check('phone: no page header above the daily-ops content', !visible($('shared-header')) && !visible($('staff-back-to-hub')), 'header still shown');
       showHub();
