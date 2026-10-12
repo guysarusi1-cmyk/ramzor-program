@@ -11,7 +11,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 $root = $PSScriptRoot
 Set-Location $root
 function Step($t){ Write-Host "`n== $t" -ForegroundColor Cyan }
-function Invoke-Git { & git.exe @args; if($LASTEXITCODE -ne 0){ throw "git $($args -join ' ') failed" } }
+function Invoke-Git { $ErrorActionPreference = 'Continue'; & git.exe @args 2>&1 | ForEach-Object { "$_" }; if($LASTEXITCODE -ne 0){ throw "git $($args -join ' ') failed" } }          # (git writes its progress to stderr: that is not a failure; only the exit code counts)
 
 Step "1/6 working tree must be committed on dev"
 $branch = (git rev-parse --abbrev-ref HEAD).Trim()
