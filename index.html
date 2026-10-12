@@ -441,7 +441,7 @@
   .bottom-nav{ display:none; }
   @media (max-width:700px){
     .bottom-nav{
-      display:grid; grid-template-columns:1fr 1fr; position:fixed; left:0; right:0; bottom:0; z-index:50;
+      display:grid; grid-template-columns:1fr; position:fixed; left:0; right:0; bottom:0; z-index:50;
       background:rgba(18,23,42,.96); border-top:1px solid var(--line);
       padding:6px 8px calc(6px + env(safe-area-inset-bottom));
       -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
@@ -1126,7 +1126,7 @@
   /* the app home and the portal replace the shared page header, like the רמזור home does */
   #protected-app:has(#view-apphome.active) > #shared-header, #protected-app:has(#view-apphome.active) > #shared-logout-row,
   #protected-app:has(#view-portal.active) > #shared-header, #protected-app:has(#view-portal.active) > #shared-logout-row{ display:none; }
-  body.portal-mode #bottom-nav{ display:none; }
+  #protected-app:has(.plogin) > #bottom-nav, #protected-app:has(#view-apphome.active) > #bottom-nav{ display:none; }          /* (the bar is there in the Ramzor and in the portal; not on the sign-in, nor on the first screen itself) */
 
   .apphome{ padding-top:30px; text-align:center; }
   .apphome-top{ text-align:left; }
@@ -1711,10 +1711,6 @@
     <button type="button" class="bottom-nav-btn" id="bnav-home" data-bnav="home">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>
       <span>בית</span>
-    </button>
-    <button type="button" class="bottom-nav-btn" id="bnav-kids" data-bnav="kids">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="20" height="13" rx="2"/><path d="M8 21h8M12 16.5V21"/></svg>
-      <span>שליטה במסך הילדים</span>
     </button>
   </nav>
 
@@ -5385,7 +5381,7 @@ function showAppHome(){
       ${portalServerOn ? '' : '<div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>'}
     </div>`;
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
-  document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else showPortal(); });
+  document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
   const mg = document.getElementById('apphome-manage'); if(mg) mg.addEventListener('click', () => { portalUi.manager = true; srvOpenPortal(); });
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
 }
@@ -8267,17 +8263,15 @@ async function adminLog(box){
   box.innerHTML = GROUPS.map(([g, title]) => { const list = items.filter(x => group(x.by) === g).slice(0, 100); return `<details class="pfold pfold-in"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">
     ${list.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL')} · ${pEsc(who(x.by))}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('');
 }
-
 // ---------- bottom navigation bar (phones) ----------
-// "בית" = the home screen, "שליטה במסך הילדים" = the kids-screen control area. Both just trigger the
-// same things the home screen's own buttons do, so there is a single behaviour for each.
-document.getElementById('bnav-home').addEventListener('click', showHub);
-document.getElementById('bnav-kids').addEventListener('click', ()=> document.getElementById('hub-kids-btn').click());
+// One button, "בית": back to the first screen — the choice between the Ramzor and the portal (when the portal is on), or the Ramzor's home.
+// It is there in the Ramzor and in the portal alike.
+function goHome(){ if(PORTAL_ENABLED && typeof showAppHome === 'function') showAppHome(); else showHub(); }
+document.getElementById('bnav-home').addEventListener('click', goHome);
 
 function updateBottomNav(){
-  const kidsActive = document.getElementById('view-kids-quick').classList.contains('active');
-  document.getElementById('bnav-kids').classList.toggle('active', kidsActive);
-  document.getElementById('bnav-home').classList.toggle('active', !kidsActive);
+  const atHome = document.getElementById('view-apphome').classList.contains('active') || (!PORTAL_ENABLED && document.getElementById('view-hub').classList.contains('active'));
+  document.getElementById('bnav-home').classList.toggle('active', atHome);
 }
 // views switch by toggling the "active" class from many places — watching it keeps the bar in sync
 // without touching each of them
