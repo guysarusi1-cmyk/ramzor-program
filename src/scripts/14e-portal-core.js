@@ -9,6 +9,8 @@ function portalPerson(id){ return portalLoad().instructors.find(p => p.id === id
 function portalMe(){ return portalPerson(portalUi.persona) || portalLoad().instructors[0]; }          // (in server mode persona = the signed-in person)
 function portalIsCoordinator(){ return portalMe().role === 'coordinator'; }
 // the coordinator's view of the portal: the coordinator herself, or the admin when he opened the management portal (an admin can also be an instructor)
+// the leopard look is exclusive: the coordinator, the admin, and the people the admin chose (sched_settings "leopard_people")
+const leopardAllowed = () => !!srv.meRow && (srv.meRow.role === 'coordinator' || !!srv.meRow.admin || (srv.leopardPeople || []).includes(srv.me));
 const portalAsCoord = me => !!me && (me.role === 'coordinator' || (!!portalUi.manager && !!me.admin));
 function pEsc(s){ return escapeHtml(s == null ? '' : s); }
 function portalActivateView(id){
@@ -76,7 +78,7 @@ function showPortal(tab){
   const today = monthKeyOf(isoDate(new Date()));
   if(!portalUi.month) portalUi.month = today;
   const view = document.getElementById('view-portal');
-  const leopard = portalServerOn && !portalUi.viewAs && srv.portalTheme === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
+  const leopard = portalServerOn && !portalUi.viewAs && leopardAllowed() && srv.portalTheme === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
   document.body.classList.toggle('leopard-bg', leopard);
   view.innerHTML = `
     <div class="portal-shell${portalServerOn && portalAsCoord(me) ? ' wide' : ''}" data-ptheme="${theme}">

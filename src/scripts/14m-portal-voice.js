@@ -109,7 +109,8 @@ async function srvLoadSettings(){
     if(!r.error) hasCols = true; else r = await sbPersonal.from('staff_settings').select('voice,reminders').eq('staff_id', srv.me).maybeSingle();          // (before scheduling-v8.sql / v12.sql the columns do not exist)
     if(!r.error && r.data){ srv.voice = r.data.voice || null; srv.reminders = r.data.reminders !== false; srv.pickOne = !!r.data.pick_one; srv.showLong = !!r.data.show_long; }
   } catch(e){}
-  srv.portalTheme = null;
+  srv.portalTheme = null; srv.leopardPeople = [];
+  try { const lp = await sbPersonal.from('sched_settings').select('value').eq('key', 'leopard_people').maybeSingle(); if(!lp.error && lp.data && Array.isArray(lp.data.value)) srv.leopardPeople = lp.data.value; } catch(e){}          // (who else may choose the leopard look: chosen by the admin)
   try { const t = await sbPersonal.from('staff_settings').select('portal_theme').eq('staff_id', srv.me).maybeSingle(); if(!t.error && t.data) srv.portalTheme = t.data.portal_theme || null; } catch(e){}          // (comes with scheduling-v16.sql)
   if(!srv.voice){ try { srv.voice = localStorage.getItem('ramzor-portal-voice') || null; } catch(e){} }
   if(!hasCols){ try { srv.pickOne = localStorage.getItem('ramzor-portal-pickone') === '1'; srv.showLong = localStorage.getItem('ramzor-portal-showlong') === '1'; } catch(e){} }          // (only until the columns exist)
@@ -126,7 +127,7 @@ async function srvSaveSetting(patch){
   } catch(e){ return false; }
 }
 function openPortalSettings(){
-  const coord = !!srv.meRow, leo = coord && srv.portalTheme === 'leopard';          // (the leopard look: a choice for everybody in the gear, never the default)          // (the leopard look: only the coordinator's portal)
+  const coord = leopardAllowed(), leo = coord && srv.portalTheme === 'leopard';          // (the leopard look: exclusive — the coordinator, the admin, and whom the admin chose; never the default)          // (the leopard look: only the coordinator's portal)
   const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') === '1'; } catch(e){ return false; } })();
   const sh = portalSheet(`<h2>העדפות מערכת</h2>
     <h3 class="psec">באיזו שפה נדבר איתך?</h3>
