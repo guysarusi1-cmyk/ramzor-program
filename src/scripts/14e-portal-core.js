@@ -76,7 +76,7 @@ function showPortal(tab){
   const today = monthKeyOf(isoDate(new Date()));
   if(!portalUi.month) portalUi.month = today;
   const view = document.getElementById('view-portal');
-  const leopard = portalServerOn && !portalUi.viewAs && me.role === 'coordinator' && !me.admin && srv.portalTheme === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
+  const leopard = portalServerOn && !portalUi.viewAs && (me.role === 'coordinator' || me.admin) && srv.portalTheme === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
   document.body.classList.toggle('leopard-bg', leopard);
   view.innerHTML = `
     <div class="portal-shell${portalServerOn && portalAsCoord(me) ? ' wide' : ''}" data-ptheme="${theme}">
