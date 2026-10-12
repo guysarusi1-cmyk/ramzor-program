@@ -126,7 +126,7 @@ async function srvSaveSetting(patch){
   } catch(e){ return false; }
 }
 function openPortalSettings(){
-  const coord = !!(srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)), leo = coord && srv.portalTheme === 'leopard';          // (the leopard look: the coordinator and the admin only)          // (the leopard look: only the coordinator's portal)
+  const coord = !!srv.meRow, leo = coord && srv.portalTheme === 'leopard';          // (the leopard look: a choice for everybody in the gear, never the default)          // (the leopard look: only the coordinator's portal)
   const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') === '1'; } catch(e){ return false; } })();
   const sh = portalSheet(`<h2>העדפות מערכת</h2>
     <h3 class="psec">באיזו שפה נדבר איתך?</h3>
