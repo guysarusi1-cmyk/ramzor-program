@@ -319,11 +319,11 @@
   .cs-req b{ font-size:12.5px; } .cs-req > span{ color:var(--p-text); overflow-wrap:anywhere; }
   .cs-req.no{ border-color:var(--p-no, #ff8a80); } .cs-req.can{ border-color:var(--p-avoid, #f0c239); } .cs-req.yes{ border-color:var(--p-yes, #7be0a0); }
   .cs-name[draggable=true]{ cursor:grab; } .cs-name.dragging{ opacity:.5; }
-  .mcal-cell.drop-ok{ outline:3px solid var(--gold); outline-offset:-3px; }
-  .mcal-cell.drop-yes{ outline-color:var(--p-yes, #7be0a0); background:rgba(123,224,160,.28); }
-  .mcal-cell.drop-can{ outline-color:var(--p-avoid, #f0c239); background:rgba(240,194,57,.28); }
-  .mcal-cell.drop-no{ outline-color:var(--p-no, #ff8a80); background:rgba(255,138,128,.28); }
-  .mcal-cell.drop-none{ outline-color:#8ec0ff; background:rgba(110,168,254,.24); }
+  .mcal .mcal-cell.drop-ok{ outline:3px solid var(--gold); outline-offset:-3px; }          /* (stronger than the weekend and hover backgrounds, so the wish colour shows on every day) */
+  .mcal .mcal-cell.drop-ok.drop-yes{ outline-color:var(--p-yes, #7be0a0); background:rgba(123,224,160,.28); }
+  .mcal .mcal-cell.drop-ok.drop-can{ outline-color:var(--p-avoid, #f0c239); background:rgba(240,194,57,.28); }
+  .mcal .mcal-cell.drop-ok.drop-no{ outline-color:var(--p-no, #ff8a80); background:rgba(255,138,128,.28); }
+  .mcal .mcal-cell.drop-ok.drop-none{ outline-color:#8ec0ff; background:rgba(110,168,254,.24); }
   .mcal-key.compact{ display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
   .tab-key{ display:flex; flex-direction:column; gap:3px; width:100%; }          /* the folded tab: a small colour key, stacked, above the text */
   .tab-key{ gap:10px; margin-top:6px; align-items:center; }

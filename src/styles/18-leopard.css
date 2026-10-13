@@ -15,5 +15,5 @@
   .portal-shell[data-ptheme=leopard] .btn:not(.ghost){ background:linear-gradient(180deg, #e9c06a, #c99135); color:#2a1606; border-color:#c99135; }
   .portal-shell[data-ptheme=leopard] .btn.ghost, .portal-shell[data-ptheme=leopard] .back-btn{ background:rgba(58,37,20,.9); color:var(--p-text); border-color:var(--p-line); }
   .portal-shell[data-ptheme=leopard] select, .portal-shell[data-ptheme=leopard] input, .portal-shell[data-ptheme=leopard] textarea{ background:rgba(28,17,9,.9); color:var(--p-text); border-color:var(--p-line); }
-  .portal-shell[data-ptheme=leopard] .mcal-cell{ background-color:rgba(38,24,13,.82); }
+  .portal-shell[data-ptheme=leopard] .mcal{ background:rgba(24,14,6,.55); border-radius:12px; }          /* (behind the calendar; the shifts keep their own backgrounds) */
   .portal-shell[data-ptheme=leopard] .cs-tab{ background:rgba(38,24,13,.92); border-color:rgba(226,182,92,.45); }

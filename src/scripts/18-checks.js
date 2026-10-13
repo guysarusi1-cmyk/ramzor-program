@@ -1548,6 +1548,11 @@
           if(dragged && target){
             const dt = new DataTransfer(); dragged.dispatchEvent(new DragEvent('dragstart', { dataTransfer:dt, bubbles:true }));
             target.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true })); const marked = target.classList.contains('drop-ok') && /drop-(yes|can|no|none)/.test(target.className);
+            { const wk = document.querySelector('.mcal-cell.editable.weekend');
+              if(wk){ wk.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true }));
+                const lvl = (wk.className.match(/drop-(yes|can|none|no)(?![a-z])/) || [])[1], bg = getComputedStyle(wk).backgroundColor, want = { yes:'rgba(123, 224, 160, 0.28)', can:'rgba(240, 194, 57, 0.28)', no:'rgba(255, 138, 128, 0.28)', none:'rgba(110, 168, 254, 0.24)' }[lvl];
+                check('portal people: while dragging, a weekend shift also takes the colour of the wish (not hidden by the weekend background)', !!lvl && bg === want, lvl + ' / ' + bg);
+                wk.dispatchEvent(new DragEvent('dragleave', { dataTransfer:dt, bubbles:true })); } }
             target.dispatchEvent(new DragEvent('drop', { dataTransfer:dt, bubbles:true, cancelable:true })); await sleep(700); const asked = !!document.querySelector('.confirm-sheet'); if(asked) await answerSheet();
             check('portal people: dropping a name on a shift places that instructor on it at once, without a question (she did not write "no" for it)', marked && !asked && await waitFor(async () => { const q = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', day).eq('shift', 'M'); return q.data && q.data.length === 1; }, 60), 'not placed (target marked: ' + marked + ')');
             await sbPersonal.from('assignment').delete().eq('staff_id', i2).eq('day', day).eq('shift', 'M'); await srvReloadSafe(); await srvLoadCoord(); srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(200); }
