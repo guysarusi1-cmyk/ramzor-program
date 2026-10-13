@@ -344,7 +344,9 @@
   @media (min-width:700px){ .mcal{ grid-template-columns:70px repeat(7, minmax(0, 1fr)); column-gap:5px; } .mcal-head{ font-size:14px; } .mcal-num{ font-size:14px; padding:5px 3px; margin-top:12px; } .mcal-cell{ padding:5px; gap:3px; } .mcal-label b{ font-size:14px; } .mcal-label small{ font-size:12px; } .mcal-name{ font-size:13px; padding:2px 5px; } .mcal-name small{ font-size:10.5px; } .mcal-missing{ font-size:12px; } }
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
-  body.portal-big .portal-shell{ zoom:1.14; }
+  body.portal-big .portal-shell{ zoom:1.25; }
+  .portal-shell.wide{ zoom:1.2; }          /* the coordinator's portal: larger text than everybody's (she works at a computer) */
+  body.portal-big .portal-shell.wide{ zoom:1.42; }
   [data-fold="team"] .mcal-name.me{ cursor:pointer; }          /* one's own name in the team calendar opens the swap / cannot-come choice */
   [data-fold="team"] .mcal-name.me:hover{ outline:2px solid var(--gold); outline-offset:1px; }
   .pday-fixed{ display:block; text-align:center; font-size:11px; font-weight:700; color:var(--p-no, #ff8a80); margin:-2px 0 2px; }          /* a locked day (vacation, sick leave...): the reason written on the day itself */

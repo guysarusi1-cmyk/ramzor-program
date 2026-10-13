@@ -117,6 +117,13 @@ async function srvLoadPhotos(){
 }
 // one row of the schedule -> the list of rows (for "my shifts") and the team board (instructors only; short / long / custom-hours shifts carry a note)
 const SRV_STD = { M:['07:00', '15:00'], A:['14:00', '22:00'], N:['22:00', '08:00'], S:['07:00', '11:00'] };
+function srvDropRow(st, id){
+  const r = st.rows.find(x => x.id === id); if(!r) return;
+  st.rows = st.rows.filter(x => x.id !== id);
+  const keys = r.shift === 'L' ? [[r.day, 'e'], [addDays(r.day, 1), 'm'], [addDays(r.day, 1), 'e']] : r.shift === 'S' ? [[r.day, 'm']] : [[r.day, SRV_SHIFT_UI[r.shift]]];
+  keys.forEach(([d, sid]) => { const mm = st.months[monthKeyOf(d)]; if(!mm || !sid) return; const list = mm.assignments[`${d}|${sid}`]; if(!list) return; const i = list.indexOf(r.staff); if(i >= 0) list.splice(i, 1); });
+  const a = st.assignmentIds[id]; if(a){ delete st.assignmentIds[`${a.key}|${a.staff}`]; delete st.assignmentIds[id]; }
+}
 function srvAddRow(st, r){
   const t5 = x => x ? x.slice(0, 5) : null, from = t5(r.from_time), to = t5(r.to_time);
   st.rows.push({ id:r.id, staff:r.staff_id, day:r.day, shift:r.shift, from, to, flags:r.flags || [] });
