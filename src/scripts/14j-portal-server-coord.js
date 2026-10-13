@@ -333,10 +333,10 @@ function waNumber(staffId){
 }
 // the ready messages: one for "no" and one for "not marked", each for a man and for a woman; the coordinator edits them in the settings (sched_settings "wa_messages")
 const WA_DEFAULT = {
-  no:   { f:'היי {שם}, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכלי להגיע?',
-          m:'היי {שם}, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכל להגיע?' },
-  none: { f:'היי {שם}, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכלי להגיע?',
-          m:'היי {שם}, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכל להגיע?' }
+  no:   { f:'היי, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכלי להגיע?',
+          m:'היי, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכל להגיע?' },
+  none: { f:'היי, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכלי להגיע?',
+          m:'היי, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכל להגיע?' }
 };
 const waTemplate = (kind, female) => { const own = ((portalLoad().waMsg || {})[kind] || {})[female ? 'f' : 'm']; return (own && String(own).trim()) || WA_DEFAULT[kind][female ? 'f' : 'm']; };
 // a ready message about this very shift (she can still change it in WhatsApp before sending)
