@@ -1632,7 +1632,7 @@
         check('portal people: opening one part of the settings folds the other', !document.querySelector('details[data-sfold="ann"]').open, 'still open');
         document.querySelector('#sd-day').value = sd; document.querySelector('#sd-label').value = 'בדיקה'; document.querySelector('#sd-go').click();
         check('portal people: a special day can be added', await waitFor(async () => { const d = await sbPersonal.from('special_days').select('day').eq('day', sd); return d.data && d.data.length === 1; }), 'not added'); created.day = sd;
-        document.querySelector('details[data-sfold="staff"]').open = true; await waitFor(() => document.querySelectorAll('[data-mail]').length > 0, 100);
+        await waitFor(() => { const d = document.querySelector('details[data-sfold="staff"]'); if(d && !d.open) d.open = true; return document.querySelectorAll('[data-mail]').length > 0; }, 100);          // (the screen is drawn again after the special day is saved: open the part again if that closed it)
         check('portal people: the settings list the staff with their e-mail fields and the priority arrows', document.querySelectorAll('[data-mail]').length >= 20 && document.querySelectorAll('[data-up]').length >= 15, document.querySelectorAll('[data-mail]').length);
         await sign('instructor2'); showPortal('inbox'); await sleep(700);
         for(let i = 0; i < 12 && !/הודעת בדיקה אוטומטית/.test(document.getElementById('portal-body').textContent); i++){ showPortal('inbox'); await sleep(500); }          // (a late redraw of the coordinator's last screen may land after the switch: ask again)
