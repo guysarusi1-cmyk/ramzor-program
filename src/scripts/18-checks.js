@@ -1743,7 +1743,7 @@
             const d = document.querySelectorAll('#portal-body details')[i]; if(!d) break;
             const name = (d.querySelector('summary') || {}).textContent || '#' + i;
             t0 = performance.now(); d.open = true; await sleep(80); await waitFor(() => !/טוען/.test(d.textContent), 60);
-            const fm = performance.now() - t0; if(fm > 6000) slow.push(tab + ' / ' + name.trim().slice(0, 30) + ' ' + Math.round(fm) + ' ms');
+            const fm = performance.now() - t0; if(fm > 8000)          /* (a folded part: up to 8 s; the test site's logs are far bigger than the live ones) */ slow.push(tab + ' / ' + name.trim().slice(0, 30) + ' ' + Math.round(fm) + ' ms');
             { const p = problems(tab + ' / ' + name.trim().slice(0, 30)); if(p) found.push(p); }
             const again = document.querySelectorAll('#portal-body details')[i]; if(again) again.open = false; await sleep(30);
           }
