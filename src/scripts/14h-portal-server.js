@@ -335,8 +335,9 @@ async function srvStart(){
 let ramzorPersonal = false;
 const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
 async function personalEnter(){
-  portalServerOn = true;
+  portalServerOn = true; portalUi.viewAs = null; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoad())){ portalServerOn = false; return false; }
+  portalUi.persona = srv.me;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('protected-app').style.display = '';
   if(!personalRamzorKind()){ srvOpenPortal(); return true; }          // (service girls and teachers: only the portal)
@@ -350,6 +351,7 @@ async function personalLeave(){
   try { await srvFlush(); } catch(e){}
   await sbPersonal.auth.signOut();
   sb = sbShared; ramzorPersonal = false; portalServerOn = false; portalState = null; srv.me = null; srv.profile = null; srv.profileFor = null;
+  portalUi.viewAs = null; portalUi.manager = false; portalUi.persona = null;
 }
 async function srvSignOut(){
   await srvFlush();
