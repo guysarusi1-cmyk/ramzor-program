@@ -1227,7 +1227,7 @@
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
       check('personal sign-in: ... and the management portal has the coordinator tabs', !!document.querySelector('[data-ptab="submissions"]') && !!document.querySelector('[data-ptab="settings"]') && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       document.querySelector('[data-ptab="admin"]') && document.querySelector('[data-ptab="admin"]').click(); await sleep(200);
-      check('management portal: a "ניהול" tab with the staff details, looking as somebody, the system settings, building again and the full log', document.querySelectorAll('#portal-body details[data-afold]').length === 5, document.querySelectorAll('#portal-body details[data-afold]').length);
+      check('management portal: a "ניהול" tab with the staff details, looking as somebody, the system settings, building again and the full log', document.querySelectorAll('#portal-body details[data-afold]').length === 6 && !!document.querySelector('#portal-body details[data-afold="problems"]'), document.querySelectorAll('#portal-body details[data-afold]').length);
       { const other = portalLoad().instructors.find(p => p.active && p.id !== srv.me && p.role === 'instructor');
         portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.manager = false; portalUi.tab = null; showPortal(); await sleep(200);
         check('management portal: looking as somebody shows a clear "only to look" bar, with the way back', !!document.querySelector('.adm-viewas') && !!document.getElementById('viewas-end'), 'no bar');
@@ -1761,6 +1761,35 @@
         await personalLeave(); showHub();
       }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.tab = null; portalUi.persona = 'c1'; showHub();
+    });
+    // ---- problems in the field: the report button (portal, gear, Ramzor home) and the errors written down by themselves (scheduling-v23.sql)
+    await step('problems', async () => {
+      if(!PORTAL_ENABLED) return;
+      check('problems: the Ramzor home has "משהו לא עובד? דיווח על תקלה"', !!document.getElementById('hub-problem'), 'missing');
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('problems: the instructor test account signs in', false, error ? error.message : 'no'); return; }
+      const has = await sbPersonal.from('client_errors').insert({ kind:'error', message:'בדיקה אוטומטית: טבלה קיימת', detail:{} });
+      if(has.error && /client_errors|relation|schema cache/i.test(has.error.message)){ check('(info) problems: skipped, scheduling-v23.sql was not run on this server', true, ''); await personalLeave(); showHub(); return; }
+      check('problems: a signed-in person can write a problem (and cannot read the list: only the admin)', !has.error && !((await sbPersonal.from('client_errors').select('id').limit(1)).data || []).length, (has.error || {}).message);
+      document.getElementById('apphome-portal').click(); await sleep(400);
+      const btn = document.getElementById('portal-problem');
+      check('problems: the portal ends with "משהו לא עובד? דיווח על תקלה"', !!btn && /דיווח על תקלה/.test(btn.textContent), 'missing');
+      if(btn){ btn.click(); await sleep(150);
+        const box = document.querySelector('.psheet #prob-text'), send = document.querySelector('.psheet #prob-send');
+        check('problems: the button opens a short question: what happened', !!box && !!send, 'no sheet');
+        if(box){ box.value = 'בדיקה אוטומטית: דיווח'; send.click();
+          let thanked = false; for(let i = 0; i < 40 && !thanked; i++){ await sleep(150); thanked = [...document.querySelectorAll('.toast')].some(t => /הדיווח נשלח/.test(t.textContent)); }
+          check('problems: sending the report thanks the person (it reached the database)', thanked && !document.querySelector('.psheet #prob-text'), 'no thanks'); } }
+      document.getElementById('portal-gear').click(); await sleep(150);
+      check('problems: the gear has the report button too', !!document.querySelector('.psheet #gear-problem'), 'missing');
+      { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+      // an error on the device is written down once, with where it happened
+      window.__probForce = true; const before = PROB.sent;
+      probRecord('בדיקה אוטומטית: שגיאה ' + Date.now(), 'stack'); probRecord('בדיקה אוטומטית: שגיאה ' + Date.now(), 'stack');
+      const again = PROB.sent; probRecord('בדיקה אוטומטית: שגיאה ' + Date.now(), ''); window.__probForce = false;
+      check('problems: an error on the device is written down by itself (each kind once, at most 8 per visit)', again - before >= 1 && PROB.recent.length >= 1 && /portal/.test(PROB.recent[PROB.recent.length - 1].where), [before, again, JSON.stringify(PROB.recent.slice(-1))].join(' / '));
+      await personalLeave(); showHub();
     });
     await step('tv today', async () => {
       if(!PORTAL_ENABLED) return;

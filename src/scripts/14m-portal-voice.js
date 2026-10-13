@@ -140,7 +140,9 @@ function openPortalSettings(){
     <div class="pnote">${tx('long_setting')}</div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${srv.pickOne ? 'on' : ''}" data-set-pick="1">להציג "רק אחד מאלה": כן</button><button type="button" class="${srv.pickOne ? '' : 'on'}" data-set-pick="0">לא</button></div>
     <div class="pnote">${tx('pick_setting')}</div>` : ''}
+    <button type="button" class="btn ghost" id="gear-problem" style="margin-top:14px;width:100%">משהו לא עובד? דיווח על תקלה</button>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
+  sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
   sh.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', async () => {
     await srvSaveSetting({ voice:b.dataset.voice }); sh.close(); toast(({ warm:'בחרנו בשפה החמה והרכה', light:'עברנו לשפה הקלילה. נתראה בבדיחות!', brief:'עברנו לשפה קצרה ועניינית' })[b.dataset.voice]); showPortal();
   }));

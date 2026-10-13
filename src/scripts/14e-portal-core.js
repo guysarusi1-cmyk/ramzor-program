@@ -95,6 +95,7 @@ function showPortal(tab){
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
       ${portalServerOn && portalUi.viewAs ? `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>` : ''}
       <div id="portal-body"></div>
+      ${portalServerOn ? '<button type="button" class="portal-problem" id="portal-problem">משהו לא עובד? דיווח על תקלה</button>' : ''}
     </div>`;
   if(portalServerOn && portalUi.viewAs){          // (the admin looks at somebody's portal: folds, months and tabs work; nothing can be changed)
     document.getElementById('viewas-end').addEventListener('click', adminViewAsEnd);
@@ -105,6 +106,7 @@ function showPortal(tab){
   }
   document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
+  const prob = document.getElementById('portal-problem'); if(prob) prob.addEventListener('click', openProblemReport);
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
   if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
   view.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.ptab; showPortal(); }));

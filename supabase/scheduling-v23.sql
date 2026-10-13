@@ -27,7 +27,7 @@ grant select, insert, update on public.client_errors to authenticated;
 create or replace function public.client_report_mail() returns trigger language plpgsql security definer set search_path = public as $$
 declare who text; r record;
 begin
-  if new.kind <> 'report' then return new; end if;
+  if new.kind <> 'report' or new.message like 'בדיקה אוטומטית%' then return new; end if;          -- (the automatic checks of the test site send no e-mail)
   select display_name into who from public.staff where id = new.staff_id;
   for r in select p.email from public.staff s join public.staff_private p on p.staff_id = s.id
            where s.active and p.email is not null and (s.kind = 'admin' or coalesce(p.is_admin, false)) loop

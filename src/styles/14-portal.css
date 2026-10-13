@@ -383,3 +383,7 @@
   .wa-btn:hover, .wa-btn:focus-visible{ background:#1ebe5a; outline:2px solid #fff; outline-offset:1px; }
   .wa-ask{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
   .wa-go{ display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#25d366 !important; color:#fff !important; border-color:#25d366 !important; text-decoration:none; }
+  /* "something does not work? report a problem": quiet, at the end of the screen (the portal and the Ramzor's home) */
+  .portal-problem, .home-problem{ display:block; margin:28px auto 8px; background:none; border:0; padding:10px 14px; font:inherit; font-size:14px; color:var(--p-muted, var(--muted)); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+  .portal-problem:hover, .home-problem:hover, .portal-problem:focus-visible, .home-problem:focus-visible{ color:var(--p-text, var(--text)); }
+  .pmine-row.done{ opacity:.6; }

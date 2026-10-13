@@ -17,11 +17,11 @@ function srvRenderAdmin(body){
   portalUi.adminFold = portalUi.adminFold || {};
   const fold = (id, title) => `<details class="pfold" data-afold="${id}"${portalUi.adminFold[id] ? ' open' : ''}><summary><span>${title}</span></summary><div class="pfold-body" data-abody="${id}"></div></details>`;
   body.innerHTML = `<div class="pnote">כאן מה שרק למנהל יש: כל פרטי הצוות, צפייה בפורטל כמו שמדריך מסוים רואה אותו, הגדרות המערכת, בנייה מחדש של סידור ויומן מלא.</div>
-    ${fold('staff', 'פרטי הצוות')}${fold('viewas', 'צפייה כמו מדריך מסוים')}${fold('system', 'הגדרות מערכת')}${fold('rebuild', 'בנייה מחדש של סידור')}${fold('log', 'יומן מלא')}`;
+    ${fold('problems', 'תקלות ודיווחים')}${fold('staff', 'פרטי הצוות')}${fold('viewas', 'צפייה כמו מדריך מסוים')}${fold('system', 'הגדרות מערכת')}${fold('rebuild', 'בנייה מחדש של סידור')}${fold('log', 'יומן מלא')}`;
   const fill = async id => {
     const box = body.querySelector(`[data-abody="${id}"]`); if(!box) return;
     box.innerHTML = '<div class="pnote">רק רגע...</div>';
-    try { await ({ staff:adminStaff, viewas:adminViewAs, system:adminSystem, rebuild:adminRebuild, log:adminLog })[id](box, body); }
+    try { await ({ problems:adminProblems, staff:adminStaff, viewas:adminViewAs, system:adminSystem, rebuild:adminRebuild, log:adminLog })[id](box, body); }
     catch(e){ box.innerHTML = '<div class="pnote">הטעינה נכשלה. נסו לפתוח שוב.</div>'; }
   };
   body.querySelectorAll('details[data-afold]').forEach(d => d.addEventListener('toggle', () => { portalUi.adminFold[d.dataset.afold] = d.open; if(d.open) fill(d.dataset.afold); }));
