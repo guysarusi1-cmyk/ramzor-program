@@ -13,7 +13,7 @@ function probClient(){
   try { if(typeof portalServerOn !== 'undefined' && portalServerOn) return sbPersonal; } catch(e){}
   try { return sb; } catch(e){ return null; }
 }
-const probSilent = () => !window.__probForce && (!!window.__portalNoHome || /[?&]demo=/.test(location.search));          // (the automatic checks and the demos do not write problems)
+const probSilent = () => !window.__probForce && (!!window.__portalNoHome || new URLSearchParams(location.search).has('demo'));          // (the automatic checks and the demos do not write problems)
 
 // an error on this device: written once per kind, at most 8 per visit (a loop must not flood the list)
 function probRecord(message, stack){
