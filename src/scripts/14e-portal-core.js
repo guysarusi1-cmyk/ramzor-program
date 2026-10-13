@@ -30,6 +30,7 @@ function queueEmail(to, subject, body){
 // ---- the first screen after login: two cards
 function showAppHome(){
   stopCarousel(); document.body.classList.remove('leopard-bg');
+  if(portalUi.viewAs){ portalUi.viewAs = null; if(typeof srv !== 'undefined' && srv.me) portalUi.persona = srv.me; }          // (leaving "looking as somebody" by any way: back to being oneself)
   portalActivateView('view-apphome');
   document.getElementById('view-apphome').innerHTML = `
     <div class="apphome">
