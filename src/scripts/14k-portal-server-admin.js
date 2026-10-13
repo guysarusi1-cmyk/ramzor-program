@@ -232,7 +232,7 @@ function srvRenderCoordSettings(body){
       <div class="an-actions"><div class="pchoice wrap" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
       <button type="button" class="btn" id="an-send">שליחה</button></div>
       <h3 class="psec">הודעות אחרונות</h3>
-      ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
+      ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
       const wire = box => {
         let via = 'portal';
         box.querySelectorAll('[data-via]').forEach(b => b.addEventListener('click', () => { via = b.dataset.via; box.querySelectorAll('[data-via]').forEach(x => x.classList.toggle('on', x === b)); }));
@@ -271,7 +271,7 @@ function srvRenderCoordSettings(body){
         const who = l.by_staff ? nameOf(l.by_staff) : 'המערכת / המנהל';
         const person = l.what === 'update shift' && o.staff_id && n.staff_id && o.staff_id !== n.staff_id ? `${pEsc(nameOf(o.staff_id))} ← ${pEsc(nameOf(n.staff_id))}` : pEsc(nameOf(d.staff_id));
         const hours = l.what === 'update shift' && o.staff_id === n.staff_id && (o.from_time !== n.from_time || o.to_time !== n.to_time) ? ` · שעות ${String(o.from_time || '').slice(0, 5)}–${String(o.to_time || '').slice(0, 5)} ← ${String(n.from_time || '').slice(0, 5)}–${String(n.to_time || '').slice(0, 5)}` : '';
-        return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')} · ${pEsc(who)}</small><br>משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${person}${hours}</span></div>`;
+        return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${pEsc(who)}</small><br>משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${person}${hours}</span></div>`;
       };
       const html = `
       <div class="pnote">מי שינה משמרת ומתי. מקובץ לפי סוג השינוי; פותחים קבוצה כדי לראות את השינויים בה (החדשים למעלה).</div>

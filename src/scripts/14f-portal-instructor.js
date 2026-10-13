@@ -295,12 +295,12 @@ function renderInstructorInbox(body){
   const mine = st.notices.filter(n => n.to === me.id).slice(0, 15), mails = st.outbox.filter(e => e.to === me.id || e.to === 'all').slice(0, 12);
   body.innerHTML = `
     <h2 class="psec">עדכונים אישיים</h2>
-    ${mine.length ? mine.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}
+    ${mine.length ? mine.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}
     <h2 class="psec">הודעות מהרכזת</h2>
     ${st.announcements.length ? st.announcements.map(a => `<div class="pannounce"><small>${a.date} · ${pEsc(a.from)}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות.</div>'}
     <h2 class="psec">אימיילים (תצוגה מקדימה)</h2>
     <div class="pnote">בגרסה המחוברת לשרת ההודעות האלה יישלחו במייל אמיתי. כאן רואים איך הן ייראו.</div>
-    ${mails.length ? mails.map(e => `<button type="button" class="pmail" data-mail="${e.id}"><b>${pEsc(e.subject)}</b><small>${new Date(e.at).toLocaleString('he-IL')}</small></button>`).join('') : '<div class="pnote">עוד לא נשלחו אליך הודעות.</div>'}`;
+    ${mails.length ? mails.map(e => `<button type="button" class="pmail" data-mail="${e.id}"><b>${pEsc(e.subject)}</b><small>${new Date(e.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small></button>`).join('') : '<div class="pnote">עוד לא נשלחו אליך הודעות.</div>'}`;
   body.querySelectorAll('[data-mail]').forEach(b => b.addEventListener('click', () => showMailPreview(st.outbox.find(e => e.id === b.dataset.mail))));
 }
 function showMailPreview(e){

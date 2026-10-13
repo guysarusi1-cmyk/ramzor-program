@@ -104,7 +104,7 @@ async function adminRebuild(box){
   const months = [0, 1, 2].map(n => addMonths(monthKeyOf(srvToday()), n));
   box.innerHTML = `<div class="pnote">המערכת תבנה את הסידור של החודש מחדש, לפי ההעדפות והחוקים העדכניים, ותשלח אותו לרכזת. זה קורה בשליחה השעתית, תוך שעה לכל היותר. סידור שכבר פורסם לא נבנה מחדש.</div>
     <div class="ctl-actions">${months.map(mk => `<button type="button" class="btn ghost" data-rebuild="${mk}">לבנות מחדש את ${monthLabel(mk)}</button>`).join('')}</div>
-    <h3 class="psec">בקשות אחרונות</h3>${r.error ? '<div class="pnote">נדרש scheduling-v19.sql</div>' : ((r.data || []).map(x => `<div class="pmine-row"><span>${monthLabel(x.month.slice(0, 7))} · <small>${new Date(x.at).toLocaleString('he-IL')}</small><br><small>${x.done_at ? pEsc(x.result || 'בוצע') : 'ממתין לשליחה השעתית'}</small></span></div>`).join('') || '<div class="pnote">אין.</div>')}`;
+    <h3 class="psec">בקשות אחרונות</h3>${r.error ? '<div class="pnote">נדרש scheduling-v19.sql</div>' : ((r.data || []).map(x => `<div class="pmine-row"><span>${monthLabel(x.month.slice(0, 7))} · <small>${new Date(x.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small><br><small>${x.done_at ? pEsc(x.result || 'בוצע') : 'ממתין לשליחה השעתית'}</small></span></div>`).join('') || '<div class="pnote">אין.</div>')}`;
   box.querySelectorAll('[data-rebuild]').forEach(b => b.addEventListener('click', async () => {
     const mk = b.dataset.rebuild, m = portalMonth(mk);
     if(m.published){ toast('הסידור הזה כבר פורסם, ולכן לא נבנה מחדש'); return; }
@@ -134,5 +134,5 @@ async function adminLog(box){
   ].sort((x, y) => String(y.at).localeCompare(String(x.at)));
   const GROUPS = [['admin', 'מנהל'], ['coord', 'רכזת'], ['ahmash', 'אחמ"ש'], ['instr', 'מדריך'], ['system', 'המערכת (אוטומטי)']];
   box.innerHTML = GROUPS.map(([g, title]) => { const list = items.filter(x => group(x.by) === g).slice(0, 100); return `<details class="pfold pfold-in"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">
-    ${list.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL')} · ${pEsc(who(x.by))}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('');
+    ${list.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${pEsc(who(x.by))}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('');
 }

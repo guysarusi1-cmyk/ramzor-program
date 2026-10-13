@@ -1484,7 +1484,7 @@
         check('portal swaps: the shift now belongs to the colleague', !now.error && now.data.length === 1 && now.data[0].staff_id === i2, JSON.stringify(now.data));
         // 4. both people got a notice
         await sign('instructor'); showPortal('inbox'); await sleep(500);
-        check('portal swaps: the person who asked got a notice about the change', /הוסרה/.test(document.getElementById('portal-body').textContent), document.getElementById('portal-body').textContent.slice(0, 120));
+        check('portal swaps: the person who asked got a notice about the change', /הוסרה|עברה למישהו אחר/.test(((document.querySelector('#portal-body .pannounce') || {}).textContent) || ''),document.getElementById('portal-body').textContent.slice(0, 120));
       } finally {
         await sign('coordinator');
         await sbPersonal.from('schedule').delete().eq('month', firstOf(mkT));
@@ -1689,6 +1689,79 @@
     });
 
     // ---- kids' TV: every visible slide renders, names without age
+    // ---- a user, start to end: each test account signs in the real way, sees its own name, and goes through every tab and every folded part.
+    //      Nothing is written; what is checked on every screen: it loads in time, no "loading failed", no empty words (undefined, NaN...), no broken pictures,
+    //      nothing wider than the screen, and no script error.
+    await step('user journey', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)';
+      const waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
+      const loading = () => /טוען/.test((document.getElementById('portal-body') || {}).textContent || '');
+      const problems = where => {
+        const out = [], body = document.getElementById('view-portal'), t = body ? body.innerText : '';
+        if(/הטעינה נכשלה/.test(t)) out.push('loading failed');
+        const bad = t.match(/\b(undefined|NaN|null|\[object Object\])\b/); if(bad) out.push('word "' + bad[1] + '": ' + t.slice(Math.max(0, bad.index - 40), bad.index + 20).replace(/\s+/g, ' '));
+        const img = [...(body ? body.querySelectorAll('img') : [])].find(i => i.complete && i.naturalWidth === 0 && i.getAttribute('src')); if(img) out.push('broken picture ' + String(img.getAttribute('src')).slice(0, 40));
+        if(document.documentElement.scrollWidth > innerWidth + 2) out.push('wider than the screen: ' + document.documentElement.scrollWidth + ' > ' + innerWidth);
+        return out.length ? where + ': ' + out.join(' | ') : '';
+      };
+      // who is who, as the coordinator reads it (an instructor may not read the e-mails): e-mail -> the staff row and its name
+      const who = {};
+      { await sbPersonal.auth.signOut(); const c = await signInRetry('coordinator-test@merkaz-cherum.local', PW);
+        if(!c.error){ const pv = await sbPersonal.from('staff_private').select('staff_id,email'), sf = await sbPersonal.from('staff').select('id,display_name');
+          (pv.data || []).forEach(r => { const s = (sf.data || []).find(x => x.id === r.staff_id); if(r.email) who[r.email.toLowerCase()] = { id:r.staff_id, name:s ? s.display_name : '' }; }); } }
+      for(const kind of ['instructor', 'instructor2', 'service', 'coordinator']){
+        const errs0 = errors.length, found = [], slow = [];
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
+        const mail = kind + '-test@merkaz-cherum.local', { error } = await signInRetry(mail, PW);
+        if(error){ check(`user journey (${kind}): the test account signs in`, false, error.message); continue; }
+        let t0 = performance.now(); const entered = await personalEnter(), tEnter = performance.now() - t0;
+        check(`user journey (${kind}): signing in opens the first screen within 6 seconds (the two choices; only the portal for a service girl)`, entered && (activeView() === 'view-apphome' || (kind === 'service' && activeView() === 'view-portal')) && tEnter < 6000, activeView() + ' / ' + Math.round(tEnter) + ' ms');
+        // the right person: the staff row linked to this e-mail, and its name in the greeting
+        const me = who[mail];
+        check(`user journey (${kind}): the system knows who signed in (the person linked to this e-mail)`, !!me && srv.me === me.id, me ? me.id + ' vs ' + srv.me : 'no such e-mail in the staff');
+        const card = document.getElementById('apphome-portal') || document.getElementById('apphome-manage');
+        if(activeView() === 'view-apphome' && card) card.click();
+        await waitFor(() => activeView() === 'view-portal' && !loading(), 60);
+        const hello = (document.querySelector('.portal-hello') || {}).textContent || '', first = String((me || {}).name || '').trim().split(/\s+/)[0];
+        check(`user journey (${kind}): the portal greets the person by name ("שלום ...")`, !!first && hello.trim().startsWith('שלום') && hello.includes(first) && !/undefined|null/.test(hello), hello + ' / name in the database: ' + first);
+        { const title = ((document.querySelector('.portal-title') || {}).textContent || '').trim(), want = { coordinator:'פורטל הרכזת', service:'פורטל בנות השירות' }[kind] || 'פורטל המדריך';
+          check(`user journey (${kind}): the portal title fits the person (${want})`, title === want, title); }
+        { const bar = document.querySelector('.portal-tabs') || (document.querySelector('[data-ptab]') || {}).parentElement, cut = bar ? [...bar.querySelectorAll('[data-ptab]')].filter(b => { const r = b.getBoundingClientRect(), o = bar.getBoundingClientRect(); return r.left < o.left - 1 || r.right > o.right + 1; }).map(b => b.textContent.trim()) : ['no tabs'];
+          check(`user journey (${kind}): all the tabs fit on the screen (none cut at the edge)`, !cut.length, cut.join(', ')); }
+        { const p = problems('first screen'); if(p) found.push(p); }
+        // every tab, and in every tab every folded part (one at a time)
+        const tabs = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab).filter((x, i, a) => a.indexOf(x) === i);
+        check(`user journey (${kind}): the portal has its tabs`, tabs.length >= 2, tabs.join(','));
+        for(const tab of tabs){
+          const b = document.querySelector(`[data-ptab="${tab}"]`); if(!b) { found.push(tab + ': the tab button disappeared'); continue; }
+          t0 = performance.now(); b.click(); await sleep(60); await waitFor(() => !loading() && !!(document.getElementById('portal-body') || {}).textContent, 60); const ms = performance.now() - t0; if(ms > 6000) slow.push(tab + ' ' + Math.round(ms) + ' ms');
+          if(!(document.getElementById('portal-body') || {}).textContent){ found.push(tab + ': empty screen'); continue; }
+          { const p = problems(tab); if(p) found.push(p); }
+          const folds = [...document.querySelectorAll('#portal-body details')];
+          for(let i = 0; i < folds.length && i < 25; i++){
+            const d = document.querySelectorAll('#portal-body details')[i]; if(!d) break;
+            const name = (d.querySelector('summary') || {}).textContent || '#' + i;
+            t0 = performance.now(); d.open = true; await sleep(80); await waitFor(() => !/טוען/.test(d.textContent), 60);
+            const fm = performance.now() - t0; if(fm > 6000) slow.push(tab + ' / ' + name.trim().slice(0, 30) + ' ' + Math.round(fm) + ' ms');
+            { const p = problems(tab + ' / ' + name.trim().slice(0, 30)); if(p) found.push(p); }
+            const again = document.querySelectorAll('#portal-body details')[i]; if(again) again.open = false; await sleep(30);
+          }
+        }
+        check(`user journey (${kind}): every tab and folded part opens cleanly (no failed loading, empty words, broken pictures or sideways scrolling)`, !found.length, found.slice(0, 6).join(' || '));
+        check(`user journey (${kind}): every tab and part loads within 6 seconds`, !slow.length, slow.join(', '));
+        // the gear (personal settings) opens and closes
+        const g = document.getElementById('portal-gear'); if(g){ g.click(); await sleep(150); }
+        check(`user journey (${kind}): the gear opens the personal settings`, !!g && !!document.querySelector('.psheet'), 'no gear sheet');
+        { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+        // back home, and into the Ramzor (when the person has it)
+        showAppHome(); const rz = document.getElementById('apphome-ramzor');
+        if(rz){ rz.click(); await sleep(400); check(`user journey (${kind}): the Ramzor opens from the same sign-in, with the children`, activeView() === 'view-hub' && roster.length >= 1, activeView() + ' / ' + roster.length); }
+        check(`user journey (${kind}): no script errors along the way`, errors.length === errs0, errors.slice(errs0, errs0 + 3).join(' || '));
+        await personalLeave(); showHub();
+      }
+      await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.tab = null; portalUi.persona = 'c1'; showHub();
+    });
     await step('tv today', async () => {
       if(!PORTAL_ENABLED) return;
       const liveWas = PORTAL_TV_LIVE; PORTAL_TV_LIVE = true;

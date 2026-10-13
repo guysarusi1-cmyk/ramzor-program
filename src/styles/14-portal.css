@@ -345,8 +345,15 @@
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
   body.portal-big .portal-shell{ zoom:1.25; }
-  .portal-shell.wide{ zoom:1.2; }          /* the coordinator's portal: larger text than everybody's (she works at a computer) */
-  body.portal-big .portal-shell.wide{ zoom:1.42; }
+  @media (min-width:900px){          /* the coordinator's portal on a computer: larger text than everybody's (on a phone the usual size, so that the tabs fit) */
+    .portal-shell.wide{ zoom:1.2; }
+    body.portal-big .portal-shell.wide{ zoom:1.42; }
+    /* ... and the windows that open over it (the shift editor, the questions) in the same size */
+    body:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.2; }
+    body:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.2); }
+    body.portal-big:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.42; }
+    body.portal-big:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.42); }
+  }
   [data-fold="team"] .mcal-name.me{ cursor:pointer; }          /* one's own name in the team calendar opens the swap / cannot-come choice */
   [data-fold="team"] .mcal-name.me:hover{ outline:2px solid var(--gold); outline-offset:1px; }
   .pday-fixed{ display:block; text-align:center; font-size:11px; font-weight:700; color:var(--p-no, #ff8a80); margin:-2px 0 2px; }          /* a locked day (vacation, sick leave...): the reason written on the day itself */

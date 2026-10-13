@@ -293,5 +293,5 @@ async function ctlLog(box){
     if(table === 'bonus_day') return n.kind === 'hide' ? (op === 'delete' ? 'החזיר/ה בונוס שהוסתר' : 'הסתיר/ה בונוס להיום') : (op === 'delete' ? `מחק/ה את הבונוס המיוחד "${n.name}"` : `הוסיף/ה בונוס מיוחד: "${n.name}"`);
     return l.what;
   };
-  box.innerHTML = (r.data || []).map(l => `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')} · ${pEsc(who(l.by_staff))}</small><br>${pEsc(words(l))}</span></div>`).join('') || '<div class="pnote">עוד אין שינויים.</div>';
+  box.innerHTML = (r.data || []).map(l => `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${pEsc(who(l.by_staff))}</small><br>${pEsc(words(l))}</span></div>`).join('') || '<div class="pnote">עוד אין שינויים.</div>';
 }

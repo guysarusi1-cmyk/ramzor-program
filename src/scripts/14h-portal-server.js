@@ -52,7 +52,7 @@ async function srvLoad(){
     srvAll(() => sbPersonal.from('prefs_absence').select('staff_id,day,reason,note').gte('day', from).lte('day', to)),
     srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,note').gte('month', from).lte('month', to)),
     srvAll(() => sbPersonal.from('schedule').select('month,status').gte('month', from).lte('month', to)),
-    srvAll(() => sbPersonal.from('notices').select('id,text,kind,seen,created_at').order('created_at', { ascending:false }).limit(40)),
+    sbPersonal.from('notices').select('id,text,kind,seen,created_at').eq('to_staff', meId).order('created_at', { ascending:false }).limit(40).then(r => { if(r.error) throw r.error; return r.data || []; }),          // (only her own: the coordinator may read everybody's notices; and only the last 40)
     srvAll(() => sbPersonal.from('prefs_hours').select('staff_id,day,from_time,to_time').gte('day', from).lte('day', to)),
     srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday').gte('month', from).lte('month', to))
   ]);
@@ -234,10 +234,11 @@ function srvRenderTab(me, body, t){
 }
 async function srvRenderInbox(body){
   const st = portalLoad();
+  if(!body.textContent.trim()) body.innerHTML = '<div class="pnote">טוען…</div>';          // (not a blank screen while the messages come)
   const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
   if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
-  body.innerHTML = `<h2 class="psec">העדכונים שלך</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}
-    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}`;
+  body.innerHTML = `<h2 class="psec">העדכונים שלך</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}
+    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}`;
   st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)
 }// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
 async function srvReload(){ await srvFlush(); await srvLoad(); }
@@ -330,9 +331,20 @@ function srvShowLogin(step, email){
     onEnter('plogin-pw', 'plogin-pwbtn');
   }
 }
+// the first load after a sign-in: false only when it really failed. A load that was overtaken by a newer one (two starts at the same moment) leaves the
+// portal on: the newer load draws it (before this, the older one switched the portal off and the person got the demo portal)
+async function srvLoadFirst(){
+  const p = srvLoad(), mine = srv.epoch, ok = await p;
+  if(ok) return true;
+  if(srv.epoch !== mine){          // (wait for the newer load, then go on as usual)
+    for(let i = 0; i < 150 && !(portalState && srv.me && portalState.serverMode); i++) await new Promise(r => setTimeout(r, 100));
+    if(portalState && srv.me) return true;
+  }
+  portalServerOn = false; return false;
+}
 async function srvStart(){
   portalServerOn = true;
-  if(!(await srvLoad())){ portalServerOn = false; return false; }
+  if(!(await srvLoadFirst())) return false;
   portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null;
   showPortal();
   return true;
@@ -343,7 +355,7 @@ let ramzorPersonal = false;
 const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
 async function personalEnter(){
   portalServerOn = true; portalUi.viewAs = null; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
-  if(!(await srvLoad())){ portalServerOn = false; return false; }
+  if(!(await srvLoadFirst())) return false;
   portalUi.persona = srv.me;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('protected-app').style.display = '';
