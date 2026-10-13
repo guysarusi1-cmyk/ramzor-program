@@ -64,6 +64,8 @@ async function srvLoadCoord(){
     srvAll(() => sbPersonal.from('vacation_requests').select('id,staff_id,from_day,to_day,note,status,created_at').order('created_at', { ascending:false }).limit(60))
   ]);
   st.priv = {}; priv.forEach(r => { st.priv[r.staff_id] = r; });
+  try { const ph = await sbPersonal.from('staff_private').select('staff_id,phone'); if(!ph.error) (ph.data || []).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; }); } catch(e){}          // (the phones: scheduling-v21.sql)
+  st.waMsg = {}; try { const wm = await sbPersonal.from('sched_settings').select('value').eq('key', 'wa_messages').maybeSingle(); if(!wm.error && wm.data && wm.data.value) st.waMsg = wm.data.value; } catch(e){}          // (the WhatsApp messages as the coordinator wrote them)
   st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}          // (each person's chosen voice, so that her feedback is written in it)
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; try { const sr = await sbPersonal.from('sick_reports').select('assignment_id,note').order('created_at'); (sr.data || []).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; }); } catch(e){}          // (the reason an instructor gave when she reported that she cannot come)
@@ -170,7 +172,7 @@ function srvOpenSlot(mk, key, body){
       ${warn.length ? `<div class="pwarn">${warn.map(w => `<div>⚠ ${pEsc(w)}</div>`).join('')}</div>` : ''}
       <div class="pedit-list">${rows.length ? rows.map(r => r.id === editing
         ? `<div class="pedit-row editing"><span>${pEsc(nm(r.staff))}</span><span class="phours-edit"><select data-hfrom aria-label="משעה">${timeOpts((r.from || sh.start).slice(0, 5))}</select><span>עד</span><select data-hto aria-label="עד שעה">${timeOpts((r.to || sh.end).slice(0, 5))}</select></span><span class="pedit-btns"><button type="button" class="btn small" data-hsave="${r.id}">שמירה</button><button type="button" class="btn ghost small" data-hcancel>ביטול</button></span></div><div id="hrs-warn" class="pwarn" aria-live="polite"></div>`
-        : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-repl="${r.id}">החלפה</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>${replacing === r.id ? `<div class="cs-pick-list cs-repl-list" role="listbox"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff))}:</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>${ranked.map(({ p, lv }) => `<button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-repl-to="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>`).join('') || '<div class="pnote">אין מדריך פנוי.</div>'}<button type="button" class="btn ghost small" data-repl-cancel>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
+        : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-repl="${r.id}">החלפה</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>${replacing === r.id ? `<div class="cs-pick-list cs-repl-list" role="listbox"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff))}:</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-repl-to="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('') || '<div class="pnote">אין מדריך פנוי.</div>'}<button type="button" class="btn ghost small" data-repl-cancel>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
       ${others().length ? `<div class="pnote">בנות שירות ומורות במשמרת: ${others().map(r => pEsc(nm(r.staff)) + ' ' + (r.from || '') + '–' + (r.to || '')).join(', ')}</div>` : ''}
       <h3 class="psec">הוספה</h3>
       <div class="phours-row"><div class="cs-pick">
@@ -178,7 +180,7 @@ function srvOpenSlot(mk, key, body){
         <button type="button" class="cs-pick-btn" id="cs-pick-btn" aria-haspopup="listbox" aria-expanded="false"><span>בחרו מדריך/ה</span><i aria-hidden="true">⌄</i></button>
         <div class="cs-pick-list" id="cs-pick-list" role="listbox" hidden>
           <div class="cs-pick-head"><span class="cs-pick-title">בחרו מדריך/ה</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>
-          ${ranked.map(({ p, lv }) => `<button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-val="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>`).join('')}
+          ${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-val="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('')}
         </div></div></div>
       <div class="phours-row"><select id="add-from" aria-label="משעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.start ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select><span>עד</span><select id="add-to" aria-label="עד שעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.end ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></div>
       <div id="add-warn" class="pwarn" aria-live="polite"></div>
@@ -193,6 +195,7 @@ function srvOpenSlot(mk, key, body){
     who.addEventListener('change', () => { tint(); upd(); }); from.addEventListener('change', upd); to.addEventListener('change', upd);
     wrap.querySelector('#add-go').addEventListener('click', async () => {
       if(!who.value){ toast('בחרו מדריך/ה'); return; }
+      if(!(await srvAskBeforePlacing(who.value, key))) return;
       const w = srvWarnings(who.value, date, code, from.value, to.value);
       if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;
       const std = SRV_STD[code]; const flags = ['manual'];
@@ -237,9 +240,8 @@ function srvOpenSlot(mk, key, body){
     wrap.querySelectorAll('[data-repl-to]').forEach(b => b.addEventListener('click', async () => {
       const r = portalLoad().rows.find(x => x.id === replacing); if(!r) return;
       const nw = b.dataset.replTo, from = r.from || sh.start, to = r.to || sh.end;
-      const lv = levelFor(nw);
+      if(!(await srvAskBeforePlacing(nw, key))) return;
       const w = srvWarnings(nw, date, code, from, to, r.id);
-      if(lv === 'no') w.unshift(`${nm(nw)} סימן/ה "לא" למשמרת הזו`);
       if(w.length && !(await confirmSheet({ title:'להחליף למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, להחליף', cancelLabel:'חזרה', danger:true }))) return;
       const flags = Array.from(new Set((r.flags || []).concat('manual')));
       const u = await sbPersonal.from('assignment').update({ staff_id:nw, flags }).eq('id', r.id);
@@ -312,11 +314,56 @@ async function srvAddToSlot(mk, key, staffId, body){
   const nm = instrName(person, st.instructors);
   if(st.rows.some(r => r.staff === staffId && r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')))){ toast(`${nm} כבר במשמרת הזו`); return; }
   const w = srvWarnings(staffId, date, code, sh.start, sh.end);
-  // no question for an ordinary placement; a question only when the instructor wrote "no" for this shift (or is away that day)
-  if(srvWishFor(staffId, key) === 'no' && !(await confirmSheet({ title:`${nm} סימן/ה "לא" למשמרת הזו`, text:`${dayLabel(date)} · ${sh.label} ${sh.start}–${sh.end}. לשבץ בכל זאת?`, okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;
+  // no question for "yes" or "can"; for "no" and for a shift she did not mark: ask her first on WhatsApp, or place anyway
+  if(!(await srvAskBeforePlacing(staffId, key))) return;
   const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
   if(ins.error){ toast('השיבוץ נכשל'); return; }
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
   toast(w.length ? `${nm} שובץ/ה. שימי לב: ${w.join('. ')}.` : `${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`, w.length ? 6000 : 0);          // (the warnings that are left, such as rest, do not stop her; she sees them)
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
+}
+
+// ---------------------------------------------------------------- WhatsApp: asking an instructor before placing her in a shift she marked "no" or did not mark
+const WA_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.6 11.6 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3z"/></svg>';
+// the person's phone as WhatsApp wants it: 054-1234567 -> 972541234567
+function waNumber(staffId){
+  const raw = String(((portalLoad().priv || {})[staffId] || {}).phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+  if(!raw) return null;
+  return raw.startsWith('972') ? raw : raw.startsWith('0') ? '972' + raw.slice(1) : raw.length >= 9 ? '972' + raw : null;
+}
+// the ready messages: one for "no" and one for "not marked", each for a man and for a woman; the coordinator edits them in the settings (sched_settings "wa_messages")
+const WA_DEFAULT = {
+  no:   { f:'היי {שם}, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכלי להגיע?',
+          m:'היי {שם}, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכל להגיע?' },
+  none: { f:'היי {שם}, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכלי להגיע?',
+          m:'היי {שם}, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכל להגיע?' }
+};
+const waTemplate = (kind, female) => { const own = ((portalLoad().waMsg || {})[kind] || {})[female ? 'f' : 'm']; return (own && String(own).trim()) || WA_DEFAULT[kind][female ? 'f' : 'm']; };
+// a ready message about this very shift (she can still change it in WhatsApp before sending)
+function waText(staffId, key){
+  const st = portalLoad(), { date, shiftId } = splitKey(key), sh = st.shiftTypes.find(x => x.id === shiftId) || {}, p = st.instructors.find(x => x.id === staffId) || {};
+  const female = ((st.priv || {})[staffId] || {}).female !== false, kind = srvWishFor(staffId, key) === 'no' ? 'no' : 'none';
+  return waTemplate(kind, female).replace(/\{שם\}/g, String(p.first || '').split(' ')[0]).replace(/\{משמרת\}/g, `משמרת ה${sh.label || ''}`)
+    .replace(/\{יום\}/g, `יום ${dayLabel(date)}`).replace(/\{שעות\}/g, `${sh.start || ''}–${sh.end || ''}`);
+}
+function waLink(staffId, key){ const num = waNumber(staffId); return num ? `https://wa.me/${num}?text=${encodeURIComponent(waText(staffId, key))}` : null; }
+const waButtonHtml = (staffId, key) => { const url = waLink(staffId, key); return url ? `<a class="wa-btn" href="${url}" target="_blank" rel="noopener" title="שאלה בוואטסאפ" aria-label="שאלה בוואטסאפ">${WA_SVG}</a>` : ''; };
+// before placing somebody who marked "no" or did not mark this shift: WhatsApp first, place anyway, or back. -> true = place
+function srvAskBeforePlacing(staffId, key){
+  const lv = srvWishFor(staffId, key);
+  if(lv === 'yes' || lv === 'can') return Promise.resolve(true);
+  const st = portalLoad(), { date, shiftId } = splitKey(key), sh = st.shiftTypes.find(x => x.id === shiftId) || {}, p = st.instructors.find(x => x.id === staffId), nm = p ? instrName(p, st.instructors) : '';
+  const url = waLink(staffId, key);
+  return new Promise(resolve => {
+    let done = false; const finish = v => { if(done) return; done = true; sh2.close(); resolve(v); };
+    const sh2 = portalSheet(`<h2>${pEsc(nm)} ${lv === 'no' ? 'סימן/ה "לא" למשמרת הזו' : 'לא סימן/ה את המשמרת הזו'}</h2>
+      <div class="pnote">${dayLabel(date)} · ${pEsc(sh.label || '')} ${sh.start || ''}–${sh.end || ''}. כדאי לשאול לפני שמשבצים.</div>
+      <div class="wa-ask">${url ? `<a class="btn wa-go" id="wa-go" href="${url}" target="_blank" rel="noopener">${WA_SVG}<span>לשאול בוואטסאפ</span></a>` : '<div class="pnote">אין מספר טלפון. אפשר להוסיף אותו בהגדרות, ליד המייל.</div>'}
+        <button type="button" class="btn ghost" id="wa-place">לשבץ בכל זאת</button>
+        <button type="button" class="btn ghost" id="wa-back">חזרה</button></div>`);
+    const go = sh2.querySelector('#wa-go'); if(go) go.addEventListener('click', () => { toast('נפתחה שיחה בוואטסאפ. אחרי התשובה אפשר לשבץ.'); finish(false); });
+    sh2.querySelector('#wa-place').addEventListener('click', () => finish(true));
+    sh2.querySelector('#wa-back').addEventListener('click', () => finish(false));
+    sh2.addEventListener('click', e => { if(e.target === sh2) finish(false); });
+  });
 }

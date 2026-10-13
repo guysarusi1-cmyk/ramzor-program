@@ -1507,7 +1507,7 @@
         portalUi.persona = srv.me; return true;
       };
       const waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
-      const maybeSheet = async () => { for(let i = 0; i < 8; i++){ const s = document.querySelector('.confirm-sheet'); if(s){ s.querySelector('.confirm-ok').click(); await sleep(80); return true; } await sleep(100); } return false; };
+      const maybeSheet = async () => { for(let i = 0; i < 8; i++){ const wp = document.querySelector('#wa-place'); if(wp){ wp.click(); await sleep(150); continue; } const s = document.querySelector('.confirm-sheet'); if(s){ s.querySelector('.confirm-ok').click(); await sleep(80); return true; } await sleep(100); } return false; };
       if(!(await sign('instructor'))){ check('portal people: the instructor test account signs in', false, 'no'); portalServerOn = false; return; }
       const i1 = srv.me;
       if(!(await sign('instructor2'))){ check('(info) portal people: skipped — the second instructor test account is missing', true, ''); portalServerOn = false; return; }
@@ -1553,8 +1553,18 @@
                 const lvl = (wk.className.match(/drop-(yes|can|none|no)(?![a-z])/) || [])[1], bg = getComputedStyle(wk).backgroundColor, want = { yes:'rgba(123, 224, 160, 0.28)', can:'rgba(240, 194, 57, 0.28)', no:'rgba(255, 138, 128, 0.28)', none:'rgba(110, 168, 254, 0.24)' }[lvl];
                 check('portal people: while dragging, a weekend shift also takes the colour of the wish (not hidden by the weekend background)', !!lvl && bg === want, lvl + ' / ' + bg);
                 wk.dispatchEvent(new DragEvent('dragleave', { dataTransfer:dt, bubbles:true })); } }
-            target.dispatchEvent(new DragEvent('drop', { dataTransfer:dt, bubbles:true, cancelable:true })); dragged.dispatchEvent(new DragEvent('dragend', { dataTransfer:dt, bubbles:true })); await sleep(700); const asked = !!document.querySelector('.confirm-sheet'); if(asked) await answerSheet();
-            check('portal people: dropping a name on a shift places that instructor on it at once, without a question (she did not write "no" for it)', marked && !asked && await waitFor(async () => { const q = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', day).eq('shift', 'M'); return q.data && q.data.length === 1; }, 60), 'not placed (target marked: ' + marked + ')');
+            // she did not mark that shift: the question comes first (WhatsApp with a ready message in her gender, place anyway, or back)
+            const ph = await sbPersonal.from('staff_private').update({ phone:'0500000000' }).eq('staff_id', i2), hasPhone = !ph.error; if(hasPhone) portalLoad().priv[i2].phone = '0500000000';
+            target.dispatchEvent(new DragEvent('drop', { dataTransfer:dt, bubbles:true, cancelable:true })); dragged.dispatchEvent(new DragEvent('dragend', { dataTransfer:dt, bubbles:true })); await sleep(500);
+            const ask = document.querySelector('.wa-ask'), go = document.querySelector('#wa-go'), sheetTxt = ask ? ask.closest('.sheet').textContent : '';
+            check('portal people: dropping a name on a shift she did not mark asks first: WhatsApp, place anyway, or back', !!ask && /לא סימן\/ה/.test(sheetTxt) && !!document.querySelector('#wa-place') && !!document.querySelector('#wa-back'), sheetTxt.slice(0, 80));
+            if(hasPhone) check('portal people: the WhatsApp button opens a chat with her number and a ready message for a shift she did not mark (in her gender)', !!go && /^https:\/\/wa\.me\/972500000000\?text=/.test(go.href) && /ולא סימנת/.test(decodeURIComponent(go.href)) && /תוכל[י]? להגיע/.test(decodeURIComponent(go.href)), go ? decodeURIComponent(go.href).slice(0, 120) : 'no button');
+            else check('(info) portal people: the phone column is missing on this server (scheduling-v21.sql), the WhatsApp link was not checked', true, '');
+            { const t1 = (WA_DEFAULT.no.f + WA_DEFAULT.no.m + WA_DEFAULT.none.f + WA_DEFAULT.none.m);
+              check('portal people: there are two ready messages (marked "no" / did not mark), each for a woman and for a man', /תוכלי/.test(WA_DEFAULT.no.f) && /תוכל /.test(WA_DEFAULT.no.m) && /"לא"/.test(WA_DEFAULT.no.f) && !/"לא"/.test(WA_DEFAULT.none.f) && (t1.match(/\{שם\}/g) || []).length === 4, ''); }
+            if(document.querySelector('#wa-place')) document.querySelector('#wa-place').click();
+            check('portal people: "place anyway" places that instructor on the shift at once', marked && await waitFor(async () => { const q = await sbPersonal.from('assignment').select('id').eq('staff_id', i2).eq('day', day).eq('shift', 'M'); return q.data && q.data.length === 1; }, 60), 'not placed (target marked: ' + marked + ')');
+            if(hasPhone){ await sbPersonal.from('staff_private').update({ phone:null }).eq('staff_id', i2); portalLoad().priv[i2].phone = null; }
             await sbPersonal.from('assignment').delete().eq('staff_id', i2).eq('day', day).eq('shift', 'M'); await srvReloadSafe(); await srvLoadCoord(); srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(200); }
           document.getElementById('cs-close').click(); await sleep(100); }
         check('portal people: a person who did not mark that shift is coloured (and the colours are explained in the small key on the instructors tab)', !!document.querySelector('.mcal-name.wish-none') && !!document.querySelector('#cs-open .mcal-key') && true, document.querySelectorAll('.mcal-name').length);
@@ -1608,7 +1618,11 @@
         check('portal people: approving the vacation enters the days as absence', await waitFor(async () => { const a = await sbPersonal.from('prefs_absence').select('day').eq('staff_id', i1).eq('reason', 'vacation').gte('day', vf).lte('day', vt); return a.data && a.data.length === 3; }), 'no absence');
         // ---- an announcement from the coordinator, read by the instructor
         showPortal('settings'); await waitFor(() => !!document.querySelector('details[data-sfold="ann"]'), 100);          // (the settings screen opens folded; each part loads when it is opened)
-        check('portal people: the settings screen opens with all four parts folded', [...document.querySelectorAll('#portal-body details[data-sfold]')].length === 4 && [...document.querySelectorAll('#portal-body details[data-sfold]')].every(d => !d.open), 'not folded');
+        check('portal people: the settings screen opens with all five parts folded (staff, days, announcement, WhatsApp messages, log)', [...document.querySelectorAll('#portal-body details[data-sfold]')].length === 5 && !!document.querySelector('#portal-body details[data-sfold="wa"]') && [...document.querySelectorAll('#portal-body details[data-sfold]')].every(d => !d.open), 'not folded');
+        { const wd = document.querySelector('details[data-sfold="wa"]'); wd.open = true; await waitFor(() => !!document.querySelector('[data-wa]'), 100);
+          const tas = [...document.querySelectorAll('[data-wa]')];
+          check('portal people: in the settings the coordinator edits the WhatsApp messages: "no" and not marked, each for a woman and for a man, with a save button', tas.length === 4 && /תוכלי/.test(document.querySelector('[data-wa="no|f"]').value) && /תוכל /.test(document.querySelector('[data-wa="none|m"]').value) && !!document.querySelector('#wa-save'), tas.length);
+          wd.open = false; await sleep(50); }
         const det = document.querySelector('details[data-sfold="ann"]'); det.open = true; await waitFor(() => !!document.querySelector('#an-text'), 100);
         document.querySelector('#an-text').value = 'הודעת בדיקה אוטומטית'; document.querySelector('#an-send').click(); await answerSheet(); created.announcements = true;
         check('portal people: the announcement is sent', await waitFor(async () => { const a = await sbPersonal.from('announcements').select('id').eq('text', 'הודעת בדיקה אוטומטית'); return a.data && a.data.length === 1; }), 'not sent');

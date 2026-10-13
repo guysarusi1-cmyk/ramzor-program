@@ -370,3 +370,9 @@
   .pnotices-top{ display:flex; justify-content:flex-start; margin-bottom:8px; }          /* "mark all as read" at the top of the new messages */
   .plogin-row{ display:flex; gap:8px; margin-top:10px; } .plogin-row .btn{ flex:1; }          /* the code step: a new code, or back */
   .plogin .plogin-link{ width:100%; margin-top:10px; }
+  /* WhatsApp: next to "no" and "not marked" in the lists of the shift editor, and in the question before placing */
+  .cs-pick-row{ display:flex; align-items:center; gap:6px; } .cs-pick-row .cs-pick-item{ flex:1; }
+  .wa-btn{ flex:none; display:inline-grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#25d366; color:#fff; text-decoration:none; }
+  .wa-btn:hover, .wa-btn:focus-visible{ background:#1ebe5a; outline:2px solid #fff; outline-offset:1px; }
+  .wa-ask{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .wa-go{ display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#25d366 !important; color:#fff !important; border-color:#25d366 !important; text-decoration:none; }
