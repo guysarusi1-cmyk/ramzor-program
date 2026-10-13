@@ -1506,7 +1506,10 @@
   .wa-btn:hover, .wa-btn:focus-visible{ background:#1ebe5a; outline:2px solid #fff; outline-offset:1px; }
   .wa-ask{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
   .wa-go{ display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#25d366 !important; color:#fff !important; border-color:#25d366 !important; text-decoration:none; }
-
+  /* "something does not work? report a problem": quiet, at the end of the screen (the portal and the Ramzor's home) */
+  .portal-problem, .home-problem{ display:block; margin:28px auto 8px; background:none; border:0; padding:10px 14px; font:inherit; font-size:14px; color:var(--p-muted, var(--muted)); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+  .portal-problem:hover, .home-problem:hover, .portal-problem:focus-visible, .home-problem:focus-visible{ color:var(--p-text, var(--text)); }
+  .pmine-row.done{ opacity:.6; }
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
   .avatar-initials.avatar-has-char img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -1772,6 +1775,7 @@
       </span>
     </button>
     <button type="button" class="home-control" id="hub-control-btn" hidden>🎛️ בקרת אחמ"ש</button>
+    <button type="button" class="home-problem" id="hub-problem">משהו לא עובד? דיווח על תקלה</button>
     <button type="button" class="home-link" id="hub-install-link" hidden>התקנה כאפליקציה על מסך הבית</button>
   </section>
 
@@ -5438,6 +5442,7 @@ function showPortal(tab){
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
       ${portalServerOn && portalUi.viewAs ? `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>` : ''}
       <div id="portal-body"></div>
+      ${portalServerOn ? '<button type="button" class="portal-problem" id="portal-problem">משהו לא עובד? דיווח על תקלה</button>' : ''}
     </div>`;
   if(portalServerOn && portalUi.viewAs){          // (the admin looks at somebody's portal: folds, months and tabs work; nothing can be changed)
     document.getElementById('viewas-end').addEventListener('click', adminViewAsEnd);
@@ -5448,6 +5453,7 @@ function showPortal(tab){
   }
   document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
+  const prob = document.getElementById('portal-problem'); if(prob) prob.addEventListener('click', openProblemReport);
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
   if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
   view.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.ptab; showPortal(); }));
@@ -7724,7 +7730,9 @@ function openPortalSettings(){
     <div class="pnote">${tx('long_setting')}</div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${srv.pickOne ? 'on' : ''}" data-set-pick="1">להציג "רק אחד מאלה": כן</button><button type="button" class="${srv.pickOne ? '' : 'on'}" data-set-pick="0">לא</button></div>
     <div class="pnote">${tx('pick_setting')}</div>` : ''}
+    <button type="button" class="btn ghost" id="gear-problem" style="margin-top:14px;width:100%">משהו לא עובד? דיווח על תקלה</button>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
+  sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
   sh.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', async () => {
     await srvSaveSetting({ voice:b.dataset.voice }); sh.close(); toast(({ warm:'בחרנו בשפה החמה והרכה', light:'עברנו לשפה הקלילה. נתראה בבדיחות!', brief:'עברנו לשפה קצרה ועניינית' })[b.dataset.voice]); showPortal();
   }));
@@ -8279,11 +8287,11 @@ function srvRenderAdmin(body){
   portalUi.adminFold = portalUi.adminFold || {};
   const fold = (id, title) => `<details class="pfold" data-afold="${id}"${portalUi.adminFold[id] ? ' open' : ''}><summary><span>${title}</span></summary><div class="pfold-body" data-abody="${id}"></div></details>`;
   body.innerHTML = `<div class="pnote">כאן מה שרק למנהל יש: כל פרטי הצוות, צפייה בפורטל כמו שמדריך מסוים רואה אותו, הגדרות המערכת, בנייה מחדש של סידור ויומן מלא.</div>
-    ${fold('staff', 'פרטי הצוות')}${fold('viewas', 'צפייה כמו מדריך מסוים')}${fold('system', 'הגדרות מערכת')}${fold('rebuild', 'בנייה מחדש של סידור')}${fold('log', 'יומן מלא')}`;
+    ${fold('problems', 'תקלות ודיווחים')}${fold('staff', 'פרטי הצוות')}${fold('viewas', 'צפייה כמו מדריך מסוים')}${fold('system', 'הגדרות מערכת')}${fold('rebuild', 'בנייה מחדש של סידור')}${fold('log', 'יומן מלא')}`;
   const fill = async id => {
     const box = body.querySelector(`[data-abody="${id}"]`); if(!box) return;
     box.innerHTML = '<div class="pnote">רק רגע...</div>';
-    try { await ({ staff:adminStaff, viewas:adminViewAs, system:adminSystem, rebuild:adminRebuild, log:adminLog })[id](box, body); }
+    try { await ({ problems:adminProblems, staff:adminStaff, viewas:adminViewAs, system:adminSystem, rebuild:adminRebuild, log:adminLog })[id](box, body); }
     catch(e){ box.innerHTML = '<div class="pnote">הטעינה נכשלה. נסו לפתוח שוב.</div>'; }
   };
   body.querySelectorAll('details[data-afold]').forEach(d => d.addEventListener('toggle', () => { portalUi.adminFold[d.dataset.afold] = d.open; if(d.open) fill(d.dataset.afold); }));
@@ -8398,6 +8406,73 @@ async function adminLog(box){
   box.innerHTML = GROUPS.map(([g, title]) => { const list = items.filter(x => group(x.by) === g).slice(0, 100); return `<details class="pfold pfold-in"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">
     ${list.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${pEsc(who(x.by))}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('');
 }
+
+// ---------- PROBLEMS IN THE FIELD (the pilot) ----------
+// A "report a problem" button (the person writes what happened; the screen and the device go with it), and the script errors that happen
+// on people's devices, written down by themselves. Only the admin sees them (management portal, "ניהול"). (scheduling-v23.sql)
+const PROB = { sent:0, seen:new Set(), recent:[] };
+function probWhere(){
+  const v = ((document.querySelector('.view.active') || {}).id || '').replace(/^view-/, '');
+  return [v, v === 'portal' && typeof portalUi !== 'undefined' ? (portalUi.tab || '') : ''].filter(Boolean).join(' / ');
+}
+const probDevice = () => `${innerWidth}x${innerHeight} · ${navigator.userAgent.slice(0, 160)}`;
+// the connection that is signed in: the personal one, or the staff login of this device
+function probClient(){
+  try { if(typeof portalServerOn !== 'undefined' && portalServerOn) return sbPersonal; } catch(e){}
+  try { return sb; } catch(e){ return null; }
+}
+const probSilent = () => !window.__probForce && (!!window.__portalNoHome || new URLSearchParams(location.search).has('demo'));          // (the automatic checks and the demos do not write problems)
+
+// an error on this device: written once per kind, at most 8 per visit (a loop must not flood the list)
+function probRecord(message, stack){
+  const msg = String(message || '').slice(0, 300);
+  if(!msg || probSilent() || /ResizeObserver loop|^Script error\.?$/i.test(msg)) return;
+  PROB.recent.push({ at:new Date().toISOString(), msg, where:probWhere() }); PROB.recent = PROB.recent.slice(-5);
+  if(PROB.seen.has(msg) || PROB.sent >= 8) return;
+  PROB.seen.add(msg); PROB.sent++;
+  const c = probClient(); if(!c) return;
+  try { Promise.resolve(c.from('client_errors').insert({ kind:'error', message:msg, detail:{ stack:String(stack || '').slice(0, 1500), where:probWhere(), device:probDevice(), env:APP_ENV, page:location.pathname + location.hash } })).catch(() => {}); } catch(e){}
+}
+window.addEventListener('error', e => probRecord(e.message, e.error && e.error.stack));
+window.addEventListener('unhandledrejection', e => { const r = e.reason; probRecord((r && (r.message || r.error_description)) || String(r), r && r.stack); });
+
+// the button: what happened, in the person's words
+function openProblemReport(){
+  const sh = portalSheet(`<h2>דיווח על תקלה</h2>
+    <div class="pnote">מה קרה, ומה ניסית לעשות? המסך והמכשיר נשלחים לבד, אין צורך לפרט אותם.</div>
+    <label class="pfield">מה קרה<textarea id="prob-text" rows="4" maxlength="1500"></textarea></label>
+    <div class="confirm-actions"><button type="button" class="btn" id="prob-send">שליחה</button><button type="button" class="btn ghost" data-close>ביטול</button></div>`);
+  sh.querySelector('#prob-text').focus();
+  sh.querySelector('#prob-send').addEventListener('click', async () => {
+    const text = sh.querySelector('#prob-text').value.trim(); if(!text){ toast('כתבו בקצרה מה קרה'); return; }
+    const b = sh.querySelector('#prob-send'); b.disabled = true;
+    let ok = false;
+    try { const c = probClient(); if(c){ const r = await c.from('client_errors').insert({ kind:'report', message:text, detail:{ where:probWhere(), device:probDevice(), env:APP_ENV, page:location.pathname + location.hash, recent:PROB.recent } }); ok = !r.error; } } catch(e){}
+    if(ok){ sh.close(); toast('תודה! הדיווח נשלח למנהל המערכת, ונחזור אלייך.', 5000); }
+    else { b.disabled = false; toast('הדיווח לא נשלח. אפשר לנסות שוב, או לכתוב למנהל המערכת בוואטסאפ.', 6000); }
+  });
+}
+
+// ---- for the admin: the reports and the errors (management portal, "ניהול")
+async function adminProblems(box){
+  const r = await sbPersonal.from('client_errors').select('id,at,staff_id,kind,message,detail,handled').not('message', 'like', 'בדיקה אוטומטית%').order('at', { ascending:false }).limit(300);
+  if(r.error){ box.innerHTML = '<div class="pnote">נדרש scheduling-v23.sql</div>'; return; }
+  const rows = r.data || [], when = x => new Date(x.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' }), who = x => x.staff_id ? nameOf(x.staff_id) : 'מכשיר משותף';
+  const reports = rows.filter(x => x.kind === 'report'), open = reports.filter(x => !x.handled);
+  // the automatic errors in groups of the same message: how many times, how many people, when last
+  const groups = {}; rows.filter(x => x.kind === 'error' && !x.handled).forEach(x => { const g = groups[x.message] = groups[x.message] || { message:x.message, ids:[], people:new Set(), last:x, where:new Set() }; g.ids.push(x.id); g.people.add(x.staff_id || '-'); if((x.detail || {}).where) g.where.add(x.detail.where); });
+  const glist = Object.values(groups).sort((a, b) => String(b.last.at).localeCompare(String(a.last.at)));
+  const rep = x => `<div class="pmine-row${x.handled ? ' done' : ''}"><span><small>${when(x)} · ${pEsc(who(x))} · ${pEsc((x.detail || {}).where || '')}</small><br>${pEsc(x.message)}<br><small>${pEsc(((x.detail || {}).device || '').slice(0, 90))}</small></span>${x.handled ? '<em class="pst pst-approved">טופל</em>' : `<button type="button" class="btn ghost small" data-prob-done="${x.id}">טופל</button>`}</div>`;
+  box.innerHTML = `<div class="pnote">דיווחים שאנשים שלחו מהכפתור "דיווח על תקלה", ושגיאות שקרו אצלם במכשיר ונרשמו לבד. כל דיווח חדש מגיע אליך גם במייל.</div>
+    <h3 class="psec">דיווחים (${open.length} פתוחים)</h3>${reports.slice(0, 60).map(rep).join('') || '<div class="pnote">אין דיווחים.</div>'}
+    <h3 class="psec">שגיאות שנרשמו לבד (${glist.length} סוגים)</h3>${glist.map(g => `<div class="pmine-row"><span><small>אחרונה ${when(g.last)} · ${g.ids.length} פעמים · ${g.people.size} אנשים · ${pEsc([...g.where].slice(0, 3).join(', '))}</small><br><span dir="ltr">${pEsc(g.message)}</span></span><button type="button" class="btn ghost small" data-prob-done="${g.ids.join(',')}">טופל</button></div>`).join('') || '<div class="pnote">אין שגיאות פתוחות.</div>'}`;
+  box.querySelectorAll('[data-prob-done]').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true; const ids = b.dataset.probDone.split(',').map(Number);
+    const u = await sbPersonal.from('client_errors').update({ handled:true }).in('id', ids);
+    if(u.error){ b.disabled = false; toast('לא נשמר'); return; } adminProblems(box);
+  }));
+}
+{ const hp = document.getElementById('hub-problem'); if(hp) hp.addEventListener('click', openProblemReport); }          // (the same button on the Ramzor's home screen)
 // ---------- bottom navigation bar (phones) ----------
 // One button, "בית": back to the first screen — the choice between the Ramzor and the portal (when the portal is on), or the Ramzor's home.
 // It is there in the Ramzor and in the portal alike.
