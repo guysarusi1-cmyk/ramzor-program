@@ -1468,8 +1468,15 @@
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
   body.portal-big .portal-shell{ zoom:1.25; }
-  .portal-shell.wide{ zoom:1.2; }          /* the coordinator's portal: larger text than everybody's (she works at a computer) */
-  body.portal-big .portal-shell.wide{ zoom:1.42; }
+  @media (min-width:900px){          /* the coordinator's portal on a computer: larger text than everybody's (on a phone the usual size, so that the tabs fit) */
+    .portal-shell.wide{ zoom:1.2; }
+    body.portal-big .portal-shell.wide{ zoom:1.42; }
+    /* ... and the windows that open over it (the shift editor, the questions) in the same size */
+    body:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.2; }
+    body:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.2); }
+    body.portal-big:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.42; }
+    body.portal-big:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.42); }
+  }
   [data-fold="team"] .mcal-name.me{ cursor:pointer; }          /* one's own name in the team calendar opens the swap / cannot-come choice */
   [data-fold="team"] .mcal-name.me:hover{ outline:2px solid var(--gold); outline-offset:1px; }
   .pday-fixed{ display:block; text-align:center; font-size:11px; font-weight:700; color:var(--p-no, #ff8a80); margin:-2px 0 2px; }          /* a locked day (vacation, sick leave...): the reason written on the day itself */
@@ -5421,7 +5428,7 @@ function showPortal(tab){
     <div class="portal-shell${portalServerOn && portalAsCoord(me) ? ' wide' : ''}" data-ptheme="${theme}">
       <div class="portal-top">
         <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
-        <h1 class="portal-title">${portalServerOn && portalAsCoord(me) && me.admin ? 'פורטל ניהול' : portalServerOn && me.role === 'service' ? 'פורטל בנות השירות' : 'פורטל המדריך'}</h1>
+        <h1 class="portal-title">${portalServerOn && portalAsCoord(me) ? (me.admin ? 'פורטל ניהול' : 'פורטל הרכזת') : portalServerOn && me.role === 'service' ? 'פורטל בנות השירות' : 'פורטל המדריך'}</h1>
         <span class="portal-top-actions">${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
       ${portalServerOn ? `<div class="portal-hello">שלום ${pEsc(me.first)}</div>` : `<label class="portal-as">צפייה כ:
@@ -5862,12 +5869,12 @@ function renderInstructorInbox(body){
   const mine = st.notices.filter(n => n.to === me.id).slice(0, 15), mails = st.outbox.filter(e => e.to === me.id || e.to === 'all').slice(0, 12);
   body.innerHTML = `
     <h2 class="psec">עדכונים אישיים</h2>
-    ${mine.length ? mine.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}
+    ${mine.length ? mine.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים.</div>'}
     <h2 class="psec">הודעות מהרכזת</h2>
     ${st.announcements.length ? st.announcements.map(a => `<div class="pannounce"><small>${a.date} · ${pEsc(a.from)}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות.</div>'}
     <h2 class="psec">אימיילים (תצוגה מקדימה)</h2>
     <div class="pnote">בגרסה המחוברת לשרת ההודעות האלה יישלחו במייל אמיתי. כאן רואים איך הן ייראו.</div>
-    ${mails.length ? mails.map(e => `<button type="button" class="pmail" data-mail="${e.id}"><b>${pEsc(e.subject)}</b><small>${new Date(e.at).toLocaleString('he-IL')}</small></button>`).join('') : '<div class="pnote">עוד לא נשלחו אליך הודעות.</div>'}`;
+    ${mails.length ? mails.map(e => `<button type="button" class="pmail" data-mail="${e.id}"><b>${pEsc(e.subject)}</b><small>${new Date(e.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small></button>`).join('') : '<div class="pnote">עוד לא נשלחו אליך הודעות.</div>'}`;
   body.querySelectorAll('[data-mail]').forEach(b => b.addEventListener('click', () => showMailPreview(st.outbox.find(e => e.id === b.dataset.mail))));
 }
 function showMailPreview(e){
@@ -6196,7 +6203,7 @@ async function srvLoad(){
     srvAll(() => sbPersonal.from('prefs_absence').select('staff_id,day,reason,note').gte('day', from).lte('day', to)),
     srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,note').gte('month', from).lte('month', to)),
     srvAll(() => sbPersonal.from('schedule').select('month,status').gte('month', from).lte('month', to)),
-    srvAll(() => sbPersonal.from('notices').select('id,text,kind,seen,created_at').order('created_at', { ascending:false }).limit(40)),
+    sbPersonal.from('notices').select('id,text,kind,seen,created_at').eq('to_staff', meId).order('created_at', { ascending:false }).limit(40).then(r => { if(r.error) throw r.error; return r.data || []; }),          // (only her own: the coordinator may read everybody's notices; and only the last 40)
     srvAll(() => sbPersonal.from('prefs_hours').select('staff_id,day,from_time,to_time').gte('day', from).lte('day', to)),
     srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday').gte('month', from).lte('month', to))
   ]);
@@ -6378,10 +6385,11 @@ function srvRenderTab(me, body, t){
 }
 async function srvRenderInbox(body){
   const st = portalLoad();
+  if(!body.textContent.trim()) body.innerHTML = '<div class="pnote">טוען…</div>';          // (not a blank screen while the messages come)
   const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
   if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
-  body.innerHTML = `<h2 class="psec">העדכונים שלך</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL')}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}
-    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}`;
+  body.innerHTML = `<h2 class="psec">העדכונים שלך</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}
+    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}`;
   st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)
 }// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
 async function srvReload(){ await srvFlush(); await srvLoad(); }
@@ -6474,9 +6482,20 @@ function srvShowLogin(step, email){
     onEnter('plogin-pw', 'plogin-pwbtn');
   }
 }
+// the first load after a sign-in: false only when it really failed. A load that was overtaken by a newer one (two starts at the same moment) leaves the
+// portal on: the newer load draws it (before this, the older one switched the portal off and the person got the demo portal)
+async function srvLoadFirst(){
+  const p = srvLoad(), mine = srv.epoch, ok = await p;
+  if(ok) return true;
+  if(srv.epoch !== mine){          // (wait for the newer load, then go on as usual)
+    for(let i = 0; i < 150 && !(portalState && srv.me && portalState.serverMode); i++) await new Promise(r => setTimeout(r, 100));
+    if(portalState && srv.me) return true;
+  }
+  portalServerOn = false; return false;
+}
 async function srvStart(){
   portalServerOn = true;
-  if(!(await srvLoad())){ portalServerOn = false; return false; }
+  if(!(await srvLoadFirst())) return false;
   portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null;
   showPortal();
   return true;
@@ -6487,7 +6506,7 @@ let ramzorPersonal = false;
 const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
 async function personalEnter(){
   portalServerOn = true; portalUi.viewAs = null; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
-  if(!(await srvLoad())){ portalServerOn = false; return false; }
+  if(!(await srvLoadFirst())) return false;
   portalUi.persona = srv.me;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('protected-app').style.display = '';
@@ -7382,7 +7401,7 @@ function srvRenderCoordSettings(body){
       <div class="an-actions"><div class="pchoice wrap" id="an-via"><button type="button" class="on" data-via="portal">בפורטל</button><button type="button" data-via="email">במייל</button><button type="button" data-via="both">בשניהם</button></div>
       <button type="button" class="btn" id="an-send">שליחה</button></div>
       <h3 class="psec">הודעות אחרונות</h3>
-      ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL')} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
+      ${(ann.data || []).map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${a.via === 'portal' ? 'בפורטל' : a.via === 'email' ? 'במייל' : 'בפורטל ובמייל'}</small><div>${pEsc(a.text)}</div></div>`).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
       const wire = box => {
         let via = 'portal';
         box.querySelectorAll('[data-via]').forEach(b => b.addEventListener('click', () => { via = b.dataset.via; box.querySelectorAll('[data-via]').forEach(x => x.classList.toggle('on', x === b)); }));
@@ -7421,7 +7440,7 @@ function srvRenderCoordSettings(body){
         const who = l.by_staff ? nameOf(l.by_staff) : 'המערכת / המנהל';
         const person = l.what === 'update shift' && o.staff_id && n.staff_id && o.staff_id !== n.staff_id ? `${pEsc(nameOf(o.staff_id))} ← ${pEsc(nameOf(n.staff_id))}` : pEsc(nameOf(d.staff_id));
         const hours = l.what === 'update shift' && o.staff_id === n.staff_id && (o.from_time !== n.from_time || o.to_time !== n.to_time) ? ` · שעות ${String(o.from_time || '').slice(0, 5)}–${String(o.to_time || '').slice(0, 5)} ← ${String(n.from_time || '').slice(0, 5)}–${String(n.to_time || '').slice(0, 5)}` : '';
-        return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')} · ${pEsc(who)}</small><br>משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${person}${hours}</span></div>`;
+        return `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${pEsc(who)}</small><br>משמרת ${d.day ? dayLabel(d.day) : ''} ${SRV_SHIFT_WORD[d.shift] || ''} · ${person}${hours}</span></div>`;
       };
       const html = `
       <div class="pnote">מי שינה משמרת ומתי. מקובץ לפי סוג השינוי; פותחים קבוצה כדי לראות את השינויים בה (החדשים למעלה).</div>
@@ -8027,7 +8046,7 @@ async function ctlLog(box){
     if(table === 'bonus_day') return n.kind === 'hide' ? (op === 'delete' ? 'החזיר/ה בונוס שהוסתר' : 'הסתיר/ה בונוס להיום') : (op === 'delete' ? `מחק/ה את הבונוס המיוחד "${n.name}"` : `הוסיף/ה בונוס מיוחד: "${n.name}"`);
     return l.what;
   };
-  box.innerHTML = (r.data || []).map(l => `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL')} · ${pEsc(who(l.by_staff))}</small><br>${pEsc(words(l))}</span></div>`).join('') || '<div class="pnote">עוד אין שינויים.</div>';
+  box.innerHTML = (r.data || []).map(l => `<div class="pmine-row"><span><small>${new Date(l.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${pEsc(who(l.by_staff))}</small><br>${pEsc(words(l))}</span></div>`).join('') || '<div class="pnote">עוד אין שינויים.</div>';
 }
 
 // ---------- THE KIDS' TV, from the database (config "portalTv"): who is on shift today, today's timetable, the night and morning screens ----------
@@ -8347,7 +8366,7 @@ async function adminRebuild(box){
   const months = [0, 1, 2].map(n => addMonths(monthKeyOf(srvToday()), n));
   box.innerHTML = `<div class="pnote">המערכת תבנה את הסידור של החודש מחדש, לפי ההעדפות והחוקים העדכניים, ותשלח אותו לרכזת. זה קורה בשליחה השעתית, תוך שעה לכל היותר. סידור שכבר פורסם לא נבנה מחדש.</div>
     <div class="ctl-actions">${months.map(mk => `<button type="button" class="btn ghost" data-rebuild="${mk}">לבנות מחדש את ${monthLabel(mk)}</button>`).join('')}</div>
-    <h3 class="psec">בקשות אחרונות</h3>${r.error ? '<div class="pnote">נדרש scheduling-v19.sql</div>' : ((r.data || []).map(x => `<div class="pmine-row"><span>${monthLabel(x.month.slice(0, 7))} · <small>${new Date(x.at).toLocaleString('he-IL')}</small><br><small>${x.done_at ? pEsc(x.result || 'בוצע') : 'ממתין לשליחה השעתית'}</small></span></div>`).join('') || '<div class="pnote">אין.</div>')}`;
+    <h3 class="psec">בקשות אחרונות</h3>${r.error ? '<div class="pnote">נדרש scheduling-v19.sql</div>' : ((r.data || []).map(x => `<div class="pmine-row"><span>${monthLabel(x.month.slice(0, 7))} · <small>${new Date(x.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small><br><small>${x.done_at ? pEsc(x.result || 'בוצע') : 'ממתין לשליחה השעתית'}</small></span></div>`).join('') || '<div class="pnote">אין.</div>')}`;
   box.querySelectorAll('[data-rebuild]').forEach(b => b.addEventListener('click', async () => {
     const mk = b.dataset.rebuild, m = portalMonth(mk);
     if(m.published){ toast('הסידור הזה כבר פורסם, ולכן לא נבנה מחדש'); return; }
@@ -8377,7 +8396,7 @@ async function adminLog(box){
   ].sort((x, y) => String(y.at).localeCompare(String(x.at)));
   const GROUPS = [['admin', 'מנהל'], ['coord', 'רכזת'], ['ahmash', 'אחמ"ש'], ['instr', 'מדריך'], ['system', 'המערכת (אוטומטי)']];
   box.innerHTML = GROUPS.map(([g, title]) => { const list = items.filter(x => group(x.by) === g).slice(0, 100); return `<details class="pfold pfold-in"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">
-    ${list.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL')} · ${pEsc(who(x.by))}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('');
+    ${list.map(x => `<div class="pmine-row"><span><small>${new Date(x.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${pEsc(who(x.by))}</small><br>${pEsc(x.text)}</span></div>`).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('');
 }
 // ---------- bottom navigation bar (phones) ----------
 // One button, "בית": back to the first screen — the choice between the Ramzor and the portal (when the portal is on), or the Ramzor's home.
