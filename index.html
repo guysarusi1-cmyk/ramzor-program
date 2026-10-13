@@ -1442,11 +1442,11 @@
   .cs-req b{ font-size:12.5px; } .cs-req > span{ color:var(--p-text); overflow-wrap:anywhere; }
   .cs-req.no{ border-color:var(--p-no, #ff8a80); } .cs-req.can{ border-color:var(--p-avoid, #f0c239); } .cs-req.yes{ border-color:var(--p-yes, #7be0a0); }
   .cs-name[draggable=true]{ cursor:grab; } .cs-name.dragging{ opacity:.5; }
-  .mcal-cell.drop-ok{ outline:3px solid var(--gold); outline-offset:-3px; }
-  .mcal-cell.drop-yes{ outline-color:var(--p-yes, #7be0a0); background:rgba(123,224,160,.28); }
-  .mcal-cell.drop-can{ outline-color:var(--p-avoid, #f0c239); background:rgba(240,194,57,.28); }
-  .mcal-cell.drop-no{ outline-color:var(--p-no, #ff8a80); background:rgba(255,138,128,.28); }
-  .mcal-cell.drop-none{ outline-color:#8ec0ff; background:rgba(110,168,254,.24); }
+  .mcal .mcal-cell.drop-ok{ outline:3px solid var(--gold); outline-offset:-3px; }          /* (stronger than the weekend and hover backgrounds, so the wish colour shows on every day) */
+  .mcal .mcal-cell.drop-ok.drop-yes{ outline-color:var(--p-yes, #7be0a0); background:rgba(123,224,160,.28); }
+  .mcal .mcal-cell.drop-ok.drop-can{ outline-color:var(--p-avoid, #f0c239); background:rgba(240,194,57,.28); }
+  .mcal .mcal-cell.drop-ok.drop-no{ outline-color:var(--p-no, #ff8a80); background:rgba(255,138,128,.28); }
+  .mcal .mcal-cell.drop-ok.drop-none{ outline-color:#8ec0ff; background:rgba(110,168,254,.24); }
   .mcal-key.compact{ display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
   .tab-key{ display:flex; flex-direction:column; gap:3px; width:100%; }          /* the folded tab: a small colour key, stacked, above the text */
   .tab-key{ gap:10px; margin-top:6px; align-items:center; }
@@ -1467,7 +1467,9 @@
   @media (min-width:700px){ .mcal{ grid-template-columns:70px repeat(7, minmax(0, 1fr)); column-gap:5px; } .mcal-head{ font-size:14px; } .mcal-num{ font-size:14px; padding:5px 3px; margin-top:12px; } .mcal-cell{ padding:5px; gap:3px; } .mcal-label b{ font-size:14px; } .mcal-label small{ font-size:12px; } .mcal-name{ font-size:13px; padding:2px 5px; } .mcal-name small{ font-size:10.5px; } .mcal-missing{ font-size:12px; } }
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
-  body.portal-big .portal-shell{ zoom:1.14; }
+  body.portal-big .portal-shell{ zoom:1.25; }
+  .portal-shell.wide{ zoom:1.2; }          /* the coordinator's portal: larger text than everybody's (she works at a computer) */
+  body.portal-big .portal-shell.wide{ zoom:1.42; }
   [data-fold="team"] .mcal-name.me{ cursor:pointer; }          /* one's own name in the team calendar opens the swap / cannot-come choice */
   [data-fold="team"] .mcal-name.me:hover{ outline:2px solid var(--gold); outline-offset:1px; }
   .pday-fixed{ display:block; text-align:center; font-size:11px; font-weight:700; color:var(--p-no, #ff8a80); margin:-2px 0 2px; }          /* a locked day (vacation, sick leave...): the reason written on the day itself */
@@ -1491,6 +1493,12 @@
   .pnotices-top{ display:flex; justify-content:flex-start; margin-bottom:8px; }          /* "mark all as read" at the top of the new messages */
   .plogin-row{ display:flex; gap:8px; margin-top:10px; } .plogin-row .btn{ flex:1; }          /* the code step: a new code, or back */
   .plogin .plogin-link{ width:100%; margin-top:10px; }
+  /* WhatsApp: next to "no" and "not marked" in the lists of the shift editor, and in the question before placing */
+  .cs-pick-row{ display:flex; align-items:center; gap:6px; } .cs-pick-row .cs-pick-item{ flex:1; }
+  .wa-btn{ flex:none; display:inline-grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#25d366; color:#fff; text-decoration:none; }
+  .wa-btn:hover, .wa-btn:focus-visible{ background:#1ebe5a; outline:2px solid #fff; outline-offset:1px; }
+  .wa-ask{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .wa-go{ display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#25d366 !important; color:#fff !important; border-color:#25d366 !important; text-decoration:none; }
 
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
@@ -1649,9 +1657,9 @@
 
 /* ---------- the leopard look: the coordinator's third choice in the portal's gear (never in any other portal) ---------- */
   body.leopard-bg{ background:#2a1a0e url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='220'%20viewBox='0%200%20220%20220'%3E%3Crect%20width='220'%20height='220'%20fill='%23c79552'/%3E%3Cellipse%20cx='40.0'%20cy='40.0'%20rx='12.5'%20ry='10.0'%20fill='%23ad7739'/%3E%3Cellipse%20cx='29.5'%20cy='51.0'%20rx='7.5'%20ry='2.7'%20transform='rotate%28222%2029.5%2051.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='28.4'%20cy='29.9'%20rx='5.6'%20ry='2.7'%20transform='rotate%28313%2028.4%2029.9%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='42.5'%20cy='26.0'%20rx='6.7'%20ry='2.7'%20transform='rotate%28371%2042.5%2026.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='56.3'%20cy='42.7'%20rx='6.9'%20ry='3.4'%20transform='rotate%28443%2056.3%2042.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='45.0'%20cy='53.5'%20rx='5.1'%20ry='2.9'%20transform='rotate%28525%2045.0%2053.5%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='130.0'%20cy='30.0'%20rx='11.7'%20ry='9.4'%20fill='%23ad7739'/%3E%3Cellipse%20cx='130.0'%20cy='250.0'%20rx='11.7'%20ry='9.4'%20fill='%23ad7739'/%3E%3Cellipse%20cx='141.8'%20cy='38.7'%20rx='5.9'%20ry='3.7'%20transform='rotate%28118%20141.8%2038.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='123.6'%20cy='42.1'%20rx='6.9'%20ry='3.1'%20transform='rotate%28206%20123.6%2042.1%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='115.3'%20cy='34.7'%20rx='5.2'%20ry='2.9'%20transform='rotate%28257%20115.3%2034.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='119.9'%20cy='19.8'%20rx='5.9'%20ry='3.4'%20transform='rotate%28318%20119.9%2019.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='119.9'%20cy='239.8'%20rx='5.9'%20ry='3.4'%20transform='rotate%28318%20119.9%20239.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='134.4'%20cy='17.2'%20rx='7.4'%20ry='3.6'%20transform='rotate%28366%20134.4%2017.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='134.4'%20cy='237.2'%20rx='7.4'%20ry='3.6'%20transform='rotate%28366%20134.4%20237.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='145.6'%20cy='28.6'%20rx='6.6'%20ry='3.8'%20transform='rotate%28453%20145.6%2028.6%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-30.0'%20cy='95.0'%20rx='12.3'%20ry='9.9'%20fill='%23ad7739'/%3E%3Cellipse%20cx='190.0'%20cy='95.0'%20rx='12.3'%20ry='9.9'%20fill='%23ad7739'/%3E%3Cellipse%20cx='-17.4'%20cy='104.0'%20rx='7.3'%20ry='2.8'%20transform='rotate%28130%20-17.4%20104.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='202.6'%20cy='104.0'%20rx='7.3'%20ry='2.8'%20transform='rotate%28130%20202.6%20104.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='186.8'%20cy='108.7'%20rx='7.0'%20ry='3.7'%20transform='rotate%28194%20186.8%20108.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='174.3'%20cy='90.9'%20rx='5.9'%20ry='3.6'%20transform='rotate%28291%20174.3%2090.9%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='187.4'%20cy='81.2'%20rx='6.4'%20ry='3.8'%20transform='rotate%28369%20187.4%2081.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-15.8'%20cy='88.0'%20rx='7.0'%20ry='2.7'%20transform='rotate%28428%20-15.8%2088.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='204.2'%20cy='88.0'%20rx='7.0'%20ry='2.7'%20transform='rotate%28428%20204.2%2088.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='85.0'%20cy='110.0'%20rx='13.7'%20ry='10.9'%20fill='%23ad7739'/%3E%3Cellipse%20cx='91.1'%20cy='95.4'%20rx='6.2'%20ry='3.5'%20transform='rotate%28360%2091.1%2095.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='102.7'%20cy='106.3'%20rx='5.5'%20ry='2.8'%20transform='rotate%28418%20102.7%20106.3%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='97.6'%20cy='121.2'%20rx='5.4'%20ry='2.9'%20transform='rotate%28492%2097.6%20121.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='81.6'%20cy='125.2'%20rx='5.2'%20ry='3.2'%20transform='rotate%28553%2081.6%20125.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='68.8'%20cy='117.2'%20rx='7.5'%20ry='3.8'%20transform='rotate%28594%2068.8%20117.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='67.1'%20cy='107.2'%20rx='6.1'%20ry='3.8'%20transform='rotate%28659%2067.1%20107.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='74.4'%20cy='97.4'%20rx='5.5'%20ry='2.9'%20transform='rotate%28674%2074.4%2097.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='25.0'%20cy='170.0'%20rx='13.1'%20ry='10.5'%20fill='%23ad7739'/%3E%3Cellipse%20cx='245.0'%20cy='170.0'%20rx='13.1'%20ry='10.5'%20fill='%23ad7739'/%3E%3Cellipse%20cx='33.9'%20cy='182.7'%20rx='5.4'%20ry='3.3'%20transform='rotate%28154%2033.9%20182.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='18.5'%20cy='183.7'%20rx='5.4'%20ry='3.8'%20transform='rotate%28220%2018.5%20183.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='238.5'%20cy='183.7'%20rx='5.4'%20ry='3.8'%20transform='rotate%28220%20238.5%20183.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='7.7'%20cy='171.8'%20rx='7.2'%20ry='3.2'%20transform='rotate%28278%207.7%20171.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='227.7'%20cy='171.8'%20rx='7.2'%20ry='3.2'%20transform='rotate%28278%20227.7%20171.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='14.5'%20cy='158.2'%20rx='7.0'%20ry='3.4'%20transform='rotate%28319%2014.5%20158.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='234.5'%20cy='158.2'%20rx='7.0'%20ry='3.4'%20transform='rotate%28319%20234.5%20158.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='24.5'%20cy='155.2'%20rx='6.4'%20ry='3.2'%20transform='rotate%28346%2024.5%20155.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='41.0'%20cy='164.1'%20rx='6.3'%20ry='2.8'%20transform='rotate%28431%2041.0%20164.1%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='42.4'%20cy='170.7'%20rx='6.7'%20ry='3.4'%20transform='rotate%28471%2042.4%20170.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='150.0'%20cy='165.0'%20rx='13.6'%20ry='10.8'%20fill='%23ad7739'/%3E%3Cellipse%20cx='163.4'%20cy='154.7'%20rx='5.4'%20ry='3.0'%20transform='rotate%28402%20163.4%20154.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='166.7'%20cy='170.9'%20rx='5.4'%20ry='3.8'%20transform='rotate%28492%20166.7%20170.9%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='147.6'%20cy='180.2'%20rx='6.5'%20ry='2.7'%20transform='rotate%28532%20147.6%20180.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='132.5'%20cy='168.7'%20rx='5.8'%20ry='3.8'%20transform='rotate%28603%20132.5%20168.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='138.1'%20cy='153.4'%20rx='7.9'%20ry='3.3'%20transform='rotate%28665%20138.1%20153.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-15.0'%20cy='-20.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='-15.0'%20cy='200.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='205.0'%20cy='-20.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='205.0'%20cy='200.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='-15.9'%20cy='185.0'%20rx='6.9'%20ry='2.7'%20transform='rotate%28371%20-15.9%20185.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='204.1'%20cy='185.0'%20rx='6.9'%20ry='2.7'%20transform='rotate%28371%20204.1%20185.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='2.1'%20cy='196.2'%20rx='7.7'%20ry='3.1'%20transform='rotate%28424%202.1%20196.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='222.1'%20cy='196.2'%20rx='7.7'%20ry='3.1'%20transform='rotate%28424%20222.1%20196.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-5.6'%20cy='-7.2'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20-5.6%20-7.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-5.6'%20cy='212.8'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20-5.6%20212.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='214.4'%20cy='-7.2'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20214.4%20-7.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='214.4'%20cy='212.8'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20214.4%20212.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='192.0'%20cy='-9.7'%20rx='7.3'%20ry='2.9'%20transform='rotate%28577%20192.0%20-9.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='192.0'%20cy='210.3'%20rx='7.3'%20ry='2.9'%20transform='rotate%28577%20192.0%20210.3%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='188.1'%20cy='195.4'%20rx='7.4'%20ry='2.9'%20transform='rotate%28648%20188.1%20195.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='110.0'%20cy='-15.0'%20rx='14.0'%20ry='11.2'%20fill='%23ad7739'/%3E%3Cellipse%20cx='110.0'%20cy='205.0'%20rx='14.0'%20ry='11.2'%20fill='%23ad7739'/%3E%3Cellipse%20cx='114.4'%20cy='189.6'%20rx='5.6'%20ry='3.4'%20transform='rotate%28367%20114.4%20189.6%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='128.6'%20cy='-13.6'%20rx='7.2'%20ry='3.1'%20transform='rotate%28474%20128.6%20-13.6%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='128.6'%20cy='206.4'%20rx='7.2'%20ry='3.1'%20transform='rotate%28474%20128.6%20206.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='120.4'%20cy='-1.8'%20rx='5.3'%20ry='3.3'%20transform='rotate%28500%20120.4%20-1.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='120.4'%20cy='218.2'%20rx='5.3'%20ry='3.3'%20transform='rotate%28500%20120.4%20218.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='95.8'%20cy='-4.8'%20rx='8.0'%20ry='3.5'%20transform='rotate%28570%2095.8%20-4.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='95.8'%20cy='215.2'%20rx='8.0'%20ry='3.5'%20transform='rotate%28570%2095.8%20215.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='96.6'%20cy='194.0'%20rx='6.0'%20ry='3.5'%20transform='rotate%28687%2096.6%20194.0%29'%20fill='%233b2311'/%3E%3Ccircle%20cx='26.4'%20cy='85.5'%20r='3.5'%20fill='%233b2311'/%3E%3Ccircle%20cx='43.9'%20cy='195.6'%20r='3.0'%20fill='%233b2311'/%3E%3Ccircle%20cx='208.2'%20cy='158.8'%20r='3.0'%20fill='%233b2311'/%3E%3Ccircle%20cx='163.5'%20cy='18.7'%20r='2.5'%20fill='%233b2311'/%3E%3Ccircle%20cx='-1.5'%20cy='6.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='-1.5'%20cy='226.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='218.5'%20cy='6.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='218.5'%20cy='226.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='102.4'%20cy='144.3'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='131.1'%20cy='104.4'%20r='3.9'%20fill='%233b2311'/%3E%3Ccircle%20cx='34.3'%20cy='120.6'%20r='2.2'%20fill='%233b2311'/%3E%3Ccircle%20cx='30.6'%20cy='-3.0'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='30.6'%20cy='217.0'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='192.3'%20cy='6.2'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='192.3'%20cy='226.2'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='110.3'%20cy='168.0'%20r='2.8'%20fill='%233b2311'/%3E%3C/svg%3E") repeat; background-size:220px 220px; }
-  body.leopard-bg::before{ content:''; position:fixed; inset:0; background:radial-gradient(ellipse at 50% 0%, rgba(36,22,10,.55), rgba(24,14,6,.82)); pointer-events:none; z-index:0; }
+  body.leopard-bg::before{ content:''; position:fixed; inset:0; background:radial-gradient(ellipse at 50% 0%, rgba(28,17,8,.78), rgba(18,10,4,.92)); pointer-events:none; z-index:0; }
   body.leopard-bg #protected-app{ position:relative; z-index:1; }
-  .portal-shell[data-ptheme=leopard]{ --p-bg:transparent; --p-panel:rgba(38,24,13,.9); --p-panel2:rgba(58,37,20,.92); --p-line:rgba(226,182,92,.32); --p-text:#f7ead3; --p-muted:#d6bd96;
+  .portal-shell[data-ptheme=leopard]{ --p-bg:transparent; --p-panel:rgba(24,14,6,.96); --p-panel2:rgba(44,27,13,.97); --p-line:rgba(226,182,92,.5); --p-text:#fffaf0; --p-muted:#f0dcb8;
     --gold:#e2b65c; color:var(--p-text); }
   .portal-shell[data-ptheme=leopard] .portal-title{ color:#e2b65c; letter-spacing:.5px; text-shadow:0 2px 0 rgba(0,0,0,.35); }
   .portal-shell[data-ptheme=leopard] .portal-title::after{ content:''; display:block; height:6px; margin:6px auto 0; width:120px; border-radius:6px; background:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='220'%20viewBox='0%200%20220%20220'%3E%3Crect%20width='220'%20height='220'%20fill='%23c79552'/%3E%3Cellipse%20cx='40.0'%20cy='40.0'%20rx='12.5'%20ry='10.0'%20fill='%23ad7739'/%3E%3Cellipse%20cx='29.5'%20cy='51.0'%20rx='7.5'%20ry='2.7'%20transform='rotate%28222%2029.5%2051.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='28.4'%20cy='29.9'%20rx='5.6'%20ry='2.7'%20transform='rotate%28313%2028.4%2029.9%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='42.5'%20cy='26.0'%20rx='6.7'%20ry='2.7'%20transform='rotate%28371%2042.5%2026.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='56.3'%20cy='42.7'%20rx='6.9'%20ry='3.4'%20transform='rotate%28443%2056.3%2042.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='45.0'%20cy='53.5'%20rx='5.1'%20ry='2.9'%20transform='rotate%28525%2045.0%2053.5%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='130.0'%20cy='30.0'%20rx='11.7'%20ry='9.4'%20fill='%23ad7739'/%3E%3Cellipse%20cx='130.0'%20cy='250.0'%20rx='11.7'%20ry='9.4'%20fill='%23ad7739'/%3E%3Cellipse%20cx='141.8'%20cy='38.7'%20rx='5.9'%20ry='3.7'%20transform='rotate%28118%20141.8%2038.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='123.6'%20cy='42.1'%20rx='6.9'%20ry='3.1'%20transform='rotate%28206%20123.6%2042.1%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='115.3'%20cy='34.7'%20rx='5.2'%20ry='2.9'%20transform='rotate%28257%20115.3%2034.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='119.9'%20cy='19.8'%20rx='5.9'%20ry='3.4'%20transform='rotate%28318%20119.9%2019.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='119.9'%20cy='239.8'%20rx='5.9'%20ry='3.4'%20transform='rotate%28318%20119.9%20239.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='134.4'%20cy='17.2'%20rx='7.4'%20ry='3.6'%20transform='rotate%28366%20134.4%2017.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='134.4'%20cy='237.2'%20rx='7.4'%20ry='3.6'%20transform='rotate%28366%20134.4%20237.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='145.6'%20cy='28.6'%20rx='6.6'%20ry='3.8'%20transform='rotate%28453%20145.6%2028.6%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-30.0'%20cy='95.0'%20rx='12.3'%20ry='9.9'%20fill='%23ad7739'/%3E%3Cellipse%20cx='190.0'%20cy='95.0'%20rx='12.3'%20ry='9.9'%20fill='%23ad7739'/%3E%3Cellipse%20cx='-17.4'%20cy='104.0'%20rx='7.3'%20ry='2.8'%20transform='rotate%28130%20-17.4%20104.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='202.6'%20cy='104.0'%20rx='7.3'%20ry='2.8'%20transform='rotate%28130%20202.6%20104.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='186.8'%20cy='108.7'%20rx='7.0'%20ry='3.7'%20transform='rotate%28194%20186.8%20108.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='174.3'%20cy='90.9'%20rx='5.9'%20ry='3.6'%20transform='rotate%28291%20174.3%2090.9%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='187.4'%20cy='81.2'%20rx='6.4'%20ry='3.8'%20transform='rotate%28369%20187.4%2081.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-15.8'%20cy='88.0'%20rx='7.0'%20ry='2.7'%20transform='rotate%28428%20-15.8%2088.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='204.2'%20cy='88.0'%20rx='7.0'%20ry='2.7'%20transform='rotate%28428%20204.2%2088.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='85.0'%20cy='110.0'%20rx='13.7'%20ry='10.9'%20fill='%23ad7739'/%3E%3Cellipse%20cx='91.1'%20cy='95.4'%20rx='6.2'%20ry='3.5'%20transform='rotate%28360%2091.1%2095.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='102.7'%20cy='106.3'%20rx='5.5'%20ry='2.8'%20transform='rotate%28418%20102.7%20106.3%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='97.6'%20cy='121.2'%20rx='5.4'%20ry='2.9'%20transform='rotate%28492%2097.6%20121.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='81.6'%20cy='125.2'%20rx='5.2'%20ry='3.2'%20transform='rotate%28553%2081.6%20125.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='68.8'%20cy='117.2'%20rx='7.5'%20ry='3.8'%20transform='rotate%28594%2068.8%20117.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='67.1'%20cy='107.2'%20rx='6.1'%20ry='3.8'%20transform='rotate%28659%2067.1%20107.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='74.4'%20cy='97.4'%20rx='5.5'%20ry='2.9'%20transform='rotate%28674%2074.4%2097.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='25.0'%20cy='170.0'%20rx='13.1'%20ry='10.5'%20fill='%23ad7739'/%3E%3Cellipse%20cx='245.0'%20cy='170.0'%20rx='13.1'%20ry='10.5'%20fill='%23ad7739'/%3E%3Cellipse%20cx='33.9'%20cy='182.7'%20rx='5.4'%20ry='3.3'%20transform='rotate%28154%2033.9%20182.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='18.5'%20cy='183.7'%20rx='5.4'%20ry='3.8'%20transform='rotate%28220%2018.5%20183.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='238.5'%20cy='183.7'%20rx='5.4'%20ry='3.8'%20transform='rotate%28220%20238.5%20183.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='7.7'%20cy='171.8'%20rx='7.2'%20ry='3.2'%20transform='rotate%28278%207.7%20171.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='227.7'%20cy='171.8'%20rx='7.2'%20ry='3.2'%20transform='rotate%28278%20227.7%20171.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='14.5'%20cy='158.2'%20rx='7.0'%20ry='3.4'%20transform='rotate%28319%2014.5%20158.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='234.5'%20cy='158.2'%20rx='7.0'%20ry='3.4'%20transform='rotate%28319%20234.5%20158.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='24.5'%20cy='155.2'%20rx='6.4'%20ry='3.2'%20transform='rotate%28346%2024.5%20155.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='41.0'%20cy='164.1'%20rx='6.3'%20ry='2.8'%20transform='rotate%28431%2041.0%20164.1%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='42.4'%20cy='170.7'%20rx='6.7'%20ry='3.4'%20transform='rotate%28471%2042.4%20170.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='150.0'%20cy='165.0'%20rx='13.6'%20ry='10.8'%20fill='%23ad7739'/%3E%3Cellipse%20cx='163.4'%20cy='154.7'%20rx='5.4'%20ry='3.0'%20transform='rotate%28402%20163.4%20154.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='166.7'%20cy='170.9'%20rx='5.4'%20ry='3.8'%20transform='rotate%28492%20166.7%20170.9%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='147.6'%20cy='180.2'%20rx='6.5'%20ry='2.7'%20transform='rotate%28532%20147.6%20180.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='132.5'%20cy='168.7'%20rx='5.8'%20ry='3.8'%20transform='rotate%28603%20132.5%20168.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='138.1'%20cy='153.4'%20rx='7.9'%20ry='3.3'%20transform='rotate%28665%20138.1%20153.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-15.0'%20cy='-20.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='-15.0'%20cy='200.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='205.0'%20cy='-20.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='205.0'%20cy='200.0'%20rx='13.3'%20ry='10.6'%20fill='%23ad7739'/%3E%3Cellipse%20cx='-15.9'%20cy='185.0'%20rx='6.9'%20ry='2.7'%20transform='rotate%28371%20-15.9%20185.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='204.1'%20cy='185.0'%20rx='6.9'%20ry='2.7'%20transform='rotate%28371%20204.1%20185.0%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='2.1'%20cy='196.2'%20rx='7.7'%20ry='3.1'%20transform='rotate%28424%202.1%20196.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='222.1'%20cy='196.2'%20rx='7.7'%20ry='3.1'%20transform='rotate%28424%20222.1%20196.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-5.6'%20cy='-7.2'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20-5.6%20-7.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='-5.6'%20cy='212.8'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20-5.6%20212.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='214.4'%20cy='-7.2'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20214.4%20-7.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='214.4'%20cy='212.8'%20rx='6.5'%20ry='3.5'%20transform='rotate%28513%20214.4%20212.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='192.0'%20cy='-9.7'%20rx='7.3'%20ry='2.9'%20transform='rotate%28577%20192.0%20-9.7%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='192.0'%20cy='210.3'%20rx='7.3'%20ry='2.9'%20transform='rotate%28577%20192.0%20210.3%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='188.1'%20cy='195.4'%20rx='7.4'%20ry='2.9'%20transform='rotate%28648%20188.1%20195.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='110.0'%20cy='-15.0'%20rx='14.0'%20ry='11.2'%20fill='%23ad7739'/%3E%3Cellipse%20cx='110.0'%20cy='205.0'%20rx='14.0'%20ry='11.2'%20fill='%23ad7739'/%3E%3Cellipse%20cx='114.4'%20cy='189.6'%20rx='5.6'%20ry='3.4'%20transform='rotate%28367%20114.4%20189.6%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='128.6'%20cy='-13.6'%20rx='7.2'%20ry='3.1'%20transform='rotate%28474%20128.6%20-13.6%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='128.6'%20cy='206.4'%20rx='7.2'%20ry='3.1'%20transform='rotate%28474%20128.6%20206.4%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='120.4'%20cy='-1.8'%20rx='5.3'%20ry='3.3'%20transform='rotate%28500%20120.4%20-1.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='120.4'%20cy='218.2'%20rx='5.3'%20ry='3.3'%20transform='rotate%28500%20120.4%20218.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='95.8'%20cy='-4.8'%20rx='8.0'%20ry='3.5'%20transform='rotate%28570%2095.8%20-4.8%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='95.8'%20cy='215.2'%20rx='8.0'%20ry='3.5'%20transform='rotate%28570%2095.8%20215.2%29'%20fill='%233b2311'/%3E%3Cellipse%20cx='96.6'%20cy='194.0'%20rx='6.0'%20ry='3.5'%20transform='rotate%28687%2096.6%20194.0%29'%20fill='%233b2311'/%3E%3Ccircle%20cx='26.4'%20cy='85.5'%20r='3.5'%20fill='%233b2311'/%3E%3Ccircle%20cx='43.9'%20cy='195.6'%20r='3.0'%20fill='%233b2311'/%3E%3Ccircle%20cx='208.2'%20cy='158.8'%20r='3.0'%20fill='%233b2311'/%3E%3Ccircle%20cx='163.5'%20cy='18.7'%20r='2.5'%20fill='%233b2311'/%3E%3Ccircle%20cx='-1.5'%20cy='6.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='-1.5'%20cy='226.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='218.5'%20cy='6.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='218.5'%20cy='226.1'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='102.4'%20cy='144.3'%20r='3.3'%20fill='%233b2311'/%3E%3Ccircle%20cx='131.1'%20cy='104.4'%20r='3.9'%20fill='%233b2311'/%3E%3Ccircle%20cx='34.3'%20cy='120.6'%20r='2.2'%20fill='%233b2311'/%3E%3Ccircle%20cx='30.6'%20cy='-3.0'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='30.6'%20cy='217.0'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='192.3'%20cy='6.2'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='192.3'%20cy='226.2'%20r='2.6'%20fill='%233b2311'/%3E%3Ccircle%20cx='110.3'%20cy='168.0'%20r='2.8'%20fill='%233b2311'/%3E%3C/svg%3E") center/90px 90px; opacity:.9; }
@@ -1663,8 +1671,10 @@
   .portal-shell[data-ptheme=leopard] .btn:not(.ghost){ background:linear-gradient(180deg, #e9c06a, #c99135); color:#2a1606; border-color:#c99135; }
   .portal-shell[data-ptheme=leopard] .btn.ghost, .portal-shell[data-ptheme=leopard] .back-btn{ background:rgba(58,37,20,.9); color:var(--p-text); border-color:var(--p-line); }
   .portal-shell[data-ptheme=leopard] select, .portal-shell[data-ptheme=leopard] input, .portal-shell[data-ptheme=leopard] textarea{ background:rgba(28,17,9,.9); color:var(--p-text); border-color:var(--p-line); }
-  .portal-shell[data-ptheme=leopard] .mcal-cell{ background-color:rgba(38,24,13,.82); }
+  .portal-shell[data-ptheme=leopard] .mcal{ background:rgba(16,9,3,.88); border-radius:12px; }          /* (behind the calendar; the shifts keep their own backgrounds) */
   .portal-shell[data-ptheme=leopard] .cs-tab{ background:rgba(38,24,13,.92); border-color:rgba(226,182,92,.45); }
+  .portal-shell[data-ptheme=leopard] .pnote, .portal-shell[data-ptheme=leopard] small{ color:#f0dcb8; }          /* (stronger contrast: the text reads clearly over the pattern) */
+  .portal-shell[data-ptheme=leopard] .portal-hello, .portal-shell[data-ptheme=leopard] .pmonth b{ color:#fffaf0; text-shadow:0 1px 2px rgba(0,0,0,.6); }
 </style>
 </head>
 <body>
@@ -5356,6 +5366,7 @@ function queueEmail(to, subject, body){
 // ---- the first screen after login: two cards
 function showAppHome(){
   stopCarousel(); document.body.classList.remove('leopard-bg');
+  if(portalUi.viewAs){ portalUi.viewAs = null; if(typeof srv !== 'undefined' && srv.me) portalUi.persona = srv.me; }          // (leaving "looking as somebody" by any way: back to being oneself)
   portalActivateView('view-apphome');
   document.getElementById('view-apphome').innerHTML = `
     <div class="apphome">
@@ -6250,6 +6261,13 @@ async function srvLoadPhotos(){
 }
 // one row of the schedule -> the list of rows (for "my shifts") and the team board (instructors only; short / long / custom-hours shifts carry a note)
 const SRV_STD = { M:['07:00', '15:00'], A:['14:00', '22:00'], N:['22:00', '08:00'], S:['07:00', '11:00'] };
+function srvDropRow(st, id){
+  const r = st.rows.find(x => x.id === id); if(!r) return;
+  st.rows = st.rows.filter(x => x.id !== id);
+  const keys = r.shift === 'L' ? [[r.day, 'e'], [addDays(r.day, 1), 'm'], [addDays(r.day, 1), 'e']] : r.shift === 'S' ? [[r.day, 'm']] : [[r.day, SRV_SHIFT_UI[r.shift]]];
+  keys.forEach(([d, sid]) => { const mm = st.months[monthKeyOf(d)]; if(!mm || !sid) return; const list = mm.assignments[`${d}|${sid}`]; if(!list) return; const i = list.indexOf(r.staff); if(i >= 0) list.splice(i, 1); });
+  const a = st.assignmentIds[id]; if(a){ delete st.assignmentIds[`${a.key}|${a.staff}`]; delete st.assignmentIds[id]; }
+}
 function srvAddRow(st, r){
   const t5 = x => x ? x.slice(0, 5) : null, from = t5(r.from_time), to = t5(r.to_time);
   st.rows.push({ id:r.id, staff:r.staff_id, day:r.day, shift:r.shift, from, to, flags:r.flags || [] });
@@ -6468,8 +6486,9 @@ async function srvStart(){
 let ramzorPersonal = false;
 const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
 async function personalEnter(){
-  portalServerOn = true;
+  portalServerOn = true; portalUi.viewAs = null; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoad())){ portalServerOn = false; return false; }
+  portalUi.persona = srv.me;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('protected-app').style.display = '';
   if(!personalRamzorKind()){ srvOpenPortal(); return true; }          // (service girls and teachers: only the portal)
@@ -6483,6 +6502,7 @@ async function personalLeave(){
   try { await srvFlush(); } catch(e){}
   await sbPersonal.auth.signOut();
   sb = sbShared; ramzorPersonal = false; portalServerOn = false; portalState = null; srv.me = null; srv.profile = null; srv.profileFor = null;
+  portalUi.viewAs = null; portalUi.manager = false; portalUi.persona = null;
 }
 async function srvSignOut(){
   await srvFlush();
@@ -6825,6 +6845,8 @@ async function srvLoadCoord(){
     srvAll(() => sbPersonal.from('vacation_requests').select('id,staff_id,from_day,to_day,note,status,created_at').order('created_at', { ascending:false }).limit(60))
   ]);
   st.priv = {}; priv.forEach(r => { st.priv[r.staff_id] = r; });
+  try { const ph = await sbPersonal.from('staff_private').select('staff_id,phone'); if(!ph.error) (ph.data || []).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; }); } catch(e){}          // (the phones: scheduling-v21.sql)
+  st.waMsg = {}; try { const wm = await sbPersonal.from('sched_settings').select('value').eq('key', 'wa_messages').maybeSingle(); if(!wm.error && wm.data && wm.data.value) st.waMsg = wm.data.value; } catch(e){}          // (the WhatsApp messages as the coordinator wrote them)
   st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}          // (each person's chosen voice, so that her feedback is written in it)
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; try { const sr = await sbPersonal.from('sick_reports').select('assignment_id,note').order('created_at'); (sr.data || []).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; }); } catch(e){}          // (the reason an instructor gave when she reported that she cannot come)
@@ -6847,6 +6869,7 @@ function srvDefaultCoordMonth(){
   return st.months[next] && st.months[next].status ? next : (st.months[cur] && st.months[cur].status ? cur : next);
 }
 function srvRenderCoordSchedule(body){
+  if(srvDragWho){ srvRenderAfterDrag = body; return; }          // (never redraw the calendar in the middle of a drag: the name being dragged would vanish and the drop would be lost; it redraws when the drag ends)
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad(), mk = portalUi.month || (portalUi.month = srvDefaultCoordMonth()), m = portalMonth(mk), ctx = portalCtx(mk);
   const flags = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk), has = !!m.status;
@@ -6874,7 +6897,7 @@ function srvRenderCoordSchedule(body){
   body.querySelectorAll('.cs-name[data-cs-person]').forEach(b => {
     b.setAttribute('draggable', 'true');
     b.addEventListener('dragstart', e => { srvDragWho = b.dataset.csPerson; e.dataTransfer.setData('text/plain', b.dataset.csPerson); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
-    b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); });
+    b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   body.querySelectorAll('.mcal-cell.editable').forEach(c => {
     c.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; srvDropShow(c); });
@@ -6914,7 +6937,7 @@ function srvOpenSlot(mk, key, body){
   const others = () => portalLoad().rows.filter(r => r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')) && ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role !== 'instructor'));
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
   const wrap = portalSheet('<div id="slot-body"></div>');
-  let editing = null;                                             // (the row whose hours are being changed by hand)
+  let editing = null, replacing = null;                          // (the row whose hours are being changed by hand; the row whose person is being replaced)
   const timeOpts = sel => Array.from({ length:48 }, (_, i) => { const v = String(Math.floor(i / 2)).padStart(2, '0') + (i % 2 ? ':30' : ':00'); return `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`; }).join('');
   const draw = () => {
     if(!wrap.isConnected) return;                                   // (the sheet was closed while the data was reloading)
@@ -6922,13 +6945,15 @@ function srvOpenSlot(mk, key, body){
     // what each of them wrote for THIS shift: yes (green), can (yellow), not marked (blue), no / away (red); the list is ordered the same way
     const mprefs = portalMonth(monthKeyOf(date)).prefs || {}, LV = { yes:['yes', 'כן'], avoid:['can', 'יכול'], none:['none', 'לא סומן'], no:['no', 'לא'] }, RANK = { yes:0, avoid:1, none:2, no:3 };
     const levelFor = id => { const pr = mprefs[id] || { slots:{}, absent:[], fixed:[] }; if((pr.absent || []).includes(date) || (pr.fixed || []).some(f => f.day === date)) return 'no'; return (pr.slots || {})[key] || 'none'; };
-    const ranked = people.map((p, i) => ({ p, lv:levelFor(p.id), i })).sort((a, b) => RANK[a.lv] - RANK[b.lv] || a.i - b.i);
+    const prio = id => (((portalLoad().priv || {})[id] || {}).leader_priority) ?? 999;
+    const rankOf = list => list.map((p, i) => ({ p, lv:levelFor(p.id), i })).sort((a, b) => RANK[a.lv] - RANK[b.lv] || prio(a.p.id) - prio(b.p.id) || a.i - b.i);          // (green first, then by the priority list)
+    const ranked = rankOf(people);
     const warn = srvShiftWarnings(date, code, rows);
     wrap.querySelector('#slot-body').innerHTML = `<h2>${dayLabel(date)} · ${pEsc(sh.label)} ${rangeHtml(sh.start, sh.end)}</h2>
       ${warn.length ? `<div class="pwarn">${warn.map(w => `<div>⚠ ${pEsc(w)}</div>`).join('')}</div>` : ''}
       <div class="pedit-list">${rows.length ? rows.map(r => r.id === editing
         ? `<div class="pedit-row editing"><span>${pEsc(nm(r.staff))}</span><span class="phours-edit"><select data-hfrom aria-label="משעה">${timeOpts((r.from || sh.start).slice(0, 5))}</select><span>עד</span><select data-hto aria-label="עד שעה">${timeOpts((r.to || sh.end).slice(0, 5))}</select></span><span class="pedit-btns"><button type="button" class="btn small" data-hsave="${r.id}">שמירה</button><button type="button" class="btn ghost small" data-hcancel>ביטול</button></span></div><div id="hrs-warn" class="pwarn" aria-live="polite"></div>`
-        : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
+        : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-repl="${r.id}">החלפה</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>${replacing === r.id ? `<div class="cs-pick-list cs-repl-list" role="listbox"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff))}:</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-repl-to="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('') || '<div class="pnote">אין מדריך פנוי.</div>'}<button type="button" class="btn ghost small" data-repl-cancel>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
       ${others().length ? `<div class="pnote">בנות שירות ומורות במשמרת: ${others().map(r => pEsc(nm(r.staff)) + ' ' + (r.from || '') + '–' + (r.to || '')).join(', ')}</div>` : ''}
       <h3 class="psec">הוספה</h3>
       <div class="phours-row"><div class="cs-pick">
@@ -6936,7 +6961,7 @@ function srvOpenSlot(mk, key, body){
         <button type="button" class="cs-pick-btn" id="cs-pick-btn" aria-haspopup="listbox" aria-expanded="false"><span>בחרו מדריך/ה</span><i aria-hidden="true">⌄</i></button>
         <div class="cs-pick-list" id="cs-pick-list" role="listbox" hidden>
           <div class="cs-pick-head"><span class="cs-pick-title">בחרו מדריך/ה</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>
-          ${ranked.map(({ p, lv }) => `<button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-val="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>`).join('')}
+          ${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-val="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('')}
         </div></div></div>
       <div class="phours-row"><select id="add-from" aria-label="משעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.start ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select><span>עד</span><select id="add-to" aria-label="עד שעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.end ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></div>
       <div id="add-warn" class="pwarn" aria-live="polite"></div>
@@ -6951,6 +6976,7 @@ function srvOpenSlot(mk, key, body){
     who.addEventListener('change', () => { tint(); upd(); }); from.addEventListener('change', upd); to.addEventListener('change', upd);
     wrap.querySelector('#add-go').addEventListener('click', async () => {
       if(!who.value){ toast('בחרו מדריך/ה'); return; }
+      if(!(await srvAskBeforePlacing(who.value, key))) return;
       const w = srvWarnings(who.value, date, code, from.value, to.value);
       if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;
       const std = SRV_STD[code]; const flags = ['manual'];
@@ -6983,9 +7009,28 @@ function srvOpenSlot(mk, key, body){
       const after = portalLoad().rows.filter(x => x.id !== r.id);
       const w = srvShiftWarnings(date, code, after);
       if(w.length && !(await confirmSheet({ title:'להסיר למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, להסיר', cancelLabel:'חזרה', danger:true }))) return;
+      b.disabled = true;
       const d = await sbPersonal.from('assignment').delete().eq('id', r.id);
-      if(d.error){ toast('ההסרה נכשלה'); return; }
-      await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body);
+      if(d.error){ b.disabled = false; toast('ההסרה נכשלה'); return; }
+      srvDropRow(portalLoad(), r.id); draw(); srvRenderCoordSchedule(body); toast(`${nm(r.staff)} הוסר/ה מהמשמרת. מי שנוגע בעניין קיבל עדכון.`);
+      srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
+    }));
+    // replacing: another instructor takes this row (the same hours); the list is ordered by her wish for this shift, then by the priority list
+    wrap.querySelectorAll('[data-repl]').forEach(b => b.addEventListener('click', () => { replacing = replacing === b.dataset.repl ? null : b.dataset.repl; editing = null; draw(); }));
+    wrap.querySelectorAll('[data-repl-cancel]').forEach(b => b.addEventListener('click', () => { replacing = null; draw(); }));
+    wrap.querySelectorAll('[data-repl-to]').forEach(b => b.addEventListener('click', async () => {
+      const r = portalLoad().rows.find(x => x.id === replacing); if(!r) return;
+      const nw = b.dataset.replTo, from = r.from || sh.start, to = r.to || sh.end;
+      if(!(await srvAskBeforePlacing(nw, key))) return;
+      const w = srvWarnings(nw, date, code, from, to, r.id);
+      if(w.length && !(await confirmSheet({ title:'להחליף למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, להחליף', cancelLabel:'חזרה', danger:true }))) return;
+      const flags = Array.from(new Set((r.flags || []).concat('manual')));
+      const u = await sbPersonal.from('assignment').update({ staff_id:nw, flags }).eq('id', r.id);
+      if(u.error){ toast('ההחלפה נכשלה'); return; }
+      const st2 = portalLoad(), was = nm(r.staff);
+      srvDropRow(st2, r.id); srvAddRow(st2, { id:r.id, staff_id:nw, day:r.day, shift:r.shift, from_time:r.from, to_time:r.to, flags });
+      replacing = null; draw(); srvRenderCoordSchedule(body); toast(`${nm(nw)} במקום ${was}. מי שנוגע בעניין קיבל עדכון.`);
+      srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
     }));
   };
   draw();
@@ -7030,7 +7075,7 @@ function srvSidePanelHtml(mk){
 
 
 // while a name is dragged, the shift under it is coloured by what that instructor wrote for it: yes = green, can = yellow, no (or away) = red, not marked = blue
-let srvDragWho = null;
+let srvDragWho = null, srvRenderAfterDrag = null;
 // what this instructor wrote for this shift (key = 'date|m/e/n'): yes / can / no (also when she is away that day) / none
 function srvWishFor(staffId, key){
   const date = splitKey(key).date, pr = (portalMonth(monthKeyOf(date)).prefs || {})[staffId] || { slots:{}, absent:[], fixed:[] };
@@ -7050,13 +7095,58 @@ async function srvAddToSlot(mk, key, staffId, body){
   const nm = instrName(person, st.instructors);
   if(st.rows.some(r => r.staff === staffId && r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')))){ toast(`${nm} כבר במשמרת הזו`); return; }
   const w = srvWarnings(staffId, date, code, sh.start, sh.end);
-  // no question for an ordinary placement; a question only when the instructor wrote "no" for this shift (or is away that day)
-  if(srvWishFor(staffId, key) === 'no' && !(await confirmSheet({ title:`${nm} סימן/ה "לא" למשמרת הזו`, text:`${dayLabel(date)} · ${sh.label} ${sh.start}–${sh.end}. לשבץ בכל זאת?`, okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;
+  // no question for "yes" or "can"; for "no" and for a shift she did not mark: ask her first on WhatsApp, or place anyway
+  if(!(await srvAskBeforePlacing(staffId, key))) return;
   const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
   if(ins.error){ toast('השיבוץ נכשל'); return; }
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
   toast(w.length ? `${nm} שובץ/ה. שימי לב: ${w.join('. ')}.` : `${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`, w.length ? 6000 : 0);          // (the warnings that are left, such as rest, do not stop her; she sees them)
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
+}
+
+// ---------------------------------------------------------------- WhatsApp: asking an instructor before placing her in a shift she marked "no" or did not mark
+const WA_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.6 11.6 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3z"/></svg>';
+// the person's phone as WhatsApp wants it: 054-1234567 -> 972541234567
+function waNumber(staffId){
+  const raw = String(((portalLoad().priv || {})[staffId] || {}).phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+  if(!raw) return null;
+  return raw.startsWith('972') ? raw : raw.startsWith('0') ? '972' + raw.slice(1) : raw.length >= 9 ? '972' + raw : null;
+}
+// the ready messages: one for "no" and one for "not marked", each for a man and for a woman; the coordinator edits them in the settings (sched_settings "wa_messages")
+const WA_DEFAULT = {
+  no:   { f:'היי, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכלי להגיע?',
+          m:'היי, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכל להגיע?' },
+  none: { f:'היי, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכלי להגיע?',
+          m:'היי, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכל להגיע?' }
+};
+const waTemplate = (kind, female) => { const own = ((portalLoad().waMsg || {})[kind] || {})[female ? 'f' : 'm']; return (own && String(own).trim()) || WA_DEFAULT[kind][female ? 'f' : 'm']; };
+// a ready message about this very shift (she can still change it in WhatsApp before sending)
+function waText(staffId, key){
+  const st = portalLoad(), { date, shiftId } = splitKey(key), sh = st.shiftTypes.find(x => x.id === shiftId) || {}, p = st.instructors.find(x => x.id === staffId) || {};
+  const female = ((st.priv || {})[staffId] || {}).female !== false, kind = srvWishFor(staffId, key) === 'no' ? 'no' : 'none';
+  return waTemplate(kind, female).replace(/\{שם\}/g, String(p.first || '').split(' ')[0]).replace(/\{משמרת\}/g, `משמרת ה${sh.label || ''}`)
+    .replace(/\{יום\}/g, `יום ${dayLabel(date)}`).replace(/\{שעות\}/g, `${sh.start || ''}–${sh.end || ''}`);
+}
+function waLink(staffId, key){ const num = waNumber(staffId); return num ? `https://wa.me/${num}?text=${encodeURIComponent(waText(staffId, key))}` : null; }
+const waButtonHtml = (staffId, key) => { const url = waLink(staffId, key); return url ? `<a class="wa-btn" href="${url}" target="_blank" rel="noopener" title="שאלה בוואטסאפ" aria-label="שאלה בוואטסאפ">${WA_SVG}</a>` : ''; };
+// before placing somebody who marked "no" or did not mark this shift: WhatsApp first, place anyway, or back. -> true = place
+function srvAskBeforePlacing(staffId, key){
+  const lv = srvWishFor(staffId, key);
+  if(lv === 'yes' || lv === 'can') return Promise.resolve(true);
+  const st = portalLoad(), { date, shiftId } = splitKey(key), sh = st.shiftTypes.find(x => x.id === shiftId) || {}, p = st.instructors.find(x => x.id === staffId), nm = p ? instrName(p, st.instructors) : '';
+  const url = waLink(staffId, key);
+  return new Promise(resolve => {
+    let done = false; const finish = v => { if(done) return; done = true; sh2.close(); resolve(v); };
+    const sh2 = portalSheet(`<h2>${pEsc(nm)} ${lv === 'no' ? 'סימן/ה "לא" למשמרת הזו' : 'לא סימן/ה את המשמרת הזו'}</h2>
+      <div class="pnote">${dayLabel(date)} · ${pEsc(sh.label || '')} ${sh.start || ''}–${sh.end || ''}. כדאי לשאול לפני שמשבצים.</div>
+      <div class="wa-ask">${url ? `<a class="btn wa-go" id="wa-go" href="${url}" target="_blank" rel="noopener">${WA_SVG}<span>לשאול בוואטסאפ</span></a>` : '<div class="pnote">אין מספר טלפון. אפשר להוסיף אותו בהגדרות, ליד המייל.</div>'}
+        <button type="button" class="btn ghost" id="wa-place">לשבץ בכל זאת</button>
+        <button type="button" class="btn ghost" id="wa-back">חזרה</button></div>`);
+    const go = sh2.querySelector('#wa-go'); if(go) go.addEventListener('click', () => { toast('נפתחה שיחה בוואטסאפ. אחרי התשובה אפשר לשבץ.'); finish(false); });
+    sh2.querySelector('#wa-place').addEventListener('click', () => finish(true));
+    sh2.querySelector('#wa-back').addEventListener('click', () => finish(false));
+    sh2.addEventListener('click', e => { if(e.target === sh2) finish(false); });
+  });
 }
 
 // ---------- THE PORTAL ON THE SERVER: the coordinator's other screens (who submitted, absences, vacation requests, settings) ----------
@@ -7196,15 +7286,20 @@ function srvRenderCoordSettings(body){
       <div class="pnote">כאן מזינים כתובת מייל לכל אחד ויוצרים לו התחברות. סדר המדריכים הוא סדר העדיפות בחלוקת המשמרות מעבר למינימום (למעלה = עדיפות גבוהה). המדריכים לא רואים אותו.</div>
       ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
-        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
+        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
       ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${p.admin ? 'מנהל' : KIND_WORD[p.role]}</small></span>
-        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}">
+        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
       <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option></select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
+        box.querySelectorAll('[data-phone]').forEach(inp => inp.addEventListener('change', async () => {          // (for a WhatsApp chat from the schedule; scheduling-v21.sql)
+          const phone = inp.value.trim() || null;
+          const u = await sbPersonal.from('staff_private').update({ phone }).eq('staff_id', inp.dataset.phone);
+          toast(u.error ? 'הטלפון לא נשמר' : 'הטלפון נשמר'); if(!u.error) (st.priv[inp.dataset.phone] = st.priv[inp.dataset.phone] || {}).phone = phone;
+        }));
         box.querySelectorAll('[data-mail]').forEach(inp => inp.addEventListener('change', async () => {
           const mail = inp.value.trim().toLowerCase() || null;
           const u = await sbPersonal.from('staff_private').update({ email:mail }).eq('staff_id', inp.dataset.mail);
@@ -7297,6 +7392,22 @@ function srvRenderCoordSettings(body){
           const r = await sbPersonal.rpc('post_announcement', { p_text:text, p_via:via });
           toast(r.error ? 'השליחה נכשלה' : 'ההודעה נשלחה'); srvRenderCoordSettings(body);
         });
+      };
+      return { html, wire };
+    }],
+    wa: [() => 'הודעות וואטסאפ למדריכים', async () => {
+      const box1 = (kind, title) => `<h3 class="psec">${title}</h3>${['f', 'm'].map(g => `<label class="pfield">${g === 'f' ? 'למדריכה' : 'למדריך'}<textarea rows="3" maxlength="500" data-wa="${kind}|${g}">${pEsc(waTemplate(kind, g === 'f'))}</textarea></label>`).join('')}`;
+      const html = `
+      <div class="pnote">כשמשבצים מישהו שסימן "לא" או שלא סימן את המשמרת, אפשר לפתוח איתו שיחה בוואטסאפ עם ההודעה הזו (ואפשר לשנות אותה גם שם, לפני השליחה). במקום המילים בסוגריים נכנסים הפרטים: <b>{שם}</b>, <b>{משמרת}</b>, <b>{יום}</b>, <b>{שעות}</b>.</div>
+      ${box1('no', 'למי שסימן/ה "לא"')}${box1('none', 'למי שלא סימן/ה את המשמרת')}
+      <div class="an-actions"><button type="button" class="btn ghost small" id="wa-reset">חזרה לנוסח המקורי</button><button type="button" class="btn" id="wa-save">שמירה</button></div>`;
+      const wire = box => {
+        box.querySelector('#wa-save').addEventListener('click', async () => {
+          const val = { no:{}, none:{} }; box.querySelectorAll('[data-wa]').forEach(t => { const [k, g] = t.dataset.wa.split('|'); val[k][g] = t.value.trim(); });
+          const u = await sbPersonal.from('sched_settings').upsert({ key:'wa_messages', value:val });
+          toast(u.error ? 'השמירה נכשלה' : 'ההודעות נשמרו'); if(!u.error) st.waMsg = val;
+        });
+        box.querySelector('#wa-reset').addEventListener('click', () => { box.querySelectorAll('[data-wa]').forEach(t => { const [k, g] = t.dataset.wa.split('|'); t.value = WA_DEFAULT[k][g]; }); toast('הנוסח המקורי חזר. לוחצים "שמירה" כדי לשמור.'); });
       };
       return { html, wire };
     }],
