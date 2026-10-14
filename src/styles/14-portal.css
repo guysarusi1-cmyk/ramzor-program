@@ -345,6 +345,12 @@
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
   body.portal-big .portal-shell{ zoom:1.25; }
+  /* very large text: the portal and the windows over it; the tabs go to a second row when they do not fit */
+  body.portal-huge .portal-shell{ zoom:1.5; }
+  body.portal-huge:has(.view.active .portal-shell) .sheet .sheet-card{ zoom:1.35; }
+  body.portal-huge:has(.view.active .portal-shell) .psheet .sheet-card{ max-height:calc(88dvh / 1.35); }
+  body.portal-huge .portal-tabs{ flex-wrap:wrap; }
+  @media (max-width:700px){ body.portal-huge .portal-title{ grid-column:1 / -1; grid-row:2; } body.portal-huge .pcal, body.portal-huge .mcal, body.portal-huge .wcal{ zoom:.75; } }          /* (on a phone the title goes under the buttons, and the 7-day calendars a little smaller, so that everything fits) */
   @media (min-width:900px){          /* the coordinator's portal on a computer: larger text than everybody's (on a phone the usual size, so that the tabs fit) */
     .portal-shell.wide{ zoom:1.2; }
     body.portal-big .portal-shell.wide{ zoom:1.42; }
@@ -353,6 +359,9 @@
     body:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.2); }
     body.portal-big:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.42; }
     body.portal-big:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.42); }
+    body.portal-huge .portal-shell.wide{ zoom:1.7; }
+    body.portal-huge:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.6; }
+    body.portal-huge:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.6); }
   }
   [data-fold="team"] .mcal-name.me{ cursor:pointer; }          /* one's own name in the team calendar opens the swap / cannot-come choice */
   [data-fold="team"] .mcal-name.me:hover{ outline:2px solid var(--gold); outline-offset:1px; }
@@ -386,4 +395,4 @@
   /* "something does not work? report a problem": quiet, at the end of the screen (the portal and the Ramzor's home) */
   .portal-problem, .home-problem{ display:block; margin:28px auto 8px; background:none; border:0; padding:10px 14px; font:inherit; font-size:14px; color:var(--p-muted, var(--muted)); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
   .portal-problem:hover, .home-problem:hover, .portal-problem:focus-visible, .home-problem:focus-visible{ color:var(--p-text, var(--text)); }
-  .pmine-row.done{ opacity:.6; }
+  .pmine-row.done{ opacity:.6; }  .install-link{ font-size:15px; color:var(--p-text, var(--text)); text-decoration:underline; text-underline-offset:3px; }          /* "install as an app": on the main screen and in the portal of those who have only it (phones, before it is installed) */

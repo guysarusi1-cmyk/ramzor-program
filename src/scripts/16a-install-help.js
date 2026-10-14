@@ -12,11 +12,17 @@ function runsAsInstalledApp(){
 function isIPhoneOrIPad(){
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
-function updateInstallLink(){
-  const link = document.getElementById('hub-install-link');
+// on a phone, while the site is not yet on the home screen (the Ramzor's home, the main screen with the two choices, and the portal of those who have only it)
+function installWanted(){
   const phoneLike = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 700;
-  link.hidden = runsAsInstalledApp() || !phoneLike;
+  return !runsAsInstalledApp() && phoneLike;
 }
+function updateInstallLink(){
+  document.getElementById('hub-install-link').hidden = !installWanted();
+  document.querySelectorAll('[data-install-link]').forEach(b => { b.hidden = !installWanted(); });
+}
+function installLinkHtml(){ return installWanted() ? '<button type="button" class="home-link install-link" data-install-link>📲 התקנה כאפליקציה על מסך הבית</button>' : ''; }          // (a function: it is called by screens drawn before this file runs)
+document.addEventListener('click', e => { if(e.target.closest('[data-install-link]')) openInstallSheet(); });
 function openInstallSheet(){
   const body = document.getElementById('install-sheet-body');
   if(deferredInstallPrompt){

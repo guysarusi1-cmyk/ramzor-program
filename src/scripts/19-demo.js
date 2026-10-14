@@ -17,6 +17,7 @@
       if(what === 'psrv-login'){ srvShowLogin('email'); return; }
       const kind = /^psrv-(subs|csched|cswaps|cvac|cset)$/.test(what) ? 'coordinator' : what === 'psrv-service' ? 'service' : 'instructor';
       await sbPersonal.auth.signInWithPassword({ email:kind + '-test@merkaz-cherum.local', password:'@config(testPersonalPassword)' });
+      try { const sz = location.search.match(/[?&]size=(\d)/); localStorage.setItem('ramzor-portal-big', sz ? sz[1] : '0'); } catch(e){}          // (&size=2 shows the very large text)
       await srvStart();
       const pm = location.search.match(/[?&]pmonth=(\d{4}-\d{2})/); if(pm) portalUi.month = portalUi.pmonth = portalUi.smonth = pm[1];          // (&pmonth=2026-11 opens that month)
       if(/[?&]long\b/.test(location.search)){ srv.showLong = true; srv.pickOne = /[?&]pick\b/.test(location.search); }          // (&long shows the long weekend, &long&pick also "only one of these")

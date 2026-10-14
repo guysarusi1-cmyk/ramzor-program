@@ -99,6 +99,10 @@
     await step('install help', async () => {
       const phone = innerWidth <= 700;
       check(phone ? 'install link shows on phones' : 'install link hidden on bigger screens', visible($('hub-install-link')) === phone, 'visible=' + visible($('hub-install-link')));
+      if(PORTAL_ENABLED){ showAppHome(); const al = document.querySelector('#view-apphome [data-install-link]');
+        check(phone ? 'install link also on the main screen (the two choices) on phones' : 'no install link on the main screen on bigger screens', !!al === phone, String(!!al));
+        if(al){ al.click(); await sleep(100); check('... and it opens the install steps', !$('install-sheet').hidden, 'not opened'); $('install-sheet-close').click(); }
+        showHub(); }
       if(!phone) return;
       $('hub-install-link').click();
       check('install sheet opens with steps', !$('install-sheet').hidden && $('install-sheet-body').textContent.length > 20, 'empty sheet');
@@ -1761,6 +1765,32 @@
         await personalLeave(); showHub();
       }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.tab = null; portalUi.persona = 'c1'; showHub();
+    });
+    // ---- very large text (the gear: "טקסט גדול מאוד"): every tab and folded part still fits the screen, for an instructor, a service girl and the coordinator
+    await step('very large text', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
+      const wider = () => document.documentElement.scrollWidth > innerWidth + 2 ? `${document.documentElement.scrollWidth} > ${innerWidth}` : '';
+      for(const kind of ['instructor', 'service', 'coordinator']){
+        await sbPersonal.auth.signOut();
+        const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW);
+        if(error || !(await personalEnter())){ check(`very large text (${kind}): signs in`, false, error ? error.message : 'no'); continue; }
+        try { localStorage.setItem('ramzor-portal-big', '2'); } catch(e){} applyPortalSize();
+        if(activeView() === 'view-apphome') (document.getElementById('apphome-portal') || document.getElementById('apphome-manage')).click();
+        await waitFor(() => activeView() === 'view-portal' && !/טוען/.test(document.getElementById('portal-body').textContent), 60);
+        const bad = [];
+        if(getComputedStyle(document.querySelector('.portal-shell')).zoom < 1.45) bad.push('not enlarged');
+        for(const tab of [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab)){
+          document.querySelector(`[data-ptab="${tab}"]`).click(); await sleep(60); await waitFor(() => !/טוען/.test(document.getElementById('portal-body').textContent) && !!document.getElementById('portal-body').textContent, 60);
+          { const w = wider(); if(w) bad.push(tab + ': ' + w); }
+          const cut = [...document.querySelectorAll('[data-ptab]')].filter(b => { const r = b.getBoundingClientRect(); return r.left < -1 || r.right > innerWidth + 1; }); if(cut.length) bad.push(tab + ': tabs cut');
+          const n = document.querySelectorAll('#portal-body details').length;
+          for(let i = 0; i < n && i < 12; i++){ const d = document.querySelectorAll('#portal-body details')[i]; if(!d) break; d.open = true; await sleep(80); await waitFor(() => !/טוען/.test(d.textContent), 40); const w = wider(); if(w) bad.push(tab + ' / ' + ((d.querySelector('summary') || {}).textContent || '').trim().slice(0, 25) + ': ' + w); d.open = false; }
+        }
+        check(`very large text (${kind}): every tab and folded part fits the screen (nothing wider than it, no tab cut)`, !bad.length, bad.slice(0, 5).join(' || '));
+        try { localStorage.setItem('ramzor-portal-big', '0'); } catch(e){} applyPortalSize();
+        await personalLeave(); showHub();
+      }
     });
     // ---- problems in the field: the report button (portal, gear, Ramzor home) and the errors written down by themselves (scheduling-v23.sql)
     await step('problems', async () => {
