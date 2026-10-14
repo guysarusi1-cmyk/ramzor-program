@@ -1468,6 +1468,12 @@
   /* the gear next to the theme button, and the large-text option */
   .portal-top-actions{ display:flex; gap:8px; align-items:center; }
   body.portal-big .portal-shell{ zoom:1.25; }
+  /* very large text: the portal and the windows over it; the tabs go to a second row when they do not fit */
+  body.portal-huge .portal-shell{ zoom:1.5; }
+  body.portal-huge:has(.view.active .portal-shell) .sheet .sheet-card{ zoom:1.35; }
+  body.portal-huge:has(.view.active .portal-shell) .psheet .sheet-card{ max-height:calc(88dvh / 1.35); }
+  body.portal-huge .portal-tabs{ flex-wrap:wrap; }
+  @media (max-width:700px){ body.portal-huge .portal-title{ grid-column:1 / -1; grid-row:2; } body.portal-huge .pcal, body.portal-huge .mcal, body.portal-huge .wcal{ zoom:.75; } }          /* (on a phone the title goes under the buttons, and the 7-day calendars a little smaller, so that everything fits) */
   @media (min-width:900px){          /* the coordinator's portal on a computer: larger text than everybody's (on a phone the usual size, so that the tabs fit) */
     .portal-shell.wide{ zoom:1.2; }
     body.portal-big .portal-shell.wide{ zoom:1.42; }
@@ -1476,6 +1482,9 @@
     body:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.2); }
     body.portal-big:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.42; }
     body.portal-big:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.42); }
+    body.portal-huge .portal-shell.wide{ zoom:1.7; }
+    body.portal-huge:has(.view.active .portal-shell.wide) .sheet .sheet-card{ zoom:1.6; }
+    body.portal-huge:has(.view.active .portal-shell.wide) .psheet .sheet-card{ max-height:calc(88dvh / 1.6); }
   }
   [data-fold="team"] .mcal-name.me{ cursor:pointer; }          /* one's own name in the team calendar opens the swap / cannot-come choice */
   [data-fold="team"] .mcal-name.me:hover{ outline:2px solid var(--gold); outline-offset:1px; }
@@ -1509,7 +1518,17 @@
   /* "something does not work? report a problem": quiet, at the end of the screen (the portal and the Ramzor's home) */
   .portal-problem, .home-problem{ display:block; margin:28px auto 8px; background:none; border:0; padding:10px 14px; font:inherit; font-size:14px; color:var(--p-muted, var(--muted)); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
   .portal-problem:hover, .home-problem:hover, .portal-problem:focus-visible, .home-problem:focus-visible{ color:var(--p-text, var(--text)); }
-  .pmine-row.done{ opacity:.6; }
+  .pmine-row.done{ opacity:.6; }  .install-link{ font-size:15px; color:var(--p-text, var(--text)); text-decoration:underline; text-underline-offset:3px; }          /* "install as an app": on the main screen and in the portal of those who have only it (phones, before it is installed) */
+  .adm-mins{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }          /* the three personal minimums side by side */
+  /* a new day for sign-up: the instructors' card at the top of the schedule tab, and the coordinator's list */
+  .od-cards{ display:flex; flex-direction:column; gap:10px; margin:0 0 12px; } .od-cards:empty{ display:none; }
+  .od-card{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:14px; border-radius:14px; border:2px solid var(--gold, #e8b94a); background:var(--p-panel2, var(--panel-2)); }
+  .od-card.mine{ border-color:var(--p-yes, #7be0a0); }
+  .od-card-text{ display:flex; flex-direction:column; gap:3px; min-width:0; } .od-card-text b{ font-size:16px; } .od-card-text small{ color:var(--p-muted, var(--muted)); }
+  .od-count{ font-weight:700; } .od-count.full{ color:var(--p-yes, #7be0a0); } .od-count.low{ color:var(--p-no, #ff8a80); }
+  .od-hours{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .od-hours[hidden]{ display:none; } .od-nums{ grid-template-columns:1fr 1fr; }
+  body.lang-ar .portal-tabs{ flex-wrap:wrap; justify-content:center; }          /* (Arabic words are longer: the tabs go to a second row instead of being cut) */
+
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
   .avatar-initials.avatar-has-char img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -5187,8 +5206,8 @@ function scheduleTable(ctx, assignments){
     cells: ctx.shiftTypes.map(st => {
       const slot = slotMap[slotKey(date, st.id)];
       if(!slot) return { slot:null, people:[], missing:0 };
-      const list = (assignments[slot.key] || []).filter(pid => byId[pid]);
-      return { slot, people:list.map(pid => ({ iid:pid, name:instrName(byId[pid], ctx.instructors), level:levelOf(ctx.prefs, pid, slot) })), missing:Math.max(0, slot.need - list.length) };
+      const list = (assignments[slot.key] || []).filter(pid => byId[pid]), annot = (portalMonth(ctx.month) || {}).annot || {};
+      return { slot, people:list.map(pid => ({ iid:pid, name:instrName(byId[pid], ctx.instructors), level:levelOf(ctx.prefs, pid, slot), note:annot[`${slot.key}|${pid}`] || '' })), missing:Math.max(0, slot.need - list.length) };          // (note: other hours than the shift's, a short morning, the long weekend)
     })
   }));
   return rows;
@@ -5198,7 +5217,7 @@ function buildScheduleXlsx(ctx, assignments){
   const rows = [[{ text:'תאריך', s:1 }, ...ctx.shiftTypes.map(st => ({ text:`${st.label} (${st.start}–${st.end})`, s:1 }))]];
   table.forEach(r => rows.push([{ text:dayLabel(r.date), s:3 }, ...r.cells.map(c => {
     const runs = [];
-    c.people.forEach((p, i) => { if(i) runs.push({ text:'\n' }); runs.push({ text:p.name, color:XLSX_COLORS[p.level], bold:true }); });
+    c.people.forEach((p, i) => { if(i) runs.push({ text:'\n' }); runs.push({ text:p.name, color:XLSX_COLORS[p.level], bold:true }); if(p.note) runs.push({ text:` (${p.note})` }); });
     if(c.missing){ if(runs.length) runs.push({ text:'\n' }); runs.push({ text:`חסר/ים ${c.missing}`, color:XLSX_COLORS.no, bold:true }); }
     return runs.length ? { runs, s:2 } : { text:'', s:2 };
   })]));
@@ -5218,7 +5237,7 @@ function downloadScheduleXlsx(ctx, assignments){
 function scheduleHtmlTable(ctx, assignments){
   const rows = scheduleTable(ctx, assignments);
   const head = `<tr><th>תאריך</th>${ctx.shiftTypes.map(st => `<th>${escapeHtml(st.label)}<br><span>${st.start}–${st.end}</span></th>`).join('')}</tr>`;
-  const body = rows.map(r => `<tr><th>${dayLabel(r.date)}</th>${r.cells.map(c => `<td>${c.people.map(p => `<b class="lv-${p.level}">${escapeHtml(p.name)}</b>`).join('<br>')}${c.missing ? `<br><b class="lv-no">חסר/ים ${c.missing}</b>` : ''}</td>`).join('')}</tr>`).join('');
+  const body = rows.map(r => `<tr><th>${dayLabel(r.date)}</th>${r.cells.map(c => `<td>${c.people.map(p => `<b class="lv-${p.level}">${escapeHtml(p.name)}</b>${p.note ? ` <small>(${escapeHtml(p.note)})</small>` : ''}`).join('<br>')}${c.missing ? `<br><b class="lv-no">חסר/ים ${c.missing}</b>` : ''}</td>`).join('')}</tr>`).join('');
   return `<table class="print-table"><caption>סידור עבודה — ${monthLabel(ctx.month)}</caption>${head}${body}</table>`;
 }
 function printSchedule(ctx, assignments){
@@ -5402,6 +5421,7 @@ function showAppHome(){
           <span class="home-card-sub">כל מה שהרכזת רואה ועושה, ועוד</span>
         </button>` : ''}
       </div>
+      ${installLinkHtml()}
       ${portalServerOn || sbPersonal ? '' : '<div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>'}
     </div>`;
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
@@ -5442,6 +5462,7 @@ function showPortal(tab){
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
       ${portalServerOn && portalUi.viewAs ? `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>` : ''}
       <div id="portal-body"></div>
+      ${portalServerOn && srv.meRow && !['instructor', 'coordinator'].includes(srv.meRow.role) && !srv.meRow.admin ? installLinkHtml() : ''}
       ${portalServerOn ? '<button type="button" class="portal-problem" id="portal-problem">משהו לא עובד? דיווח על תקלה</button>' : ''}
     </div>`;
   if(portalServerOn && portalUi.viewAs){          // (the admin looks at somebody's portal: folds, months and tabs work; nothing can be changed)
@@ -6527,6 +6548,7 @@ async function personalLeave(){
   try { await srvFlush(); } catch(e){}
   await sbPersonal.auth.signOut();
   sb = sbShared; ramzorPersonal = false; portalServerOn = false; portalState = null; srv.me = null; srv.profile = null; srv.profileFor = null;
+  if(typeof arApply === 'function') arApply();          // (back to Hebrew)
   portalUi.viewAs = null; portalUi.manager = false; portalUi.persona = null;
 }
 async function srvSignOut(){
@@ -6576,6 +6598,7 @@ function srvRenderSchedule(body){
       ${notices.length > 1 ? '<div class="pnotices-top"><button type="button" class="btn ghost small" id="notices-all-ok">סימון של כולן כנקראו</button></div>' : ''}
       ${notices.map(n => `<div class="pnotice ${n.kind}" role="status"><span>${pEsc(n.text)}</span><button type="button" class="btn small" data-notice-ok="${n.id}">הבנתי, תודה</button></div>`).join('')}
       </div></details>` : ''}
+    ${isInstr ? '<div id="od-cards" class="od-cards"></div>' : ''}
     ${monthNavHtml(mk)}
     ${!m.published ? `<div class="pnote">${tx('sch_unpub')}</div>` : `
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
@@ -6598,6 +6621,7 @@ function srvRenderSchedule(body){
       <div class="pfold-body" id="open-fold-body"><div class="pnote">רק רגע...</div></div>
     </details>` : ''}`}`;
   wireMonthNav(body); wireFolds(body);
+  if(isInstr && !portalUi.viewAs) srvFillOpenDays(body);          // (a new day for sign-up, at the top)
   if(isInstr && m.published) srvFillOpenFold(body, mk); else { const ob = document.getElementById('open-fold-body'); if(ob) ob.innerHTML = `<div class="pnote">${tx('open_none')}</div>`; }
   body.querySelectorAll('[data-notice-ok]').forEach(b => b.addEventListener('click', () => { const n = st.notices.find(x => x.id === b.dataset.noticeOk); if(n) n.seen = true; portalSave(); srvRenderSchedule(body); }));
   const allOk = document.getElementById('notices-all-ok'); if(allOk) allOk.addEventListener('click', () => { st.notices.forEach(n => { n.seen = true; }); portalSave(); srvRenderSchedule(body); });
@@ -6871,10 +6895,13 @@ async function srvLoadCoord(){
   ]);
   st.priv = {}; priv.forEach(r => { st.priv[r.staff_id] = r; });
   try { const ph = await sbPersonal.from('staff_private').select('staff_id,phone'); if(!ph.error) (ph.data || []).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; }); } catch(e){}          // (the phones: scheduling-v21.sql)
+  try { const pm = await sbPersonal.from('staff_private').select('staff_id,min_mid,min_nights,min_weekend,day_buddy,lang'); if(!pm.error) (pm.data || []).forEach(r => { if(st.priv[r.staff_id]) Object.assign(st.priv[r.staff_id], r); }); } catch(e){}          // (personal minimums, the day colleague, the language: scheduling-v25.sql)
   st.waMsg = {}; try { const wm = await sbPersonal.from('sched_settings').select('value').eq('key', 'wa_messages').maybeSingle(); if(!wm.error && wm.data && wm.data.value) st.waMsg = wm.data.value; } catch(e){}          // (the WhatsApp messages as the coordinator wrote them)
-  st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}          // (each person's chosen voice, so that her feedback is written in it)
+  st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}
+  st.langs = {}; try { const sl = await sbPersonal.from('staff_settings').select('staff_id,lang'); if(!sl.error) (sl.data || []).forEach(r => { if(r.lang) st.langs[r.staff_id] = r.lang; }); } catch(e){}          // (each person's own choice of language; scheduling-v25.sql)          // (each person's chosen voice, so that her feedback is written in it)
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; try { const sr = await sbPersonal.from('sick_reports').select('assignment_id,note').order('created_at'); (sr.data || []).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; }); } catch(e){}          // (the reason an instructor gave when she reported that she cannot come)
+  await srvOdLoad();          // (the open days for sign-up and who took them: scheduling-v25.sql)
   st.openReqs = []; try { const r = await sbPersonal.from('open_shift_requests').select('id,staff_id,day,shift,created_at').eq('status', 'pending').order('created_at'); st.openReqs = r.error ? [] : (r.data || []); } catch(e){}          // (the requests to join an open shift; they come with scheduling-v11.sql)
 }
 
@@ -6900,6 +6927,7 @@ function srvRenderCoordSchedule(body){
   const flags = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk), has = !!m.status;
   const needLook = flags.filter(f => !['service_absent', 'service'].includes(f.kind)), info = flags.filter(f => ['service_absent', 'service'].includes(f.kind));
   const people = id => (st.instructors.find(p => p.id === id) || {}).first || '';
+  const odAlerts = m.published ? srvOdAlerts(mk) : [], lookCount = needLook.length + odAlerts.length;
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
     ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. המערכת בונה אותו אוטומטית פעם אחת: טיוטה ב-24 בחודש ב-23:00, והסידור הסופי בלילה שבין ה-24 ל-25 (בין חצות ל-06:00), והוא נשלח אלייך. מכאן אפשר לערוך אותו ידנית.</div>'}
@@ -6907,14 +6935,17 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn" id="cs-publish"${m.published ? ' disabled' : ''}>${m.published ? 'הסידור פורסם' : 'פרסום הסידור'}</button>
       <button type="button" class="btn ghost" id="cs-xlsx">ייצוא לאקסל</button>
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
+      ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
     </div>
     ${m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>'}
-    ${needLook.length ? `<details class="pissues"><summary>${needLook.length} דברים שדורשים תשומת לב</summary>${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
+    ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
+    ${m.published ? srvOdFoldHtml(mk) : ''}
     <div class="pnote">לחיצה על משמרת בלוח פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בלוח.</div>
     <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
   wireMonthNav(body);
   if(!has) return;
+  if(m.published) srvOdWire(body, mk);
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });
   if(csClose) csClose.addEventListener('click', () => { portalUi.csOpen = false; portalUi.csPerson = null; srvRenderCoordSchedule(body); });
@@ -7492,11 +7523,27 @@ const fbGx = (profile, m, f) => (profile && profile.female === false) ? m : f;  
 // the full Sunday-Saturday weeks of a month (each: the Sunday)
 function fbWeeks(mk){ const ds = daysOfMonth(mk); return ds.filter(d => dowOf(d) === 0 && ds.includes(addDays(d, 6))); }
 // what the person is asked to do at least, in this month: 2 mid-week shifts and a night every full week (when she does nights), and 4 weekend shifts (a night on Friday / Saturday counts for both)
-function fbMinimum(profile, mk){
+const fbOwnMin = profile => !!profile && [profile.min_mid, profile.min_nights, profile.min_weekend].some(x => x != null);
+const fbMins = profile => ({ mid:profile.min_mid ?? 2, night:(profile.no_nights || profile.only_long || profile.latest_end) ? 0 : (profile.min_nights ?? 1), weekend:profile.min_weekend ?? 4 });
+function fbMinimum(profile, mk, ar){
   profile = profile || {};
+  if(ar){          // (the same, in Arabic)
+    if(profile.manual_only) return { total:null, weeks:0, text:'' };
+    const weeks = fbWeeks(mk).length;
+    if(profile.only_long) return { total:1, weeks, text:'نهاية أسبوع طويلة واحدة في الشهر (تُحسب كـ 4 مناوبات نهاية أسبوع)' };
+    const m = fbMins(profile), own = fbOwnMin(profile), wk = own ? m.mid + m.night : m.mid, total = own ? weeks * wk + m.weekend : weeks * 2 + (m.night ? weeks + Math.max(0, 4 - weeks) : 4);
+    const text = own ? `${wk === 1 ? 'مناوبة واحدة في الأسبوع' : `${wk} مناوبات في الأسبوع`}${m.night ? ` (منها ${m.night === 1 ? 'ليلة واحدة' : m.night + ' ليالٍ'})` : ''}${m.weekend ? `، وفي الشهر ${m.weekend} مناوبات نهاية أسبوع` : '، بدون حد أدنى لنهايات الأسبوع'}. في هذا الشهر هذا حوالي ${total} مناوبات`
+                     : `كل أسبوع مناوبتان في منتصف الأسبوع${m.night ? ' ومناوبة ليلية واحدة' : ''}، وفي الشهر 4 مناوبات نهاية أسبوع. في هذا الشهر هذا حوالي ${total} مناوبات`;
+    return { total, weeks, text, own:own ? m : null };
+  }
   if(profile.manual_only) return { total:null, weeks:0, text:'' };
   const weeks = fbWeeks(mk).length, nights = !(profile.no_nights || profile.only_long || profile.latest_end);
   if(profile.only_long) return { total:1, weeks, text:'סופ"ש ארוך אחד בחודש (הוא נחשב ל-4 משמרות סופ"ש)' };
+  if(fbOwnMin(profile)){          // (personal minimums from the management portal: there the nights beyond the night minimum count as shifts too)
+    const m = fbMins(profile), wk = m.mid + m.night, total = weeks * wk + m.weekend;
+    const text = `${wk === 1 ? 'משמרת אחת בשבוע' : `${wk} משמרות בשבוע`}${m.night ? ` (מהן ${m.night === 1 ? 'לילה אחד' : m.night + ' לילות'})` : ''}${m.weekend ? `, ובחודש ${m.weekend} משמרות סופ"ש` : ', בלי מינימום של סופי שבוע'}. בחודש הזה זה בערך ${total} משמרות`;
+    return { total, weeks, text, own:m };
+  }
   const total = weeks * 2 + (nights ? weeks + Math.max(0, 4 - weeks) : 4);
   const text = `בכל שבוע 2 משמרות אמצע שבוע${nights ? ' ומשמרת לילה אחת' : ''}, ובחודש 4 משמרות סופ"ש${nights ? ' (לילה בסופ"ש נחשב גם ללילה השבועי)' : ''}. בחודש הזה זה בערך ${total} משמרות`;
   return { total, weeks, text };
@@ -7518,24 +7565,25 @@ const fbRowShiftId = r => r.shift === 'S' ? 'm' : ({ M:'m', A:'e', N:'n', L:'l' 
 
 // the whole picture for one person and one month
 function srvFeedbackFor(p, mk, input){
-  const { prefs, rows, profile, goal } = input, gx = (m, f) => fbGx(profile, m, f), V = input.voice || portalVoice(), T = (key, ...a) => txFor(V, key, ...a), fem = !(profile && profile.female === false);
+  const { prefs, rows, profile, goal } = input, gx = (m, f) => fbGx(profile, m, f), V = input.voice || ((typeof arOn === 'function' && arOn()) ? 'ar' : portalVoice()), T = (key, ...a) => txFor(V, key, ...a), fem = !(profile && profile.female === false);
+  const ar = V === 'ar', L = (he, a) => ar ? a : he, DL = d => ar ? arWords(dayLabel(d)) : dayLabel(d);          // (Arabic: the person's own language)
   const days = daysOfMonth(mk), mine = rows.filter(r => r.day.slice(0, 7) === mk);
   const unmet = [], honored = [];
   const on = (day, id) => mine.filter(r => r.day === day && fbRowShiftId(r) === id);
   Object.keys(prefs.slots || {}).sort().forEach(key => {
     const [day, id] = key.split('|'), lv = prefs.slots[key];
     if(!days.includes(day) || (lv !== 'no' && lv !== 'avoid')) return;          // ("כן" is a wish to work, not a request to keep away from a shift)
-    const hit = on(day, id).length > 0, label = `${dayLabel(day)} (${FB_SHIFT_WORD[id]})`;
+    const hit = on(day, id).length > 0, label = `${DL(day)} (${ar ? arWords(FB_SHIFT_WORD[id]) : FB_SHIFT_WORD[id]})`;
     if(!hit) honored.push(label);
-    else unmet.push(lv === 'no' ? `${label}: סימנת "לא", והיינו צריכים להשלים את הצוות` : `${label}: סימנת "יכול", ושובצת כי חיפשנו מישהו שיוכל`);
+    else unmet.push(lv === 'no' ? L(`${label}: סימנת "לא", והיינו צריכים להשלים את הצוות`, `${label}: اخترت "لا"، واحتجنا لاستكمال الطاقم`) : L(`${label}: סימנת "יכול", ושובצת כי חיפשנו מישהו שיוכל`, `${label}: اخترت "ممكن"، وجُدولت لأننا بحثنا عمّن يستطيع`));
   });
-  (prefs.absent || []).filter(d => days.includes(d)).forEach(d => { if(mine.some(r => r.day === d)) unmet.push(`${dayLabel(d)}: ביקשת להיעדר`); else honored.push(dayLabel(d)); });
+  (prefs.absent || []).filter(d => days.includes(d)).forEach(d => { if(mine.some(r => r.day === d)) unmet.push(L(`${dayLabel(d)}: ביקשת להיעדר`, `${DL(d)}: طلبت أن تغيب/ي`)); else honored.push(DL(d)); });
   Object.keys(prefs.hours || {}).filter(d => days.includes(d)).forEach(d => {
     const rs = mine.filter(r => r.day === d), win = prefs.hours[d];
     const ok = rs.every(r => r.from && r.to && win.some(([a, b]) => parseInt(r.from, 10) >= a && (parseInt(r.to, 10) || 24) <= b));
-    if(ok) honored.push(dayLabel(d)); else unmet.push(`${dayLabel(d)}: ציינת שעות אחרות, ולא הצלחנו להתאים אליהן את המשמרת`);
+    if(ok) honored.push(DL(d)); else unmet.push(L(`${dayLabel(d)}: ציינת שעות אחרות, ולא הצלחנו להתאים אליהן את המשמרת`, `${DL(d)}: حدّدت ساعات أخرى، ولم ننجح في ملاءمة المناوبة لها`));
   });
-  const c = fbCounts(mine, mk), min = fbMinimum(profile, mk);
+  const c = fbCounts(mine, mk), min = fbMinimum(profile, mk, ar);
   let goalLine = '', goalOk = null;
   if(goal){
     const t = FB_GOAL_WORD[goal];
@@ -7547,16 +7595,20 @@ function srvFeedbackFor(p, mk, input){
       goalLine = goalOk ? T('fb_g_max_ok', t, c.total) : T('fb_g_max_no', t, c.total);
     } else {
       const weeks = c.perWeek, bad = weeks.filter(w => w.all < 4 || w.all > 5); goalOk = bad.length === 0;
-      goalLine = goalOk ? T('fb_g_wk_ok', t) : T('fb_g_wk_no', t, dayLabel(bad[0].week), String(bad[0].all) + (bad.length > 1 ? ` (ועוד ${bad.length - 1} שבועות)` : ''));
+      goalLine = goalOk ? T('fb_g_wk_ok', t) : T('fb_g_wk_no', t, dayLabel(bad[0].week), String(bad[0].all) + (bad.length > 1 ? L(` (ועוד ${bad.length - 1} שבועות)`, ` (و${bad.length - 1} أسابيع أخرى)`) : ''));
     }
     (goalOk ? honored : unmet).push(`הבקשה ${t}`);
   }
   const minGaps = [];
-  if(min.total != null && !(profile && profile.only_long)){
+  if(min.own){
+    const m = min.own;
+    c.perWeek.forEach(w => { const all = w.mid + w.night; if(all < m.mid + m.night) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסרות ${m.mid + m.night - all} משמרות`, `في أسبوع ${DL(w.week)} تنقص ${m.mid + m.night - all} مناوبات`)); else if(w.night < m.night) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסר לילה`, `في أسبوع ${DL(w.week)} تنقص ليلة`)); });
+    if(c.weekend < m.weekend) minGaps.push(L(`במשמרות סופ"ש יש ${c.weekend} מתוך ${m.weekend}`, `في مناوبات نهاية الأسبوع يوجد ${c.weekend} من ${m.weekend}`));
+  } else if(min.total != null && !(profile && profile.only_long)){
     const nights = !(profile && (profile.no_nights || profile.only_long || profile.latest_end));
-    c.perWeek.forEach(w => { if(w.mid < 2) minGaps.push(`בשבוע של ${dayLabel(w.week)} חסרות ${2 - w.mid} משמרות אמצע שבוע`); if(nights && w.night < 1) minGaps.push(`בשבוע של ${dayLabel(w.week)} חסרה משמרת לילה`); });
-    if(c.weekend < 4) minGaps.push(`במשמרות סופ"ש יש ${c.weekend} מתוך 4`);
-  } else if(profile && profile.only_long && !mine.some(r => r.shift === 'L')) minGaps.push('עוד לא שובצת לסופ"ש ארוך');
+    c.perWeek.forEach(w => { if(w.mid < 2) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסרות ${2 - w.mid} משמרות אמצע שבוע`, `في أسبوع ${DL(w.week)} تنقص ${2 - w.mid} مناوبات منتصف الأسبوع`)); if(nights && w.night < 1) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסרה משמרת לילה`, `في أسبوع ${DL(w.week)} تنقص مناوبة ليلية`)); });
+    if(c.weekend < 4) minGaps.push(L(`במשמרות סופ"ש יש ${c.weekend} מתוך 4`, `في مناوبات نهاية الأسبوع يوجد ${c.weekend} من 4`));
+  } else if(profile && profile.only_long && !mine.some(r => r.shift === 'L')) minGaps.push(L('עוד לא שובצת לסופ"ש ארוך', 'لم تُجدول/ي بعد لنهاية أسبوع طويلة'));
   const asked = honored.length + unmet.length, name = p.first;
   const lines = [];
   lines.push(T('fb_intro', monthLabel(mk)));
@@ -7571,7 +7623,7 @@ function srvFeedbackFor(p, mk, input){
   }
   const closing = T('fb_close', T('fb_thanks', fem));
   if(closing) lines.push(closing);
-  return { subject:`הסידור של ${monthLabel(mk)} פורסם: ככה הלכו הבקשות שלך`, text:lines.join('\n\n'), asked, honored:honored.length, unmet:reqUnmet, goalOk, total:c.total, min, minGaps };
+  return { subject:L(`הסידור של ${monthLabel(mk)} פורסם: ככה הלכו הבקשות שלך`, `نُشر جدول ${arWords(monthLabel(mk))}: هكذا سارت طلباتك`), text:lines.join('\n\n'), asked, honored:honored.length, unmet:reqUnmet, goalOk, total:c.total, min, minGaps };
 }
 
 // the coordinator's side: everybody gets their own message when the schedule is published
@@ -7582,8 +7634,9 @@ async function srvSendFeedback(mk){
     const rows = st.rows.filter(r => r.staff === p.id), pr = (m.prefs[p.id] || { slots:{}, absent:[], hours:{} });
     if(!rows.length && !Object.keys(pr.slots || {}).length) continue;
     const pv = (st.priv || {})[p.id] || {};
-    const fb = srvFeedbackFor(p, mk, { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour }, goal:(m.goals || {})[p.id] || null, voice:(st.voices || {})[p.id] || 'warm' });
-    const r = await sbPersonal.rpc('coordinator_tell', { p_staff:p.id, p_subject:fb.subject, p_text:fb.text, p_kind:'info' });
+    const input = { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour, min_mid:pv.min_mid, min_nights:pv.min_nights, min_weekend:pv.min_weekend }, goal:(m.goals || {})[p.id] || null, voice:(st.voices || {})[p.id] || 'warm' };
+    const fb = srvFeedbackFor(p, mk, input), ar = ((st.langs || {})[p.id] || pv.lang) === 'ar' ? srvFeedbackFor(p, mk, Object.assign({}, input, { voice:'ar' })) : null;          // (an Arabic speaker: Arabic first, the Hebrew under it)
+    const r = await sbPersonal.rpc('coordinator_tell', { p_staff:p.id, p_subject:ar ? `${ar.subject} | ${fb.subject}` : fb.subject, p_text:ar ? `${ar.text}\n\n— בעברית —\n\n${fb.text}` : fb.text, p_kind:'info' });
     if(r.error) sent.failed++; else sent.ok++;
   }
   return sent;
@@ -7683,13 +7736,14 @@ const VOICES = {
 };
 // the voice of the person now: the setting, else what the browser remembers, else the warm one
 function portalVoice(){
+  if(typeof arOn === 'function' && arOn()) return 'warm';          // (in Arabic there is one voice, the warm one)
   if(typeof srv !== 'undefined' && srv.voice) return srv.voice;
   try { const v = localStorage.getItem('ramzor-portal-voice'); if(v && VOICES.st_unsub[v]) return v; } catch(e){}
   return 'warm';
 }
-const tx = (key, ...args) => { const k = VOICES[key]; if(!k) return key; return (k[portalVoice()] || k.warm)(...args); };
+const tx = (key, ...args) => { if(typeof arOn === 'function' && arOn()){ const a = arVoice(key, args); if(a != null) return a; } const k = VOICES[key]; if(!k) return key; return (k[portalVoice()] || k.warm)(...args); };
 // the same, for somebody else's voice (the coordinator writes the feedback in each person's own voice)
-const txFor = (voice, key, ...args) => { const k = VOICES[key]; return (k && (k[voice] || k.warm))(...args); };
+const txFor = (voice, key, ...args) => { if(voice === 'ar'){ const a = arVoice(key, args); if(a != null) return a; } const k = VOICES[key]; return (k && (k[voice] || k.warm))(...args); };          // (voice 'ar': the Arabic of an Arabic speaker)
 
 // ---------------------------------------------------------------- the settings (the gear)
 async function srvLoadSettings(){
@@ -7703,6 +7757,11 @@ async function srvLoadSettings(){
   try { const lp = await sbPersonal.from('sched_settings').select('value').eq('key', 'leopard_people').maybeSingle(); if(!lp.error && lp.data && Array.isArray(lp.data.value)) srv.leopardPeople = lp.data.value; } catch(e){}          // (who else may choose the leopard look: chosen by the admin)
   try { const t = await sbPersonal.from('staff_settings').select('portal_theme').eq('staff_id', srv.me).maybeSingle(); if(!t.error && t.data) srv.portalTheme = t.data.portal_theme || null; } catch(e){}          // (comes with scheduling-v16.sql)
   if(!srv.voice){ try { srv.voice = localStorage.getItem('ramzor-portal-voice') || null; } catch(e){} }
+  srv.lang = (srv.profile && srv.profile.lang) || null;          // (the language: her own choice, else the admin's default; scheduling-v25.sql)
+  try { const lg = await sbPersonal.from('staff_settings').select('lang').eq('staff_id', srv.me).maybeSingle(); if(!lg.error && lg.data && lg.data.lang) srv.lang = lg.data.lang; } catch(e){}
+  if(!srv.lang){ try { srv.lang = localStorage.getItem('ramzor-portal-lang') || 'he'; } catch(e){ srv.lang = 'he'; } }
+  try { localStorage.setItem('ramzor-portal-lang', srv.lang); } catch(e){}
+  if(typeof arApply === 'function') arApply();
   if(!hasCols){ try { srv.pickOne = localStorage.getItem('ramzor-portal-pickone') === '1'; srv.showLong = localStorage.getItem('ramzor-portal-showlong') === '1'; } catch(e){} }          // (only until the columns exist)
 }
 async function srvSaveSetting(patch){
@@ -7718,13 +7777,15 @@ async function srvSaveSetting(patch){
 }
 function openPortalSettings(){
   const coord = leopardAllowed(), leo = coord && srv.portalTheme === 'leopard';          // (the leopard look: exclusive — the coordinator, the admin, and whom the admin chose; never the default)          // (the leopard look: only the coordinator's portal)
-  const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') === '1'; } catch(e){ return false; } })();
+  const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){ return '0'; } })();          // ('0' usual, '1' large, '2' very large)
   const sh = portalSheet(`<h2>העדפות מערכת</h2>
-    <h3 class="psec">באיזו שפה נדבר איתך?</h3>
-    <div class="pgoal-list" role="group" aria-label="שפת המערכת">${Object.keys(VOICE_NAMES).map(k => `<button type="button" class="pgoal-opt${v === k ? ' on' : ''}" data-voice="${k}"><b>${VOICE_NAMES[k]}</b><small>${VOICE_SAMPLE[k]}</small></button>`).join('')}</div>
+    ${portalAsCoord(portalMe()) ? '' : `<h3 class="psec">שפה · اللغة</h3>
+    <div class="pchoice wrap ar-keep"><button type="button" class="${srv.lang === 'ar' ? '' : 'on'}" data-set-lang="he">עברית</button><button type="button" class="${srv.lang === 'ar' ? 'on' : ''}" data-set-lang="ar">العربية</button></div>`}
+    ${arOn() ? '' : `<h3 class="psec">באיזו שפה נדבר איתך?</h3>
+    <div class="pgoal-list" role="group" aria-label="שפת המערכת">${Object.keys(VOICE_NAMES).map(k => `<button type="button" class="pgoal-opt${v === k ? ' on' : ''}" data-voice="${k}"><b>${VOICE_NAMES[k]}</b><small>${VOICE_SAMPLE[k]}</small></button>`).join('')}</div>`}
     <h3 class="psec">מראה</h3>
     <div class="pchoice wrap"><button type="button" class="${dark && !leo ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark || leo ? '' : 'on'}" data-set-theme="light">מצב בהיר</button>${coord ? `<button type="button" class="${leo ? 'on' : ''}" data-set-theme="leopard">מצב מנומר 🐆</button>` : ''}</div>
-    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big ? '' : 'on'}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big ? 'on' : ''}" data-set-big="1">טקסט גדול</button></div>
+    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button><button type="button" class="${big === '2' ? 'on' : ''}" data-set-big="2">טקסט גדול מאוד</button></div>
     ${srv.meRow && srv.meRow.role === 'instructor' ? `<h3 class="psec">סופי שבוע</h3>
     <div class="pchoice wrap"><button type="button" class="${srv.showLong ? 'on' : ''}" data-set-long="1">להציג סופ"ש ארוך: כן</button><button type="button" class="${srv.showLong ? '' : 'on'}" data-set-long="0">לא</button></div>
     <div class="pnote">${tx('long_setting')}</div>
@@ -7733,6 +7794,10 @@ function openPortalSettings(){
     <button type="button" class="btn ghost" id="gear-problem" style="margin-top:14px;width:100%">משהו לא עובד? דיווח על תקלה</button>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
   sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
+  sh.querySelectorAll('[data-set-lang]').forEach(b => b.addEventListener('click', async () => {
+    const lang = b.dataset.setLang; if(lang === srv.lang) return;
+    await srvSaveLang(lang); sh.close(); arApply(); showPortal(); toast(lang === 'ar' ? 'تم تغيير اللغة إلى العربية' : 'השפה הוחלפה לעברית');
+  }));
   sh.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', async () => {
     await srvSaveSetting({ voice:b.dataset.voice }); sh.close(); toast(({ warm:'בחרנו בשפה החמה והרכה', light:'עברנו לשפה הקלילה. נתראה בבדיחות!', brief:'עברנו לשפה קצרה ועניינית' })[b.dataset.voice]); showPortal();
   }));
@@ -7756,8 +7821,9 @@ function openPortalSettings(){
   sh.querySelectorAll('[data-set-big]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-portal-big', b.dataset.setBig); } catch(e){} applyPortalSize(); sh.close(); openPortalSettings(); }));
 }
 function applyPortalSize(){
-  let big = false; try { big = localStorage.getItem('ramzor-portal-big') === '1'; } catch(e){}
-  document.body.classList.toggle('portal-big', big);
+  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}
+  document.body.classList.toggle('portal-big', big === '1');
+  document.body.classList.toggle('portal-huge', big === '2');
 }
 
 // ---------- THE AHMASH CONTROL (בקרת אחמ"ש): who the kids' TV shows today, today's timetable, today's bonuses, a log ----------
@@ -8300,15 +8366,19 @@ function srvRenderAdmin(body){
 
 // ---- 1. the staff's details: every flag the system uses, for every person
 async function adminStaff(box, body){
-  const [staff, priv] = await Promise.all([
+  const BASE = 'staff_id,email,female,is_leader,ahmash_rank,no_nights,manual_only,only_long_weekend,latest_end_hour,is_admin';
+  let [staff, priv] = await Promise.all([
     sbPersonal.from('staff').select('id,display_name,kind,active,sort_order').order('kind').order('display_name'),
-    sbPersonal.from('staff_private').select('staff_id,email,female,is_leader,ahmash_rank,no_nights,manual_only,only_long_weekend,latest_end_hour,is_admin')
+    sbPersonal.from('staff_private').select(BASE + ',min_mid,min_nights,min_weekend,day_buddy,lang')
   ]);
+  const extra = !priv.error;          // (personal minimums, the day colleague and the language come with scheduling-v25.sql)
+  if(!extra) priv = await sbPersonal.from('staff_private').select(BASE);
   if(staff.error || priv.error) throw staff.error || priv.error;
   const pv = {}; (priv.data || []).forEach(p => { pv[p.staff_id] = p; });
   const lr = await sbPersonal.from('sched_settings').select('value').eq('key', 'leopard_people').maybeSingle(), leoList = (lr.data && Array.isArray(lr.data.value)) ? lr.data.value.slice() : [];
   const KIND = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', admin:'מנהל' };
-  const flags = (s, p) => [p.is_admin ? 'מנהל' : '', p.is_leader ? 'מוביל/ה' : '', p.ahmash_rank ? `אחמ"ש ${p.ahmash_rank}` : '', p.no_nights ? 'בלי לילות' : '', p.latest_end_hour ? `עד ${p.latest_end_hour}:00` : '', p.manual_only ? 'שיבוץ ידני בלבד' : '', p.only_long_weekend ? 'רק סופ"ש ארוך' : '', p.female === false ? 'גבר' : '', leoList.includes(s.id) ? '🐆' : ''].filter(Boolean).join(' · ');
+  const flags = (s, p) => [p.is_admin ? 'מנהל' : '', p.is_leader ? 'מוביל/ה' : '', p.ahmash_rank ? `אחמ"ש ${p.ahmash_rank}` : '', p.no_nights ? 'בלי לילות' : '', p.latest_end_hour ? `עד ${p.latest_end_hour}:00` : '', p.manual_only ? 'שיבוץ ידני בלבד' : '', p.only_long_weekend ? 'רק סופ"ש ארוך' : '', p.female === false ? 'גבר' : '', leoList.includes(s.id) ? '🐆' : '',
+    [p.min_mid, p.min_nights, p.min_weekend].some(x => x != null) ? `מינימום אישי ${p.min_mid ?? 2}/${p.min_nights ?? 1}/${p.min_weekend ?? 4}` : '', p.day_buddy ? `יום עדיף עם ${nameOf(p.day_buddy)}` : '', p.lang === 'ar' ? 'ערבית' : ''].filter(Boolean).join(' · ');
   box.innerHTML = (staff.data || []).map(s => { const p = pv[s.id] || {}; return `<div class="pmine-row adm-row${s.active ? '' : ' inactive'}"><span><b>${pEsc(s.display_name)}</b> <small>${KIND[s.kind] || s.kind}${s.active ? '' : ' · לא פעיל/ה'}</small><br><small>${pEsc(flags(s, p)) || '—'}</small></span><button type="button" class="btn ghost small" data-adm-edit="${s.id}">✏️ עריכה</button></div>`; }).join('');
   box.querySelectorAll('[data-adm-edit]').forEach(b => b.addEventListener('click', () => {
     const s = staff.data.find(x => x.id === b.dataset.admEdit), p = pv[s.id] || {};
@@ -8319,12 +8389,22 @@ async function adminStaff(box, body){
       <div class="adm-checks">${yes('ae-active', 'פעיל/ה', s.active)}${yes('ae-female', 'אישה', p.female !== false)}${yes('ae-leader', 'מוביל/ה', p.is_leader)}${yes('ae-nonights', 'לא עושה לילות', p.no_nights)}${yes('ae-manual', 'שיבוץ ידני בלבד', p.manual_only)}${yes('ae-long', 'רק סופ"ש ארוך', p.only_long_weekend)}${yes('ae-admin', 'מנהל (פורטל ניהול)', p.is_admin)}${yes('ae-leo', 'מצב מנומר (אפשרות בהגדרות)', leoList.includes(s.id))}</div>
       <label class="pfield">אחמ"ש<select id="ae-ahm"><option value="0"${!p.ahmash_rank ? ' selected' : ''}>לא</option><option value="1"${p.ahmash_rank === 1 ? ' selected' : ''}>כן, דרגה 1</option><option value="2"${p.ahmash_rank === 2 ? ' selected' : ''}>כן, דרגה 2 (רק כשאין אחר)</option></select></label>
       <label class="pfield">שעת סיום קבועה<select id="ae-end"><option value="">אין</option>${[19, 20, 21].map(h => `<option value="${h}"${p.latest_end_hour === h ? ' selected' : ''}>${h}:00</option>`).join('')}</select></label>
+      ${extra && s.kind === 'instructor' ? `<h3 class="psec">מינימום אישי</h3>
+      <div class="pnote">ריק = המינימום הרגיל (2 משמרות אמצע שבוע, לילה אחד בשבוע, 4 משמרות סופ"ש בחודש). מי שיש לו מינימום אישי: לילות מעבר למינימום הלילות נספרים גם כמשמרות.</div>
+      <div class="adm-mins"><label class="pfield">משמרות בשבוע<input type="number" id="ae-mmid" min="0" max="7" placeholder="2" value="${p.min_mid ?? ''}"></label>
+        <label class="pfield">לילות בשבוע (נוסף)<input type="number" id="ae-mnight" min="0" max="7" placeholder="1" value="${p.min_nights ?? ''}"></label>
+        <label class="pfield">סופ"ש בחודש<input type="number" id="ae-mwk" min="0" max="12" placeholder="4" value="${p.min_weekend ?? ''}"></label></div>
+      <label class="pfield">משמרת יום עדיף רק יחד עם (אחרת לילות; העדפה, לא חובה)<select id="ae-buddy"><option value="">אין</option>${staff.data.filter(x => x.kind === 'instructor' && x.active && x.id !== s.id).map(x => `<option value="${x.id}"${p.day_buddy === x.id ? ' selected' : ''}>${pEsc(x.display_name)}</option>`).join('')}</select></label>` : ''}
+      ${extra && s.kind !== 'coordinator' ? `<label class="pfield">שפת הפורטל (ברירת מחדל; כל אחד יכול לשנות אצלו)<select id="ae-lang"><option value="he"${p.lang !== 'ar' ? ' selected' : ''}>עברית</option><option value="ar"${p.lang === 'ar' ? ' selected' : ''}>ערבית</option></select></label>` : ''}
       <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="ae-save">שמירה</button></div>`);
     sh.querySelector('#ae-save').addEventListener('click', async () => {
       const v = id => sh.querySelector('#' + id), name = v('ae-name').value.trim(); if(!name){ toast('צריך שם'); return; }
       const a = await sbPersonal.from('staff').update({ display_name:name, kind:v('ae-kind').value, active:v('ae-active').checked }).eq('id', s.id);
       const row = { female:v('ae-female').checked, is_leader:v('ae-leader').checked, no_nights:v('ae-nonights').checked, manual_only:v('ae-manual').checked, only_long_weekend:v('ae-long').checked,
                     is_admin:v('ae-admin').checked, ahmash_rank:+v('ae-ahm').value, latest_end_hour:v('ae-end').value ? +v('ae-end').value : null };
+      const num = id => { const x = v(id); if(!x || x.value === '') return null; const n = Math.round(+x.value); return isNaN(n) ? null : Math.max(0, n); };
+      if(v('ae-mmid')) Object.assign(row, { min_mid:num('ae-mmid'), min_nights:num('ae-mnight'), min_weekend:num('ae-mwk'), day_buddy:v('ae-buddy').value || null });
+      if(v('ae-lang')) row.lang = v('ae-lang').value === 'ar' ? 'ar' : null;
       const c = pv[s.id] ? await sbPersonal.from('staff_private').update(row).eq('staff_id', s.id) : await sbPersonal.from('staff_private').insert(Object.assign({ staff_id:s.id }, row));
       if(a.error || c.error){ toast('השמירה נכשלה: ' + ((a.error || c.error).message || '')); return; }
       const wantLeo = v('ae-leo').checked; if(wantLeo !== leoList.includes(s.id)){ const next = wantLeo ? leoList.concat(s.id) : leoList.filter(x => x !== s.id); const l = await sbPersonal.from('sched_settings').upsert({ key:'leopard_people', value:next }); if(!l.error){ leoList.length = 0; next.forEach(x => leoList.push(x)); } }
@@ -8473,6 +8553,404 @@ async function adminProblems(box){
   }));
 }
 { const hp = document.getElementById('hub-problem'); if(hp) hp.addEventListener('click', openProblemReport); }          // (the same button on the Ramzor's home screen)
+
+// ---------- A NEW DAY FOR SIGN-UP (scheduling-v25.sql) ----------
+// In a month that is already published, the coordinator opens a day (the whole day = morning and afternoon, one shift, the night, or other hours),
+// with a minimum and a maximum of instructors and for whom (everybody, only ahmash, only leaders). The instructors it is for place themselves
+// (no approval): the shifts are added at once, the places left go down, and at the maximum the offer disappears and the coordinator is told.
+// Taking oneself off goes through the coordinator (she removes the person in the shift editor, and the place opens again).
+const OD_SCOPE = { day:'כל היום (בוקר וצהריים)', morning:'בוקר', afternoon:'צהריים', night:'לילה', hours:'שעות אחרות' };
+const OD_FOR = { all:'כולם', ahmash:'רק אחמ"שים', leader:'רק מובילים' };
+
+// ---- the coordinator
+async function srvOdLoad(){
+  const st = portalLoad(); st.openDays = [];
+  try { const r = await sbPersonal.rpc('open_days_status'); if(!r.error) st.openDays = r.data || []; } catch(e){}
+}
+const srvOdOfMonth = mk => (portalLoad().openDays || []).filter(o => monthKeyOf(o.day) === mk);
+// for "things that need attention": an open day in the next two days that has not reached its minimum
+function srvOdAlerts(mk){
+  const today = srvToday(), soon = addDays(today, 2);
+  return srvOdOfMonth(mk).filter(o => !o.closed && o.day >= today && o.day <= soon && o.taken < o.min_staff)
+    .map(o => `${o.words}: נרשמו ${o.taken} מתוך מינימום ${o.min_staff}.`);
+}
+function srvOdFoldHtml(mk){
+  const list = srvOdOfMonth(mk); if(!list.length) return '';
+  const st = portalLoad(), nm = id => { const p = st.instructors.find(x => x.id === id); return p ? instrName(p, st.instructors) : ''; };
+  return `<details class="pissues od-fold" data-od-fold${portalUi.odOpen ? ' open' : ''}><summary>${list.length} ימים פתוחים לשיבוץ</summary>
+    ${list.map(o => { const full = o.taken >= o.max_staff, low = o.taken < o.min_staff;
+      return `<div class="pflag od-row"><span><b>${pEsc(o.words)}</b> · ${OD_FOR[o.audience] || ''}<br>
+        <span class="od-count${full ? ' full' : low ? ' low' : ''}">נרשמו ${o.taken} מתוך ${o.max_staff}${o.min_staff ? ` (מינימום ${o.min_staff})` : ''}${o.closed ? ' · נסגר' : full ? ' · מלא' : ''}</span>
+        ${(o.people || []).length ? `<br><small>${o.people.map(id => pEsc(nm(id))).join(', ')}</small>` : ''}${o.note ? `<br><small>${pEsc(o.note)}</small>` : ''}</span>
+        ${o.closed ? '' : `<button type="button" class="btn ghost small" data-od-close="${o.id}">סגירה</button>`}</div>`; }).join('')}
+    <div class="pnote">מי שנרשם מופיע בלוח מיד. כדי להוריד מישהו: לחיצה על המשמרת בלוח ו"הסרה", והמקום נפתח שוב.</div></details>`;
+}
+function srvOdWire(body, mk){
+  const b = body.querySelector('#cs-openday'); if(b) b.addEventListener('click', () => srvOpenDayDialog(mk, body));
+  const f = body.querySelector('[data-od-fold]'); if(f) f.addEventListener('toggle', () => { portalUi.odOpen = f.open; });
+  body.querySelectorAll('[data-od-close]').forEach(x => x.addEventListener('click', async () => {
+    if(!(await confirmSheet({ title:'לסגור את היום הזה להרשמה?', text:'ההצעה תרד מהפורטל של המדריכים. מי שכבר נרשם נשאר בסידור.', okLabel:'כן, לסגור', cancelLabel:'חזרה' }))) return;
+    const u = await sbPersonal.from('open_days').update({ closed:true }).eq('id', x.dataset.odClose);
+    toast(u.error ? 'הסגירה נכשלה' : 'היום נסגר להרשמה'); await srvOdLoad(); srvRenderCoordSchedule(body);
+  }));
+  srvOdPoll(body, mk);
+}
+// while the coordinator looks at the schedule, the open days are checked every minute: whoever placed herself shows up by itself
+function srvOdPoll(body, mk){
+  clearInterval(srv.odTimer); srv.odTimer = null;
+  if(!srvOdOfMonth(mk).some(o => !o.closed && o.taken < o.max_staff && o.day >= srvToday())) return;
+  srv.odTimer = setInterval(async () => {
+    if(!body.isConnected || portalUi.tab !== 'schedule' || srvDragWho || document.querySelector('.sheet:not([hidden])')){ if(!body.isConnected){ clearInterval(srv.odTimer); srv.odTimer = null; } return; }
+    const before = JSON.stringify(srvOdOfMonth(mk).map(o => [o.id, o.taken]));
+    await srvOdLoad();
+    if(JSON.stringify(srvOdOfMonth(mk).map(o => [o.id, o.taken])) !== before){ await srvReloadSafe(); await srvLoadCoord(); if(body.isConnected) srvRenderCoordSchedule(body); }
+  }, 60000);
+}
+// the window where the coordinator opens a day
+function srvOpenDayDialog(mk, body){
+  const today = srvToday(), days = daysOfMonth(mk), first = days[0] > today ? days[0] : today, last = days[days.length - 1];
+  if(first > last){ toast('החודש הזה כבר עבר'); return; }
+  const sh = portalSheet(`<h2>פתיחת יום לשיבוץ</h2>
+    <div class="pnote">המדריכים שהיום פתוח להם יקבלו הודעה בפורטל ובמייל, ויוכלו להשתבץ בעצמם. מי שנרשם מופיע אצלך בלוח מיד.</div>
+    <label class="pfield">תאריך<input type="date" id="od-day" min="${first}" max="${last}" value="${first}"></label>
+    <label class="pfield">מה פתוח<select id="od-scope">${Object.keys(OD_SCOPE).map(k => `<option value="${k}">${OD_SCOPE[k]}</option>`).join('')}</select></label>
+    <div class="od-hours" id="od-hours" hidden><label class="pfield">משעה<input type="time" id="od-from" value="10:00"></label><label class="pfield">עד שעה<input type="time" id="od-to" value="14:00"></label></div>
+    <div class="adm-mins od-nums"><label class="pfield">מינימום מדריכים<input type="number" id="od-min" min="0" max="20" value="1"></label><label class="pfield">מקסימום מדריכים<input type="number" id="od-max" min="1" max="20" value="3"></label></div>
+    <label class="pfield">למי פתוח<select id="od-for">${Object.keys(OD_FOR).map(k => `<option value="${k}">${OD_FOR[k]}</option>`).join('')}</select></label>
+    <label class="pfield">הערה למדריכים (לא חובה)<input type="text" id="od-note" maxlength="200" placeholder="למשל: יום כיף עם הילדים"></label>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="od-go">פרסום למדריכים</button></div>`);
+  const scope = sh.querySelector('#od-scope'); scope.addEventListener('change', () => { sh.querySelector('#od-hours').hidden = scope.value !== 'hours'; });
+  sh.querySelector('#od-go').addEventListener('click', async () => {
+    const v = id => sh.querySelector('#' + id).value, day = v('od-day'), mn = parseInt(v('od-min'), 10), mx = parseInt(v('od-max'), 10), from = v('od-from'), to = v('od-to');
+    if(!day || day < first || day > last){ toast('בחרו תאריך בחודש הזה (מהיום והלאה)'); return; }
+    if(!(mx >= 1) || !(mn >= 0) || mn > mx){ toast('בדקו את המספרים: המינימום לא יכול להיות גדול מהמקסימום'); return; }
+    if(scope.value === 'hours' && (!from || !to || to <= from)){ toast('בדקו את השעות: "עד" צריך להיות אחרי "משעה"'); return; }
+    const words = `${dayLabel(day)}, ${scope.value === 'hours' ? `${from}–${to}` : OD_SCOPE[scope.value]}`;
+    if(!(await confirmSheet({ title:'לפרסם את היום למדריכים?', text:`${words}. ${mn ? `מינימום ${mn}, ` : ''}מקסימום ${mx} מדריכים, ל${OD_FOR[v('od-for')]}. כל מי שהיום פתוח לו יקבל הודעה ומייל.`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    const r = await sbPersonal.rpc('open_day_publish', { p_day:day, p_scope:scope.value, p_from:scope.value === 'hours' ? from : null, p_to:scope.value === 'hours' ? to : null, p_min:mn, p_max:mx, p_audience:v('od-for'), p_note:v('od-note') || null });
+    if(r.error){ toast(/not published/.test(r.error.message) ? 'אפשר לפתוח יום רק בחודש שהסידור שלו פורסם' : 'הפרסום נכשל: ' + r.error.message, 6000); return; }
+    sh.close(); toast('היום פורסם. המדריכים קיבלו הודעה ומייל.', 5000); portalUi.odOpen = true;
+    await srvOdLoad(); srvRenderCoordSchedule(body);
+  });
+}
+
+// ---- the instructors: a card at the top of the schedule tab for every day that is open to them
+async function srvFillOpenDays(body){
+  const box = body.querySelector('#od-cards'); if(!box) return;
+  let list = [];
+  try { const r = await sbPersonal.rpc('open_days_for_me'); if(r.error) return; list = r.data || []; } catch(e){ return; }
+  if(!box.isConnected) return;
+  box.innerHTML = list.map(o => { const left = o.max_staff - o.taken;
+    return `<div class="od-card${o.mine ? ' mine' : ''}"><div class="od-card-text"><b>${o.mine ? 'נרשמת ליום הנוסף ✓' : 'נפתח יום נוסף לשיבוץ'}</b><span>${pEsc(o.words)}</span>
+      ${o.note ? `<small>${pEsc(o.note)}</small>` : ''}${o.mine ? '<small>כדי לבטל צריך לפנות לרכזת.</small>' : `<small>${left === 1 ? 'נשאר מקום אחד' : `נשארו ${left} מקומות`}</small>`}</div>
+      ${o.mine ? '' : `<button type="button" class="btn" data-od-join="${o.id}">אני רוצה להשתבץ</button>`}</div>`; }).join('');
+  box.querySelectorAll('[data-od-join]').forEach(b => b.addEventListener('click', async () => {
+    const o = list.find(x => x.id === b.dataset.odJoin); if(!o) return;
+    if(!(await confirmSheet({ title:'להשתבץ ליום הזה?', text:`${o.words}. המשמרת תיכנס לסידור שלך מיד. ביטול רק דרך הרכזת.`, okLabel:'כן, להשתבץ', cancelLabel:'חזרה' }))) return;
+    b.disabled = true;
+    const r = await sbPersonal.rpc('open_day_join', { p_id:o.id });
+    if(r.error){
+      const msg = r.error.message || '';
+      toast(/full/.test(msg) ? 'מישהו הקדים: היום כבר מלא. תודה על הרצון לעזור!' : /already working/.test(msg) ? 'יש לך כבר משמרת באותו יום, אז אי אפשר להשתבץ גם לזה.' : /already in/.test(msg) ? 'כבר נרשמת ליום הזה.' : 'ההרשמה לא הצליחה. נסו שוב או פנו לרכזת.', 6000);
+      b.disabled = false; srvFillOpenDays(body); return;
+    }
+    toast('נרשמת! המשמרת נכנסה לסידור שלך. תודה!', 5000);
+    await srvReloadSafe(); if(body.isConnected) srvRenderSchedule(body);
+  }));
+}
+
+// ---------- ARABIC (العربية) for the portal of the instructors and the service girls ----------
+// The language: the person's own choice in the gear (staff_settings.lang), else the admin's default (staff_private.lang), else Hebrew (scheduling-v25.sql).
+// Two layers: (1) every sentence the system says (the voices, warm only) has its own Arabic version with the details in place;
+// (2) everything else on the screen (buttons, titles, short words) is translated as it is drawn, by the dictionary below.
+// People's names stay as they are. The coordinator's and the admin's screens stay in Hebrew.
+const AR_DAY = { 'ראשון':'الأحد', 'שני':'الاثنين', 'שלישי':'الثلاثاء', 'רביעי':'الأربعاء', 'חמישי':'الخميس', 'שישי':'الجمعة', 'שבת':'السبت' };
+const AR_MONTH = { 'ינואר':'كانون الثاني', 'פברואר':'شباط', 'מרץ':'آذار', 'אפריל':'نيسان', 'מאי':'أيار', 'יוני':'حزيران', 'יולי':'تموز', 'אוגוסט':'آب', 'ספטמבר':'أيلول', 'אוקטובר':'تشرين الأول', 'נובמבר':'تشرين الثاني', 'דצמבר':'كانون الأول' };
+const AR_SHIFT = { 'בוקר קצר':'صباح قصير', 'סופ"ש ארוך':'نهاية أسبوع طويلة', 'בוקר':'صباح', 'צהריים':'ما بعد الظهر', 'לילה':'ليل' };
+
+function portalLang(){
+  if(typeof srv === 'undefined' || !portalServerOn || !srv.me){ try { return document.querySelector('.plogin') && localStorage.getItem('ramzor-portal-lang') === 'ar' ? 'ar' : 'he'; } catch(e){ return 'he'; } }
+  if(portalUi.viewAs || (srv.meRow && (srv.meRow.role === 'coordinator' || (srv.meRow.admin && portalUi.manager)))) return 'he';          // (the coordinator's and the admin's screens)
+  return srv.lang === 'ar' ? 'ar' : 'he';
+}
+const arOn = () => portalLang() === 'ar';
+// the details inside a sentence (a day, a month, a shift) in Arabic
+function arWords(s){
+  if(s == null) return s;
+  s = String(s);
+  s = s.replace(/(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)(?=\s*\(?\d)/g, d => AR_DAY[d]);
+  s = s.replace(/\((ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)\)/g, (x, d) => '(' + AR_DAY[d] + ')');
+  s = s.replace(/(ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)(?=\s*\d{4})/g, m => AR_MONTH[m]);
+  Object.keys(AR_SHIFT).forEach(k => { s = s.split(k).join(AR_SHIFT[k]); });
+  return s;
+}
+const A = s => (s != null && AR[String(s).trim()] != null) ? AR[String(s).trim()] : arWords(s);          // (a whole known text, or the days, months and shifts inside it)
+
+// ---- (1) the sentences of the system, in Arabic (the warm voice)
+const AR_VOICES = {
+  st_unsub:() => 'يسعدنا أن نستلم تفضيلاتك. هذا يساعدنا على بناء جدول مناوبات يناسبك.',
+  st_sub:() => 'تفضيلاتك وصلتنا، شكرًا! يمكن تعديلها حتى إغلاق التقديم.',
+  locked:() => 'التقديم لهذا الشهر مغلق الآن (يُفتح في 1 من الشهر السابق ويُغلق في 24 منه الساعة 22:30). لأي تغيير يمكن التوجه للمركّزة، ويسعدها أن تساعد.',
+  submit_ok:() => 'شكرًا! تم تقديم تفضيلاتك ✓',
+  consent_needed:() => 'يسعدنا أن تجيبوا على السؤالين الصغيرين قبل التقديم. هذا يساعدنا في التخطيط',
+  save_later:() => 'لم ننجح في الحفظ الآن، سنحاول مرة أخرى تلقائيًا بعد لحظة',
+  submit_fail:() => 'لم ننجح في حفظ التقديم الآن. يمكن المحاولة مرة أخرى بعد لحظة',
+  clear_text:(a) => `كل اختياراتك في هذا الشهر (نعم، ممكن، لا${A(a)}) ستعود إلى "نعم"، أي متاح. يمكن دائمًا الاختيار من جديد.`,
+  clear_done:() => 'مسحنا كل شيء. كل شيء "نعم" من جديد',
+  hint_low:(f, m) => `لاحظنا أنه حسب اختياراتك الحالية بقيت ${f} مناوبات تناسبك. لكي ننجح في جدولتك بالحد الأدنى (حوالي ${m} مناوبات) من الأفضل ترك مرونة أكثر قليلًا. إذا كان هناك ما يقيّدك، يسعدنا أن نسمع ونجد حلًّا معًا.`,
+  neutral_note:(n) => `بقيت ${n} مناوبات لم تختاروا لها بعد. يسعدنا أن تمرّوا على الشهر كله وتختاروا لكل مناوبة "نعم" أو "ممكن" أو "لا"، لكي نبني جدولًا يناسبكم.`,
+  submit_neutral:(n) => `شكرًا، تم حفظ التفضيلات. لكن التقديم لم يكتمل بعد: بقيت ${n} مناوبات بدون اختيار. يسعدنا جدًا أن تكملوها حتى إغلاق التقديم`,
+  long_levels:() => 'لنهاية الأسبوع الطويلة يمكن اختيار "نعم" أو "ممكن" أو "لا"',
+  long_setting:() => 'نهاية الأسبوع الطويلة (من الجمعة بعد الظهر حتى بعد خروج السبت) لا تظهر بشكل افتراضي. عند التفعيل يظهر تحت كل جمعة وسبت زر واحد تختارون فيه إن كان يناسبكم. لن نجدولكم لها بدون اختياركم.',
+  pick_setting:() => 'عند تفعيل هذا الخيار يظهر في كل نهاية أسبوع زر صغير "واحدة فقط من هذه". تختارون عدة نهايات أسبوع تناسبكم، والنظام يجدولكم في واحدة منها فقط.',
+  sch_unpub:() => 'جدول هذا الشهر ما زال قيد التحضير. حالما يُنشر سنبلغك هنا وبالبريد الإلكتروني.',
+  sch_none:() => 'في هذا الشهر لم تُجدول لك مناوبات بعد. إذا لم يكن هذا ما توقعتم، يسعدنا أن نسمع ونساعد.',
+  sch_help:() => 'تحتاجون تغيير شيء؟ اضغطوا على "طلب استبدال": هناك يمكن طلب استبدال، أو الإبلاغ "لا أستطيع الحضور" إذا حدث شيء. طلب الاستبدال ينشر المناوبة في لوحة الاستبدالات، ويمكن للزملاء أن يعرضوا المساعدة. عدم الحضور يُبلغ المركّزة ويفتح المناوبة للاستبدال فورًا. نحن هنا من أجلكم.',
+  change_title:() => 'ماذا نستطيع أن نفعل من أجلك؟',
+  change_swap_sub:() => 'ننشر المناوبة في لوحة الاستبدالات، ويمكن للزملاء أن يعرضوا المساعدة',
+  change_cant_sub:() => 'نبلغ المركّزة ونفتح المناوبة للاستبدال فورًا',
+  pick_swap_q:() => 'أي مناوبة تريد/ين استبدالها؟',
+  pick_cant_q:() => 'لأي مناوبة لا تستطيع/ين الحضور؟',
+  change_none:() => 'لا توجد الآن مناوبات قادمة يمكن تغييرها من هنا. عند الحاجة يمكن التوجه للمركّزة.',
+  swap_confirm:(d, s, c) => `سننشر المناوبة ${A(d)} (${A(s)}) في لوحة الاستبدالات، ويمكن للزملاء أن يعرضوا المساعدة.${c ? ' ' + A(c) : ''}`,
+  swap_posted:() => 'نشرنا المناوبة في لوحة الاستبدالات، وسنبلغك حين يوجد من يستبدلك',
+  swap_fail:() => 'لم ننجح في النشر الآن. يمكن المحاولة مرة أخرى بعد لحظة',
+  cant_title:() => 'هذا يحدث، ونحن هنا. هل تبلغون أنكم لا تستطيعون الحضور؟',
+  cant_text:(d, s, c) => `سنبلغ المركّزة الآن ونفتح المناوبة ${A(d)} (${A(s)}) للاستبدال، وسيصل إشعار لباقي المرشدين أيضًا. الاستبدال نفسه ينتظر موافقة المركّزة.${c ? ' ' + A(c) : ''}`,
+  cant_reason_label:() => 'ماذا حدث؟ يسعدنا أن تكتب/ي لنا السبب (إلزامي)',
+  cant_reason_hint:() => 'مثلًا: لا أشعر جيدًا، مناسبة عائلية...',
+  cant_done:() => 'أبلغنا المركّزة وفتحنا المناوبة للاستبدال. لا داعي للقلق',
+  cant_fail:() => 'لم ننجح في إرسال التحديث الآن. يمكن المحاولة مرة أخرى بعد لحظة',
+  cands:(n) => ` زملاء متاحون لهذه المناوبة ولم يُجدولوا لها: ${n}. يمكن أيضًا التوجه إليهم مباشرة.`,
+  swaps_intro:() => 'زملاء يبحثون عمّن يستبدلهم في مناوبة. إذا كان بإمكانكم المساعدة، اضغطوا على الزر والطلب ينتقل للمركّزة. شكرًا لأنكم سند لبعضكم. لطلب استبدال بأنفسكم افتحوا "الجدول" ← "مناوباتي" ← "طلب استبدال".',
+  swaps_none:() => 'لا توجد الآن طلبات استبدال مفتوحة. شكرًا لاهتمامكم!',
+  take_ok:() => 'شكرًا! الطلب انتقل للمركّزة، وسنبلغكما معًا',
+  take_fail:() => 'لم ننجح الآن، ربما المناوبة أُخذت. شكرًا على الاستعداد!',
+  cancel_ok:() => 'ألغينا الطلب',
+  cancel_fail:() => 'لم ننجح في الإلغاء الآن. يمكن المحاولة مرة أخرى بعد لحظة',
+  vac_guide:() => 'لكي ننجح في تخطيط الطاقم والموافقة على الإجازة بسهولة، يسعدنا استلام طلب إجازة من أسبوع حتى ثلاثة أسابيع قبل 30 يومًا على الأقل، وطلب ثلاثة أسابيع فأكثر قبل شهرين على الأقل. بعد موافقة المركّزة تدخل الأيام تلقائيًا كغياب. (ليوم أو يومين يمكن ببساطة اختيار "غياب" في التفضيلات.)',
+  vac_hint:(d, k) => `هذه إجازة من ${d} أيام. عادة من الأفضل تقديم إجازة كهذه ${A(k)}. يمكن الإرسال الآن أيضًا، والمركّزة ستفعل كل ما بوسعها.`,
+  vac_sent:() => 'تم إرسال الطلب، شكرًا! المركّزة ستعود إليكم',
+  vac_fail:() => 'لم ننجح في الإرسال الآن. يمكن المحاولة مرة أخرى بعد لحظة',
+  vac_none:() => 'لم ترسلوا طلبات بعد.',
+  open_intro:() => 'هنا تظهر مناوبات ما زال ينقصها أحد، وفقط تلك التي يمكن جدولتكم فيها. شكرًا لاهتمامكم بالطاقم! يمكن طلب الانضمام لمناوبة تناسبكم، الطلب ينتقل للمركّزة، وتُجدولون بعد موافقتها.',
+  open_waiting:() => 'بانتظار موافقة المركّزة',
+  open_confirm_title:() => 'طلب الانضمام للمناوبة؟',
+  open_confirm:(d, s) => `سنرسل للمركّزة طلبًا لانضمامكم للمناوبة ${A(d)} (${A(s)}). تُجدولون فيها فقط بعد موافقتها، وسنبلغكم. شكرًا على المساعدة!`,
+  open_none:() => 'لا توجد الآن مناوبات ناقصة. شكرًا لأنك تفقدت!',
+  open_ok:() => 'تم إرسال الطلب للمركّزة، وسنبلغك حالما توافق. شكرًا على رغبتك في المساعدة!',
+  open_fail:() => 'لم ننجح في إرسال الطلب الآن، ربما المناوبة أُخذت. شكرًا على الاستعداد!',
+  avail_ok:() => 'شكرًا! تم تقديم توفّركن ✓',
+  retry:() => 'لم ننجح في الحفظ الآن. يمكن المحاولة مرة أخرى بعد لحظة',
+  inbox_none:() => 'لا توجد تحديثات جديدة الآن.',
+  inbox_nomsg:() => 'لا توجد رسائل جديدة الآن.',
+  fb_intro:(m) => `جدول ${A(m)} نُشر، وأردنا أن نشاركك الآن كيف سارت طلباتك.`,
+  fb_nothing:(t) => `هذا الشهر لم تختر/ي طلبات خاصة، وحاولنا أن نعطيك جدولًا مريحًا قدر الإمكان. حصلت على ${t} مناوبات.`,
+  fb_count:(a, h) => `من بين ${a} طلبات اخترتها نجحنا في تلبية ${h}، وشكرًا لمشاركتنا. هذا يساعدنا على بناء جدول يناسب الجميع.`,
+  fb_unmet:(l) => `هذه الطلبات التي لم ننجح في تلبيتها هذه المرة، رغم أننا حاولنا فعلًا:\n${A(l)}\nأحيانًا يجب استكمال الطاقم أو الحفاظ على قواعد السلامة والراحة. سنستمر في بذل قصارى جهدنا في الأشهر القادمة.`,
+  fb_close:(g) => `إذا كان هناك ما لا يناسبك، يمكن طلب استبدال في البوابة أو التحدث مع المركّزة. نحن هنا من أجلك، ${g}.`,
+  fb_thanks:() => 'شكرًا لأنك جزء من الطاقم',
+  fb_g_min_ok:(t, c) => `طلبت ${A(t)}، وحصلت على ${c} مناوبات، تمامًا كما أردت. شكرًا على المشاركة!`,
+  fb_g_min_low:(t, c) => `طلبت ${A(t)}. هذه المرة حصلت على ${c} مناوبات، أقل قليلًا من الحد الأدنى، وهذا ليس بسببك. يسعدنا أن نستكمل ذلك معًا.`,
+  fb_g_min_high:(t, c) => `طلبت ${A(t)}. هذه المرة حصلت على ${c} مناوبات، أكثر من الحد الأدنى، لأننا احتجنا أيادي إضافية. نشكرك على المرونة.`,
+  fb_g_max_ok:(t, c) => `طلبت ${A(t)}، وحصلت على ${c} مناوبات. شكرًا على الاستعداد!`,
+  fb_g_max_no:(t, c) => `طلبت ${A(t)}. حاولنا أن نعطيك أكثر ما يمكن، ووصلنا هذه المرة إلى ${c} مناوبات. لم نستطع إعطاء أكثر دون المسّ بالقواعد وبالطاقم.`,
+  fb_g_wk_ok:(t) => `طلبت ${A(t)}، وفي كل أسبوع حصلت على 4 أو 5 مناوبات. رائع!`,
+  fb_g_wk_no:(t, w, x) => `طلبت ${A(t)}. حاولنا، وفي أسبوع ${A(w)} خرج ${A(x)}. لم ننجح دائمًا في ملاءمة ذلك، وشكرًا على التفهّم.`,
+  fb_min_ok:(t) => `وأيضًا: استوفيت الحد الأدنى لهذا الشهر (${A(t)}). شكرًا على الجهد!`,
+  fb_min_gap:(t, g) => `بخصوص الحد الأدنى (${A(t)}): بقيت بعض المناوبات التي لم ننجح في استكمالها لك:\n${A(g)}\nهذا ليس بسببك، ولا داعي للقلق. إذا كان مريحًا لك، يمكن التوجه للمركّزة ونجد حلًّا معًا.`
+};
+// the sentences of the system: Arabic for an Arabic portal, and for the coordinator writing to an Arabic speaker (voice 'ar')
+function arVoice(key, args){ const f = AR_VOICES[key]; return f ? f(...args) : null; }
+
+// ---- (2) the screen: exact texts, then phrases inside longer texts (the longest first)
+const AR = {
+  // the tabs and the titles
+  'הסידור':'الجدول', 'העדפות':'التفضيلات', 'החלפות':'الاستبدالات', 'חופשה':'إجازة', 'הודעות':'الرسائل', 'זמינות':'التوفّر', 'שעות':'الساعات', 'משמרות חסרות':'مناوبات ناقصة',
+  'פורטל המדריך':'بوابة المرشد', 'פורטל בנות השירות':'بوابة متطوعات الخدمة', 'מרכז חירום':'مركز الطوارئ', 'מה תרצו לפתוח?':'ماذا تريدون أن تفتحوا؟',
+  'הרמזור':'الإشارة الضوئية', 'תפעול יומיומי ומסך הילדים':'التشغيل اليومي وشاشة الأطفال', 'משמרות, העדפות והודעות':'مناوبات، تفضيلات ورسائل',
+  'יציאה':'خروج', '→ מסך ראשי':'→ الشاشة الرئيسية', 'בית':'الرئيسية', 'העדפות מערכת':'إعدادات النظام', 'סיום':'إنهاء',
+  'המשמרות שלי':'مناوباتي', 'הצוות כולו':'الطاقم كله', 'איך הלכו הבקשות שלך':'كيف سارت طلباتك', 'משמרות פתוחות':'مناوبات مفتوحة', 'הודעות חדשות':'رسائل جديدة',
+  'המשמרת הבאה שלך':'مناوبتك القادمة', 'בקשת החלפה':'طلب استبدال', 'הבנתי, תודה':'فهمت، شكرًا', 'סימון של כולן כנקראו':'تعليم الكل كمقروء',
+  'העדכונים שלך':'تحديثاتك', 'הודעות מהרכזת':'رسائل من المركّزة', 'הבקשות שלי':'طلباتي', 'בקשות החלפה פתוחות':'طلبات استبدال مفتوحة',
+  'טוען…':'جارٍ التحميل…', 'רק רגע...':'لحظة...', 'רק רגע':'لحظة', 'נשמר ✓':'تم الحفظ ✓', 'עוד לא נשמר, ננסה שוב':'لم يُحفظ بعد، سنحاول مرة أخرى',
+  // the colour key and the levels
+  'כן':'نعم', 'יכול':'ممكن', 'לא':'لا', 'לא סומן':'غير محدد', 'שעות אחרות':'ساعات أخرى', 'נקה הכל':'مسح الكل', 'היעדרות':'غياب', 'היעדרויות':'غيابات',
+  'שובץ/ה במשמרת שסימן/ה כך':'جُدول/ت في مناوبة اختارها/ا هكذا', 'אחמ"ש':'مسؤول وردية', 'חדש':'جديد',
+  // shifts and days
+  'בוקר':'صباح', 'צהריים':'ما بعد الظهر', 'לילה':'ليل', 'ערב':'مساء', 'בוקר קצר':'صباح قصير', 'סופ"ש ארוך':'نهاية أسبوع طويلة', 'כפולה':'مزدوجة',
+  'ראשון':'الأحد', 'שני':'الاثنين', 'שלישי':'الثلاثاء', 'רביעי':'الأربعاء', 'חמישי':'الخميس', 'שישי':'الجمعة', 'שבת':'السبت',
+  // buttons and answers
+  'ביטול':'إلغاء', 'חזרה':'رجوع', 'אישור':'موافقة', 'שמירה':'حفظ', 'שליחה':'إرسال', 'סגירה':'إغلاق', 'מחיקה':'حذف', 'תודה':'شكرًا', 'כתבו':'اكتبوا',
+  'כן, לפרסם':'نعم، للنشر', 'כן, לשלוח':'نعم، للإرسال', 'כן, לדווח':'نعم، للإبلاغ', 'כן, לנקות הכל':'نعم، لمسح الكل', 'כן, להשתבץ':'نعم، للانضمام',
+  'הפעולה בוטלה':'تم إلغاء العملية', 'שליחת הבקשה':'إرسال الطلب', 'ביטול הבקשה שלי':'إلغاء طلبي', 'לשלוח את הבקשה?':'إرسال الطلب؟', 'לבקש החלפה?':'طلب استبدال؟',
+  'מחכה לתשובה':'بانتظار الرد', 'אושרה':'تمت الموافقة', 'הפעם לא אושרה':'هذه المرة لم تتم الموافقة', 'בוטלה':'أُلغيت', 'הבקשה בוטלה':'تم إلغاء الطلب',
+  'אני יכול/ה להחליף':'أستطيع الاستبدال', 'מוכן/ה להחליף':'مستعد/ة للاستبدال', 'מוכן/ה לעזור':'مستعد/ة للمساعدة', 'מחפשים מחליף/ה':'نبحث عن بديل/ة',
+  'נמצא מחליף/ה, מחכים לאישור הרכזת':'وُجد بديل/ة، بانتظار موافقة المركّزة', 'ממתין לאישור הרכזת':'بانتظار موافقة المركّزة',
+  // the preferences
+  'איך ממלאים? (לחצו להסבר)':'كيف نملأ؟ (اضغطوا للشرح)', 'אין לי העדפה מיוחדת':'ليس لدي تفضيل خاص', 'יעד חודשי':'هدف شهري',
+  'אני רוצה לעשות החודש את המינימום הנדרש':'أريد أن أعمل هذا الشهر الحد الأدنى المطلوب', 'אני רוצה לעבוד כמה שיותר החודש':'أريد أن أعمل أكثر ما يمكن هذا الشهر',
+  'אני רוצה לעשות 4-5 משמרות בכל שבוע':'أريد أن أعمل 4-5 مناوبات كل أسبوع', 'מתוך המשמרות שסימנתי "כן"':'من المناوبات التي اخترت لها "نعم"',
+  'לעשות החודש את המינימום הנדרש':'أن أعمل هذا الشهر الحد الأدنى المطلوب', 'לעבוד כמה שיותר החודש (מתוך מה שסימנתי "כן")':'أن أعمل أكثر ما يمكن هذا الشهر (من بين ما اخترت له "نعم")', 'לעשות 4-5 משמרות בכל שבוע':'أن أعمل 4-5 مناوبات كل أسبوع',
+  'הבחירה נשמרת כשמגישים את ההעדפות':'يُحفظ الاختيار عند تقديم التفضيلات', 'לנקות את כל ההעדפות?':'مسح كل التفضيلات؟', 'המינימום שלך':'الحد الأدنى لك',
+  'אפשר לציין עד שני טווחים שבהם אתם זמינים. המערכת תשתמש בהם רק כשהם משלימים משמרת שלמה':'يمكن تحديد حتى مجالين تكونون متاحين فيهما. النظام يستخدمهما فقط عندما يكمّلان مناوبة كاملة',
+  'בדקו שהשעות נכונות: "מ" לפני "עד", והטווחים לא חופפים':'تأكدوا أن الساعات صحيحة: "من" قبل "حتى"، والمجالات لا تتداخل', 'עד':'حتى', 'מ':'من', 'בשעה':'الساعة',
+  'שישי לפני כניסת שבת, לינה במרכז החירום, שבת בוקר עד צאת שבת':'الجمعة قبل دخول السبت، مبيت في مركز الطوارئ، السبت صباحًا حتى خروج السبت',
+  '▲ שייך לשישי ולשבת שמעל':'▲ يخص الجمعة والسبت في الأعلى', 'הגשה':'تقديم', 'הגשת ההעדפות':'تقديم التفضيلات', 'עדכון ההגשה':'تحديث التقديم',
+  // swaps, cannot come, open shifts
+  '⚠ דחוף: דווח שלא יכול/ה להגיע':'⚠ عاجل: تم الإبلاغ عن عدم القدرة على الحضور', 'עמיתים שזמינים למשמרת':'زملاء متاحون للمناوبة', 'מי זמין/ה?':'من متاح/ة؟',
+  'משמרות שמחכות לעזרה שלך':'مناوبات تنتظر مساعدتك', 'כבר יש בקשה פתוחה למשמרת הזו':'يوجد طلب مفتوح لهذه المناوبة',
+  'לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע':'الضغط على اسمك في مناوبة لم تمرّ بعد يفتح طلب استبدال أو إبلاغًا بعدم القدرة على الحضور',
+  // vacation
+  'בקשת חופשה':'طلب إجازة', 'מתאריך':'من تاريخ', 'עד תאריך':'حتى تاريخ', 'יש משהו שחשוב לנו לדעת? (לא חובה)':'هل هناك ما يهمّنا معرفته؟ (غير إلزامي)',
+  'אפשר לבקש עד 4 חודשים בבקשה אחת':'يمكن طلب حتى 4 أشهر في طلب واحد', 'נשמח לדעת מאיזה תאריך ועד איזה תאריך':'يسعدنا أن نعرف من أي تاريخ وحتى أي تاريخ',
+  'לחופשה או להיעדרות אפשר לפנות לרכזת, והיא תסמן':'للإجازة أو الغياب يمكن التوجه للمركّزة، وهي تسجّل ذلك', 'היעדרות שאושרה':'غياب تمت الموافقة عليه',
+  'חודשיים מראש':'قبل شهرين', '30 יום מראש':'قبل 30 يومًا',
+  // service girls
+  'הימים והשעות הקבועים שלכן':'أيامكن وساعاتكن الثابتة', 'לא זמינה':'غير متاحة', 'שתיהן':'كلتاهما', 'הארכה עד 16:00':'تمديد حتى 16:00', 'מ-16:00':'من 16:00', 'עד 22:00':'حتى 22:00',
+  'שעות מותאמות':'ساعات مخصّصة', 'המשך עד 11:00 ביום ראשון':'استمرار حتى 11:00 يوم الأحد', 'כל הימים נבחרו, תודה!':'تم اختيار كل الأيام، شكرًا!',
+  'נשמח שתבחרו לכל יום לפני ההגשה, ככה נוכל לתכנן':'يسعدنا أن تختاروا لكل يوم قبل التقديم، هكذا نستطيع التخطيط',
+  'עוד לא הוגדרו שעות קבועות. נשמח אם תפנו לרכזת':'لم تُحدَّد ساعات ثابتة بعد. يسعدنا أن تتوجهن للمركّزة',
+  'לכל יום נשמח שתבחרו מתי נוח לכן. ביום ראשון מגיעות ב-11:00 (עד 19:00), וביום חמישי עד 16:00':'لكل يوم يسعدنا أن تخترن متى يناسبكن. يوم الأحد يكون الوصول الساعة 11:00 (حتى 19:00)، ويوم الخميس حتى 16:00',
+  'אם לא תספיקו עד ה-24 בשעה 22:30, לא נורא: השעות הקבועות יישלחו בשבילכן אוטומטית':'إن لم تلحقن حتى 24 الساعة 22:30، لا بأس: الساعات الثابتة تُرسل عنكن تلقائيًا',
+  // the gear
+  'באיזו שפה נדבר איתך?':'بأي أسلوب نتحدث معك؟', 'מראה':'المظهر', 'מצב כהה':'وضع داكن', 'מצב בהיר':'وضع فاتح', 'טקסט רגיל':'نص عادي', 'טקסט גדול':'نص كبير', 'טקסט גדול מאוד':'نص كبير جدًا',
+  'סופי שבוע':'نهايات الأسبوع', 'שפת הפורטל':'لغة البوابة', 'שפה':'اللغة',
+  // a new day for sign-up
+  'נפתח יום נוסף לשיבוץ':'فُتح يوم إضافي للجدولة', 'נרשמת ליום הנוסף ✓':'سجّلت لليوم الإضافي ✓', 'אני רוצה להשתבץ':'أريد الانضمام', 'נשאר מקום אחד':'بقي مكان واحد',
+  'כדי לבטל צריך לפנות לרכזת.':'للإلغاء يجب التوجه للمركّزة.', 'להשתבץ ליום הזה?':'الانضمام لهذا اليوم؟', 'כל היום (07:00–22:00)':'اليوم كله (07:00–22:00)',
+  // problems, installing, the sign-in
+  'משהו לא עובד? דיווח על תקלה':'شيء لا يعمل؟ الإبلاغ عن خلل', 'דיווח על תקלה':'الإبلاغ عن خلل', 'מה קרה':'ماذا حدث',
+  'מה קרה, ומה ניסית לעשות? המסך והמכשיר נשלחים לבד, אין צורך לפרט אותם.':'ماذا حدث، وماذا حاولت أن تفعل/ي؟ الشاشة والجهاز يُرسلان تلقائيًا، لا حاجة لتفصيلهما.',
+  '📲 התקנה כאפליקציה על מסך הבית':'📲 التثبيت كتطبيق على الشاشة الرئيسية', 'התקנה כאפליקציה על מסך הבית':'التثبيت كتطبيق على الشاشة الرئيسية', 'התקנה עכשיו':'التثبيت الآن',
+  'אפשר להתקין את התכנית על מסך הבית, והיא תיפתח כמו אפליקציה רגילה.':'يمكن تثبيت البرنامج على الشاشة الرئيسية، فيُفتح كتطبيق عادي.',
+  'באייפון ההתקנה נעשית דרך ספארי (לא דרך דפדפן אחר):':'في الآيفون يتم التثبيت عبر سفاري (ليس عبر متصفح آخر):', 'באנדרואיד, בדפדפן כרום:':'في أندرويد، في متصفح كروم:',
+  'לוחצים על כפתור השיתוף בתחתית המסך (ריבוע עם חץ כלפי מעלה).':'نضغط على زر المشاركة أسفل الشاشة (مربع مع سهم للأعلى).', 'גוללים ובוחרים':'ننزل ونختار', '"הוספה למסך הבית"':'"إضافة إلى الشاشة الرئيسية"',
+  'לוחצים':'نضغط', '"הוספה"':'"إضافة"', '. האייקון יופיע על מסך הבית.':'. ستظهر الأيقونة على الشاشة الرئيسية.', 'לוחצים על שלוש הנקודות בפינה העליונה.':'نضغط على النقاط الثلاث في الزاوية العليا.',
+  'בוחרים':'نختار', '"התקנת אפליקציה"':'"تثبيت التطبيق"', 'או "הוספה למסך הבית"':'أو "إضافة إلى الشاشة الرئيسية"', 'מאשרים. האייקון יופיע על מסך הבית.':'نؤكد. ستظهر الأيقونة على الشاشة الرئيسية.'
+};
+// whole sentences inside longer texts (a text made of several sentences: each known sentence is replaced; never single words)
+const AR_SENT = [
+  ['בהתחלה אף משמרת לא מסומנת. נשמח שתעברו על כל החודש: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "כן" אומר שתשמחו לקבל אותה, "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. לחיצה נוספת על אותו סימון מחזירה את המשמרת למצב שלא סומן.',
+   'في البداية لا توجد أي مناوبة محددة. يسعدنا أن تمرّوا على الشهر كله: اختاروا في الأسفل مستوى، ثم اضغطوا على يوم (لكل مناوباته) أو على مناوبة واحدة. "نعم" تعني أنكم ستسعدون باستلامها، "ممكن" تعني أنها ممكنة لكن أقل راحة، و"لا" تعني أنها لا تناسب. ضغطة أخرى على نفس الاختيار تعيد المناوبة إلى غير محددة.'],
+  ['הוא כפתור אחד לכל סופ"ש, מתחת לשישי ולשבת, ולא תלוי בסימונים של שישי או של שבת. אם לא סימנתם אותו, לא נשבץ אתכם אליו. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.',
+   'هي زر واحد لكل نهاية أسبوع، تحت الجمعة والسبت، ولا تتعلق باختيارات الجمعة أو السبت. إذا لم تختاروها فلن نجدولكم لها. إذا كنتم متاحين في جزء من الساعات فقط، اختاروا "ساعات أخرى" واضغطوا على اليوم.'],
+  ['🕯️ = סופ"ש ארוך', '🕯️ = نهاية أسبوع طويلة'],
+  ['שישי לפני כניסת שבת, לינה במרכז החירום, שבת בוקר עד צאת שבת', 'الجمعة قبل دخول السبت، مبيت في مركز الطوارئ، السبت صباحًا حتى خروج السبت'],
+  ['הלילות מסומנים אצלך "לא", כי לפי ההגדרות את/ה לא עושה לילות. אם בא לך לילה מסוים, אפשר לשנות אותו.', 'الليالي محددة عندك "لا"، لأنه حسب الإعدادات أنت لا تعمل/ين ليالي. إذا رغبت بليلة معيّنة، يمكن تغييرها.'],
+  ['לא חובה בכלל. נשתדל להתחשב בזה ככל האפשר, בכפוף לצרכי הצוות ולכללי הבטיחות והמנוחה.', 'غير إلزامي إطلاقًا. سنحاول مراعاة ذلك قدر الإمكان، حسب احتياجات الطاقم وقواعد السلامة والراحة.'],
+  ['ההגשה לחודש הזה סגורה כרגע. לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.', 'التقديم لهذا الشهر مغلق الآن. لأي تغيير يمكن التوجه للمركّزة، ويسعدها أن تساعد.'],
+  ['הזמינות שלכן אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.', 'توفّركن وصلنا، شكرًا! يمكن التعديل حتى إغلاق التقديم.'],
+  ['נשמח לדעת מתי אתן זמינות, ככה נוכל לסדר לכן את החודש.', 'يسعدنا أن نعرف متى تكنّ متاحات، هكذا نستطيع ترتيب الشهر لكنّ.'],
+  ['לכל יום נשמח שתבחרו מתי נוח לכן. ביום ראשון מגיעות ב-11:00 (עד 19:00), וביום חמישי עד 16:00.', 'لكل يوم يسعدنا أن تخترن متى يناسبكن. يوم الأحد يكون الوصول الساعة 11:00 (حتى 19:00)، ويوم الخميس حتى 16:00.'],
+  ['הימים שאושרו לך או שהרכזת סימנה:', 'الأيام التي تمت الموافقة عليها لك أو التي حددتها المركّزة:'],
+  ['ב = בוקר', 'ص = صباح'], ['צ = צהריים', 'ظ = ما بعد الظهر'], ['ל = לילה', 'ل = ليل'], ['ע = ערב', 'م = مساء']
+];
+// inside a longer text: details with numbers (applied after the sentences)
+const AR_INLINE = [
+  [/אפשר להגיש עד (\d{1,2}\/\d{1,2})(?: בשעה (\d{1,2}:\d{2}))?/g, (m, d, h) => `يمكن التقديم حتى ${d}${h ? ' الساعة ' + h : ''}`],
+  [/\((חופשה|מחלה|מילואים|היעדרות|לידה|אחר)\)/g, (m, r) => `(${AR[r] || r})`],
+  [/(^|\s)נשמר ✓/g, (m, s) => `${s}تم الحفظ ✓`]
+];
+// one letter in a calendar: a day of the week in the head row, a shift in a day
+const AR_DOW_LETTER = { 'א':'ح', 'ב':'ن', 'ג':'ث', 'ד':'ر', 'ה':'خ', 'ו':'ج', 'ש':'س' };
+const AR_SHIFT_LETTER = { 'ב':'ص', 'צ':'ظ', 'ל':'ل', 'ע':'م' };
+// texts with details inside (numbers, dates, names): [pattern, the Arabic]
+const AR_RX = [
+  [/^שלום (.+)$/, (m, n) => `مرحبًا ${n}`],
+  [/^עוד (\d+) משמרות לסימון$/, (m, n) => `بقيت ${n} مناوبات للاختيار`],
+  [/^נשארו (\d+) ימים לבחירה$/, (m, n) => `بقيت ${n} أيام للاختيار`],
+  [/^נשארו (\d+) מקומות$/, (m, n) => `بقيت ${n} أماكن`],
+  [/^אפשר להגיש עד (\d{1,2}\/\d{1,2})(?: בשעה (\d{1,2}:\d{2}))?$/, (m, d, h) => `يمكن التقديم حتى ${d}${h ? ' الساعة ' + h : ''}`],
+  [/^הצעתם להחליף את (.+)$/, (m, n) => `عرضتم استبدال ${n}`],
+  [/^שלחנו קוד אל (.+)\. הוא מגיע תוך דקה \(כדאי לבדוק גם בספאם\)\.$/, (m, e) => `أرسلنا رمزًا إلى ${e}. يصل خلال دقيقة (يُستحسن التحقق من البريد المزعج أيضًا).`],
+  [/^לא הצלחנו לשמור את הסיסמה \((.*)\)\. אפשר להמשיך ולנסות שוב בפעם הבאה\.$/, (m, x) => `لم ننجح في حفظ كلمة المرور (${x}). يمكن المتابعة والمحاولة مرة أخرى في المرة القادمة.`],
+  [/^המינימום שלך: (.+)$/, (m, x) => `الحد الأدنى لك: ${arMinText(x)}`],
+  [/^(.+) \((חופשה|מחלה|מילואים|היעדרות|לידה|אחר)\)$/, (m, d, r) => `${arWords(d)} (${AR[r] || r})`],
+  [/^(.*?)(\d{1,2}\/\d{1,2})(.*)$/, null]          // (a placeholder: dates inside known sentences are handled by arWords)
+].filter(x => x[1]);
+// the minimum as fbMinimum writes it in Hebrew -> the Arabic one (the instructor's own profile)
+function arMinText(he){ try { const mk = portalUi.pmonth || portalUi.month; const m = fbMinimum(srv.profile, mk, true); return m && m.text ? m.text : he; } catch(e){ return he; } }
+Object.assign(AR, {
+  'כמה משמרות ירגישו לך נכון החודש?':'كم مناوبة ستشعر/ين أنها مناسبة لك هذا الشهر؟', 'עוד שתי שאלות קטנות לחודש הזה':'سؤالان صغيران آخران لهذا الشهر',
+  'אם נצטרך, האם יהיה לך נוח להישאר עד 16:00 במשמרת בוקר?':'إذا احتجنا، هل يناسبك البقاء حتى 16:00 في مناوبة الصباح؟', 'עד 4 הארכות בחודש':'حتى 4 تمديدات في الشهر',
+  'אם נצטרך, האם יהיה לך נוח להמשיך משבת בלילה עד יום ראשון ב-11:00?':'إذا احتجنا، هل يناسبك الاستمرار من ليلة السبت حتى يوم الأحد الساعة 11:00؟',
+  'יש משהו שחשוב לך שנדע? (לא חובה)':'هل هناك ما يهمّك أن نعرفه؟ (غير إلزامي)', 'עדכון והגשה מחדש':'تحديث وتقديم من جديد', 'הגשת ההעדפות':'تقديم التفضيلات', 'הגשה':'تقديم',
+  'כל המשמרות מסומנות':'كل المناوبات محددة', 'ביקשתם החלפה':'طلبتم استبدالًا', 'מחפש/ת מחליף/ה':'يبحث/تبحث عن بديل/ة', 'אי אפשר לשבץ אותך כרגע':'لا يمكن جدولتك الآن',
+  'התקנה כאפליקציה':'التثبيت كتطبيق',
+  // the sign-in
+  'כניסה אישית':'دخول شخصي', 'ברוכים הבאים':'أهلًا وسهلًا', 'כתובת מייל':'عنوان البريد الإلكتروني', 'סיסמה':'كلمة المرور', 'כניסה':'دخول', 'קוד':'رمز',
+  'כניסה ראשונה, או ששכחתם את הסיסמה?':'دخول أول، أو نسيتم كلمة المرور؟', 'שלחו לי קוד למייל':'أرسلوا لي رمزًا للبريد الإلكتروني', 'כניסה עם סיסמת צוות':'دخول بكلمة مرور الطاقم',
+  'הקלידו את הקוד':'اكتبوا الرمز', 'שליחת קוד חדש':'إرسال رمز جديد', 'נשלח קוד חדש':'أُرسل رمز جديد', 'בחירת סיסמה אישית':'اختيار كلمة مرور شخصية',
+  'מהפעם הבאה נכנסים עם המייל והסיסמה הזו, בלי לחכות לקוד. אם שוכחים אותה, אפשר תמיד לקבל קוד למייל.':'من المرة القادمة يكون الدخول بالبريد الإلكتروني وكلمة المرور هذه، بدون انتظار رمز. إذا نُسيت، يمكن دائمًا الحصول على رمز للبريد الإلكتروني.',
+  'סיסמה (לפחות 8 תווים)':'كلمة المرور (8 أحرف على الأقل)', 'שוב, לאימות':'مرة أخرى، للتأكيد', 'שמירה וכניסה':'حفظ ودخول',
+  'המייל או הסיסמה לא נכונים. אם שכחתם את הסיסמה, אפשר לקבל קוד למייל.':'البريد الإلكتروني أو كلمة المرور غير صحيحين. إذا نسيتم كلمة المرور، يمكن الحصول على رمز للبريد الإلكتروني.',
+  'הסיסמה נשמרה. מהפעם הבאה נכנסים איתה.':'تم حفظ كلمة المرور. من المرة القادمة يكون الدخول بها.', 'הסיסמה צריכה להיות באורך 8 תווים לפחות.':'يجب أن تكون كلمة المرور 8 أحرف على الأقل.',
+  'הקוד לא התאים, או שהוא כבר לא בתוקף. אפשר לבקש קוד חדש.':'الرمز غير مطابق، أو انتهت صلاحيته. يمكن طلب رمز جديد.', 'הקלידו את כתובת המייל.':'اكتبوا عنوان البريد الإلكتروني.',
+  'הקלידו מייל וסיסמה. בכניסה הראשונה, או אם שכחתם את הסיסמה, אפשר לקבל קוד למייל.':'اكتبوا البريد الإلكتروني وكلمة المرور. في الدخول الأول، أو إذا نسيتم كلمة المرور، يمكن الحصول على رمز للبريد الإلكتروني.',
+  'לא הצלחנו לשלוח קוד לכתובת הזו. אפשר לבדוק שהיא נכונה, ואם זה ממשיך, הרכזת תשמח לעזור.':'لم ننجح في إرسال رمز لهذا العنوان. يمكن التأكد أنه صحيح، وإذا استمر ذلك، يسعد المركّزة أن تساعد.',
+  'משהו קטן השתבש. אפשר לנסות שוב בעוד רגע.':'حدث خلل صغير. يمكن المحاولة مرة أخرى بعد لحظة.', 'שתי הסיסמאות לא זהות. אפשר להקליד שוב.':'كلمتا المرور غير متطابقتين. يمكن الكتابة من جديد.',
+  'עוד לא חיברנו את הכתובת הזו לרשימת הצוות. הרכזת תשמח לעזור לכם להיכנס.':'لم نربط هذا العنوان بقائمة الطاقم بعد. يسعد المركّزة أن تساعدكم على الدخول.',
+  'שלחנו קוד ממש עכשיו. אפשר לבקש קוד חדש בעוד דקה.':'أرسلنا رمزًا للتو. يمكن طلب رمز جديد بعد دقيقة.',
+  'לא יכולה להגיע':'لا أستطيع الحضور', 'לא יכול להגיע':'لا أستطيع الحضور', 'שפה · اللغة':'اللغة', 'הסידור לחודש הזה עוד בהכנה. ברגע שהוא יפורסם נעדכן אותך כאן ובמייל.':'جدول هذا الشهر ما زال قيد التحضير. حالما يُنشر سنبلغك هنا وبالبريد الإلكتروني.',
+  'הבחירה נשמרת כשמגישים את ההעדפות':'يُحفظ الاختيار عند تقديم التفضيلات',
+  'להציג סופ"ש ארוך: כן':'إظهار نهاية الأسبوع الطويلة: نعم', 'להציג "רק אחד מאלה": כן':'إظهار "واحدة فقط من هذه": نعم', 'נגישות':'إمكانية الوصول',
+  'חופשה':'إجازة', 'מחלה':'مرض', 'מילואים':'خدمة احتياط', 'לידה':'ولادة', 'אחר':'آخر', 'נסיעה לחו"ל':'سفر للخارج', 'חופשה מיוחדת':'إجازة خاصة',
+  'כל הימים נבחרו, תודה!':'تم اختيار كل الأيام، شكرًا!', 'היעדרות שאושרה':'غياب تمت الموافقة عليه', 'הבקשות שלי':'طلباتي',
+  'כן, להחליף':'نعم، للاستبدال', 'כן, לבטל':'نعم، للإلغاء', 'כן, להצטרף':'نعم، للانضمام', 'בקשה להצטרף':'طلب انضمام', 'לבקש להצטרף':'طلب الانضمام',
+  'לא יכול/ה להגיע':'لا أستطيع الحضور', 'בקשת החלפה במשמרת':'طلب استبدال في مناوبة', 'שעות קבועות':'ساعات ثابتة', 'אישור השעות':'تأكيد الساعات'
+});
+const AR_HE = /[\u0590-\u05FF]/;
+const arEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+let arSentSorted = null;
+function arText(t, names){
+  const core = t.trim(); if(!core || !AR_HE.test(core)) return t;
+  if(AR[core] != null) return t.replace(core, AR[core]);
+  if(/[.:]$/.test(core) && AR[core.slice(0, -1)] != null) return t.replace(core, AR[core.slice(0, -1)] + core.slice(-1));          // (the same text with a full stop or a colon)
+  for(const [rx, fn] of AR_RX){ const m = core.match(rx); if(m) return t.replace(core, fn(...m)); }
+  arSentSorted = arSentSorted || AR_SENT.slice().sort((a, b) => b[0].length - a[0].length);
+  let s = core;
+  for(const [he, ar] of arSentSorted) if(s.includes(he)) s = s.split(he).join(ar);
+  for(const [rx, fn] of AR_INLINE) s = s.replace(rx, fn);
+  // the days, months and shift words: only when nothing else in Hebrew is left around them (never a mixed sentence)
+  const w = arWords(s), rest = (names || []).reduce((x, nm) => x.split(nm).join(''), w);
+  if(!AR_HE.test(rest)) s = w;
+  return s === core ? t : t.replace(core, s);
+}
+// ---- the translation of what is on the screen (only the portal's parts; the Ramzor and the coordinator stay in Hebrew)
+const AR_ROOTS = '#view-portal, #view-apphome, .psheet, .confirm-sheet, #install-sheet, .toast, #toast, .plogin, .bottom-nav';
+const AR_KEEP = 'script, style, textarea, input, select option.ar-keep, .ar-keep, .pannounce > div, .pnotice > span, .preq-note, .ar-data';          // (what people wrote: notices, messages, notes)
+const arMissing = new Set();          // (what stayed in Hebrew: the checks list it, so that the dictionary can be completed)
+let arObserver = null, arQueued = false;
+function arTranslateIn(root){
+  if(!root || !arOn()) return;
+  const names = ((portalState && portalState.instructors) || []).map(p => instrName(p, portalState.instructors)).concat(((portalState && portalState.instructors) || []).map(p => p.first)).filter(Boolean).sort((a, b) => b.length - a.length);
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for(let n = walk.nextNode(); n; n = walk.nextNode()){
+    const t = n.nodeValue; if(!AR_HE.test(t)) continue;
+    const p = n.parentElement; if(!p || p.closest(AR_KEEP)) continue;
+    const one = t.trim();
+    if(one.length === 1){ const map = p.closest('.pcal-head, .mcal-head, .wcal-head') ? AR_DOW_LETTER : p.closest('.pshift, .pcal, .mcal, .pday') ? AR_SHIFT_LETTER : null; if(map && map[one]){ n.nodeValue = t.replace(one, map[one]); continue; } }
+    const out = arText(t, names); if(out !== t) n.nodeValue = out;
+    const left = names.reduce((x, nm) => x.split(nm).join(''), out.trim()); if(AR_HE.test(left)) arMissing.add(out.trim().slice(0, 300));
+  }
+  (root.querySelectorAll ? root.querySelectorAll('[placeholder], [title], [aria-label]') : []).forEach(el => ['placeholder', 'title', 'aria-label'].forEach(a => { const v = el.getAttribute(a); if(v && AR_HE.test(v)){ const o = arText(v, names); if(o !== v) el.setAttribute(a, o); } }));
+}
+function arSweep(){ arQueued = false; if(!arOn()) return; document.querySelectorAll(AR_ROOTS).forEach(r => { if(!portalServerOn && (r.id === 'view-portal' || r.id === 'view-apphome')) return; arTranslateIn(r); }); }
+function arApply(){
+  const on = arOn();
+  document.documentElement.lang = on ? 'ar' : 'he'; document.body.classList.toggle('lang-ar', on);
+  if(on && !arObserver){
+    arObserver = new MutationObserver(() => { if(!arQueued){ arQueued = true; requestAnimationFrame(arSweep); } });
+    arObserver.observe(document.body, { childList:true, subtree:true, characterData:true });
+  } else if(!on && arObserver){ arObserver.disconnect(); arObserver = null; }
+  if(on) arSweep();
+}
+// the gear: the language, saved for the person (and remembered on this device for the sign-in screen)
+async function srvSaveLang(lang){
+  srv.lang = lang; try { localStorage.setItem('ramzor-portal-lang', lang); } catch(e){}
+  try { const r = await sbPersonal.from('staff_settings').upsert({ staff_id:srv.me, lang }); return !r.error; } catch(e){ return false; }
+}
 // ---------- bottom navigation bar (phones) ----------
 // One button, "בית": back to the first screen — the choice between the Ramzor and the portal (when the portal is on), or the Ramzor's home.
 // It is there in the Ramzor and in the portal alike.
@@ -8726,11 +9204,17 @@ function runsAsInstalledApp(){
 function isIPhoneOrIPad(){
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
-function updateInstallLink(){
-  const link = document.getElementById('hub-install-link');
+// on a phone, while the site is not yet on the home screen (the Ramzor's home, the main screen with the two choices, and the portal of those who have only it)
+function installWanted(){
   const phoneLike = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 700;
-  link.hidden = runsAsInstalledApp() || !phoneLike;
+  return !runsAsInstalledApp() && phoneLike;
 }
+function updateInstallLink(){
+  document.getElementById('hub-install-link').hidden = !installWanted();
+  document.querySelectorAll('[data-install-link]').forEach(b => { b.hidden = !installWanted(); });
+}
+function installLinkHtml(){ return installWanted() ? '<button type="button" class="home-link install-link" data-install-link>📲 התקנה כאפליקציה על מסך הבית</button>' : ''; }          // (a function: it is called by screens drawn before this file runs)
+document.addEventListener('click', e => { if(e.target.closest('[data-install-link]')) openInstallSheet(); });
 function openInstallSheet(){
   const body = document.getElementById('install-sheet-body');
   if(deferredInstallPrompt){
