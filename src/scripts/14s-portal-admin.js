@@ -30,15 +30,19 @@ function srvRenderAdmin(body){
 
 // ---- 1. the staff's details: every flag the system uses, for every person
 async function adminStaff(box, body){
-  const [staff, priv] = await Promise.all([
+  const BASE = 'staff_id,email,female,is_leader,ahmash_rank,no_nights,manual_only,only_long_weekend,latest_end_hour,is_admin';
+  let [staff, priv] = await Promise.all([
     sbPersonal.from('staff').select('id,display_name,kind,active,sort_order').order('kind').order('display_name'),
-    sbPersonal.from('staff_private').select('staff_id,email,female,is_leader,ahmash_rank,no_nights,manual_only,only_long_weekend,latest_end_hour,is_admin')
+    sbPersonal.from('staff_private').select(BASE + ',min_mid,min_nights,min_weekend,day_buddy,lang')
   ]);
+  const extra = !priv.error;          // (personal minimums, the day colleague and the language come with scheduling-v25.sql)
+  if(!extra) priv = await sbPersonal.from('staff_private').select(BASE);
   if(staff.error || priv.error) throw staff.error || priv.error;
   const pv = {}; (priv.data || []).forEach(p => { pv[p.staff_id] = p; });
   const lr = await sbPersonal.from('sched_settings').select('value').eq('key', 'leopard_people').maybeSingle(), leoList = (lr.data && Array.isArray(lr.data.value)) ? lr.data.value.slice() : [];
   const KIND = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', admin:'מנהל' };
-  const flags = (s, p) => [p.is_admin ? 'מנהל' : '', p.is_leader ? 'מוביל/ה' : '', p.ahmash_rank ? `אחמ"ש ${p.ahmash_rank}` : '', p.no_nights ? 'בלי לילות' : '', p.latest_end_hour ? `עד ${p.latest_end_hour}:00` : '', p.manual_only ? 'שיבוץ ידני בלבד' : '', p.only_long_weekend ? 'רק סופ"ש ארוך' : '', p.female === false ? 'גבר' : '', leoList.includes(s.id) ? '🐆' : ''].filter(Boolean).join(' · ');
+  const flags = (s, p) => [p.is_admin ? 'מנהל' : '', p.is_leader ? 'מוביל/ה' : '', p.ahmash_rank ? `אחמ"ש ${p.ahmash_rank}` : '', p.no_nights ? 'בלי לילות' : '', p.latest_end_hour ? `עד ${p.latest_end_hour}:00` : '', p.manual_only ? 'שיבוץ ידני בלבד' : '', p.only_long_weekend ? 'רק סופ"ש ארוך' : '', p.female === false ? 'גבר' : '', leoList.includes(s.id) ? '🐆' : '',
+    [p.min_mid, p.min_nights, p.min_weekend].some(x => x != null) ? `מינימום אישי ${p.min_mid ?? 2}/${p.min_nights ?? 1}/${p.min_weekend ?? 4}` : '', p.day_buddy ? `יום עדיף עם ${nameOf(p.day_buddy)}` : '', p.lang === 'ar' ? 'ערבית' : ''].filter(Boolean).join(' · ');
   box.innerHTML = (staff.data || []).map(s => { const p = pv[s.id] || {}; return `<div class="pmine-row adm-row${s.active ? '' : ' inactive'}"><span><b>${pEsc(s.display_name)}</b> <small>${KIND[s.kind] || s.kind}${s.active ? '' : ' · לא פעיל/ה'}</small><br><small>${pEsc(flags(s, p)) || '—'}</small></span><button type="button" class="btn ghost small" data-adm-edit="${s.id}">✏️ עריכה</button></div>`; }).join('');
   box.querySelectorAll('[data-adm-edit]').forEach(b => b.addEventListener('click', () => {
     const s = staff.data.find(x => x.id === b.dataset.admEdit), p = pv[s.id] || {};
@@ -49,12 +53,22 @@ async function adminStaff(box, body){
       <div class="adm-checks">${yes('ae-active', 'פעיל/ה', s.active)}${yes('ae-female', 'אישה', p.female !== false)}${yes('ae-leader', 'מוביל/ה', p.is_leader)}${yes('ae-nonights', 'לא עושה לילות', p.no_nights)}${yes('ae-manual', 'שיבוץ ידני בלבד', p.manual_only)}${yes('ae-long', 'רק סופ"ש ארוך', p.only_long_weekend)}${yes('ae-admin', 'מנהל (פורטל ניהול)', p.is_admin)}${yes('ae-leo', 'מצב מנומר (אפשרות בהגדרות)', leoList.includes(s.id))}</div>
       <label class="pfield">אחמ"ש<select id="ae-ahm"><option value="0"${!p.ahmash_rank ? ' selected' : ''}>לא</option><option value="1"${p.ahmash_rank === 1 ? ' selected' : ''}>כן, דרגה 1</option><option value="2"${p.ahmash_rank === 2 ? ' selected' : ''}>כן, דרגה 2 (רק כשאין אחר)</option></select></label>
       <label class="pfield">שעת סיום קבועה<select id="ae-end"><option value="">אין</option>${[19, 20, 21].map(h => `<option value="${h}"${p.latest_end_hour === h ? ' selected' : ''}>${h}:00</option>`).join('')}</select></label>
+      ${extra && s.kind === 'instructor' ? `<h3 class="psec">מינימום אישי</h3>
+      <div class="pnote">ריק = המינימום הרגיל (2 משמרות אמצע שבוע, לילה אחד בשבוע, 4 משמרות סופ"ש בחודש). מי שיש לו מינימום אישי: לילות מעבר למינימום הלילות נספרים גם כמשמרות.</div>
+      <div class="adm-mins"><label class="pfield">משמרות בשבוע<input type="number" id="ae-mmid" min="0" max="7" placeholder="2" value="${p.min_mid ?? ''}"></label>
+        <label class="pfield">לילות בשבוע (נוסף)<input type="number" id="ae-mnight" min="0" max="7" placeholder="1" value="${p.min_nights ?? ''}"></label>
+        <label class="pfield">סופ"ש בחודש<input type="number" id="ae-mwk" min="0" max="12" placeholder="4" value="${p.min_weekend ?? ''}"></label></div>
+      <label class="pfield">משמרת יום עדיף רק יחד עם (אחרת לילות; העדפה, לא חובה)<select id="ae-buddy"><option value="">אין</option>${staff.data.filter(x => x.kind === 'instructor' && x.active && x.id !== s.id).map(x => `<option value="${x.id}"${p.day_buddy === x.id ? ' selected' : ''}>${pEsc(x.display_name)}</option>`).join('')}</select></label>` : ''}
+      ${extra && s.kind !== 'coordinator' ? `<label class="pfield">שפת הפורטל (ברירת מחדל; כל אחד יכול לשנות אצלו)<select id="ae-lang"><option value="he"${p.lang !== 'ar' ? ' selected' : ''}>עברית</option><option value="ar"${p.lang === 'ar' ? ' selected' : ''}>ערבית</option></select></label>` : ''}
       <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="ae-save">שמירה</button></div>`);
     sh.querySelector('#ae-save').addEventListener('click', async () => {
       const v = id => sh.querySelector('#' + id), name = v('ae-name').value.trim(); if(!name){ toast('צריך שם'); return; }
       const a = await sbPersonal.from('staff').update({ display_name:name, kind:v('ae-kind').value, active:v('ae-active').checked }).eq('id', s.id);
       const row = { female:v('ae-female').checked, is_leader:v('ae-leader').checked, no_nights:v('ae-nonights').checked, manual_only:v('ae-manual').checked, only_long_weekend:v('ae-long').checked,
                     is_admin:v('ae-admin').checked, ahmash_rank:+v('ae-ahm').value, latest_end_hour:v('ae-end').value ? +v('ae-end').value : null };
+      const num = id => { const x = v(id); if(!x || x.value === '') return null; const n = Math.round(+x.value); return isNaN(n) ? null : Math.max(0, n); };
+      if(v('ae-mmid')) Object.assign(row, { min_mid:num('ae-mmid'), min_nights:num('ae-mnight'), min_weekend:num('ae-mwk'), day_buddy:v('ae-buddy').value || null });
+      if(v('ae-lang')) row.lang = v('ae-lang').value === 'ar' ? 'ar' : null;
       const c = pv[s.id] ? await sbPersonal.from('staff_private').update(row).eq('staff_id', s.id) : await sbPersonal.from('staff_private').insert(Object.assign({ staff_id:s.id }, row));
       if(a.error || c.error){ toast('השמירה נכשלה: ' + ((a.error || c.error).message || '')); return; }
       const wantLeo = v('ae-leo').checked; if(wantLeo !== leoList.includes(s.id)){ const next = wantLeo ? leoList.concat(s.id) : leoList.filter(x => x !== s.id); const l = await sbPersonal.from('sched_settings').upsert({ key:'leopard_people', value:next }); if(!l.error){ leoList.length = 0; next.forEach(x => leoList.push(x)); } }

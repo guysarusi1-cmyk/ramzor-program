@@ -65,6 +65,7 @@ async function srvLoadCoord(){
   ]);
   st.priv = {}; priv.forEach(r => { st.priv[r.staff_id] = r; });
   try { const ph = await sbPersonal.from('staff_private').select('staff_id,phone'); if(!ph.error) (ph.data || []).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; }); } catch(e){}          // (the phones: scheduling-v21.sql)
+  try { const pm = await sbPersonal.from('staff_private').select('staff_id,min_mid,min_nights,min_weekend,day_buddy,lang'); if(!pm.error) (pm.data || []).forEach(r => { if(st.priv[r.staff_id]) Object.assign(st.priv[r.staff_id], r); }); } catch(e){}          // (personal minimums, the day colleague, the language: scheduling-v25.sql)
   st.waMsg = {}; try { const wm = await sbPersonal.from('sched_settings').select('value').eq('key', 'wa_messages').maybeSingle(); if(!wm.error && wm.data && wm.data.value) st.waMsg = wm.data.value; } catch(e){}          // (the WhatsApp messages as the coordinator wrote them)
   st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}          // (each person's chosen voice, so that her feedback is written in it)
   st.flags = flags; st.vacations = vac;

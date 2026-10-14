@@ -8,11 +8,18 @@ const fbGx = (profile, m, f) => (profile && profile.female === false) ? m : f;  
 // the full Sunday-Saturday weeks of a month (each: the Sunday)
 function fbWeeks(mk){ const ds = daysOfMonth(mk); return ds.filter(d => dowOf(d) === 0 && ds.includes(addDays(d, 6))); }
 // what the person is asked to do at least, in this month: 2 mid-week shifts and a night every full week (when she does nights), and 4 weekend shifts (a night on Friday / Saturday counts for both)
+const fbOwnMin = profile => !!profile && [profile.min_mid, profile.min_nights, profile.min_weekend].some(x => x != null);
+const fbMins = profile => ({ mid:profile.min_mid ?? 2, night:(profile.no_nights || profile.only_long || profile.latest_end) ? 0 : (profile.min_nights ?? 1), weekend:profile.min_weekend ?? 4 });
 function fbMinimum(profile, mk){
   profile = profile || {};
   if(profile.manual_only) return { total:null, weeks:0, text:'' };
   const weeks = fbWeeks(mk).length, nights = !(profile.no_nights || profile.only_long || profile.latest_end);
   if(profile.only_long) return { total:1, weeks, text:'סופ"ש ארוך אחד בחודש (הוא נחשב ל-4 משמרות סופ"ש)' };
+  if(fbOwnMin(profile)){          // (personal minimums from the management portal: there the nights beyond the night minimum count as shifts too)
+    const m = fbMins(profile), wk = m.mid + m.night, total = weeks * wk + m.weekend;
+    const text = `${wk === 1 ? 'משמרת אחת בשבוע' : `${wk} משמרות בשבוע`}${m.night ? ` (מהן ${m.night === 1 ? 'לילה אחד' : m.night + ' לילות'})` : ''}${m.weekend ? `, ובחודש ${m.weekend} משמרות סופ"ש` : ', בלי מינימום של סופי שבוע'}. בחודש הזה זה בערך ${total} משמרות`;
+    return { total, weeks, text, own:m };
+  }
   const total = weeks * 2 + (nights ? weeks + Math.max(0, 4 - weeks) : 4);
   const text = `בכל שבוע 2 משמרות אמצע שבוע${nights ? ' ומשמרת לילה אחת' : ''}, ובחודש 4 משמרות סופ"ש${nights ? ' (לילה בסופ"ש נחשב גם ללילה השבועי)' : ''}. בחודש הזה זה בערך ${total} משמרות`;
   return { total, weeks, text };
@@ -68,7 +75,11 @@ function srvFeedbackFor(p, mk, input){
     (goalOk ? honored : unmet).push(`הבקשה ${t}`);
   }
   const minGaps = [];
-  if(min.total != null && !(profile && profile.only_long)){
+  if(min.own){
+    const m = min.own;
+    c.perWeek.forEach(w => { const all = w.mid + w.night; if(all < m.mid + m.night) minGaps.push(`בשבוע של ${dayLabel(w.week)} חסרות ${m.mid + m.night - all} משמרות`); else if(w.night < m.night) minGaps.push(`בשבוע של ${dayLabel(w.week)} חסר לילה`); });
+    if(c.weekend < m.weekend) minGaps.push(`במשמרות סופ"ש יש ${c.weekend} מתוך ${m.weekend}`);
+  } else if(min.total != null && !(profile && profile.only_long)){
     const nights = !(profile && (profile.no_nights || profile.only_long || profile.latest_end));
     c.perWeek.forEach(w => { if(w.mid < 2) minGaps.push(`בשבוע של ${dayLabel(w.week)} חסרות ${2 - w.mid} משמרות אמצע שבוע`); if(nights && w.night < 1) minGaps.push(`בשבוע של ${dayLabel(w.week)} חסרה משמרת לילה`); });
     if(c.weekend < 4) minGaps.push(`במשמרות סופ"ש יש ${c.weekend} מתוך 4`);
@@ -98,7 +109,7 @@ async function srvSendFeedback(mk){
     const rows = st.rows.filter(r => r.staff === p.id), pr = (m.prefs[p.id] || { slots:{}, absent:[], hours:{} });
     if(!rows.length && !Object.keys(pr.slots || {}).length) continue;
     const pv = (st.priv || {})[p.id] || {};
-    const fb = srvFeedbackFor(p, mk, { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour }, goal:(m.goals || {})[p.id] || null, voice:(st.voices || {})[p.id] || 'warm' });
+    const fb = srvFeedbackFor(p, mk, { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour, min_mid:pv.min_mid, min_nights:pv.min_nights, min_weekend:pv.min_weekend }, goal:(m.goals || {})[p.id] || null, voice:(st.voices || {})[p.id] || 'warm' });
     const r = await sbPersonal.rpc('coordinator_tell', { p_staff:p.id, p_subject:fb.subject, p_text:fb.text, p_kind:'info' });
     if(r.error) sent.failed++; else sent.ok++;
   }

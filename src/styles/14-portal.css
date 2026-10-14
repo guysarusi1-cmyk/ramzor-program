@@ -396,3 +396,4 @@
   .portal-problem, .home-problem{ display:block; margin:28px auto 8px; background:none; border:0; padding:10px 14px; font:inherit; font-size:14px; color:var(--p-muted, var(--muted)); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
   .portal-problem:hover, .home-problem:hover, .portal-problem:focus-visible, .home-problem:focus-visible{ color:var(--p-text, var(--text)); }
   .pmine-row.done{ opacity:.6; }  .install-link{ font-size:15px; color:var(--p-text, var(--text)); text-decoration:underline; text-underline-offset:3px; }          /* "install as an app": on the main screen and in the portal of those who have only it (phones, before it is installed) */
+  .adm-mins{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }          /* the three personal minimums side by side */

@@ -1135,6 +1135,10 @@
       check('feedback: the words say that we tried, and thank the person', /הצלחנו להיענות ל-3/.test(fb.text) && /ניסינו/.test(fb.text) && /תודה/.test(fb.text) && /אנחנו כאן בשבילך/.test(fb.text), fb.text.slice(0, 200));
       check('feedback: nothing in it blames the person or sounds like a reprimand', !/אשמתך|לא עמדת|עליך לשפר|כשל|הפרת|חייב/.test(fb.text), fb.text);
       check('feedback: the shift that was not honoured is named with its day', fb.unmet[0].includes(dayLabel(d1)) && /לילה/.test(fb.unmet[0]), fb.unmet[0]);
+      { const own = fbMinimum({ female:true, min_mid:1, min_nights:0, min_weekend:0 }, mk), wk = fbWeeks(mk);
+        const oneEach = wk.map(w => ({ day:addDays(w, 3), shift:'N', from:'22:00', to:'08:00' }));          // (one night in every full week)
+        const fbo = srvFeedbackFor({ first:'דנה' }, mk, { prefs:{ slots:{}, absent:[], hours:{}, fixed:[] }, rows:oneEach, profile:{ female:true, min_mid:1, min_nights:0, min_weekend:0 }, goal:null });
+        check('feedback: a personal minimum (1 / 0 / 0) is described as one shift a week without a weekend minimum, and one night a week meets it', /משמרת אחת בשבוע/.test(own.text) && /בלי מינימום של סופי שבוע/.test(own.text) && own.total === wk.length && fbo.minGaps.length === 0, own.text + ' / ' + fbo.minGaps.join(';')); }
       const min = fbMinimum({ female:true }, mk), weeks = fbWeeks(mk).length;
       check('feedback: the minimum is spelled out for the person (2 mid-week + a night a week, 4 weekend shifts)', min.total === weeks * 2 + weeks + Math.max(0, 4 - weeks) && /משמרות אמצע שבוע/.test(min.text) && /4 משמרות סופ"ש/.test(min.text), JSON.stringify(min));
       check('feedback: a person who does no nights has a different minimum, and a manual-only person has none', fbMinimum({ no_nights:true }, mk).total === weeks * 2 + 4 && fbMinimum({ manual_only:true }, mk).total === null, '');
