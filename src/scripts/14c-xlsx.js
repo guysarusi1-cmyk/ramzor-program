@@ -77,17 +77,31 @@ function scheduleTable(ctx, assignments){
   }));
   return rows;
 }
+// the service girls and the teachers of each day, with their hours (they are not in the shifts' cells; the portal on the server only)
+function scheduleOthersOf(ctx){
+  if(typeof portalServerOn === 'undefined' || !portalServerOn || !portalState || !portalState.rows) return null;
+  const st = portalLoad(), out = {}; let any = false;
+  st.rows.forEach(r => {
+    if(monthKeyOf(r.day) !== ctx.month) return;
+    const p = st.instructors.find(x => x.id === r.staff); if(!p || !['service', 'teacher'].includes(p.role)) return;
+    any = true; const d = out[r.day] = out[r.day] || { service:[], teacher:[] };
+    d[p.role].push({ name:instrName(p, st.instructors), hours:r.from && r.to ? `${r.from}–${r.to}` : '' });
+  });
+  Object.values(out).forEach(d => ['service', 'teacher'].forEach(k => d[k].sort((a, b) => a.hours.localeCompare(b.hours) || a.name.localeCompare(b.name))));
+  return any ? out : null;
+}
+const OTHERS_COLS = [['service', 'בנות שירות'], ['teacher', 'מורות וגננות']];
 function buildScheduleXlsx(ctx, assignments){
-  const table = scheduleTable(ctx, assignments);
-  const rows = [[{ text:'תאריך', s:1 }, ...ctx.shiftTypes.map(st => ({ text:`${st.label} (${st.start}–${st.end})`, s:1 }))]];
+  const table = scheduleTable(ctx, assignments), others = scheduleOthersOf(ctx);
+  const rows = [[{ text:'תאריך', s:1 }, ...ctx.shiftTypes.map(st => ({ text:`${st.label} (${st.start}–${st.end})`, s:1 })), ...(others ? OTHERS_COLS.map(c => ({ text:c[1], s:1 })) : [])]];
   table.forEach(r => rows.push([{ text:dayLabel(r.date), s:3 }, ...r.cells.map(c => {
     const runs = [];
     c.people.forEach((p, i) => { if(i) runs.push({ text:'\n' }); runs.push({ text:p.name, color:XLSX_COLORS[p.level], bold:true }); if(p.note) runs.push({ text:` (${p.note})` }); });
     if(c.missing){ if(runs.length) runs.push({ text:'\n' }); runs.push({ text:`חסר/ים ${c.missing}`, color:XLSX_COLORS.no, bold:true }); }
     return runs.length ? { runs, s:2 } : { text:'', s:2 };
-  })]));
+  }), ...(others ? OTHERS_COLS.map(([k]) => { const list = (others[r.date] || {})[k] || []; return list.length ? { runs:list.flatMap((x, i) => [...(i ? [{ text:'\n' }] : []), { text:x.name, bold:true }, ...(x.hours ? [{ text:` ${x.hours}` }] : [])]), s:2 } : { text:'', s:2 }; }) : [])]));
   rows.push([{ text:'מקרא', s:3 }, { runs:[{ text:'ירוק = קיבל/ה מה שרצה  ', color:XLSX_COLORS.yes, bold:true }, { text:'כתום = יכול/ה  ', color:XLSX_COLORS.avoid, bold:true }, { text:'אדום = לא / חסר  ', color:XLSX_COLORS.no, bold:true }, { text:'כהה = בלי העדפה', color:XLSX_COLORS.neutral, bold:true }], s:0 }]);
-  return buildXlsx('סידור ' + monthLabel(ctx.month), rows, [16, ...ctx.shiftTypes.map(() => 26)]);
+  return buildXlsx('סידור ' + monthLabel(ctx.month), rows, [16, ...ctx.shiftTypes.map(() => 26), ...(others ? OTHERS_COLS.map(() => 24) : [])]);
 }
 function downloadBytes(bytes, filename, mime){
   const url = URL.createObjectURL(new Blob([bytes], { type:mime }));
@@ -100,9 +114,9 @@ function downloadScheduleXlsx(ctx, assignments){
 
 // print / "save as PDF": only the schedule table is printed
 function scheduleHtmlTable(ctx, assignments){
-  const rows = scheduleTable(ctx, assignments);
-  const head = `<tr><th>תאריך</th>${ctx.shiftTypes.map(st => `<th>${escapeHtml(st.label)}<br><span>${st.start}–${st.end}</span></th>`).join('')}</tr>`;
-  const body = rows.map(r => `<tr><th>${dayLabel(r.date)}</th>${r.cells.map(c => `<td>${c.people.map(p => `<b class="lv-${p.level}">${escapeHtml(p.name)}</b>${p.note ? ` <small>(${escapeHtml(p.note)})</small>` : ''}`).join('<br>')}${c.missing ? `<br><b class="lv-no">חסר/ים ${c.missing}</b>` : ''}</td>`).join('')}</tr>`).join('');
+  const rows = scheduleTable(ctx, assignments), others = scheduleOthersOf(ctx);
+  const head = `<tr><th>תאריך</th>${ctx.shiftTypes.map(st => `<th>${escapeHtml(st.label)}<br><span>${st.start}–${st.end}</span></th>`).join('')}${others ? OTHERS_COLS.map(c => `<th>${c[1]}</th>`).join('') : ''}</tr>`;
+  const body = rows.map(r => `<tr><th>${dayLabel(r.date)}</th>${r.cells.map(c => `<td>${c.people.map(p => `<b class="lv-${p.level}">${escapeHtml(p.name)}</b>${p.note ? ` <small>(${escapeHtml(p.note)})</small>` : ''}`).join('<br>')}${c.missing ? `<br><b class="lv-no">חסר/ים ${c.missing}</b>` : ''}</td>`).join('')}${others ? OTHERS_COLS.map(([k]) => `<td>${((others[r.date] || {})[k] || []).map(x => `<b>${escapeHtml(x.name)}</b>${x.hours ? ` <small>${x.hours}</small>` : ''}`).join('<br>')}</td>`).join('') : ''}</tr>`).join('');
   return `<table class="print-table"><caption>סידור עבודה — ${monthLabel(ctx.month)}</caption>${head}${body}</table>`;
 }
 function printSchedule(ctx, assignments){

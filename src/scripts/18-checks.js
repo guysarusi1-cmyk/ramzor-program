@@ -1827,6 +1827,25 @@
         srv.lang = 'he'; await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = null; arApply(); showHub();
       }
     });
+    // ---- Excel and print with the service girls and the teachers (a published month of the test server that has them)
+    await step('excel others', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('coordinator-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error){ check('excel others: the coordinator signs in', false, error.message); return; }
+      portalServerOn = true; await srvLoad();
+      const st = portalLoad(), isOther = r => { const p = st.instructors.find(x => x.id === r.staff); return p && ['service', 'teacher'].includes(p.role); };
+      const mk = Object.keys(st.months).find(k => st.rows.some(r => monthKeyOf(r.day) === k && isOther(r)));
+      if(!mk){ check('(info) excel others: skipped, no month with service girls or teachers on the test server', true, ''); }
+      else {
+        const ctx = portalCtx(mk), others = st.rows.filter(r => monthKeyOf(r.day) === mk && isOther(r));
+        const html = scheduleHtmlTable(ctx, portalMonth(mk).assignments), names = (html.match(/<td>[^]*?<\/td>/g) || []).length;
+        const xl = new TextDecoder().decode(buildScheduleXlsx(ctx, portalMonth(mk).assignments));
+        const shown = (html.split('<tr>').slice(2).map(tr => (tr.match(/<td>/g) || []).length)[0]) || 0;
+        check('excel others: the Excel file and the print have two more columns, the service girls and the teachers, with every one of them and her hours', /בנות שירות/.test(xl) && /מורות וגננות/.test(xl) && /<th>בנות שירות<\/th>/.test(html) && shown === ctx.shiftTypes.length + 2 && others.every(r => { const p = st.instructors.find(x => x.id === r.staff); return html.includes(instrName(p, st.instructors)) && (!r.from || html.includes(`${r.from}–${r.to}`)); }), `${others.length} rows, ${shown} columns, ${names} cells`);
+      }
+      await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; showHub();
+    });
     // ---- Arabic: the portal of an instructor and of a service girl in Arabic; everything that stayed in Hebrew is listed (people's names excepted)
     await step('arabic', async () => {
       if(!PORTAL_ENABLED) return;
