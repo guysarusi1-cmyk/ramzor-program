@@ -1777,6 +1777,7 @@
       const enter = async kind => { await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; const { error } = await signInRetry(M(kind), PW); if(error) return false; portalServerOn = true; if(!(await srvLoad())) return false; portalUi.persona = srv.me; return true; };
       if(!(await enter('instructor2'))){ check('open days: the second instructor signs in', false, 'no'); return; }
       const i2 = srv.me;
+      const lg = await sbPersonal.from('staff_settings').upsert({ staff_id:i2, lang:'ar' });          // (she reads Arabic: her notice must come in Arabic; scheduling-v26.sql)
       if(!(await enter('coordinator'))){ check('open days: the coordinator signs in', false, 'no'); return; }
       const probe = await sbPersonal.rpc('open_days_status');
       if(probe.error){ check('(info) open days: skipped, scheduling-v25.sql was not run on this server', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; return; }
@@ -1802,8 +1803,10 @@
         // the instructor: a card at the top, she places herself
         await enter('instructor2'); portalUi.month = mk; showPortal('schedule');
         await waitFor(() => !!document.querySelector(`[data-od-join="${odId}"]`), 60);
+        { const nt2 = await sbPersonal.from('notices').select('text').eq('to_staff', i2).order('created_at', { ascending:false }).limit(1);
+          check('open days: an instructor who chose Arabic gets the notice in Arabic (the server writes it)', !lg.error && !!(nt2.data && nt2.data[0]) && /فُتح يوم إضافي/.test(nt2.data[0].text), (lg.error || {}).message || (nt2.data && nt2.data[0] && nt2.data[0].text)); }
         const join = document.querySelector(`[data-od-join="${odId}"]`);
-        check('open days: the instructor sees a card "נפתח יום נוסף לשיבוץ" with the places left', !!join && /נשאר מקום אחד/.test(join.closest('.od-card').textContent), 'no card');
+        check('open days: the instructor sees a card "נפתח יום נוסף לשיבוץ" with the places left', !!join && /נשאר מקום אחד|بقي مكان واحد/.test(join.closest('.od-card').textContent), 'no card');
         if(join){ join.click(); await answerSheet(); }
         check('open days: she is placed at once (the shift is in the schedule, marked as this open day)', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id,shift,flags').eq('staff_id', i2).eq('day', day); return a.data && a.data.length === 1 && a.data[0].shift === 'M' && a.data[0].flags.includes('od:' + odId); }, 60), 'not placed');
         // another instructor: the day is full, so there is no card
@@ -1820,8 +1823,8 @@
         await enter('coordinator');
         if(odId){ await sbPersonal.from('assignment').delete().contains('flags', ['od:' + odId]); await sbPersonal.from('open_days').delete().eq('id', odId); }
         await sbPersonal.from('schedule').delete().eq('month', firstOf(mk));
-        for(const k of ['instructor', 'instructor2']){ if(await enter(k)) await sbPersonal.from('notices').update({ seen:true }).eq('seen', false); }
-        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = null; showHub();
+        for(const k of ['instructor', 'instructor2']){ if(await enter(k)){ await sbPersonal.from('notices').update({ seen:true }).eq('seen', false); if(k === 'instructor2') await sbPersonal.from('staff_settings').update({ lang:null }).eq('staff_id', srv.me); } }
+        srv.lang = 'he'; await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = null; arApply(); showHub();
       }
     });
     // ---- Arabic: the portal of an instructor and of a service girl in Arabic; everything that stayed in Hebrew is listed (people's names excepted)
@@ -1836,6 +1839,7 @@
         srv.lang = 'ar'; arApply(); arMissing.clear();
         if(activeView() === 'view-apphome'){ await sleep(300); document.getElementById('apphome-portal').click(); }
         await waitFor(() => activeView() === 'view-portal' && !/טוען|جارٍ/.test(document.getElementById('portal-body').textContent), 60); await sleep(300);
+        arMissing.clear(); arSweep();          // (only what this person's portal shows: not the screen of the step before, which was still in the page)
         check(`arabic (${kind}): the portal is in Arabic (title, tabs, greeting)`, /بوابة/.test(document.querySelector('.portal-title').textContent) && /الجدول/.test(document.querySelector('.portal-tabs').textContent) && /مرحبًا/.test(document.querySelector('.portal-hello').textContent), document.querySelector('.portal-title').textContent + ' / ' + document.querySelector('.portal-tabs').textContent);
         check(`arabic (${kind}): the sentences of the system are in Arabic`, /[؀-ۿ]/.test(tx('sch_unpub')) && !/[֐-׿]/.test(tx('sch_unpub')), tx('sch_unpub'));
         for(const tab of [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab)){
