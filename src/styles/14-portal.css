@@ -404,3 +404,4 @@
   .od-card-text{ display:flex; flex-direction:column; gap:3px; min-width:0; } .od-card-text b{ font-size:16px; } .od-card-text small{ color:var(--p-muted, var(--muted)); }
   .od-count{ font-weight:700; } .od-count.full{ color:var(--p-yes, #7be0a0); } .od-count.low{ color:var(--p-no, #ff8a80); }
   .od-hours{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .od-hours[hidden]{ display:none; } .od-nums{ grid-template-columns:1fr 1fr; }
+  body.lang-ar .portal-tabs{ flex-wrap:wrap; justify-content:center; }          /* (Arabic words are longer: the tabs go to a second row instead of being cut) */

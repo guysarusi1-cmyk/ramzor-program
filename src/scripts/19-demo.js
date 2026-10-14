@@ -22,6 +22,7 @@
       const pm = location.search.match(/[?&]pmonth=(\d{4}-\d{2})/); if(pm) portalUi.month = portalUi.pmonth = portalUi.smonth = pm[1];          // (&pmonth=2026-11 opens that month)
       if(/[?&]long\b/.test(location.search)){ srv.showLong = true; srv.pickOne = /[?&]pick\b/.test(location.search); }          // (&long shows the long weekend, &long&pick also "only one of these")
       if(/[?&]leopard\b/.test(location.search)) srv.portalTheme = 'leopard';          // (&leopard: the coordinator's leopard look)
+      if(/[?&]lang=ar/.test(location.search)){ srv.lang = 'ar'; arApply(); }          // (&lang=ar: the portal in Arabic)
       if(/[?&]open\b/.test(location.search)) portalUi.fold = { mine:true, team:true, swap:true, fb:true, openshifts:true, swmine:true, swopen:true };          // (&open shows the folded parts opened)
       { const sf = location.search.match(/[?&]sfold=(\w+)/); if(sf){ portalUi.setFold = portalUi.setFold || {}; portalUi.setFold[sf[1]] = true; } }          // (&sfold=ann opens that part of the settings screen)
       if(/[?&]printpdf/.test(location.search)) setTimeout(async () => {          // (&printpdf: the coordinator's print page, kept on the screen for a PDF made by a headless browser)

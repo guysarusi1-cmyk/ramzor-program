@@ -93,13 +93,14 @@ const VOICES = {
 };
 // the voice of the person now: the setting, else what the browser remembers, else the warm one
 function portalVoice(){
+  if(typeof arOn === 'function' && arOn()) return 'warm';          // (in Arabic there is one voice, the warm one)
   if(typeof srv !== 'undefined' && srv.voice) return srv.voice;
   try { const v = localStorage.getItem('ramzor-portal-voice'); if(v && VOICES.st_unsub[v]) return v; } catch(e){}
   return 'warm';
 }
-const tx = (key, ...args) => { const k = VOICES[key]; if(!k) return key; return (k[portalVoice()] || k.warm)(...args); };
+const tx = (key, ...args) => { if(typeof arOn === 'function' && arOn()){ const a = arVoice(key, args); if(a != null) return a; } const k = VOICES[key]; if(!k) return key; return (k[portalVoice()] || k.warm)(...args); };
 // the same, for somebody else's voice (the coordinator writes the feedback in each person's own voice)
-const txFor = (voice, key, ...args) => { const k = VOICES[key]; return (k && (k[voice] || k.warm))(...args); };
+const txFor = (voice, key, ...args) => { if(voice === 'ar'){ const a = arVoice(key, args); if(a != null) return a; } const k = VOICES[key]; return (k && (k[voice] || k.warm))(...args); };          // (voice 'ar': the Arabic of an Arabic speaker)
 
 // ---------------------------------------------------------------- the settings (the gear)
 async function srvLoadSettings(){
@@ -113,6 +114,11 @@ async function srvLoadSettings(){
   try { const lp = await sbPersonal.from('sched_settings').select('value').eq('key', 'leopard_people').maybeSingle(); if(!lp.error && lp.data && Array.isArray(lp.data.value)) srv.leopardPeople = lp.data.value; } catch(e){}          // (who else may choose the leopard look: chosen by the admin)
   try { const t = await sbPersonal.from('staff_settings').select('portal_theme').eq('staff_id', srv.me).maybeSingle(); if(!t.error && t.data) srv.portalTheme = t.data.portal_theme || null; } catch(e){}          // (comes with scheduling-v16.sql)
   if(!srv.voice){ try { srv.voice = localStorage.getItem('ramzor-portal-voice') || null; } catch(e){} }
+  srv.lang = (srv.profile && srv.profile.lang) || null;          // (the language: her own choice, else the admin's default; scheduling-v25.sql)
+  try { const lg = await sbPersonal.from('staff_settings').select('lang').eq('staff_id', srv.me).maybeSingle(); if(!lg.error && lg.data && lg.data.lang) srv.lang = lg.data.lang; } catch(e){}
+  if(!srv.lang){ try { srv.lang = localStorage.getItem('ramzor-portal-lang') || 'he'; } catch(e){ srv.lang = 'he'; } }
+  try { localStorage.setItem('ramzor-portal-lang', srv.lang); } catch(e){}
+  if(typeof arApply === 'function') arApply();
   if(!hasCols){ try { srv.pickOne = localStorage.getItem('ramzor-portal-pickone') === '1'; srv.showLong = localStorage.getItem('ramzor-portal-showlong') === '1'; } catch(e){} }          // (only until the columns exist)
 }
 async function srvSaveSetting(patch){
@@ -130,8 +136,10 @@ function openPortalSettings(){
   const coord = leopardAllowed(), leo = coord && srv.portalTheme === 'leopard';          // (the leopard look: exclusive — the coordinator, the admin, and whom the admin chose; never the default)          // (the leopard look: only the coordinator's portal)
   const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){ return '0'; } })();          // ('0' usual, '1' large, '2' very large)
   const sh = portalSheet(`<h2>העדפות מערכת</h2>
-    <h3 class="psec">באיזו שפה נדבר איתך?</h3>
-    <div class="pgoal-list" role="group" aria-label="שפת המערכת">${Object.keys(VOICE_NAMES).map(k => `<button type="button" class="pgoal-opt${v === k ? ' on' : ''}" data-voice="${k}"><b>${VOICE_NAMES[k]}</b><small>${VOICE_SAMPLE[k]}</small></button>`).join('')}</div>
+    ${portalAsCoord(portalMe()) ? '' : `<h3 class="psec">שפה · اللغة</h3>
+    <div class="pchoice wrap ar-keep"><button type="button" class="${srv.lang === 'ar' ? '' : 'on'}" data-set-lang="he">עברית</button><button type="button" class="${srv.lang === 'ar' ? 'on' : ''}" data-set-lang="ar">العربية</button></div>`}
+    ${arOn() ? '' : `<h3 class="psec">באיזו שפה נדבר איתך?</h3>
+    <div class="pgoal-list" role="group" aria-label="שפת המערכת">${Object.keys(VOICE_NAMES).map(k => `<button type="button" class="pgoal-opt${v === k ? ' on' : ''}" data-voice="${k}"><b>${VOICE_NAMES[k]}</b><small>${VOICE_SAMPLE[k]}</small></button>`).join('')}</div>`}
     <h3 class="psec">מראה</h3>
     <div class="pchoice wrap"><button type="button" class="${dark && !leo ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark || leo ? '' : 'on'}" data-set-theme="light">מצב בהיר</button>${coord ? `<button type="button" class="${leo ? 'on' : ''}" data-set-theme="leopard">מצב מנומר 🐆</button>` : ''}</div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button><button type="button" class="${big === '2' ? 'on' : ''}" data-set-big="2">טקסט גדול מאוד</button></div>
@@ -143,6 +151,10 @@ function openPortalSettings(){
     <button type="button" class="btn ghost" id="gear-problem" style="margin-top:14px;width:100%">משהו לא עובד? דיווח על תקלה</button>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
   sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
+  sh.querySelectorAll('[data-set-lang]').forEach(b => b.addEventListener('click', async () => {
+    const lang = b.dataset.setLang; if(lang === srv.lang) return;
+    await srvSaveLang(lang); sh.close(); arApply(); showPortal(); toast(lang === 'ar' ? 'تم تغيير اللغة إلى العربية' : 'השפה הוחלפה לעברית');
+  }));
   sh.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', async () => {
     await srvSaveSetting({ voice:b.dataset.voice }); sh.close(); toast(({ warm:'בחרנו בשפה החמה והרכה', light:'עברנו לשפה הקלילה. נתראה בבדיחות!', brief:'עברנו לשפה קצרה ועניינית' })[b.dataset.voice]); showPortal();
   }));

@@ -370,6 +370,7 @@ async function personalLeave(){
   try { await srvFlush(); } catch(e){}
   await sbPersonal.auth.signOut();
   sb = sbShared; ramzorPersonal = false; portalServerOn = false; portalState = null; srv.me = null; srv.profile = null; srv.profileFor = null;
+  if(typeof arApply === 'function') arApply();          // (back to Hebrew)
   portalUi.viewAs = null; portalUi.manager = false; portalUi.persona = null;
 }
 async function srvSignOut(){

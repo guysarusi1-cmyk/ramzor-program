@@ -1824,6 +1824,47 @@
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = null; showHub();
       }
     });
+    // ---- Arabic: the portal of an instructor and of a service girl in Arabic; everything that stayed in Hebrew is listed (people's names excepted)
+    await step('arabic', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
+      const all = new Set();
+      for(const kind of ['instructor', 'service']){
+        await sbPersonal.auth.signOut();
+        const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW);
+        if(error || !(await personalEnter())){ check(`arabic (${kind}): signs in`, false, error ? error.message : 'no'); continue; }
+        srv.lang = 'ar'; arApply(); arMissing.clear();
+        if(activeView() === 'view-apphome'){ await sleep(300); document.getElementById('apphome-portal').click(); }
+        await waitFor(() => activeView() === 'view-portal' && !/טוען|جارٍ/.test(document.getElementById('portal-body').textContent), 60); await sleep(300);
+        check(`arabic (${kind}): the portal is in Arabic (title, tabs, greeting)`, /بوابة/.test(document.querySelector('.portal-title').textContent) && /الجدول/.test(document.querySelector('.portal-tabs').textContent) && /مرحبًا/.test(document.querySelector('.portal-hello').textContent), document.querySelector('.portal-title').textContent + ' / ' + document.querySelector('.portal-tabs').textContent);
+        check(`arabic (${kind}): the sentences of the system are in Arabic`, /[؀-ۿ]/.test(tx('sch_unpub')) && !/[֐-׿]/.test(tx('sch_unpub')), tx('sch_unpub'));
+        for(const tab of [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab)){
+          document.querySelector(`[data-ptab="${tab}"]`).click(); await sleep(80); await waitFor(() => !/טוען|جارٍ/.test(document.getElementById('portal-body').textContent), 60); await sleep(200);
+          const n = document.querySelectorAll('#portal-body details').length;
+          for(let i = 0; i < n && i < 12; i++){ const d = document.querySelectorAll('#portal-body details')[i]; if(!d) break; d.open = true; await sleep(250); d.open = false; }
+          if(tab === 'prefs'){ for(const m of [1, 2]){ const nx = document.querySelector('[data-pmonth-next], .pmonth-next, [data-pmonth="next"]'); if(nx){ nx.click(); await sleep(500); } } }
+        }
+        document.getElementById('portal-gear').click(); await sleep(300); { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+        document.getElementById('portal-problem').click(); await sleep(300); { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+        // more states: a published month with shifts, the change windows, the app home, the install steps
+        const pub = Object.keys(portalLoad().months).find(k => portalLoad().months[k].published && portalLoad().rows.some(r => r.staff === srv.me && monthKeyOf(r.day) === k));
+        if(pub){ portalUi.month = pub; portalUi.fold = { mine:true, team:true, fb:true, openshifts:true }; showPortal('schedule'); await sleep(900);
+          const wc = document.getElementById('want-change');
+          if(wc){ wc.click(); await sleep(250); for(const kind of ['swap', 'cant']){ const o = document.querySelector(`.psheet [data-change="${kind}"]`); if(o){ o.click(); await sleep(400); const pk = document.querySelector('.psheet [data-pick-shift]'); if(pk && kind === 'cant'){ pk.click(); await sleep(500); } } document.querySelectorAll('.sheet [data-close]').forEach(x => x.click()); await sleep(150); if(kind === 'swap'){ wc.click(); await sleep(250); } } }
+          document.querySelectorAll('.sheet').forEach(s => { if(s.classList.contains('psheet') || s.classList.contains('confirm-sheet')) s.remove(); }); }
+        showAppHome(); await sleep(300); openInstallSheet(); await sleep(200); closeInstallSheet();
+        arMissing.forEach(x => all.add(x));
+        srv.lang = 'he'; await personalLeave(); showHub();
+      }
+      // the sign-in screens, in the language this device remembers
+      try { localStorage.setItem('ramzor-portal-lang', 'ar'); } catch(e){}
+      arMissing.clear(); document.getElementById('protected-app').style.display = '';
+      for(const stp of ['email', 'code', 'setpw']){ srvShowLogin(stp, 'someone@example.com'); arApply(); await sleep(250); arSweep(); }
+      arMissing.forEach(x => all.add(x));
+      try { localStorage.setItem('ramzor-portal-lang', 'he'); } catch(e){} arApply(); showHub();
+      window.__arMissing = [...all];
+      check('arabic: everything on the screens is translated (people’s names excepted)', all.size === 0, all.size + ' left: ' + [...all].slice(0, 60).join(' ¦ '));
+    });
     // ---- very large text (the gear: "טקסט גדול מאוד"): every tab and folded part still fits the screen, for an instructor, a service girl and the coordinator
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;
