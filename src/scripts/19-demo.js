@@ -24,6 +24,10 @@
       if(/[?&]leopard\b/.test(location.search)) srv.portalTheme = 'leopard';          // (&leopard: the coordinator's leopard look)
       if(/[?&]open\b/.test(location.search)) portalUi.fold = { mine:true, team:true, swap:true, fb:true, openshifts:true, swmine:true, swopen:true };          // (&open shows the folded parts opened)
       { const sf = location.search.match(/[?&]sfold=(\w+)/); if(sf){ portalUi.setFold = portalUi.setFold || {}; portalUi.setFold[sf[1]] = true; } }          // (&sfold=ann opens that part of the settings screen)
+      if(/[?&]printpdf/.test(location.search)) setTimeout(async () => {          // (&printpdf: the coordinator's print page, kept on the screen for a PDF made by a headless browser)
+        window.print = () => {}; for(let i = 0; i < 80 && !document.getElementById('cs-print'); i++) await new Promise(r => setTimeout(r, 250)); document.getElementById('cs-print').click(); await new Promise(r => setTimeout(r, 200));
+        const sheet = document.getElementById('print-sheet').cloneNode(true); setTimeout(() => { document.body.appendChild(sheet); document.body.classList.add('printing'); }, 1500);
+      }, 2500);
       showPortal(({ 'psrv-prefs':'prefs', 'psrv-subs':'submissions', 'psrv-swaps':'swaps', 'psrv-cswaps':'swaps', 'psrv-cvac':'vacations', 'psrv-cset':'settings', 'psrv-inbox':'inbox' })[what] || (location.search.match(/[?&]ptab=(\w+)/) || [])[1] || 'schedule');          // (&ptab=avail opens that tab)
       return;
     }
