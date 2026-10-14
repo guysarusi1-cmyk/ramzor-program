@@ -70,6 +70,7 @@ async function srvLoadCoord(){
   st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}          // (each person's chosen voice, so that her feedback is written in it)
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; try { const sr = await sbPersonal.from('sick_reports').select('assignment_id,note').order('created_at'); (sr.data || []).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; }); } catch(e){}          // (the reason an instructor gave when she reported that she cannot come)
+  await srvOdLoad();          // (the open days for sign-up and who took them: scheduling-v25.sql)
   st.openReqs = []; try { const r = await sbPersonal.from('open_shift_requests').select('id,staff_id,day,shift,created_at').eq('status', 'pending').order('created_at'); st.openReqs = r.error ? [] : (r.data || []); } catch(e){}          // (the requests to join an open shift; they come with scheduling-v11.sql)
 }
 
@@ -95,6 +96,7 @@ function srvRenderCoordSchedule(body){
   const flags = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk), has = !!m.status;
   const needLook = flags.filter(f => !['service_absent', 'service'].includes(f.kind)), info = flags.filter(f => ['service_absent', 'service'].includes(f.kind));
   const people = id => (st.instructors.find(p => p.id === id) || {}).first || '';
+  const odAlerts = m.published ? srvOdAlerts(mk) : [], lookCount = needLook.length + odAlerts.length;
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
     ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. המערכת בונה אותו אוטומטית פעם אחת: טיוטה ב-24 בחודש ב-23:00, והסידור הסופי בלילה שבין ה-24 ל-25 (בין חצות ל-06:00), והוא נשלח אלייך. מכאן אפשר לערוך אותו ידנית.</div>'}
@@ -102,14 +104,17 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn" id="cs-publish"${m.published ? ' disabled' : ''}>${m.published ? 'הסידור פורסם' : 'פרסום הסידור'}</button>
       <button type="button" class="btn ghost" id="cs-xlsx">ייצוא לאקסל</button>
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
+      ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
     </div>
     ${m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>'}
-    ${needLook.length ? `<details class="pissues"><summary>${needLook.length} דברים שדורשים תשומת לב</summary>${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
+    ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
+    ${m.published ? srvOdFoldHtml(mk) : ''}
     <div class="pnote">לחיצה על משמרת בלוח פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בלוח.</div>
     <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
   wireMonthNav(body);
   if(!has) return;
+  if(m.published) srvOdWire(body, mk);
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });
   if(csClose) csClose.addEventListener('click', () => { portalUi.csOpen = false; portalUi.csPerson = null; srvRenderCoordSchedule(body); });

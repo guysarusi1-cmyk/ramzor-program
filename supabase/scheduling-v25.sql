@@ -104,7 +104,10 @@ begin
     returning * into o;
   txt := 'נפתח יום נוסף לשיבוץ: ' || public.open_day_text(o) || '. יש ' || o.max_staff || ' מקומות, ומי שרוצה יכול/ה להשתבץ בעצמו/ה בפורטל, בלשונית הסידור.' || coalesce(' ' || o.note, '');
   for r in select s.id from public.staff s where s.kind = 'instructor' and s.active loop
-    if public.open_day_fits(o, r.id) then perform public.tell_staff(r.id, 'נפתח יום נוסף לשיבוץ', txt, 'open'); end if;
+    if public.open_day_fits(o, r.id) then
+      if coalesce(o.note, '') like 'בדיקה אוטומטית%' then insert into public.notices (to_staff, text, kind) values (r.id, txt, 'open');          -- (the automatic checks of the test site: no e-mails)
+      else perform public.tell_staff(r.id, 'נפתח יום נוסף לשיבוץ', txt, 'open'); end if;
+    end if;
   end loop;
   return o.id;
 end $$;

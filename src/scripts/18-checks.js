@@ -1770,6 +1770,60 @@
       }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.tab = null; portalUi.persona = 'c1'; showHub();
     });
+    // ---- a new day for sign-up (scheduling-v25.sql): the coordinator opens a day in a published month, an instructor places herself, at the maximum it closes
+    await step('open days', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
+      const enter = async kind => { await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; const { error } = await signInRetry(M(kind), PW); if(error) return false; portalServerOn = true; if(!(await srvLoad())) return false; portalUi.persona = srv.me; return true; };
+      if(!(await enter('instructor2'))){ check('open days: the second instructor signs in', false, 'no'); return; }
+      const i2 = srv.me;
+      if(!(await enter('coordinator'))){ check('open days: the coordinator signs in', false, 'no'); return; }
+      const probe = await sbPersonal.rpc('open_days_status');
+      if(probe.error){ check('(info) open days: skipped, scheduling-v25.sql was not run on this server', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; return; }
+      const day = addDays(srvToday(), 3), mk = monthKeyOf(day);
+      const had = await sbPersonal.from('schedule').select('month').eq('month', firstOf(mk));
+      if(had.error || had.data.length){ check('(info) open days: skipped, the month already has a schedule on the test server (the checks never touch it)', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; return; }
+      let odId = null;
+      try {
+        let r = await sbPersonal.from('schedule').insert({ month:firstOf(mk), status:'published', published_at:new Date().toISOString() }); if(r.error) throw r.error;
+        await srvReload(); portalUi.month = mk; showPortal('schedule'); await sleep(300);
+        const btn = document.getElementById('cs-openday');
+        check('open days: a published month has "פתיחת יום לשיבוץ" next to the publishing', !!btn, 'no button');
+        btn.click(); await sleep(150);
+        const sh = document.querySelector('.psheet #od-day') && document.querySelector('.psheet #od-day').closest('.sheet');
+        check('open days: the window asks for the date, what is open (the whole day by default; the night only if chosen), minimum, maximum and for whom', !!sh && sh.querySelector('#od-scope').value === 'day' && !!sh.querySelector('#od-min') && !!sh.querySelector('#od-max') && sh.querySelectorAll('#od-for option').length === 3 && [...sh.querySelectorAll('#od-scope option')].some(o => o.value === 'night'), 'no window');
+        sh.querySelector('#od-day').value = day; sh.querySelector('#od-scope').value = 'morning'; sh.querySelector('#od-scope').dispatchEvent(new Event('change'));
+        sh.querySelector('#od-min').value = '1'; sh.querySelector('#od-max').value = '1'; sh.querySelector('#od-note').value = 'בדיקה אוטומטית';
+        sh.querySelector('#od-go').click(); await answerSheet();
+        const made = await waitFor(async () => { const s = await sbPersonal.rpc('open_days_status'); const o = (s.data || []).find(x => x.day === day && x.note === 'בדיקה אוטומטית'); if(o) odId = o.id; return !!o; }, 60);
+        check('open days: publishing saves the day', made, 'not saved');
+        await waitFor(() => !!document.querySelector('[data-od-fold]'), 60);
+        check('open days: the coordinator sees it in "ימים פתוחים לשיבוץ" with 0 of 1', /נרשמו 0 מתוך 1/.test((document.querySelector('[data-od-fold]') || {}).textContent || ''), 'no fold');
+        // the instructor: a card at the top, she places herself
+        await enter('instructor2'); portalUi.month = mk; showPortal('schedule');
+        await waitFor(() => !!document.querySelector(`[data-od-join="${odId}"]`), 60);
+        const join = document.querySelector(`[data-od-join="${odId}"]`);
+        check('open days: the instructor sees a card "נפתח יום נוסף לשיבוץ" with the places left', !!join && /נשאר מקום אחד/.test(join.closest('.od-card').textContent), 'no card');
+        if(join){ join.click(); await answerSheet(); }
+        check('open days: she is placed at once (the shift is in the schedule, marked as this open day)', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id,shift,flags').eq('staff_id', i2).eq('day', day); return a.data && a.data.length === 1 && a.data[0].shift === 'M' && a.data[0].flags.includes('od:' + odId); }, 60), 'not placed');
+        // another instructor: the day is full, so there is no card
+        await enter('instructor'); portalUi.month = mk; showPortal('schedule'); await sleep(1500);
+        check('open days: at the maximum the offer disappears for the others', !document.querySelector(`[data-od-join="${odId}"]`), 'still offered');
+        const again = await sbPersonal.rpc('open_day_join', { p_id:odId });
+        check('... and the database refuses another one (full)', !!again.error && /full/.test(again.error.message), (again.error || {}).message || 'accepted');
+        // the coordinator: 1 of 1, the name, and a notice that it is full
+        await enter('coordinator'); portalUi.month = mk; showPortal('schedule'); await waitFor(() => !!document.querySelector('[data-od-fold]'), 60);
+        check('open days: the coordinator sees 1 of 1 and who', /נרשמו 1 מתוך 1/.test(document.querySelector('[data-od-fold]').textContent) && /מלא/.test(document.querySelector('[data-od-fold]').textContent), document.querySelector('[data-od-fold]').textContent.slice(0, 120));
+        const nt = await sbPersonal.from('notices').select('text').eq('to_staff', srv.me).ilike('text', '%הגענו למקסימום%').order('created_at', { ascending:false }).limit(1);
+        check('open days: the coordinator is told that the maximum was reached', !!(nt.data && nt.data.length), 'no notice');
+      } finally {
+        await enter('coordinator');
+        if(odId){ await sbPersonal.from('assignment').delete().contains('flags', ['od:' + odId]); await sbPersonal.from('open_days').delete().eq('id', odId); }
+        await sbPersonal.from('schedule').delete().eq('month', firstOf(mk));
+        for(const k of ['instructor', 'instructor2']){ if(await enter(k)) await sbPersonal.from('notices').update({ seen:true }).eq('seen', false); }
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = null; showHub();
+      }
+    });
     // ---- very large text (the gear: "טקסט גדול מאוד"): every tab and folded part still fits the screen, for an instructor, a service girl and the coordinator
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;

@@ -32,6 +32,7 @@ function srvRenderSchedule(body){
       ${notices.length > 1 ? '<div class="pnotices-top"><button type="button" class="btn ghost small" id="notices-all-ok">סימון של כולן כנקראו</button></div>' : ''}
       ${notices.map(n => `<div class="pnotice ${n.kind}" role="status"><span>${pEsc(n.text)}</span><button type="button" class="btn small" data-notice-ok="${n.id}">הבנתי, תודה</button></div>`).join('')}
       </div></details>` : ''}
+    ${isInstr ? '<div id="od-cards" class="od-cards"></div>' : ''}
     ${monthNavHtml(mk)}
     ${!m.published ? `<div class="pnote">${tx('sch_unpub')}</div>` : `
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
@@ -54,6 +55,7 @@ function srvRenderSchedule(body){
       <div class="pfold-body" id="open-fold-body"><div class="pnote">רק רגע...</div></div>
     </details>` : ''}`}`;
   wireMonthNav(body); wireFolds(body);
+  if(isInstr && !portalUi.viewAs) srvFillOpenDays(body);          // (a new day for sign-up, at the top)
   if(isInstr && m.published) srvFillOpenFold(body, mk); else { const ob = document.getElementById('open-fold-body'); if(ob) ob.innerHTML = `<div class="pnote">${tx('open_none')}</div>`; }
   body.querySelectorAll('[data-notice-ok]').forEach(b => b.addEventListener('click', () => { const n = st.notices.find(x => x.id === b.dataset.noticeOk); if(n) n.seen = true; portalSave(); srvRenderSchedule(body); }));
   const allOk = document.getElementById('notices-all-ok'); if(allOk) allOk.addEventListener('click', () => { st.notices.forEach(n => { n.seen = true; }); portalSave(); srvRenderSchedule(body); });

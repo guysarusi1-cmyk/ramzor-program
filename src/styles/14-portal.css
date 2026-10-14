@@ -397,3 +397,10 @@
   .portal-problem:hover, .home-problem:hover, .portal-problem:focus-visible, .home-problem:focus-visible{ color:var(--p-text, var(--text)); }
   .pmine-row.done{ opacity:.6; }  .install-link{ font-size:15px; color:var(--p-text, var(--text)); text-decoration:underline; text-underline-offset:3px; }          /* "install as an app": on the main screen and in the portal of those who have only it (phones, before it is installed) */
   .adm-mins{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }          /* the three personal minimums side by side */
+  /* a new day for sign-up: the instructors' card at the top of the schedule tab, and the coordinator's list */
+  .od-cards{ display:flex; flex-direction:column; gap:10px; margin:0 0 12px; } .od-cards:empty{ display:none; }
+  .od-card{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:14px; border-radius:14px; border:2px solid var(--gold, #e8b94a); background:var(--p-panel2, var(--panel-2)); }
+  .od-card.mine{ border-color:var(--p-yes, #7be0a0); }
+  .od-card-text{ display:flex; flex-direction:column; gap:3px; min-width:0; } .od-card-text b{ font-size:16px; } .od-card-text small{ color:var(--p-muted, var(--muted)); }
+  .od-count{ font-weight:700; } .od-count.full{ color:var(--p-yes, #7be0a0); } .od-count.low{ color:var(--p-no, #ff8a80); }
+  .od-hours{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .od-hours[hidden]{ display:none; } .od-nums{ grid-template-columns:1fr 1fr; }
