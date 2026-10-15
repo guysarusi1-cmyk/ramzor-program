@@ -2074,12 +2074,14 @@
       const txt = $('star-board').innerText;
       check('TV names carry no age', !roster.some(c => c.age && new RegExp('(^|\\D)' + String(c.age).replace('.', '\\.') + '(\\D|$)').test(txt.replace(/×\d+/g, ''))), 'an age appears on the star board');
 
-      await showSlide(7);
-      await sleep(300);
-      const board = $('mercury-board'); const br = board.getBoundingClientRect();
-      const markers = [...board.querySelectorAll('.kid-marker')];
       const expected = [];
       for(const c of roster){ const st = await getChildState(c.id); if((st.moonSteps || 0) >= 7) expected.push(c.id); }
+      let markers = [];
+      for(let i = 0; i < 40; i++){          // (a celebration of an earlier event may be playing: during its show the ship flies and its spot is empty)
+        await celebrationQueue; await showSlide(7); await sleep(300);
+        markers = [...$('mercury-board').querySelectorAll('.kid-marker')]; if(markers.length === expected.length) break; await sleep(500);
+      }
+      const board = $('mercury-board'); const br = board.getBoundingClientRect();
       check('Mercury board has a ship per child that reached Mercury', markers.length === expected.length, markers.length + ' ships vs ' + expected.length);
       const rects = markers.map(m => m.getBoundingClientRect());
       // the ship layout is only meant for TV / desktop screens (nobody watches the board on a phone)

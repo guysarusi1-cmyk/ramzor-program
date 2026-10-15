@@ -104,7 +104,8 @@ async function getChildState(id){
 }
 // Everyone at once, in one request (the boards use this). null when the read failed — keep what is on screen.
 async function getAllChildStates(){
-  const { data, error } = await sb.from('child_state').select('*');
+  const ids = (roster || []).map(c => c.id);          // (only the children on the list: a read returns at most 1000 rows, and leftovers of removed children must not push real ones out)
+  const { data, error } = ids.length ? await sb.from('child_state').select('*').in('child_id', ids) : { data:[], error:null };
   if(error || !data){ console.error(error); return null; }
   const byId = {};
   data.forEach(d => { byId[d.child_id] = childStateFromRow(d); });

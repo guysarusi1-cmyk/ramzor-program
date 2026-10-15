@@ -204,13 +204,39 @@ function celebrateFeedbackEvent(ev){
     else interruptToSlide(EVENT_TYPE_SLIDE.mercury,
       () => flyMarkerStunt(childId, document.getElementById('mercury-board'), renderMercuryBoard, now - 1), STUNT_BOARD_MS);  });
 }
+// Every star / step / brick is shown once. The live updates of the database bring it at once; a check of the database every few seconds
+// catches whatever they missed (a moment when the connection rejoins: a sign-in or sign-out on this device, an hourly renewal of the session).
+const seenFeedback = new Set();
+let feedbackClient = null, feedbackSince = null, feedbackCatchUp = null;
+function celebrateOnce(ev){
+  if(!ev || !ev.id || seenFeedback.has(ev.id)) return;
+  seenFeedback.add(ev.id);
+  if(ev.created_at && (!feedbackSince || ev.created_at > feedbackSince)) feedbackSince = ev.created_at;
+  celebrateFeedbackEvent(ev);
+}
+async function catchUpFeedback(){
+  if(!feedbackSince) return;
+  const showing = document.getElementById('view-display').classList.contains('active');
+  try {
+    const { data, error } = await sb.from('feedback_events').select('id,child_id,type,message,created_at').gt('created_at', feedbackSince).order('created_at').limit(20);
+    if(error) return;
+    (data || []).forEach(ev => { if(showing) celebrateOnce(ev); else { seenFeedback.add(ev.id); if(ev.created_at > feedbackSince) feedbackSince = ev.created_at; } });          // (while the kids' screen is not shown: noted, not replayed later)
+  } catch(e){ /* the next check tries again */ }
+}
 function startFeedbackListener(){
   if(feedbackChannel) return;
+  feedbackClient = sb;
   feedbackChannel = sb.channel('feedback_live')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback_events' }, payload => {
-      celebrateFeedbackEvent(payload.new);
+      celebrateOnce(payload.new);
     })
     .subscribe();
+  // from now on: the newest event in the database is the starting point (the clock of the database, not of this screen)
+  sb.from('feedback_events').select('id,created_at').order('created_at', { ascending:false }).limit(1).then(({ data }) => {
+    if(data && data[0]){ seenFeedback.add(data[0].id); if(!feedbackSince || data[0].created_at > feedbackSince) feedbackSince = data[0].created_at; }
+    else if(!feedbackSince) feedbackSince = new Date(0).toISOString();
+  }, () => {});
+  clearInterval(feedbackCatchUp); feedbackCatchUp = setInterval(catchUpFeedback, 8000);
   bonusRevocationChannel = sb.channel('bonus_revocations_live')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bonus_revocations' }, () => {
       // client decided (2026-10-02) revocation SHOULD interrupt the carousel too, same as the celebratory
@@ -220,8 +246,10 @@ function startFeedbackListener(){
     .subscribe();
 }
 function stopFeedbackListener(){
-  if(feedbackChannel){ sb.removeChannel(feedbackChannel); feedbackChannel = null; }
-  if(bonusRevocationChannel){ sb.removeChannel(bonusRevocationChannel); bonusRevocationChannel = null; }
+  const c = feedbackClient || sb;          // (the connection it was opened on: this device may have signed in or out since)
+  if(feedbackChannel){ c.removeChannel(feedbackChannel); feedbackChannel = null; }
+  if(bonusRevocationChannel){ c.removeChannel(bonusRevocationChannel); bonusRevocationChannel = null; }
+  clearInterval(feedbackCatchUp); feedbackCatchUp = null;
 }
 
 function startCarousel(){
