@@ -321,11 +321,16 @@ async function giveStar(childId){
 // A brick for the child's wall (the wall project): one at a time, up to WALL_BRICKS; the kids' TV celebrates it.
 async function giveBrick(childId, strength){
   const child = roster.find(c=>c.id===childId);
-  const r = await updateChildState(childId, s => (s.bricks || 0) >= WALL_BRICKS ? null : { set:{ bricks:(s.bricks || 0) + 1 }, guard:['bricks'] });
+  const why = cleanStrength(strength);                     // the strength the instructor saw (engraved on the brick, shown on the TV, kept in the log)
+  const r = await updateChildState(childId, s => {
+    if((s.bricks || 0) >= WALL_BRICKS) return null;
+    const set = { bricks:(s.bricks || 0) + 1 };
+    if(Array.isArray(s.brickWhy)){ const list = s.brickWhy.slice(0, s.bricks || 0); while(list.length < (s.bricks || 0)) list.unshift(''); set.brickWhy = list.concat(why || ''); }          // (one strength per brick, in the order of the bricks)
+    return { set, guard:['bricks'] };
+  });
   if(r.reason === 'declined'){ toast(`המקדש של ${displayName(child)} כבר הושלם — 100 לבנים 🎉`); return false; }
   if(!r.ok){ toast('⚠ הלבנה לא נשמרה — בדקו חיבור ונסו שוב'); return false; }
   const n = r.after.bricks || 0;
-  const why = cleanStrength(strength);                     // the strength the instructor saw (shown on the TV, kept in the log)
   const msg = (n >= WALL_BRICKS ? `🧱🎉 המקדש של ${displayName(child)} הושלם!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`) + (why ? ` · כוח: ${why}` : '');
   logFeedbackEvent(child.id, 'bricks', msg);
   toast(msg);

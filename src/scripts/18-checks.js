@@ -813,6 +813,36 @@
     });
 
     // ---- the wall project: 100 bricks per child, a colour per child, a message at the 100th brick
+    // ---- the temple on the kids' screen, end to end: a brick given on a phone reaches the open kids' screen by itself (live updates of the database)
+    await step('temple live', async () => {
+      await ensureManager(); const kid = roster.find(c => c.id === 'c4'); await putState('c4', { bricks: 0 });
+      const host = $('celebration'); CELEBRATION_MS = 4800;
+      activateDisplayView(); await sleep(1500);          // (the kids' screen is open and listening)
+      const saw = { wall:false, engraved:'' };
+      const watch = setInterval(() => { if(visible(host) && host.querySelectorAll('.brick.built').length){ saw.wall = true; const e = host.querySelector('.brick.new em'); if(e) saw.engraved = e.textContent; } }, 100);
+      const t0 = performance.now(); await giveBrick('c4', 'אומץ');
+      for(let i = 0; i < 80 && !saw.wall; i++) await sleep(100);
+      await sleep(300); clearInterval(watch);
+      check('temple: a brick given on a phone shows on the open kids’ screen within a few seconds (the wall, the new brick)', saw.wall, 'nothing on the kids’ screen after ' + Math.round(performance.now() - t0) + ' ms');
+      const st = await getChildState('c4');
+      check('temple: the brick keeps its strength, and the new brick on the screen is engraved with it', Array.isArray(st.brickWhy) ? (st.brickWhy[st.bricks - 1] === 'אומץ' && saw.engraved === 'אומץ') : true, JSON.stringify(st.brickWhy) + ' / ' + saw.engraved);
+      if(!Array.isArray(st.brickWhy)) check('(info) temple: the strengths of the bricks wait for scheduling-v27.sql on this server', true, '');
+      await waitMs(6000);
+      // the same with the personal sign-in of an instructor (how the instructors give bricks now), the kids' screen still open
+      if(PORTAL_ENABLED){
+        const { error } = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+        if(!error && await personalEnter()){
+          activateDisplayView(); await sleep(800);
+          saw.wall = false; const watch2 = setInterval(() => { if(visible(host) && host.querySelectorAll('.brick.built').length >= 2) saw.wall = true; }, 100);
+          const t1 = performance.now(); const okB = await giveBrick('c4', 'התמדה');
+          for(let i = 0; i < 80 && !saw.wall; i++) await sleep(100);
+          clearInterval(watch2);
+          check('temple: a brick given by an instructor with her personal sign-in also shows on the open kids’ screen', okB && saw.wall, (okB ? 'saved, ' : 'NOT saved, ') + 'nothing on the screen after ' + Math.round(performance.now() - t1) + ' ms');
+          await waitMs(6000); await personalLeave();
+        } else check('temple: the instructor test account signs in', false, error ? error.message : 'no');
+      }
+      await putState('c4', { bricks: 0, brickWhy: Array.isArray(st.brickWhy) ? [] : undefined }); showHub();
+    });
     await step('wall project', async () => {
       await ensureManager(); await putState('c6', { bricks: 0 }); await putState('c3', { bricks: 0 });
       const host = $('celebration');

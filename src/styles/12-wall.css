@@ -149,3 +149,7 @@
   }
   .mini-wall-card.done{ box-shadow:0 0 0 .5vmin #f2cf6a, 0 0 3vmin rgba(242,207,106,.8); animation:star-twinkle 3.4s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce){ .brick.new, .wall-done, .wall-strength, .mini-wall-card.done{ animation:none; } }
+  /* the strength the brick was built with, carved into its face (the number moves to the corner) */
+  .brick.engraved span{ position:absolute; top:.18em; left:.28em; font-size:.42em; opacity:.8; }
+  .brick em{ position:relative; z-index:3; font-style:normal; font-weight:900; font-size:.66em; line-height:1.02; text-align:center; direction:rtl; max-width:96%; overflow-wrap:anywhere;
+    font-family:'Assistant', 'Rubik', Arial, sans-serif; color:#2e1c05; text-shadow:0 .07em 0 rgba(255,246,220,.95), 0 0 .25em rgba(255,244,214,.9); }

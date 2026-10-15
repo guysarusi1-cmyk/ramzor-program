@@ -7,11 +7,12 @@ const WALL_BRICKS = 100;
 
 // the big wall (a limestone wall with a golden frieze, columns at the sides, blue sky) — built bricks are
 // tinted with the child's colour, the ones still to come are dark empty slots; `newBrick` is the one just added
-function bigWallHtml(child, count, newBrick, strength){
+function bigWallHtml(child, count, newBrick, strength, why){
   let bricks = '';
   for(let i = 1; i <= WALL_BRICKS; i++){
     const cls = i <= count ? (i === newBrick ? 'built new' : 'built') : '';
-    bricks += `<div class="brick ${cls}"><span>${i}</span></div>`;
+    const w = i <= count ? ((why || [])[i - 1] || (i === newBrick ? strength : '') || '') : '';          // (the strength it was built with, engraved on it)
+    bricks += `<div class="brick ${cls}${w ? ' engraved' : ''}"><span>${i}</span>${w ? `<em>${escapeHtml(w)}</em>` : ''}</div>`;
   }
   return `<div class="wall-scene" style="--h:${nameHue(child.firstName)};">
       <div class="wall-col wall-col-l"></div><div class="wall-col wall-col-r"></div>

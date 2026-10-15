@@ -66,8 +66,8 @@ function celebrationSparkles(n){
   return html;
 }
 
-function celebrationBody(kind, child, now, extra){
-  if(kind === 'bricks') return bigWallHtml(child, now, now, extra);      // (finishing the wall adds the message inside the wall)
+function celebrationBody(kind, child, now, extra, why){
+  if(kind === 'bricks') return bigWallHtml(child, now, now, extra, why);      // (finishing the wall adds the message inside the wall)
   const milestone = kind !== 'star' && now >= CELEBRATION_TRACK_STEPS;
   const name = `<div class="cel-name">${kind === 'star' ? escapeHtml(displayName(child)) : nameTagHtml(child)}</div>`;      // (the star moment already shows the character above the name)
   if(kind === 'star'){
@@ -97,12 +97,12 @@ function celebrationBody(kind, child, now, extra){
     </div>${milestone ? `<div class="cel-extra cel-milestone">${goal}</div>` : ''}`;
 }
 
-async function playCelebration(kind, child, now, extra){
+async function playCelebration(kind, child, now, extra, why){
   const host = document.getElementById('celebration');
   if(!host || !child) return;
   const wallDone = kind === 'bricks' && now >= WALL_BRICKS;
   const milestone = (kind === 'moon' || kind === 'mercury') && now >= CELEBRATION_TRACK_STEPS;
-  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone || wallDone ? 34 : 18)}<div class="cel-inner${kind === 'bricks' ? ' cel-wall' : ''}">${celebrationBody(kind, child, now, extra)}</div>`;
+  host.innerHTML = `<div class="cel-glow"></div>${celebrationSparkles(milestone || wallDone ? 34 : 18)}<div class="cel-inner${kind === 'bricks' ? ' cel-wall' : ''}">${celebrationBody(kind, child, now, extra, why)}</div>`;
   host.classList.remove('leaving');
   host.classList.add('show');
   host.setAttribute('aria-hidden', 'false');

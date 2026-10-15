@@ -196,7 +196,7 @@ function celebrateFeedbackEvent(ev){
     const state = await getChildState(childId);
     const now = type === 'star' ? (state.stars || 0) : type === 'bricks' ? (state.bricks || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
     const why = type === 'bricks' ? ((ev.message || '').match(/ · כוח: (.+)$/) || [])[1] || '' : '';        // the strength the instructor named
-    await playCelebration(type, child, now, why);
+    await playCelebration(type, child, now, why, type === 'bricks' ? state.brickWhy : undefined);
     if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
     else if(type === 'bricks') interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard);
     else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,

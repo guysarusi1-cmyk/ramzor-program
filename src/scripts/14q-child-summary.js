@@ -12,7 +12,7 @@ function summaryPrograms(state){
   const moon = state.moonSteps || 0;
   if(moon < CELEBRATION_TRACK_STEPS) out.push({ kind:'moon', now:moon });
   else out.push({ kind:'mercury', now:state.mercurySteps || 0 });
-  if((state.bricks || 0) > 0) out.push({ kind:'bricks', now:state.bricks });
+  if((state.bricks || 0) > 0) out.push({ kind:'bricks', now:state.bricks, why:state.brickWhy });
   return out;
 }
 // a short word for the grown-ups next to the picture (the children see the pictures), happy even for a small start
@@ -23,7 +23,7 @@ function summaryWord(p){
   return 'המקדש שלי';
 }
 function summaryPageHtml(p, child){
-  if(p.kind === 'bricks') return `<div class="sum-page sum-wall">${bigWallHtml(child, p.now)}</div>`;
+  if(p.kind === 'bricks') return `<div class="sum-page sum-wall">${bigWallHtml(child, p.now, null, '', p.why)}</div>`;
   if(p.kind === 'star'){
     const shown = Math.min(p.now, CELEBRATION_STAR_SLOTS);
     let slots = ''; for(let i = 1; i <= CELEBRATION_STAR_SLOTS; i++) slots += `<span class="cel-star${i <= shown ? ' filled' : ''}">★</span>`;
