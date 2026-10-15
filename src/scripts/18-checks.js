@@ -79,6 +79,10 @@
   async function run(){
     // ---- sign in
     await step('sign in', async () => {
+      if(PORTAL_ENABLED){ await sleep(300);
+        check('the first screen is the personal sign-in (e-mail and password); the staff password is only a small link at its bottom', !!document.getElementById('plogin-email') && visible($('protected-app')) && !visible($('login-screen')) && !!document.getElementById('plogin-staff') && /מכשיר של המרכז/.test(document.getElementById('plogin-staff').textContent), 'first screen: ' + (document.getElementById('plogin-email') ? 'personal' : visible($('login-screen')) ? 'staff password' : '?'));
+        document.getElementById('plogin-staff').click(); await sleep(100);
+        check('... and the link opens the staff password screen', visible($('login-screen')), 'not opened'); }
       $('login-password').value = '@config(testPassword)';
       $('login-submit-btn').click();
       for(let i=0;i<40 && !(roster && roster.length);i++) await sleep(250);
@@ -1887,6 +1891,42 @@
       try { localStorage.setItem('ramzor-portal-lang', 'he'); } catch(e){} arApply(); showHub();
       window.__arMissing = [...all];
       check('arabic: everything on the screens is translated (people’s names excepted)', all.size === 0, all.size + ' left: ' + [...all].slice(0, 60).join(' ¦ '));
+    });
+    // ---- fixed preferences (the gear: does not do mornings / afternoons / nights; scheduling-v27.sql)
+    await step('fixed preferences', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('fixed preferences: the instructor signs in', false, error ? error.message : 'no'); return; }
+      const probe = await sbPersonal.from('staff_settings').select('fixed_no').eq('staff_id', srv.me).maybeSingle();
+      if(probe.error){ check('(info) fixed preferences: skipped, scheduling-v27.sql was not run on this server', true, ''); await personalLeave(); showHub(); return; }
+      try {
+        document.getElementById('apphome-portal').click(); await sleep(400);
+        document.getElementById('portal-gear').click(); await sleep(200);
+        const bs = [...document.querySelectorAll('.psheet [data-fixed-no]')];
+        check('fixed preferences: the gear has "לא עושה בקרים", "לא עושה צהריים", "לא עושה לילות", in that order', bs.map(b => b.textContent.trim()).join('|') === 'לא עושה בקרים|לא עושה צהריים|לא עושה לילות', bs.map(b => b.textContent).join('|'));
+        const mb = bs.find(b => b.dataset.fixedNo === 'm'); if(mb && !mb.classList.contains('on')){ mb.click(); await sleep(800); }
+        const saved = await sbPersonal.from('staff_settings').select('fixed_no').eq('staff_id', srv.me).maybeSingle();
+        check('fixed preferences: choosing one is saved for her', !!saved.data && (saved.data.fixed_no || []).includes('m'), JSON.stringify(saved.data));
+        { const c = document.querySelector('.psheet [data-close]'); if(c) c.click(); await sleep(100); }
+        const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k)) || portalUi.pmonth;
+        portalUi.pmonth = mk; showPortal('prefs'); await sleep(400);
+        const day = daysOfMonth(mk).find(d => !srvPrefsOf(portalMonth(mk), srv.me).slots[`${d}|m`] && !srvPrefsOf(portalMonth(mk), srv.me).absent.includes(d) && document.querySelector(`[data-pslot="${d}|m"]`));
+        const ms = day && document.querySelector(`[data-pslot="${day}|m"]`);
+        check('fixed preferences: her mornings start as "no" (red), with a sentence that explains it', !!ms && ms.classList.contains('lv-no') && /הבקרים מסומנים אצלך "לא"/.test(document.getElementById('portal-body').textContent), ms ? ms.className : 'no free morning');
+        if(day){
+          portalUi.level = 'yes'; renderInstructorPrefs(document.getElementById('portal-body')); await sleep(100);
+          document.querySelector(`[data-pday="${day}"]`).click(); await sleep(150);
+          const pr = srvPrefsOf(portalMonth(mk), srv.me);
+          check('fixed preferences: pressing the whole day does not change the morning (it stays "no")', !pr.slots[`${day}|m`] && pr.slots[`${day}|e`] === 'yes' && document.querySelector(`[data-pslot="${day}|m"]`).classList.contains('lv-no'), JSON.stringify([pr.slots[`${day}|m`], pr.slots[`${day}|e`]]));
+          document.querySelector(`[data-pslot="${day}|m"]`).click(); await sleep(150);
+          check('... and pressing the morning itself does', srvPrefsOf(portalMonth(mk), srv.me).slots[`${day}|m`] === 'yes', String(srvPrefsOf(portalMonth(mk), srv.me).slots[`${day}|m`]));
+          delete pr.slots[`${day}|m`]; delete pr.slots[`${day}|e`]; delete pr.slots[`${day}|n`]; portalSave(); await srvFlush();
+        }
+      } finally {
+        await sbPersonal.from('staff_settings').update({ fixed_no:[] }).eq('staff_id', srv.me); srv.fixedNo = []; portalUi.level = 'avoid';
+        await personalLeave(); showHub();
+      }
     });
     // ---- very large text (the gear: "טקסט גדול מאוד"): every tab and folded part still fits the screen, for an instructor, a service girl and the coordinator
     await step('very large text', async () => {

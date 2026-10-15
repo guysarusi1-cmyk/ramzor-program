@@ -4,7 +4,16 @@ async function checkAuth(){
   const authed = !!session;
   document.getElementById('login-screen').style.display = authed ? 'none' : 'block';
   document.getElementById('protected-app').style.display = authed ? '' : 'none';
+  if(!authed) showFirstLogin();
   return authed;
+}
+// the first screen for somebody who is not signed in: the personal sign-in. The staff password (a device of the center, the kids' TV)
+// stays, behind a small link at the bottom of that screen.
+function showFirstLogin(){
+  if(!PORTAL_ENABLED || location.hash === '#tv' || typeof srvShowLogin !== 'function') return;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('protected-app').style.display = '';
+  srvShowLogin('email');
 }
 
 async function loadApp(){
