@@ -99,7 +99,8 @@ function renderInstructorPrefs(body){
   const longBar = fri => {
     if(!barOn) return '';
     const gone = !!fixedOn(fri) || prefs.absent.includes(fri), lv = gone ? 'no' : prefLevelOf(prefs, `${fri}|l`), picked = prefs.pick.includes(fri);
-    return `<div class="plong-row"><span class="plong-link" aria-hidden="true">▲ שייך לשישי ולשבת שמעל</span>${srv.showLong ? `<button type="button" class="plong lv-${lv}" data-plong="${fri}" aria-label="${pEsc(SRV_LONG.label)} של ${dayLabel(fri)} והשבת שאחריו"><b>${SRV_LONG.letter} ${pEsc(SRV_LONG.label)}</b><small>${pEsc(SRV_LONG.sub)}</small></button>` : ''}${srv.pickOne ? `<button type="button" class="ppick${picked ? ' on' : ''}" data-ppick="${fri}" aria-pressed="${picked}">רק אחד מאלה</button>` : ''}</div>`;
+    // a slim bridge under the Friday and the Saturday: one line, coloured by the choice like every shift (what it is: in "איך ממלאים")
+    return `<div class="plong-row">${srv.showLong ? `<button type="button" class="plong lv-${lv}" data-plong="${fri}" aria-label="${pEsc(SRV_LONG.label)} של ${dayLabel(fri)} והשבת שאחריו: ${pEsc(SRV_LONG.sub)}">${SRV_LONG.letter} ${pEsc(SRV_LONG.label)}</button>` : ''}${srv.pickOne ? `<button type="button" class="ppick${picked ? ' on' : ''}" data-ppick="${fri}" aria-pressed="${picked}" title="רק אחד מאלה">רק אחד</button>` : ''}</div>`;
   };
   let cells = '', neutral = 0;
   for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
