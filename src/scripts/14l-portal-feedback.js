@@ -2,7 +2,7 @@
 // ---------- THE PORTAL ON THE SERVER: the personal feedback after a schedule is published (warm, honest, never blaming) ----------
 // Pure functions (nothing here talks to the server), so that the same words are used for the e-mail, for the notice and for the card in the portal.
 const FB_SHIFT_WORD = { m:'בוקר', e:'צהריים', n:'לילה', l:'סופ"ש ארוך' };
-const FB_GOAL_WORD = { min:'לעשות החודש את המינימום הנדרש', max:'לעבוד כמה שיותר החודש (מתוך מה שסימנתי "כן")', weekly45:'לעשות 4-5 משמרות בכל שבוע' };
+const FB_GOAL_WORD = { min:'לעשות החודש את המינימום הנדרש', max:'לעבוד כמה שיותר החודש (מתוך מה שסימנתי "כן" או "יכול")', weekly45:'לעשות 4-5 משמרות בכל שבוע' };
 const fbGx = (profile, m, f) => (profile && profile.female === false) ? m : f;                    // the wording follows the person's gender (the female form when it is not known)
 
 // the full Sunday-Saturday weeks of a month (each: the Sunday)

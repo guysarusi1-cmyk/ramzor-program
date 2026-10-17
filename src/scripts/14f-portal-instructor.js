@@ -142,8 +142,8 @@ function renderInstructorPrefs(body){
       <div class="pnote">לא חובה בכלל. נשתדל להתחשב בזה ככל האפשר, בכפוף לצרכי הצוות ולכללי הבטיחות והמנוחה.</div>
       <div class="pgoal-list" role="group" aria-label="יעד חודשי">
         ${goalBtn('min', 'אני רוצה לעשות החודש את המינימום הנדרש', minInfo && minInfo.text ? 'המינימום שלך: ' + pEsc(minInfo.text) : '')}
-        ${goalBtn('max', 'אני רוצה לעבוד כמה שיותר החודש', 'מתוך המשמרות שסימנתי "כן"')}
         ${goalBtn('weekly45', 'אני רוצה לעשות 4-5 משמרות בכל שבוע', '')}
+        ${goalBtn('max', 'אני רוצה לעבוד כמה שיותר החודש', 'מתוך המשמרות שסימנת "כן" או "יכול"')}
         ${goalBtn('', 'אין לי העדפה מיוחדת', '')}
       </div>
       ${goal !== null || !locked ? '<div class="pnote">הבחירה נשמרת כשמגישים את ההעדפות.</div>' : ''}
