@@ -1649,6 +1649,11 @@
         check('portal people: "cannot come" cannot be sent without a reason (the button is disabled until one is written)', reasonWasRequired, 'button was enabled');
         check('portal people: the reason is kept for the coordinator (needs scheduling-v13.sql)', await waitFor(async () => { const q = await sbPersonal.from('sick_reports').select('note').eq('staff_id', i1); return !!(q.data || []).some(x => x.note === REASON_TEXT); }, 40) || true, '');
         check('portal people: the report opens an urgent swap request at once', await waitFor(() => portalLoad().swaps.some(s => s.urgent && s.status === 'open' && s.from === i1)), 'not opened');
+        { const probe = await sbPersonal.rpc('can_replace', {});          // (the call for help goes only to who could take the shift: scheduling-v28.sql)
+          if(probe.error && /could not find|does not exist|schema cache/i.test(probe.error.message)) check('(info) portal people: the call for help to everybody (scheduling-v28.sql not run yet)', true, '');
+          else { await sign('coordinator'); const nt = await sbPersonal.from('notices').select('text,created_at').eq('to_staff', i2).gte('created_at', new Date(Date.now() - 5 * 60000).toISOString());
+            check('portal people: "a shift looks for somebody" does not go to an instructor who works that day (only to who could take it)', !nt.error && !(nt.data || []).some(n => /מחפשת מחליף/.test(n.text)), JSON.stringify((nt.data || []).map(n => n.text.slice(0, 40))));
+            await sign('instructor'); } }
         // ---- the long vacation: asked by the instructor, approved by the coordinator, entered as absence
         showPortal('vacation'); await sleep(500);
         const vf = addDays(today, 45), vt = addDays(today, 47);

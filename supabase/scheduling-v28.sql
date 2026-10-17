@@ -1,5 +1,6 @@
 -- ================================================================
 -- Scheduling, part 28 — run in the SQL Editor after scheduling-v27.sql. Safe to run again.
+--   * "a shift looks for somebody" goes only to the people who could take it (free that day, not away, did not say "no", their rules allow it)
 --   * swaps for the service girls, only among themselves: a service girl asks for a swap (or reports she cannot come), only the other
 --     service girls see it and can offer, the coordinator approves (as with the instructors). Instructors see only instructors' requests.
 -- ================================================================
@@ -71,7 +72,26 @@ begin
   order by s.display_name;
 end $$;
 
--- "I cannot come": also for a service girl; the call for help goes to the people of her own kind
+-- could this person take that shift? (free that day, not away, did not say "no" to it, her rules allow it) — for the call "a shift looks for somebody"
+create or replace function public.can_replace(p_staff uuid, a public.assignment) returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.staff s left join public.staff_private p on p.staff_id = s.id left join public.staff_settings ss on ss.staff_id = s.id
+    where s.id = p_staff and s.active
+      and not exists (select 1 from public.assignment x where x.staff_id = s.id and x.day = a.day)
+      and not exists (select 1 from public.prefs_absence ab where ab.staff_id = s.id and ab.day = a.day)
+      and case s.kind
+        when 'service' then not exists (select 1 from public.prefs_service ps where ps.staff_id = s.id and ps.day = a.day and ps.opt = 'none')
+        when 'instructor' then not coalesce(p.manual_only, false)
+          and not exists (select 1 from public.prefs_slot f where f.staff_id = s.id and f.day = a.day and f.shift = case a.shift when 'S' then 'M' else a.shift end and f.level = 'no')
+          and (a.shift <> 'N' or not coalesce(p.no_nights, false))
+          and (not coalesce(p.only_long_weekend, false) or a.shift = 'L')
+          and not (coalesce(ss.fixed_no, '{}') @> array[case a.shift when 'N' then 'n' when 'A' then 'e' else 'm' end]
+                   and not exists (select 1 from public.prefs_slot f where f.staff_id = s.id and f.day = a.day and f.shift = case a.shift when 'S' then 'M' else a.shift end and f.level in ('yes', 'can')))
+        else false end)
+$$;
+revoke all on function public.can_replace(uuid, public.assignment) from public, anon, authenticated;
+
+-- "I cannot come": also for a service girl; the call for help goes only to the people of her kind who could take it (Guy 2026-10-17)
 create or replace function public.report_cannot_come(p_assignment uuid, p_note text default null) returns uuid language plpgsql security definer set search_path = public as $$
 declare me uuid := public.my_staff_id(); k text := public.my_kind(); a public.assignment; rid uuid; c record; i record; who text; st text; why text := trim(coalesce(p_note, ''));
 begin
@@ -84,7 +104,7 @@ begin
   insert into public.sick_reports (assignment_id, staff_id, note, status, decided_at) values (p_assignment, me, why, 'approved', now()) returning id into rid;
   insert into public.swap_requests (assignment_id, from_staff, urgent) values (p_assignment, me, true);
   for c in select s.id from public.staff s where s.kind = 'coordinator' and s.active loop perform public.tell_key(c.id, 'cant_coord', who, st || ' (הסיבה: ' || why || ')', null, 'warn'); end loop;
-  for i in select s.id from public.staff s where s.kind = k and s.active and s.id <> me loop perform public.tell_key(i.id, 'cant_team', st); end loop;
+  for i in select s.id from public.staff s where s.kind = k and s.active and s.id <> me and public.can_replace(s.id, a) loop perform public.tell_key(i.id, 'cant_team', st); end loop;
   perform public.tell_key(me, 'cant_reporter', st);
   return rid;
 end $$;
