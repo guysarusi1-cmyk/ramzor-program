@@ -128,6 +128,7 @@ function srvAddRow(st, r){
   const t5 = x => x ? x.slice(0, 5) : null, from = t5(r.from_time), to = t5(r.to_time);
   st.rows.push({ id:r.id, staff:r.staff_id, day:r.day, shift:r.shift, from, to, flags:r.flags || [] });
   const who = st.instructors.find(p => p.id === r.staff_id);
+  if(who && who.role === 'service' && r.shift !== 'L'){ const key = `${r.day}|${SRV_SHIFT_UI[r.shift] || 'm'}`; st.assignmentIds[r.id] = { key, staff:r.staff_id }; st.assignmentIds[`${key}|${r.staff_id}`] = r.id; }          // (a service girl's shift can be swapped too: scheduling-v28.sql)
   if(!who || who.role !== 'instructor') return;
   const keys = r.shift === 'L' ? [[r.day, 'e'], [addDays(r.day, 1), 'm'], [addDays(r.day, 1), 'e']] : r.shift === 'S' ? [[r.day, 'm']] : [[r.day, SRV_SHIFT_UI[r.shift]]];
   const std = SRV_STD[r.shift];
@@ -210,7 +211,7 @@ function srvTabs(me){
   if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
-  if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
+  if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (swaps: only among the service girls)
   return [['schedule', 'הסידור'], ['hours', 'שעות'], ['inbox', 'הודעות']];          // teachers
 }
 function srvRenderTab(me, body, t){

@@ -249,7 +249,8 @@ function renderInstructorSwaps(body){
   const name = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
   const approvalsForMe = [];
   Object.keys(st.months).forEach(mk => Object.keys(st.months[mk].approvals || {}).forEach(k => { const key = k.slice(0, k.lastIndexOf('|')), iid = k.slice(k.lastIndexOf('|') + 1); if(iid === me.id && st.months[mk].approvals[k] === 'pending') approvalsForMe.push({ mk, k, key }); }));
-  const open = st.swaps.filter(s => s.status === 'open').sort((a, b) => a.key.localeCompare(b.key));
+  const roleOf = id => (portalPerson(id) || {}).role, svc = me.role === 'service';
+  const open = st.swaps.filter(s => s.status === 'open' && (!portalServerOn || roleOf(s.from) === me.role)).sort((a, b) => a.key.localeCompare(b.key));          // (service girls among themselves, instructors among themselves)
   const mineReq = st.swaps.filter(s => s.from === me.id || s.to === me.id).slice(0, 10);
   body.innerHTML = `
     ${approvalsForMe.length ? '<h2 class="psec">בקשות אליי</h2>' : ''}
@@ -262,7 +263,7 @@ function renderInstructorSwaps(body){
       <summary><span>בקשות החלפה פתוחות</span><span class="pcount">${open.length}</span></summary>
       <div class="pfold-body"><div class="pnote">${tx('swaps_intro')}</div>
       ${open.length ? open.map(s => {
-        const own = s.from === me.id, can = !own && canTakeShift(me.id, s.key);
+        const own = s.from === me.id, can = !own && (svc ? !st.rows.some(r => r.staff === me.id && r.day === s.key.split('|')[0]) : canTakeShift(me.id, s.key));          // (a service girl: free that day)
         return `<div class="preq swap"><div>${s.urgent ? '<span class="pchip missing">⚠ דחוף: דווח שלא יכול/ה להגיע</span> ' : ''}<b>${pEsc(name(s.from))}</b> מחפש/ת מחליף/ה<br>${slotLabel(s.key)}</div><div class="preq-actions">${own ? `<button type="button" class="btn ghost" data-swap-cancel="${s.id}">ביטול הבקשה שלי</button>` : can ? `<button type="button" class="btn" data-swap-take="${s.id}">אני יכול/ה להחליף</button>` : '<em class="pst">אי אפשר לשבץ אותך כרגע</em>'}</div></div>`;
       }).join('') : `<div class="pnote">${tx('swaps_none')}</div>`}</div>
     </details>`;

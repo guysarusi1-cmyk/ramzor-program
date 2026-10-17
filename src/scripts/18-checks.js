@@ -1959,6 +1959,39 @@
         await personalLeave(); showHub();
       }
     });
+    // ---- swaps of the service girls, only among themselves (scheduling-v28.sql)
+    await step('service swaps', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', enter = async k => { await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; const { error } = await signInRetry(k + '-test@merkaz-cherum.local', PW); if(error) return false; portalServerOn = true; if(!(await srvLoad())) return false; portalUi.persona = srv.me; return true; };
+      if(!(await enter('service'))){ check('service swaps: the service test account signs in', false, 'no'); return; }
+      check('service swaps: the service girls have a swaps tab', srvTabs(portalMe()).some(t => t[0] === 'swaps'), srvTabs(portalMe()).map(t => t[0]).join(','));
+      const st = portalLoad(), today = srvToday();
+      const r = st.rows.filter(x => x.staff === srv.me && x.day > today && st.assignmentIds[x.id] && !st.swaps.some(s => s.aid === x.id && ['open', 'offered'].includes(s.status))).sort((a, b) => a.day.localeCompare(b.day))[0];
+      if(!r){ check('(info) service swaps: skipped, the service test account has no upcoming shift in a published month', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; return; }
+      let sid = null;
+      try {
+        portalUi.month = monthKeyOf(r.day); portalUi.fold = { mine:true }; showPortal('schedule'); await sleep(300);
+        check('service swaps: a service girl has "בקשת החלפה" on her shifts', !!document.getElementById('want-change'), 'no button');
+        const q = await sbPersonal.rpc('request_swap', { p_assignment:r.id });
+        if(q.error && /not allowed/.test(q.error.message)){ check('(info) service swaps: skipped, scheduling-v28.sql was not run on this server', true, ''); return; }
+        sid = q.data;
+        check('service swaps: she can ask for a swap of her shift', !q.error && !!sid, (q.error || {}).message);
+        await srvReload(); showPortal('swaps'); await sleep(300);
+        check('service swaps: her request is in her swaps tab', document.getElementById('portal-body').textContent.includes(dayLabel(r.day).split(' ')[1]) || st.swaps.some(s => s.id === sid) || portalLoad().swaps.some(s => s.id === sid), 'not shown');
+        await enter('instructor');
+        const seen = await sbPersonal.from('swap_requests').select('id').eq('id', sid);
+        check('service swaps: an instructor does not see the request of a service girl', !seen.error && seen.data.length === 0, JSON.stringify(seen.data));
+        const off = await sbPersonal.rpc('offer_swap', { p_swap:sid });
+        check('... and cannot offer to take it', !!off.error, 'accepted');
+        await enter('coordinator');
+        const cs = await sbPersonal.from('swap_requests').select('id,status').eq('id', sid);
+        check('service swaps: the coordinator sees it', !cs.error && cs.data.length === 1, JSON.stringify(cs.data));
+      } finally {
+        if(sid){ await enter('service'); await sbPersonal.rpc('cancel_swap', { p_swap:sid }); }
+        for(const k of ['service']){ if(await enter(k)) await sbPersonal.from('notices').update({ seen:true }).eq('seen', false); }
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = null; showHub();
+      }
+    });
     // ---- very large text (the gear: "טקסט גדול מאוד"): every tab and folded part still fits the screen, for an instructor, a service girl and the coordinator
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;

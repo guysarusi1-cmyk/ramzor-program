@@ -21,7 +21,7 @@ const srvCandidatesText = names => names.length ? tx('cands', names.join(', ')) 
 function srvRenderSchedule(body){
   if(!body.isConnected || !portalServerOn || !portalState || !portalState.serverMode) return;                                   // (a screen that finished loading after the person left it, or signed out, must not draw)
   const me = portalMe(), st = portalLoad(), mk = portalUi.month || (portalUi.month = monthKeyOf(srvToday())), m = portalMonth(mk), ctx = portalCtx(mk);
-  const today = srvToday(), isInstr = me.role === 'instructor';
+  const today = srvToday(), isInstr = me.role === 'instructor', canChange = isInstr || me.role === 'service';          // (a service girl can ask for a swap or report she cannot come too)
   const mine = st.rows.filter(r => r.staff === me.id && monthKeyOf(r.day) === mk).sort((a, b) => (a.day + (a.from || '')).localeCompare(b.day + (b.from || '')));
   const next = st.rows.filter(r => r.staff === me.id && r.day >= today).sort((a, b) => (a.day + (a.from || '')).localeCompare(b.day + (b.from || '')))[0];
   const notices = st.notices.filter(n => !n.seen);
@@ -37,13 +37,13 @@ function srvRenderSchedule(body){
     ${!m.published ? `<div class="pnote">${tx('sch_unpub')}</div>` : `
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
       <summary><span>המשמרות שלי</span><span class="pcount">${mine.length}</span></summary>
-      <div class="pfold-body">${isInstr && mine.length ? `<div class="pchange"><button type="button" class="btn ghost small" id="want-change">בקשת החלפה</button></div>` : ''}<div class="pmine">${mine.length ? mine.map(r => {
+      <div class="pfold-body">${canChange && mine.length ? `<div class="pchange"><button type="button" class="btn ghost small" id="want-change">בקשת החלפה</button></div>` : ''}<div class="pmine">${mine.length ? mine.map(r => {
         const upcoming = r.day >= today, isNext = next && next.id === r.id, req = openByAid[r.id];
         return `<div class="pmine-row${upcoming ? '' : ' past'}${isNext ? ' next' : ''}">
           <div class="pmine-main">${isNext ? '<span class="pnext-badge">המשמרת הבאה שלך</span>' : ''}${srvRowLine(r)}</div>
           ${req ? `<em class="pst pst-${req.status}">${SWAP_STATUS[req.status]}</em>` : ''}
         </div>`; }).join('') : `<div class="pnote">${tx('sch_none')}</div>`}</div>
-        ${isInstr ? `<div class="pnote">${tx('sch_help')}</div>` : ''}</div>
+        ${canChange ? `<div class="pnote">${tx('sch_help')}</div>` : ''}</div>
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
