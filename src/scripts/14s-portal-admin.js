@@ -3,7 +3,7 @@
 // The staff's details, a look at the portal as somebody else sees it, the system settings (shift hours, the numbers of the rules),
 // building a month again, and the full log. Only for the admin flag (scheduling-v18.sql / v19.sql).
 const ADMIN_WEIGHTS = [          // the numbers of the rules: [key, words, the engine's own number] (the engine is the source; these are the defaults it uses)
-  ['short_hour', 'מדריך חסר בשעה אחת', 220], ['over_hour', 'מדריך עודף בשעה אחת', 60], ['can', 'שיבוץ במשמרת שסומנה "יכול"', 60], ['neutral', 'שיבוץ במשמרת שלא סומנה', 90],
+  ['short_hour', 'מדריך חסר בשעה אחת', 220], ['over_hour', 'מדריך עודף בשעה אחת', 60], ['can', 'שיבוץ במשמרת שסומנה "יכול"', 60], ['neutral', 'שיבוץ במשמרת שלא סומנה (מוצא אחרון)', 600],
   ['weekly_mid', 'חסרה משמרת אמצע שבוע מהמינימום האישי', 150], ['weekly_night', 'חסר לילה מהמינימום האישי', 150], ['weekend_month', 'חסרה משמרת סופ"ש מהמינימום האישי', 150],
   ['pickone', '"רק אחד מאלה": לא שובץ באף אחד', 120], ['run8', 'כל יום מעבר ל-8 ימים ברצף', 400], ['five_run', '6 ימים ברצף ויותר', 30],
   ['night_then_day', 'משמרת יום מיד אחרי לילה', 130], ['rest_short', 'מנוחה קצרה', 45], ['night_run2', 'לילה שני ברצף', 10], ['night_run3', 'לילה שלישי ברצף (נוסף)', 10], ['night_run4', 'לילה רביעי ברצף (נוסף)', 20],
