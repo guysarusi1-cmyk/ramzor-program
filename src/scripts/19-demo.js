@@ -101,7 +101,12 @@
       getAllChildStates = async () => ({ get: id => Object.assign(emptyChildState(), { bricks: fake[roster.findIndex(c => c.id === id) % fake.length] }) });
       SLIDES[8].hidden = false; showSlide(8);
     }
-    else if(/^slide\d+$/.test(what)) showSlide(Number(what.slice(5)));
+    else if(/^slide\d+$/.test(what)){ if(/^slide(9|10)$/.test(what) && typeof loadTvToday === 'function') await loadTvToday(true); showSlide(Number(what.slice(5))); }          // (the screens of today read the database first, as the TV does before it shows them)
+    else if(what === 'quiet-night' || what === 'quiet-morning'){          // (the "good night" / "good morning" screens, whatever the hour)
+      const view = document.getElementById('view-display'); let el = document.getElementById('tv-quiet');
+      if(!el){ el = document.createElement('div'); el.id = 'tv-quiet'; view.appendChild(el); }
+      const md = what.slice(6); tvQuietNow = () => md; el.innerHTML = TV_QUIET_HTML[md]; el.hidden = false; tvQuietShown = md;          // (the hour is pretended, so the minute check keeps it)
+    }
   });
 })();
 /*@END-TEST-ONLY*/
