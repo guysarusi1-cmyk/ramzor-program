@@ -1868,6 +1868,12 @@
         check('open days: the coordinator sees 1 of 1 and who', /נרשמו 1 מתוך 1/.test(document.querySelector('[data-od-fold]').textContent) && /מלא/.test(document.querySelector('[data-od-fold]').textContent), document.querySelector('[data-od-fold]').textContent.slice(0, 120));
         const nt = await sbPersonal.from('notices').select('text').eq('to_staff', srv.me).ilike('text', '%הגענו למקסימום%').order('created_at', { ascending:false }).limit(1);
         check('open days: the coordinator is told that the maximum was reached', !!(nt.data && nt.data.length), 'no notice');
+        // "ahmash and leaders" is accepted by the database (scheduling-v29.sql)
+        { const al = await sbPersonal.rpc('open_day_publish', { p_day:day, p_scope:'night', p_from:null, p_to:null, p_min:0, p_max:1, p_audience:'ahmash_leader', p_note:'בדיקה אוטומטית (אחמ"שים ומובילים)' });
+          if(al.error && /audience_check/.test(al.error.message)) check('(info) open days: "ahmash and leaders" needs scheduling-v29.sql', true, '');
+          else { const s2 = await sbPersonal.rpc('open_days_status'), o2 = (s2.data || []).find(x => x.id === al.data);
+            check('open days: a day "for ahmash and leaders" is saved', !al.error && !!o2 && o2.audience === 'ahmash_leader', (al.error || {}).message || JSON.stringify(o2));
+            if(al.data) await sbPersonal.from('open_days').delete().eq('id', al.data); } }
       } finally {
         await enter('coordinator');
         if(odId){ await sbPersonal.from('assignment').delete().contains('flags', ['od:' + odId]); await sbPersonal.from('open_days').delete().eq('id', odId); }
