@@ -10,11 +10,12 @@ const WEEKDAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמ
 const ctlToday = () => isoDate(new Date());
 
 // the activities of the timetable: an id (the picture on the kids' TV), a word and an emoji for the staff screens
+// (only emoji that every screen shows: the newest ones, like the toothbrush, are empty boxes on older TVs and Windows 10)
 const TT_ICON_LIST = [
-  ['wake', 'השכמה', '⏰'], ['wash', 'התארגנות', '🪥'], ['breakfast', 'ארוחת בוקר', '🥣'], ['school', 'גן / בית ספר', '🎒'], ['lunch', 'ארוחת צהריים', '🍽️'],
-  ['rest', 'מנוחה', '😴'], ['snack', 'ארוחת ארבע', '🍎'], ['yard', 'חצר ומשחק', '🛝'], ['art', 'יצירה', '🎨'], ['music', 'מוזיקה', '🎵'], ['sport', 'ספורט', '⚽'],
+  ['wake', 'השכמה', '⏰'], ['wash', 'התארגנות', '🦷'], ['breakfast', 'ארוחת בוקר', '🥣'], ['school', 'גן / בית ספר', '🎒'], ['lunch', 'ארוחת צהריים', '🍽️'],
+  ['rest', 'מנוחה', '😴'], ['snack', 'ארוחת ארבע', '🍎'], ['yard', 'חצר ומשחק', '🤸'], ['art', 'יצירה', '🎨'], ['music', 'מוזיקה', '🎵'], ['sport', 'ספורט', '⚽'],
   ['class', 'חוג', '🧩'], ['park', 'טיול', '🌳'], ['movie', 'סרט', '📺'], ['shower', 'מקלחות', '🛁'], ['dinner', 'ארוחת ערב', '🍲'], ['story', 'סיפור', '📖'],
-  ['cleanup', 'סידור החדר', '🧹'], ['candles', 'קבלת שבת', '🕯️'], ['meeting', 'מפגש', '🫶'], ['bedtime', 'השכבה', '🌙']
+  ['cleanup', 'סידור החדר', '🧹'], ['candles', 'קבלת שבת', '🕯️'], ['meeting', 'מפגש', '🤝'], ['bedtime', 'השכבה', '🌙']
 ];
 const ttIcon = id => TT_ICON_LIST.find(x => x[0] === id) || ['other', 'פעילות', '⭐'];
 

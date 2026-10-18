@@ -65,7 +65,7 @@ const TV_QUIET_HTML = {
   night:`<div class="tvq tvq-night"><div class="tvq-stars" aria-hidden="true">${Array.from({ length:40 }, (_, i) => `<i style="left:${(i * 47) % 100}%; top:${(i * 29) % 100}%; animation-delay:${(i % 7) * -0.6}s"></i>`).join('')}</div>
       <div class="tvq-moon" aria-hidden="true">🌙</div><div class="tvq-title">לילה טוב</div><div class="tvq-row" aria-hidden="true">😴 🧸 ⭐ 💤</div></div>`,
   morning:`<div class="tvq tvq-morning"><div class="tvq-sun" aria-hidden="true">🌞</div><div class="tvq-title">בוקר טוב!</div>
-      <div class="tvq-steps"><div><span>💦</span>שוטפים פנים</div><div><span>🪥</span>מצחצחים שיניים</div><div><span>👕</span>מחליפים בגדים</div><div><span>👟</span>נועלים נעליים</div></div></div>`
+      <div class="tvq-steps"><div><span>💦</span>שוטפים פנים</div><div><span>🦷</span>מצחצחים שיניים</div><div><span>👕</span>מחליפים בגדים</div><div><span>👟</span>נועלים נעליים</div></div></div>`
 };
 let tvQuietTimer = null, tvQuietShown = null;
 function tvQuietTick(){
