@@ -206,9 +206,11 @@ function monthCalHtml(ctx, assignments, opts){
   if(!table.length) return '';
   const hh = x => String(parseInt(x, 10)), hours = s => hh(s.start) + '-' + hh(s.end);
   const blank = '<div class="mcal-blank"></div>', lead = dowOf(table[0].date);
+  const others = opts.others === false || typeof scheduleOthersOf !== 'function' ? null : scheduleOthersOf(ctx);          // (the service girls and the teachers: one slim line under every day; the coordinator can hide it)
+  let weekOthers = false;
   const flat = Array(lead).fill(null).concat(table); while(flat.length % 7) flat.push(null);
   const shiftCell = (r, i) => {
-    const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1;
+    const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1 && !weekOthers;
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
     if(!c.slot) return `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
@@ -229,7 +231,16 @@ function monthCalHtml(ctx, assignments, opts){
     const week = flat.slice(w, w + 7);
     if(w > 0) out += `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head mini" aria-hidden="true">${d}</div>`).join('')}`;          // (the days of the week again, small, above every later week: the screen scrolls down)
     out += `<div class="mcal-corner"></div>` + week.map(r => r ? `<div class="mcal-num${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}">${parseIso(r.date).getDate()}</div>` : blank).join('');
+    weekOthers = !!others && week.some(r => r && others[r.date]);
     ctx.shiftTypes.forEach((s, i) => { out += `<div class="mcal-label"><b>${pEsc(s.label)}</b><small>${hours(s)}</small></div>` + week.map(r => r ? shiftCell(r, i) : blank).join(''); });
+    if(weekOthers){
+      const nm = (x, k) => `<span class="mcal-other ${k}" title="${pEsc(x.name + (x.hours ? ' ' + x.hours : ''))}">${pEsc(x.name)}</span>`;
+      out += `<div class="mcal-label others"><small class="service">שירות</small><small class="teacher">מורות</small></div>` + week.map(r => {
+        if(!r) return blank;
+        const d = others[r.date] || { service:[], teacher:[] };
+        return `<div class="mcal-others${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}" data-day="${r.date}">${d.service.map(x => nm(x, 'service')).join('')}${d.teacher.map(x => nm(x, 'teacher')).join('')}</div>`;
+      }).join('');
+    }
   }
   return `<div class="mcal">${out}</div>`;
 }

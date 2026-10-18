@@ -91,6 +91,8 @@ function srvDefaultCoordMonth(){
   const st = portalLoad(), cur = monthKeyOf(srvToday()), next = addMonths(cur, 1);
   return st.months[next] && st.months[next].status ? next : (st.months[cur] && st.months[cur].status ? cur : next);
 }
+// the coordinator may hide the line of the service girls and the teachers in her calendar (remembered on this device)
+function csHideOthers(){ try { return localStorage.getItem('ramzor-cs-hide-others') === '1'; } catch(e){ return false; } }
 function srvRenderCoordSchedule(body){
   if(srvDragWho){ srvRenderAfterDrag = body; return; }          // (never redraw the calendar in the middle of a drag: the name being dragged would vanish and the drop would be lost; it redraws when the drag ends)
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
@@ -112,10 +114,11 @@ function srvRenderCoordSchedule(body){
     ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
     ${m.published ? srvOdFoldHtml(mk) : ''}
-    <div class="pnote">לחיצה על משמרת בלוח פותחת עריכה. בנות שירות ומורות מופיעות ברשימת המשמרות בעריכה, ולא בלוח.</div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
+    <div class="pnote cs-note-row"><span>לחיצה על משמרת בלוח פותחת עריכה.</span><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
   wireMonthNav(body);
   if(!has) return;
+  { const ob = body.querySelector('#cs-others'); if(ob) ob.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-hide-others', csHideOthers() ? '0' : '1'); } catch(e){} srvRenderCoordSchedule(body); }); }
   if(m.published) srvOdWire(body, mk);
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });

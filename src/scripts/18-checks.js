@@ -1891,6 +1891,33 @@
         const shown = (html.split('<tr>').slice(2).map(tr => (tr.match(/<td>/g) || []).length)[0]) || 0;
         check('excel others: the Excel file and the print have two more columns, the service girls and the teachers, with every one of them and her hours', /בנות שירות/.test(xl) && /מורות וגננות/.test(xl) && /<th>בנות שירות<\/th>/.test(html) && shown === ctx.shiftTypes.length + 2 && others.every(r => { const p = st.instructors.find(x => x.id === r.staff); return html.includes(instrName(p, st.instructors)) && (!r.from || html.includes(`${r.from}–${r.to}`)); }), `${others.length} rows, ${shown} columns, ${names} cells`);
       }
+      // the calendars: a slim line of the service girls and the teachers under every day (all the calendars); the coordinator can hide it
+      if(mk){
+        const ctx = portalCtx(mk), box = document.createElement('div'); box.style.width = '374px'; document.body.appendChild(box);
+        box.innerHTML = monthCalHtml(ctx, portalMonth(mk).assignments, { colour:true });
+        const day = Object.keys(scheduleOthersOf(ctx) || {})[0], cell = day && box.querySelector(`.mcal-others[data-day="${day}"]`), o = day && scheduleOthersOf(ctx)[day];
+        check('calendar: under the days there is a slim line with the service girls and the teachers (names only, small)', !!cell && o.service.concat(o.teacher).every(x => cell.textContent.includes(x.name)) && !!box.querySelector('.mcal-label.others') && parseFloat(getComputedStyle(cell.querySelector('.mcal-other')).fontSize) <= 11, day + ' / ' + (cell ? cell.textContent : 'no line'));
+        box.innerHTML = monthCalHtml(ctx, portalMonth(mk).assignments, { colour:true, others:false });
+        check('calendar: ... and without it, when hidden', !box.querySelector('.mcal-others') && !box.querySelector('.mcal-label.others'), 'still there'); box.remove();
+        try { localStorage.removeItem('ramzor-cs-hide-others'); } catch(e){}
+        portalUi.persona = srv.me; portalUi.month = mk; showPortal('schedule'); await sleep(300);          // (in server mode the persona is the signed-in person)
+        { const tb = document.querySelector('[data-ptab="schedule"]'); if(tb && !document.getElementById('cs-others')){ tb.click(); await sleep(300); } }          // (with new messages the portal opens on them)
+        for(let i = 0; i < 40 && !document.getElementById('cs-others'); i++) await sleep(150);
+        const ob = document.getElementById('cs-others');
+        check('calendar: the coordinator has a button "הסתרת בנות שירות ומורות"', !!ob && /הסתרת בנות שירות ומורות/.test(ob.textContent) && !!document.querySelector('#portal-body .mcal-others'), ob ? ob.textContent : 'no button: tab ' + portalUi.tab + ' month ' + portalUi.month + '/' + mk + ' mcal ' + !!document.querySelector('#portal-body .mcal') + ' nosched ' + /עוד אין סידור/.test(document.getElementById('portal-body').textContent) + ' note ' + !!document.querySelector('.cs-note-row'));
+        if(ob){ ob.click(); await sleep(300);
+          check('calendar: ... a tap hides the line, and the button now says "הצגת"', !document.querySelector('#portal-body .mcal-others') && /הצגת/.test(document.getElementById('cs-others').textContent), 'not hidden');
+          document.getElementById('cs-others').click(); await sleep(300);
+          check('calendar: ... and a second tap shows it again', !!document.querySelector('#portal-body .mcal-others'), 'not shown'); }
+        try { localStorage.removeItem('ramzor-cs-hide-others'); } catch(e){}
+        // an instructor sees the line too (the month must be published for her), with no button to hide it
+        if(portalMonth(mk).published){
+          await sbPersonal.auth.signOut(); const si = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+          if(!si.error){ portalServerOn = true; await srvLoad(); const c2 = portalCtx(mk), b2 = document.createElement('div'); document.body.appendChild(b2); b2.innerHTML = monthCalHtml(c2, portalMonth(mk).assignments, { me:srv.me });
+            check('calendar: an instructor sees the service girls and the teachers in her calendar too', !!b2.querySelector('.mcal-others .mcal-other'), 'none (does the database let her read their shifts?)'); b2.remove();
+            portalUi.persona = srv.me; portalUi.month = mk; showPortal('schedule'); await sleep(500); check('calendar: ... and has no button to hide them', !document.getElementById('cs-others'), 'has the button'); }
+        }
+      }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; showHub();
     });
     // ---- Arabic: the portal of an instructor and of a service girl in Arabic; everything that stayed in Hebrew is listed (people's names excepted)
