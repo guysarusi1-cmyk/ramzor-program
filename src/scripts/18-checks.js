@@ -1620,7 +1620,7 @@
           const closed = !!list && list.hidden === true;
           btn.click(); await sleep(60);
           const items = [...list.querySelectorAll('.cs-pick-item')].map(o => rk[[...o.classList].find(c => c.startsWith('opt-'))]), head = list.querySelector('.cs-pick-head');
-          check('portal people: the list of instructors to add opens under "בחרו מדריך/ה", coloured by what each wrote for this shift, ordered green, yellow, blue, red, and without extra words next to the names', closed && !list.hidden && items.length >= 10 && items.every(x => x !== undefined) && items.every((x, i) => i === 0 || x >= items[i - 1]) && !/· (כן|יכול|לא)/.test(list.querySelector('.cs-pick-item').textContent), items.join(''));
+          check('portal people: the list of instructors to add opens under "בחרו מדריך/ה", coloured by what each wrote for this shift, ordered yes, can, not marked, no, and without extra words next to the names', closed && !list.hidden && items.length >= 10 && items.every(x => x !== undefined) && items.every((x, i) => i === 0 || x >= items[i - 1]) && !/· (כן|יכול|לא)/.test(list.querySelector('.cs-pick-item').textContent), items.join(''));
           check('portal people: the colour key (yes, can, no, not marked) is at the left of the title, inside the opened list only', !!head && head.querySelectorAll('.mcal-name').length === 4 && /לא סומן/.test(head.textContent) && head.querySelector('.cs-pick-title').compareDocumentPosition(head.querySelector('.cs-pick-key')) & Node.DOCUMENT_POSITION_FOLLOWING, head ? head.textContent : 'no head');
           list.hidden = true; }
         const who = document.querySelector('#add-who'); who.value = i2; who.dispatchEvent(new Event('change')); document.querySelector('#add-go').click(); await maybeSheet();

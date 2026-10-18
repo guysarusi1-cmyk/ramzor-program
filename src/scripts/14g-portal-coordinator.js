@@ -44,7 +44,7 @@ function renderCoordSchedule(body){
       ${pendingCount ? `<span class="pchip pending">ממתינים לאישור מדריך ${pendingCount}</span>` : ''}
     </div>` : '<div class="pnote">עוד אין סידור לחודש הזה. אפשר ללחוץ "שבץ אוטומטית", או לבנות ידנית בלחיצה על משמרות בטבלה.</div>'}
     ${issues.filter(i => i.type !== 'no').length ? `<details class="pissues"><summary>${issues.filter(i => i.type !== 'no').length} דברים שדורשים תשומת לב</summary>${issues.filter(i => i.type !== 'no').slice(0, 40).map(i => `<div>• ${pEsc(issueText(i, ctx))}</div>`).join('')}</details>` : ''}
-    <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. הצבעים: ירוק = בלי הסתייגות, צהוב = יכול/ה, אדום = לא או חסר.</div>
+    <div class="pnote">לחיצה על משמרת בטבלה פותחת עריכה. הצבעים: ירוק = בלי הסתייגות, כחול = יכול/ה, אדום = לא או חסר.</div>
     ${boardHtml(ctx, m.assignments, { colour:true, edit:true })}`;
   wireMonthNav(body);
   body.querySelectorAll('td.editable').forEach(td => {
