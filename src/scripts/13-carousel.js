@@ -1,4 +1,5 @@
-// ---------- CAROUSEL (kids display: 7 rotating slides, 15s each) ----------
+// ---------- CAROUSEL (kids display: rotating slides, 7 s each — Guy 2026-10-19) ----------
+const CAROUSEL_MS = 7000;
 const SLIDES = [
   { id:0, label:'מבט על — הרמזור', render: renderOverviewSlide, hidden:true },
   { id:1, label:'הרמזור הצהוב', render: renderYellowSlide, hidden:true },
@@ -105,7 +106,7 @@ function resumeRotation(){
     let next = (carouselIndex + 1) % SLIDES.length;
     while(SLIDES[next].hidden) next = (next + 1) % SLIDES.length;
     showSlide(next);
-  }, 15000);
+  }, CAROUSEL_MS);
 }
 
 async function interruptToSlide(slideIndex, renderFn, holdMs){
