@@ -1,11 +1,12 @@
 
 // ---------- A NEW DAY FOR SIGN-UP (scheduling-v25.sql) ----------
 // In a month that is already published, the coordinator opens a day (the whole day = morning and afternoon, one shift, the night, or other hours),
-// with a minimum and a maximum of instructors and for whom (everybody, only ahmash, only leaders). The instructors it is for place themselves
+// with a minimum and a maximum of instructors and for whom (everybody, only ahmash, ahmash and leaders). The instructors it is for place themselves
 // (no approval): the shifts are added at once, the places left go down, and at the maximum the offer disappears and the coordinator is told.
 // Taking oneself off goes through the coordinator (she removes the person in the shift editor, and the place opens again).
 const OD_SCOPE = { day:'כל היום (בוקר וצהריים)', morning:'בוקר', afternoon:'צהריים', night:'לילה', hours:'שעות אחרות' };
-const OD_FOR = { all:'כולם', ahmash:'רק אחמ"שים', leader:'רק מובילים' };
+const OD_FOR = { all:'כולם', ahmash:'רק אחמ"שים', ahmash_leader:'אחמ"שים ומובילים' };          // (the choices; "ahmash and leaders" needs scheduling-v29.sql — Guy 2026-10-18)
+const OD_FOR_SHOW = Object.assign({ leader:'רק מובילים' }, OD_FOR);          // (a day opened before keeps its words)
 
 // ---- the coordinator
 async function srvOdLoad(){
@@ -24,7 +25,7 @@ function srvOdFoldHtml(mk){
   const st = portalLoad(), nm = id => { const p = st.instructors.find(x => x.id === id); return p ? instrName(p, st.instructors) : ''; };
   return `<details class="pissues od-fold" data-od-fold${portalUi.odOpen ? ' open' : ''}><summary>${list.length} ימים פתוחים לשיבוץ</summary>
     ${list.map(o => { const full = o.taken >= o.max_staff, low = o.taken < o.min_staff;
-      return `<div class="pflag od-row"><span><b>${pEsc(o.words)}</b> · ${OD_FOR[o.audience] || ''}<br>
+      return `<div class="pflag od-row"><span><b>${pEsc(o.words)}</b> · ${OD_FOR_SHOW[o.audience] || ''}<br>
         <span class="od-count${full ? ' full' : low ? ' low' : ''}">נרשמו ${o.taken} מתוך ${o.max_staff}${o.min_staff ? ` (מינימום ${o.min_staff})` : ''}${o.closed ? ' · נסגר' : full ? ' · מלא' : ''}</span>
         ${(o.people || []).length ? `<br><small>${o.people.map(id => pEsc(nm(id))).join(', ')}</small>` : ''}${o.note ? `<br><small>${pEsc(o.note)}</small>` : ''}</span>
         ${o.closed ? '' : `<button type="button" class="btn ghost small" data-od-close="${o.id}">סגירה</button>`}</div>`; }).join('')}

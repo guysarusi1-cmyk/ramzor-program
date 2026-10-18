@@ -1840,6 +1840,8 @@
         btn.click(); await sleep(150);
         const sh = document.querySelector('.psheet #od-day') && document.querySelector('.psheet #od-day').closest('.sheet');
         check('open days: the window asks for the date, what is open (the whole day by default; the night only if chosen), minimum, maximum and for whom', !!sh && sh.querySelector('#od-scope').value === 'day' && !!sh.querySelector('#od-min') && !!sh.querySelector('#od-max') && sh.querySelectorAll('#od-for option').length === 3 && [...sh.querySelectorAll('#od-scope option')].some(o => o.value === 'night'), 'no window');
+        { const opts = [...document.querySelectorAll('#od-for option')].map(o => o.textContent);
+          check('open days: "למי פתוח" offers everybody, only ahmash, and ahmash and leaders (no "only leaders")', opts.join('|') === 'כולם|רק אחמ"שים|אחמ"שים ומובילים', opts.join('|')); }
         sh.querySelector('#od-day').value = day; sh.querySelector('#od-scope').value = 'morning'; sh.querySelector('#od-scope').dispatchEvent(new Event('change'));
         sh.querySelector('#od-min').value = '1'; sh.querySelector('#od-max').value = '1'; sh.querySelector('#od-note').value = 'בדיקה אוטומטית';
         sh.querySelector('#od-go').click(); await answerSheet();
