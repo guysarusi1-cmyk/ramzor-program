@@ -2146,6 +2146,14 @@
       check('child summary: choosing a child opens the summary on the TV with a dramatic opening', !!el && !el.hidden && !!el.querySelector('.sum-open .sum-hero') && el.textContent.includes(displayName(kid)), el && el.className);
       await sleep(SUMMARY_OPEN_MS + 300);
       check('child summary: then a page for a program, with a picture', !!el.querySelector('.sum-page'), el.innerHTML.slice(0, 80));
+      { // the popups always pop: a celebration is above the summary and above "good night" / "good morning" (Guy 2026-10-19)
+        let q = document.getElementById('tv-quiet'), made = false; if(!q){ q = document.createElement('div'); q.id = 'tv-quiet'; document.getElementById('view-display').appendChild(q); made = true; }
+        const wasHidden = q.hidden, wasHtml = q.innerHTML; q.innerHTML = TV_QUIET_HTML.night; q.hidden = false;
+        const pc = playCelebration('star', roster[1], 1); await sleep(900);
+        const top = (document.elementsFromPoint(innerWidth / 2, innerHeight / 2)[0] || document.body).closest('#celebration, #tv-summary, #tv-quiet');
+        check('popups: a celebration shows above the summary of a child and above the night screen', !!top && top.id === 'celebration', top ? top.id : 'none');
+        await pc;          // (the celebration runs to its end)
+        if(made) q.remove(); else { q.hidden = wasHidden; q.innerHTML = wasHtml; } }
       closeChildSummary();
       check('child summary: it closes by itself (here: closed by the check) and the rotation goes on', el.hidden && !summaryChild, 'still open');
       stopCarousel(); showHub();
