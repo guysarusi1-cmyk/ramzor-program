@@ -732,8 +732,9 @@
       check('remote: "show" puts the chosen board on screen and holds it', $('slide-5').classList.contains('active') && tvHeld, 'slide/held wrong');
       handleTvCommand({ cmd: 'show', slide: 4 }); await sleep(50);
       check('remote: a hidden board cannot be shown', !$('slide-4').classList.contains('active'), 'hidden slide shown');
-      handleTvCommand({ cmd: 'next' }); await sleep(100);
-      check('remote: "next" goes to the next visible board', $('slide-7').classList.contains('active'), 'now on ' + carouselIndex);
+      { const ids = visibleSlideIds(), want = ids[(ids.indexOf(5) + 1) % ids.length];          // (the space and temple boards show only while a child is on them: the next one depends on the test data)
+        handleTvCommand({ cmd: 'next' }); await sleep(100);
+        check('remote: "next" goes to the next visible board', $('slide-' + want).classList.contains('active') && want !== 4, 'now on ' + carouselIndex + ', expected ' + want); }
       handleTvCommand({ cmd: 'prev' }); await sleep(100);
       check('remote: "prev" goes back', $('slide-5').classList.contains('active'), 'now on ' + carouselIndex);
       handleTvCommand({ cmd: 'resume' }); await sleep(50);
@@ -1392,6 +1393,7 @@
         if(srv.showLong || srv.pickOne){ await srvSaveSetting({ showLong:false, pickOne:false }); showPortal('prefs'); await sleep(200); }          // (somebody who tried the test site may have switched them on: start from the default)
         check('portal server: the long weekend is not shown by default (it is switched on in the settings)', !document.querySelector('.plong') && !document.querySelector('.plong-row') && !srv.showLong, document.querySelectorAll('.plong').length);
         document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-set-long="1"]').click(); await sleep(400);
+        for(let i = 0; i < 40 && !(srv.showLong && document.querySelector('.plong')); i++) await sleep(150);          // (the setting is saved first; on a slow run the calendar is drawn a moment later)
         check('portal server: switching it on shows a slim bridge under every weekend, joined to the Friday and Saturday above it (one line, no extra words)', srv.showLong === true && document.querySelectorAll('.plong').length >= 4 && document.querySelectorAll('.pday.linked').length >= 2 * document.querySelectorAll('.plong').length - 2 && !document.querySelector('.plong-link') && document.querySelector('.plong').getBoundingClientRect().height < 48, document.querySelectorAll('.plong').length + ' / ' + document.querySelectorAll('.pday.linked').length);
         const longBtns = [...document.querySelectorAll('.plong')], firstLong = document.querySelector(`[data-plong="${fri}"]`);
         check('portal server: every day has the three shifts, and the long weekend is ONE button per weekend (under Friday and Saturday), with candles (what it is: in its label)', document.querySelectorAll(`[data-pslot^="${fri}|"]`).length === 3 && document.querySelectorAll(`[data-pslot^="${sat}|"]`).length === 3 && document.querySelectorAll(`[data-pslot^="${sun}|"]`).length === 3 && longBtns.length >= 4 && !document.querySelector('[data-pslot$="|l"]') && /🕯/.test(firstLong.textContent) && /סופ"ש ארוך/.test(firstLong.textContent) && /שישי לפני כניסת שבת, לינה במרכז החירום, שבת בוקר עד צאת שבת/.test(firstLong.getAttribute('aria-label') || ''), longBtns.length + ' / ' + (firstLong ? firstLong.textContent : 'none'));
