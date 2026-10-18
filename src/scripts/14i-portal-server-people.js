@@ -47,7 +47,7 @@ function srvRenderSchedule(body){
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
-      <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}${monthCalHtml(ctx, m.assignments, { me:me.id, ahmash:srv.ahmash })}</div>
+      <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}${monthCalHtml(ctx, m.assignments, { me:me.id, ahmash:srv.ahmash, othersInCells:true })}</div>
     </details>
     ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
     ${isInstr ? `<details class="pfold" data-fold="openshifts"${openFold('openshifts') ? ' open' : ''}>

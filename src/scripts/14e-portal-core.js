@@ -200,19 +200,36 @@ function boardHtml(ctx, assignments, opts){
 // opts: me, ahmash ({ staff id: rank }); for the coordinator: sel (the person whose requests are open at the side; her names are outlined), colour (names coloured by how the wish was kept) and edit (a tap on a shift opens its editor)
 // the key of the colours of the coordinator's calendar (shown under her panel of the instructors' requests)
 const mcalKeyHtml = compact => compact === 'tab' ? `<span class="mcal-key tab-key" title="שובץ/ה במשמרת שסימן/ה כך"><span class="mcal-name wish-yes">כן</span><span class="mcal-name wish-can">יכול</span><span class="mcal-name wish-no">לא</span><span class="mcal-name wish-none">לא סומן</span></span>` : compact ? `<div class="mcal-key compact" title="שובץ/ה במשמרת שסימן/ה כך"><span class="mcal-name wish-yes">כן</span><span class="mcal-name wish-can">יכול</span><span class="mcal-name wish-no">לא</span><span class="mcal-name wish-none">לא סומן</span></div>` : '<div class="pnote mcal-key"><span class="mcal-name wish-yes">כן</span> <span class="mcal-name wish-can">יכול</span> <span class="mcal-name wish-no">לא</span> <span class="mcal-name wish-none">לא סומן</span> שובץ/ה במשמרת שסימן/ה כך.</div>';
+// the service girls and the teachers of a month by shift ("day|m"), each with her hours when they are not the shift's usual ones
+function othersByShift(ctx){
+  if(typeof portalServerOn === 'undefined' || !portalServerOn || !portalState || !portalState.rows) return {};
+  const st = portalLoad(), out = {}, hh = x => String(parseInt(x, 10));
+  st.rows.forEach(r => {
+    if(monthKeyOf(r.day) !== ctx.month) return;
+    const p = st.instructors.find(x => x.id === r.staff); if(!p || !['service', 'teacher'].includes(p.role)) return;
+    const sid = (typeof SRV_SHIFT_UI !== 'undefined' && SRV_SHIFT_UI[r.shift]) || 'm', std = typeof SRV_STD !== 'undefined' ? SRV_STD[r.shift] : null;
+    const note = r.from && r.to && (!std || r.from !== std[0] || r.to !== std[1]) ? hh(r.from) + '–' + hh(r.to) : '';
+    (out[`${r.day}|${sid}`] = out[`${r.day}|${sid}`] || []).push({ id:p.id, role:p.role, name:instrName(p, st.instructors), note, from:r.from || '' });
+  });
+  Object.values(out).forEach(l => l.sort((a, b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name)));
+  return out;
+}
 function monthCalHtml(ctx, assignments, opts){
   opts = opts || {};
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date()), picks = ahmashPicks(table, ctx, opts.ahmash || {});
   if(!table.length) return '';
   const hh = x => String(parseInt(x, 10)), hours = s => hh(s.start) + '-' + hh(s.end);
   const blank = '<div class="mcal-blank"></div>', lead = dowOf(table[0].date);
-  const others = opts.others === false || typeof scheduleOthersOf !== 'function' ? null : scheduleOthersOf(ctx);          // (the service girls and the teachers: one slim line under every day; the coordinator can hide it)
+  const others = opts.others === false || opts.othersInCells || typeof scheduleOthersOf !== 'function' ? null : scheduleOthersOf(ctx);          // (the service girls and the teachers: one slim line under every day in the coordinator's calendar; she can hide it)
+  const inCells = opts.othersInCells ? othersByShift(ctx) : {};          // (the calendar of the staff: they are in the shifts like the instructors; a teacher first, the service girls last — Guy 2026-10-18)
   let weekOthers = false;
   const flat = Array(lead).fill(null).concat(table); while(flat.length % 7) flat.push(null);
   const shiftCell = (r, i) => {
     const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1 && !weekOthers;
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
-    if(!c.slot) return `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
+    const oth = inCells[`${r.date}|${s.id}`] || [], othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(x.note)}</small>` : ''}</span>`;
+    const teachers = oth.filter(x => x.role === 'teacher').map(othName).join(''), service = oth.filter(x => x.role === 'service').map(othName).join('');
+    if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
       if(!opts.colour) return '';
       const pr = (ctx.prefs && ctx.prefs[p.iid]) || { slots:{} }, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
@@ -224,7 +241,7 @@ function monthCalHtml(ctx, assignments, opts){
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}">${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
     };
-    return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${c.missing ? `<span class="mcal-missing">חסר ${c.missing}</span>` : ''}</div>`;
+    return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${service}${c.missing ? `<span class="mcal-missing">חסר ${c.missing}</span>` : ''}</div>`;
   };
   let out = `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head">${d}</div>`).join('')}`;
   for(let w = 0; w < flat.length; w += 7){

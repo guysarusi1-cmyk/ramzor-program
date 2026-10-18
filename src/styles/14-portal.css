@@ -286,7 +286,7 @@
   .mcal-others{ min-width:0; display:flex; flex-wrap:wrap; gap:1px 3px; padding:2px; background:var(--p-panel); border:1px solid var(--p-line); border-top:1px dotted var(--p-line); border-radius:0 0 8px 8px; }
   .mcal-others.weekend{ background:rgba(128,128,128,.12); } .mcal-others.today{ border-color:var(--gold); }
   .mcal-other{ min-width:0; font-size:8.5px; line-height:1.25; font-weight:600; overflow-wrap:anywhere; }
-  .mcal-other.service, .mcal-label.others .service{ color:var(--p-svc, #c9a6ff); } .mcal-other.teacher, .mcal-label.others .teacher{ color:var(--p-tch, #7fd6c8); }
+  .mcal-other, .mcal-label.others small{ color:var(--p-svc, #c9a6ff); }          /* (the service girls and the teachers in one colour: Guy 2026-10-18) */
   .mcal-label.others{ padding-top:2px; gap:1px; } .mcal-label.others small{ font-size:8px; font-weight:700; }
   @media (min-width:700px){ .mcal-others{ padding:3px 5px; gap:2px 6px; } .mcal-other{ font-size:11px; } .mcal-label.others small{ font-size:10.5px; } }
   .cs-note-row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }

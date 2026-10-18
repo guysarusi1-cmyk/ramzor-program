@@ -1914,7 +1914,13 @@
         if(portalMonth(mk).published){
           await sbPersonal.auth.signOut(); const si = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
           if(!si.error){ portalServerOn = true; await srvLoad(); const c2 = portalCtx(mk), b2 = document.createElement('div'); document.body.appendChild(b2); b2.innerHTML = monthCalHtml(c2, portalMonth(mk).assignments, { me:srv.me });
-            check('calendar: an instructor sees the service girls and the teachers in her calendar too', !!b2.querySelector('.mcal-others .mcal-other'), 'none (does the database let her read their shifts?)'); b2.remove();
+            b2.innerHTML = monthCalHtml(c2, portalMonth(mk).assignments, { me:srv.me, othersInCells:true });
+            const cells = [...b2.querySelectorAll('.mcal-cell')].filter(x => x.querySelector('[data-role]'));
+            check('calendar: an instructor sees the service girls and the teachers inside the shifts, like the instructors (no slim line)', cells.length > 0 && !b2.querySelector('.mcal-others'), 'none (does the database let her read their shifts?)');
+            const order = cells.every(x => { const names = [...x.querySelectorAll('.mcal-name')], role = n => n.dataset.role || 'instructor', rank = { teacher:0, instructor:1, service:2 };
+              return names.every((n, i) => i === 0 || rank[role(names[i - 1])] <= rank[role(n)]); });
+            const tMorning = cells.find(x => x.dataset.shift === 'm' && x.querySelector('[data-role="teacher"]'));
+            check('calendar: ... a teacher is first in the morning, the service girls always last', order && (!tMorning || tMorning.querySelector('.mcal-name').dataset.role === 'teacher'), cells.slice(0, 3).map(x => [...x.querySelectorAll('.mcal-name')].map(n => n.dataset.role || 'i').join(',')).join(' | ')); b2.remove();
             portalUi.persona = srv.me; portalUi.month = mk; showPortal('schedule'); await sleep(500); check('calendar: ... and has no button to hide them', !document.getElementById('cs-others'), 'has the button'); }
         }
       }
