@@ -63,7 +63,8 @@ async function srvLoad(){
     settings:{ theme:(function(){ try { return localStorage.getItem('ramzor-portal-theme') || 'dark'; } catch(e){ return 'dark'; } })() }
   };
   if(!fresh()) return false;
-  portalState = st; srv.me = meId; srv.meRow = st.instructors.find(p => p.id === meId) || null;
+  const old = portalState && portalState.serverMode && srv.me === meId ? portalState : null;          // (only the same person's data)
+  if(!old) portalState = st; srv.me = meId; srv.meRow = st.instructors.find(p => p.id === meId) || null;          // (a reload keeps the old data on the screen until the new is complete: a tap in between must not find an empty list)
   months.forEach(mk => {
     const prev = addMonths(mk, -1), m = { deadline:prev + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, goals:{}, assignments:{}, annot:{}, approvals:{}, published:false, status:null };
     st.months[mk] = m;
@@ -93,6 +94,7 @@ async function srvLoad(){
   const swapRows = await srvAll(() => sbPersonal.from('swap_requests').select('id,assignment_id,from_staff,to_staff,status,urgent,created_at').order('created_at', { ascending:false })).catch(() => []);
   st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
   if(!fresh()) return false;
+  if(old){ Object.keys(old).forEach(k => { if(!(k in st)) st[k] = old[k]; }); portalState = st; }          // (what only the coordinator's load adds stays until it is read again, just below)
   srv.saved = {};
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
   if(srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)) await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)

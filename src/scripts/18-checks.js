@@ -1593,7 +1593,7 @@
             target.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true })); const marked = target.classList.contains('drop-ok') && /drop-(yes|can|no|none)/.test(target.className);
             { const wk = document.querySelector('.mcal-cell.editable.weekend');
               if(wk){ wk.dispatchEvent(new DragEvent('dragover', { dataTransfer:dt, bubbles:true, cancelable:true }));
-                const lvl = (wk.className.match(/drop-(yes|can|none|no)(?![a-z])/) || [])[1], bg = getComputedStyle(wk).backgroundColor, want = { yes:'rgba(123, 224, 160, 0.28)', can:'rgba(240, 194, 57, 0.28)', no:'rgba(255, 138, 128, 0.28)', none:'rgba(110, 168, 254, 0.24)' }[lvl];
+                const lvl = (wk.className.match(/drop-(yes|can|none|no)(?![a-z])/) || [])[1], bg = getComputedStyle(wk).backgroundColor, want = { yes:'rgba(123, 224, 160, 0.28)', can:'rgba(110, 168, 254, 0.24)', no:'rgba(255, 138, 128, 0.28)', none:'rgba(255, 179, 71, 0.28)' }[lvl];
                 check('portal people: while dragging, a weekend shift also takes the colour of the wish (not hidden by the weekend background)', !!lvl && bg === want, lvl + ' / ' + bg);
                 wk.dispatchEvent(new DragEvent('dragleave', { dataTransfer:dt, bubbles:true })); } }
             // she did not mark that shift: the question comes first (WhatsApp with a ready message in her gender, place anyway, or back)
@@ -1633,7 +1633,13 @@
             const a = document.querySelector('[data-hfrom]'), b = document.querySelector('[data-hto]'); a.value = '09:30'; a.dispatchEvent(new Event('change')); b.value = '13:00'; b.dispatchEvent(new Event('change'));
             document.querySelector('[data-hsave]').click(); await maybeSheet();
             check('portal people: the hours of that person are changed by hand and saved', await waitFor(async () => { const q = await sbPersonal.from('assignment').select('from_time,to_time').eq('id', rid); return q.data && q.data[0] && q.data[0].from_time.slice(0, 5) === '09:30' && q.data[0].to_time.slice(0, 5) === '13:00'; }), 'not changed'); } }
-        if(rm){ rm.click(); await maybeSheet(); }
+        { await waitFor(() => !!document.querySelector('[data-repl]'), 60); const rb = document.querySelector('[data-repl]');
+          if(!rb) check('portal people: "החלפה" opens the list of who can replace, inside the shift window (seen, not outside it)', false, 'no החלפה button; rows: ' + [...document.querySelectorAll('#slot-body .pedit-row')].map(x => x.outerHTML.slice(0, 400)).join(' ¦ '));
+          else { rb.click(); await sleep(200); const lst = document.querySelector('.cs-repl-list'), card = lst && (lst.closest('.sheet-card') || document.body), r = lst && lst.getBoundingClientRect(), c = card && card.getBoundingClientRect();
+            const shown = !!lst && r.height > 30 && r.top >= Math.max(0, c.top) - 1 && r.top < Math.min(innerHeight, c.bottom) - 20;
+            check('portal people: "החלפה" opens the list of who can replace, inside the shift window (seen, not outside it)', shown && lst.querySelectorAll('[data-repl-to]').length > 0, lst ? JSON.stringify([Math.round(r.top), Math.round(r.height), Math.round(c.top), Math.round(c.bottom), innerHeight]) : 'no list');
+            const cb = document.querySelector('[data-repl-cancel]'); if(cb){ cb.click(); await sleep(150); } } }
+        { const rm2 = document.querySelector('[data-rm]') || rm; if(rm2){ rm2.click(); await maybeSheet(); } }
         check('portal people: removing the person is saved', await waitFor(async () => { const a = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M'); return a.data && a.data.length === 0; }), 'not removed');
         document.querySelector('#slot-body [data-close]').click();
         // the night with one person only warns (needs exactly two, one woman)
@@ -1897,6 +1903,7 @@
         srv.lang = 'ar'; arApply(); arMissing.clear();
         if(activeView() === 'view-apphome'){ await sleep(300); document.getElementById('apphome-portal').click(); }
         await waitFor(() => activeView() === 'view-portal' && !/טוען|جارٍ/.test(document.getElementById('portal-body').textContent), 60); await sleep(300);
+        showPortal(); await sleep(400);          // (drawn again now that the language is Arabic: a real Arabic speaker has it from the first drawing)
         arMissing.clear(); arSweep();          // (only what this person's portal shows: not the screen of the step before, which was still in the page)
         check(`arabic (${kind}): the portal is in Arabic (title, tabs, greeting)`, /بوابة/.test(document.querySelector('.portal-title').textContent) && /الجدول/.test(document.querySelector('.portal-tabs').textContent) && /مرحبًا/.test(document.querySelector('.portal-hello').textContent), document.querySelector('.portal-title').textContent + ' / ' + document.querySelector('.portal-tabs').textContent);
         check(`arabic (${kind}): the sentences of the system are in Arabic`, /[؀-ۿ]/.test(tx('sch_unpub')) && !/[֐-׿]/.test(tx('sch_unpub')), tx('sch_unpub'));

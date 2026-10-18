@@ -228,7 +228,7 @@ function srvOpenSlot(mk, key, body){
       const flags = Array.from(new Set((row.flags || []).concat('manual')));
       const u = await sbPersonal.from('assignment').update({ from_time:from, to_time:to, flags }).eq('id', row.id);
       if(u.error){ toast('השינוי נכשל'); return; }
-      editing = null; toast('השעות עודכנו. מי שנוגע בעניין קיבל עדכון.');
+      row.from = from; row.to = to; row.flags = flags; editing = null; draw(); toast('השעות עודכנו. מי שנוגע בעניין קיבל עדכון.');          // (the row is shown at once with its new hours; the reload follows)
       await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body);
     }));
     wrap.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => {
@@ -259,6 +259,7 @@ function srvOpenSlot(mk, key, body){
       replacing = null; draw(); srvRenderCoordSchedule(body); toast(`${nm(nw)} במקום ${was}. מי שנוגע בעניין קיבל עדכון.`);
       srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
     }));
+    { const rl = wrap.querySelector('.cs-repl-list'); if(rl) rl.scrollIntoView({ block:'nearest' }); }          // (the opened list is shown, not left below the fold)
   };
   draw();
 }

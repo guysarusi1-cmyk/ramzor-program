@@ -17,6 +17,7 @@ function showFirstLogin(){
 }
 
 async function loadApp(){
+  if(!portalHomeFirst() && (document.querySelector('.view.active') || {}).id === 'view-portal' && !(typeof portalServerOn !== 'undefined' && portalServerOn)) showHub();          // (the staff password came from under the personal sign-in: leave that screen at once)
   await initRoster();
   await initMiniLists();
   renderManageRoster();
