@@ -250,13 +250,16 @@ function monthCalHtml(ctx, assignments, opts){
     out += `<div class="mcal-corner"></div>` + week.map(r => r ? `<div class="mcal-num${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}">${parseIso(r.date).getDate()}</div>` : blank).join('');
     weekOthers = !!others && week.some(r => r && others[r.date]);
     ctx.shiftTypes.forEach((s, i) => { out += `<div class="mcal-label"><b>${pEsc(s.label)}</b><small>${hours(s)}</small></div>` + week.map(r => r ? shiftCell(r, i) : blank).join(''); });
-    if(weekOthers){
+    if(weekOthers){          // (two rows: the teachers, then the service girls — never mixed in one line)
       const nm = (x, k) => `<span class="mcal-other ${k}" title="${pEsc(x.name + (x.hours ? ' ' + x.hours : ''))}">${pEsc(x.name)}</span>`;
-      out += `<div class="mcal-label others"><small class="service">שירות</small><small class="teacher">מורות</small></div>` + week.map(r => {
-        if(!r) return blank;
-        const d = others[r.date] || { service:[], teacher:[] };
-        return `<div class="mcal-others${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}" data-day="${r.date}">${d.service.map(x => nm(x, 'service')).join('')}${d.teacher.map(x => nm(x, 'teacher')).join('')}</div>`;
-      }).join('');
+      const kinds = [['teacher', 'מורות'], ['service', 'שירות']].filter(([k]) => week.some(r => r && others[r.date] && others[r.date][k].length));
+      kinds.forEach(([k, label], ki) => {
+        out += `<div class="mcal-label others"><small class="${k}">${label}</small></div>` + week.map(r => {
+          if(!r) return blank;
+          const d = others[r.date] || { service:[], teacher:[] };
+          return `<div class="mcal-others ${k}${ki === kinds.length - 1 ? ' last' : ''}${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}" data-day="${r.date}">${d[k].map(x => nm(x, k)).join('')}</div>`;
+        }).join('');
+      });
     }
   }
   return `<div class="mcal">${out}</div>`;

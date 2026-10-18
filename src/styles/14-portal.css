@@ -283,7 +283,8 @@
   .mcal-name{ display:block; min-width:0; font-size:9.5px; line-height:1.2; padding:1px 2px; border-radius:4px; background:var(--p-panel2); color:var(--p-text); overflow-wrap:anywhere; }          /* (a name made of two words may wrap to two lines; it is never cut) */
   .mcal-name small{ display:block; font-size:8px; line-height:1.15; color:var(--p-muted); font-weight:400; }
   /* the service girls and the teachers: one slim line under the day, small names in two soft colours (named in the label at the start of the week) */
-  .mcal-others{ min-width:0; display:flex; flex-wrap:wrap; gap:1px 3px; padding:2px; background:var(--p-panel); border:1px solid var(--p-line); border-top:1px dotted var(--p-line); border-radius:0 0 8px 8px; }
+  .mcal-others{ min-width:0; display:flex; flex-wrap:wrap; gap:1px 3px; padding:2px; background:var(--p-panel); border:1px solid var(--p-line); border-top:1px dotted var(--p-line); border-bottom:none; }
+  .mcal-others.last{ border-bottom:1px solid var(--p-line); border-radius:0 0 8px 8px; }
   .mcal-others.weekend{ background:rgba(128,128,128,.12); } .mcal-others.today{ border-color:var(--gold); }
   .mcal-other{ min-width:0; font-size:8.5px; line-height:1.25; font-weight:600; overflow-wrap:anywhere; }
   .mcal-other, .mcal-label.others small{ color:var(--p-svc, #c9a6ff); }          /* (the service girls and the teachers in one colour: Guy 2026-10-18) */

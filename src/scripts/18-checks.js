@@ -1895,8 +1895,9 @@
       if(mk){
         const ctx = portalCtx(mk), box = document.createElement('div'); box.style.width = '374px'; document.body.appendChild(box);
         box.innerHTML = monthCalHtml(ctx, portalMonth(mk).assignments, { colour:true });
-        const day = Object.keys(scheduleOthersOf(ctx) || {})[0], cell = day && box.querySelector(`.mcal-others[data-day="${day}"]`), o = day && scheduleOthersOf(ctx)[day];
-        check('calendar: under the days there is a slim line with the service girls and the teachers (names only, small)', !!cell && o.service.concat(o.teacher).every(x => cell.textContent.includes(x.name)) && !!box.querySelector('.mcal-label.others') && parseFloat(getComputedStyle(cell.querySelector('.mcal-other')).fontSize) <= 11, day + ' / ' + (cell ? cell.textContent : 'no line'));
+        const day = Object.keys(scheduleOthersOf(ctx) || {})[0], cells = day ? [...box.querySelectorAll(`.mcal-others[data-day="${day}"]`)] : [], o = day && scheduleOthersOf(ctx)[day], txt = cells.map(c => c.textContent).join(' ');
+        check('calendar: under the days there is a slim line with the service girls and the teachers (names only, small)', cells.length > 0 && o.service.concat(o.teacher).every(x => txt.includes(x.name)) && !!box.querySelector('.mcal-label.others') && parseFloat(getComputedStyle(cells[0].querySelector('.mcal-other') || cells[0]).fontSize) <= 11, day + ' / ' + txt);
+        check('calendar: ... the teachers and the service girls each on a row of their own (never mixed in one line)', [...box.querySelectorAll('.mcal-others')].every(c => !(c.querySelector('.mcal-other.teacher') && c.querySelector('.mcal-other.service'))) && (!box.querySelector('.mcal-others.teacher') || !box.querySelector('.mcal-others.teacher .mcal-other.service')), 'mixed');
         box.innerHTML = monthCalHtml(ctx, portalMonth(mk).assignments, { colour:true, others:false });
         check('calendar: ... and without it, when hidden', !box.querySelector('.mcal-others') && !box.querySelector('.mcal-label.others'), 'still there'); box.remove();
         try { localStorage.removeItem('ramzor-cs-hide-others'); } catch(e){}
