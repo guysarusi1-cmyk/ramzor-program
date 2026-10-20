@@ -113,6 +113,8 @@ async function srvLoadSettings(){
   srv.portalTheme = null;
   try { const t = await sbPersonal.from('staff_settings').select('portal_theme').eq('staff_id', srv.me).maybeSingle(); if(!t.error && t.data) srv.portalTheme = t.data.portal_theme || null; } catch(e){}          // (comes with scheduling-v16.sql)
   if(!srv.voice){ try { srv.voice = localStorage.getItem('ramzor-portal-voice') || null; } catch(e){} }
+  srv.prefStart = null;          // (how the preferences start every month: scheduling-v30.sql)
+  try { const pr = await sbPersonal.from('staff_settings').select('pref_start').eq('staff_id', srv.me).maybeSingle(); if(!pr.error && pr.data) srv.prefStart = pr.data.pref_start || null; } catch(e){}
   srv.fixedNo = [];          // (fixed preferences: scheduling-v27.sql)
   try { const fx = await sbPersonal.from('staff_settings').select('fixed_no').eq('staff_id', srv.me).maybeSingle(); if(!fx.error && fx.data && Array.isArray(fx.data.fixed_no)) srv.fixedNo = fx.data.fixed_no; } catch(e){}
   srv.lang = (srv.profile && srv.profile.lang) || null;          // (the language: her own choice, else the admin's default; scheduling-v25.sql)
@@ -136,24 +138,50 @@ async function srvSaveSetting(patch){
 function openPortalSettings(){
   const coord = leopardAllowed(), leo = coord && portalThemeNow() === 'leopard';          // (the leopard look: exclusive — the coordinator, the admin, and whom the admin chose; never the default)          // (the leopard look: only the coordinator's portal)
   const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){ return '0'; } })();          // ('0' usual, '1' large, '2' very large)
+  const role = srv.meRow ? srv.meRow.role : '', isInstr = role === 'instructor', remOn = ['instructor', 'service'].includes(role);
+  const ps = srv.prefStart || '', PS = { '':'הכל לא סומן', yes:'הכל "כן"', no:'הכל "לא"' };
+  const gf = portalUi.gearFold = portalUi.gearFold || {};
+  // the settings in a few folded groups, each with what is chosen now under its title (Guy 2026-10-20)
+  const fold = (id, title, now, inner) => `<details class="pfold gear-fold" data-gfold="${id}"${gf[id] ? ' open' : ''}><summary><span>${title}</span><small class="gear-now">${now}</small></summary><div class="pfold-body">${inner}</div></details>`;
+  const W = (he, ar) => arOn() ? ar : he;          // (the short lines under the titles are put together here, so they are written in her language)
+  const langNow = [portalAsCoord(portalMe()) ? '' : (srv.lang === 'ar' ? 'العربية' : 'עברית'), arOn() ? '' : VOICE_NAMES[v], remOn ? (srv.reminders === false ? W('בלי תזכורות', 'بدون تذكيرات') : W('עם תזכורות', 'مع تذكيرات')) : ''].filter(Boolean).join(' · ');
+  const lookNow = [leo ? W('מנומר', 'نمر') : dark ? W('כהה', 'داكن') : W('בהיר', 'فاتح'), ({ '0':W('טקסט רגיל', 'نص عادي'), '1':W('טקסט גדול', 'نص كبير'), '2':W('טקסט גדול מאוד', 'نص كبير جدًا') })[big]].join(' · ');
   const sh = portalSheet(`<h2>העדפות מערכת</h2>
-    ${portalAsCoord(portalMe()) ? '' : `<h3 class="psec">שפה · اللغة</h3>
+    ${fold('talk', 'שפה והודעות', langNow, `${portalAsCoord(portalMe()) ? '' : `<h3 class="psec">שפה · اللغة</h3>
     <div class="pchoice wrap ar-keep"><button type="button" class="${srv.lang === 'ar' ? '' : 'on'}" data-set-lang="he">עברית</button><button type="button" class="${srv.lang === 'ar' ? 'on' : ''}" data-set-lang="ar">العربية</button></div>`}
     ${arOn() ? '' : `<h3 class="psec">באיזו שפה נדבר איתך?</h3>
     <div class="pgoal-list" role="group" aria-label="שפת המערכת">${Object.keys(VOICE_NAMES).map(k => `<button type="button" class="pgoal-opt${v === k ? ' on' : ''}" data-voice="${k}"><b>${VOICE_NAMES[k]}</b><small>${VOICE_SAMPLE[k]}</small></button>`).join('')}</div>`}
-    <h3 class="psec">מראה</h3>
-    <div class="pchoice wrap"><button type="button" class="${dark && !leo ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark || leo ? '' : 'on'}" data-set-theme="light">מצב בהיר</button>${coord ? `<button type="button" class="${leo ? 'on' : ''}" data-set-theme="leopard">מצב מנומר 🐆</button>` : ''}</div>
-    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button><button type="button" class="${big === '2' ? 'on' : ''}" data-set-big="2">טקסט גדול מאוד</button></div>
-    ${srv.meRow && srv.meRow.role === 'instructor' ? `<h3 class="psec">העדפות קבועות</h3>
+    ${remOn ? `<h3 class="psec">תזכורות במייל להגשת ההעדפות</h3>
+    <div class="pchoice wrap"><button type="button" class="${srv.reminders === false ? '' : 'on'}" data-set-rem="1">לקבל תזכורות</button><button type="button" class="${srv.reminders === false ? 'on' : ''}" data-set-rem="0">בלי תזכורות</button></div>` : ''}`)}
+    ${fold('look', 'מראה', lookNow, `<div class="pchoice wrap"><button type="button" class="${dark && !leo ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark || leo ? '' : 'on'}" data-set-theme="light">מצב בהיר</button>${coord ? `<button type="button" class="${leo ? 'on' : ''}" data-set-theme="leopard">מצב מנומר 🐆</button>` : ''}</div>
+    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button><button type="button" class="${big === '2' ? 'on' : ''}" data-set-big="2">טקסט גדול מאוד</button></div>`)}
+    ${isInstr ? fold('prefs', 'ההעדפות שלי', PS[ps], `<h3 class="psec">איך מתחילות ההעדפות בכל חודש?</h3>
+    <div class="pchoice wrap pref-start">${Object.keys(PS).map(k => `<button type="button" class="${ps === k ? 'on' : ''}" data-pref-start="${k}">${PS[k]}</button>`).join('')}</div>
+    <div class="pnote">כשנפתח חודש חדש, כל המשמרות מסומנות אצלך כך מההתחלה, ומשנים רק את מה שצריך. ההעדפות הקבועות שלך נשארות "לא".</div>
+    <h3 class="psec">העדפות קבועות</h3>
     <div class="pnote">מה שמסמנים כאן מופיע אצלך "לא" בכל חודש. אפשר לבחור יותר מאחד, ואפשר תמיד לשנות משמרת מסוימת בלחיצה עליה.</div>
     <div class="pchoice wrap fixed-no">${[['m', 'לא עושה בקרים'], ['e', 'לא עושה צהריים'], ['n', 'לא עושה לילות']].map(([k, w]) => { const admin = k === 'n' && srv.profile && srv.profile.no_nights; return `<button type="button" class="${admin || (srv.fixedNo || []).includes(k) ? 'on' : ''}" data-fixed-no="${k}"${admin ? ' disabled title="הוגדר בפורטל הניהול"' : ''}>${w}</button>`; }).join('')}</div>
     <h3 class="psec">סופי שבוע</h3>
     <div class="pchoice wrap"><button type="button" class="${srv.showLong ? 'on' : ''}" data-set-long="1">להציג סופ"ש ארוך: כן</button><button type="button" class="${srv.showLong ? '' : 'on'}" data-set-long="0">לא</button></div>
     <div class="pnote">${tx('long_setting')}</div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${srv.pickOne ? 'on' : ''}" data-set-pick="1">להציג "רק אחד מאלה": כן</button><button type="button" class="${srv.pickOne ? '' : 'on'}" data-set-pick="0">לא</button></div>
-    <div class="pnote">${tx('pick_setting')}</div>` : ''}
+    <div class="pnote">${tx('pick_setting')}</div>`) : ''}
     <button type="button" class="btn ghost" id="gear-problem" style="margin-top:14px;width:100%">משהו לא עובד? דיווח על תקלה</button>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
+  sh.querySelectorAll('[data-gfold]').forEach(d => d.addEventListener('toggle', () => { gf[d.dataset.gfold] = d.open; }));
+  sh.querySelectorAll('[data-set-rem]').forEach(b => b.addEventListener('click', async () => {
+    const on = b.dataset.setRem === '1', was = srv.reminders;
+    sh.querySelectorAll('[data-set-rem]').forEach(x => x.classList.toggle('on', x === b));
+    if(!(await srvSaveSetting({ reminders:on }))){ srv.reminders = was; toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
+    toast(on ? 'נשלח לך תזכורות לקראת סוף ההגשה' : 'לא נשלח לך יותר תזכורות במייל');
+  }));
+  sh.querySelectorAll('[data-pref-start]').forEach(b => b.addEventListener('click', async () => {
+    const val = b.dataset.prefStart || null, was = srv.prefStart;
+    sh.querySelectorAll('[data-pref-start]').forEach(x => x.classList.toggle('on', x === b)); srv.prefStart = val;
+    let ok = false; try { const r = await sbPersonal.from('staff_settings').upsert({ staff_id:srv.me, pref_start:val }); ok = !r.error; } catch(e){}          // (scheduling-v30.sql)
+    if(!ok){ srv.prefStart = was; sh.querySelectorAll('[data-pref-start]').forEach(x => x.classList.toggle('on', (x.dataset.prefStart || null) === (was || null))); toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
+    toast('נשמר. בחודש הבא שייפתח, ההעדפות יתחילו כך');
+  }));
   sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
   sh.querySelectorAll('[data-fixed-no]').forEach(b => b.addEventListener('click', async () => {
     const k = b.dataset.fixedNo, cur = new Set(srv.fixedNo || []); if(cur.has(k)) cur.delete(k); else cur.add(k);

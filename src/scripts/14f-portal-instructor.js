@@ -85,6 +85,19 @@ const prefNoNight = prefFixedNo;
 const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? (prefNoNight(key) ? 'no' : 'neutral') : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
 const DEFAULT_SHIFT_LEGEND = types => types.map(s => (s.letter || s.label.charAt(0)) + ' = ' + s.label);
 const FIXED_REASON = { vacation:'חופשה', sick:'מחלה', reserve:'מילואים', leave:'חופשה מיוחדת', other:'היעדרות', self:'היעדרות' };
+// how the preferences start: whoever chose "all yes" / "all no" in the gear gets a month she opens for the first time (nothing marked yet) filled
+// that way, as real marks (the fixed "no" ones stay "no"; days away stay away). Once per month on this device, so "נקה הכל" stays clean. (scheduling-v30.sql)
+function prefStartFill(mk, id, prefs, days){
+  const lv = srv.prefStart; if(lv !== 'yes' && lv !== 'no') return false;
+  const key = `ramzor-prefstart-${id}-${mk}`; try { if(localStorage.getItem(key)) return false; } catch(e){}
+  if(Object.keys(prefs.slots).length) return false;
+  days.forEach(date => {
+    if(prefs.absent.includes(date) || prefs.fixed.some(f => f.day === date)) return;
+    prefShiftsFor(date).forEach(s => { const k = `${date}|${s.id}`; if(!prefNoNight(k)) prefs.slots[k] = lv; });
+  });
+  try { localStorage.setItem(key, '1'); } catch(e){}
+  portalSave(); return true;
+}
 function renderInstructorPrefs(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad();
@@ -92,6 +105,8 @@ function renderInstructorPrefs(body){
   const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalServerOn ? srvPrefsOf(m, me.id) : portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
   const days = daysOfMonth(mk), lead = dowOf(days[0]);
   const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
+  if(portalServerOn && me.role === 'instructor' && !locked && !submitted && prefStartFill(mk, me.id, prefs, days))
+    toast(srv.prefStart === 'yes' ? 'כל המשמרות סומנו "כן", לפי ההגדרות שלך. משנים רק את מה שצריך' : 'כל המשמרות סומנו "לא", לפי ההגדרות שלך. משנים רק את מה שצריך');
   const dl = m.deadline ? parseIso(m.deadline) : null;
   const fixedOn = date => portalServerOn ? prefs.fixed.find(f => f.day === date) : null;
   // the long weekend: one button under the Friday and the Saturday of a weekend (and, when the person switched it on in the settings, the small "only one of these" next to it)

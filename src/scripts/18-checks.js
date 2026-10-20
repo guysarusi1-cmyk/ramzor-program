@@ -1999,7 +1999,33 @@
         const mb = bs.find(b => b.dataset.fixedNo === 'm'); if(mb && !mb.classList.contains('on')){ mb.click(); await sleep(800); }
         const saved = await sbPersonal.from('staff_settings').select('fixed_no').eq('staff_id', srv.me).maybeSingle();
         check('fixed preferences: choosing one is saved for her', !!saved.data && (saved.data.fixed_no || []).includes('m'), JSON.stringify(saved.data));
+        // the gear in folded groups, each with what is chosen now under its title (Guy 2026-10-20)
+        { const gs = [...document.querySelectorAll('.psheet [data-gfold]')];
+          check('settings: the gear is in folded groups (language and messages, look, my preferences), each showing what is chosen now', gs.map(d => d.dataset.gfold).join(',') === 'talk,look,prefs' && gs.every(d => d.querySelector('.gear-now').textContent.trim().length > 2), gs.map(d => d.dataset.gfold + ':' + (d.querySelector('.gear-now') || {}).textContent).join(' | '));
+          // the reminders can be switched off (and on again)
+          const off = document.querySelector('.psheet [data-set-rem="0"]'); if(off){ off.click(); await sleep(800); }
+          const r1 = await sbPersonal.from('staff_settings').select('reminders').eq('staff_id', srv.me).maybeSingle();
+          check('settings: "בלי תזכורות" is saved for her (the engine sends her none)', !!off && !!r1.data && r1.data.reminders === false, JSON.stringify(r1.data));
+          const on = document.querySelector('.psheet [data-set-rem="1"]'); if(on){ on.click(); await sleep(800); }
+          // how her preferences start every month: unmarked / all yes / all no (scheduling-v30.sql)
+          const pb = [...document.querySelectorAll('.psheet [data-pref-start]')];
+          check('settings: "how the preferences start every month" offers unmarked, all yes, all no', pb.map(b => b.textContent).join('|') === 'הכל לא סומן|הכל "כן"|הכל "לא"', pb.map(b => b.textContent).join('|'));
+          const probe30 = await sbPersonal.from('staff_settings').select('pref_start').eq('staff_id', srv.me).maybeSingle();
+          if(probe30.error) check('(info) settings: saving how the preferences start needs scheduling-v30.sql', true, '');
+          else { pb[1].click(); await sleep(800);
+            const r2 = await sbPersonal.from('staff_settings').select('pref_start').eq('staff_id', srv.me).maybeSingle();
+            check('settings: the choice "הכל כן" is saved for her', !!r2.data && r2.data.pref_start === 'yes', JSON.stringify(r2.data));
+            pb[0].click(); await sleep(800); } }
         { const c = document.querySelector('.psheet [data-close]'); if(c) c.click(); await sleep(100); }
+        // a month opened for the first time is filled by that choice (a made-up month, nothing is saved)
+        { const wasPs = srv.prefStart, wasSave = portalSave, mk0 = '2099-03', ds = daysOfMonth(mk0), away = ds[3];
+          const fake = { slots:{}, absent:[away], fixed:[], hours:{}, pick:[] };
+          try { localStorage.removeItem(`ramzor-prefstart-chk-${mk0}`); } catch(e){}
+          srv.prefStart = 'yes'; portalSave = () => {};
+          const filled = prefStartFill(mk0, 'chk', fake, ds), again = prefStartFill(mk0, 'chk', { slots:{}, absent:[], fixed:[] }, ds);
+          const vals = Object.entries(fake.slots);
+          check('settings: with "הכל כן" a new month starts all "yes" (the fixed "no" ones stay "no", a day away stays away), and only once', filled && !again && vals.length > 40 && vals.every(([k, v]) => v === 'yes' && !k.startsWith(away) && !k.endsWith('|m')), vals.length + ' / ' + filled + ' / ' + again);
+          srv.prefStart = wasPs; portalSave = wasSave; try { localStorage.removeItem(`ramzor-prefstart-chk-${mk0}`); } catch(e){} }
         const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k)) || portalUi.pmonth;
         portalUi.pmonth = mk; showPortal('prefs'); await sleep(400);
         const day = daysOfMonth(mk).find(d => !srvPrefsOf(portalMonth(mk), srv.me).slots[`${d}|m`] && !srvPrefsOf(portalMonth(mk), srv.me).absent.includes(d) && document.querySelector(`[data-pslot="${d}|m"]`));

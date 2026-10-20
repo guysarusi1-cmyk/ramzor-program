@@ -82,6 +82,7 @@
   .pfold > summary::-webkit-details-marker{ display:none; }
   .pfold > summary::after{ content:'▾'; color:var(--p-muted); transition:transform .2s; }
   .pfold[open] > summary::after{ transform:rotate(180deg); }
+  .gear-fold > summary small.gear-now{ margin-inline-start:auto; font-family:inherit; font-weight:500; font-size:12px; color:var(--p-muted); text-align:end; }          /* (what is chosen now, next to the arrow) */
   .pfold-body{ padding:0 10px 12px; }
   .pfold.sub{ background:var(--p-panel2); margin:2px 0 8px; } .pfold.sub > summary{ min-height:42px; font-size:13.5px; font-weight:700; }
   .pfold.sub:not([open]) ~ .pmine .swap-btn{ display:none; }
