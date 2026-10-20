@@ -1313,9 +1313,14 @@
       srvOpenPortal(); srv.portalTheme = 'leopard'; showPortal();
       check('leopard: the coordinator portal can wear the leopard look (background, titles, frames)', document.querySelector('.portal-shell').dataset.ptheme === 'leopard' && document.body.classList.contains('leopard-bg'), document.querySelector('.portal-shell').dataset.ptheme);
       document.getElementById('portal-gear').click(); await sleep(150);
-      check('leopard: it is a third choice in the coordinator gear', !!document.querySelector('.psheet [data-set-theme="leopard"]') && document.querySelectorAll('.psheet [data-set-theme]').length === 3, document.querySelectorAll('.psheet [data-set-theme]').length);
+      check('leopard: it is a third choice in the gear', !!document.querySelector('.psheet [data-set-theme="leopard"]') && document.querySelectorAll('.psheet [data-set-theme]').length === 3, document.querySelectorAll('.psheet [data-set-theme]').length);
       { const c = document.querySelector('.psheet [data-close]'); if(c) c.click(); await sleep(150); }
       srv.portalTheme = null; showPortal();
+      check('leopard: the coordinator has the leopard look by default (until she chooses another look)', document.querySelector('.portal-shell').dataset.ptheme === 'leopard', document.querySelector('.portal-shell').dataset.ptheme);
+      { const wasRow = srv.meRow; srv.meRow = Object.assign({}, wasRow, { role:'instructor', admin:false });          // (everybody else: the leopard look is a choice in the gear, not the default)
+        check('leopard: for everybody else it is not the default', portalThemeNow() !== 'leopard' && leopardAllowed(), String(portalThemeNow()));
+        srv.meRow = wasRow; }
+      srv.portalTheme = 'dark'; showPortal();
       check('leopard: back to the usual look, the leopard background is gone', document.querySelector('.portal-shell').dataset.ptheme !== 'leopard' && !document.body.classList.contains('leopard-bg'), document.querySelector('.portal-shell').dataset.ptheme);
       await personalLeave(); showHub();
       check('ahmash control: without the personal sign-in the button is not there', document.getElementById('hub-control-btn').hidden, 'still shown');
