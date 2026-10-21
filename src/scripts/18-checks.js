@@ -700,7 +700,7 @@
         $('new-child-name').value = 'בדיקה' + stage; $('new-child-lastinit').value = 'ת'; $('new-child-age').value = '8';
         $('new-child-stage').value = stage;
         $('add-child-btn').click();
-        for(let i=0;i<20 && roster.length < 15;i++) await sleep(250);
+        for(let i=0;i<20 && roster.length < 16;i++) await sleep(250);
         const kid = roster.find(c => c.firstName === 'בדיקה' + stage);
         check(`new child (${stage}) appears`, !!kid, 'not in roster');
         if(!kid) continue;
@@ -1085,7 +1085,7 @@
       const swapFold = document.querySelector('details[data-fold="swap"]');
       check('swaps: a folded "בקשת החלפה" header sits inside "המשמרות שלי", and the buttons appear when it is opened', !!swapFold && !swapFold.open && getComputedStyle(document.querySelector('.swap-btn')).display === 'none', 'swap fold');
       swapFold.open = true; await sleep(60);
-      check('swaps: opening it shows a "בקשת החלפה" button beside each upcoming shift', getComputedStyle(document.querySelector('.swap-btn')).display !== 'none' && document.querySelectorAll('.swap-btn').length > 3, 'no buttons');
+      check('swaps: opening it shows a "בקשת החלפה" button beside each upcoming shift', !!document.querySelector('.swap-btn') && getComputedStyle(document.querySelector('.swap-btn')).display !== 'none' && document.querySelectorAll('.swap-btn').length >= 1, document.querySelectorAll('.swap-btn').length + ' buttons');          // (late in the month the made-up month has few shifts left)
       const mine = myShifts(portalPerson('i1'), mk).find(s => s.end > Date.now() && !st.swaps.some(w => w.key === s.key));
       document.querySelector(`[data-swap-open="${mine.key}"]`).click(); await sleep(150);
       check('swaps: asks before publishing the shift', !!document.querySelector('.confirm-sheet') && /לבקש החלפה/.test(document.querySelector('.confirm-sheet').textContent), 'no question');
@@ -1265,7 +1265,7 @@
       check('personal sign-in: ... which opens the portal of the same person, with a way back to the two choices', activeView() === 'view-portal' && /מסך ראשי/.test((document.getElementById('portal-home') || {}).textContent || ''), activeView());
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
-      check('personal sign-in: an instructor who is the admin gets three cards (Ramzor, his instructor portal, the management portal)', !!document.getElementById('apphome-manage') && document.querySelectorAll('#view-apphome .home-card').length === 3, document.querySelectorAll('#view-apphome .home-card').length);
+      check('personal sign-in: an instructor who is the admin gets three cards (Ramzor, his instructor portal, the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && document.querySelectorAll('#view-apphome .home-card').length === (therapyAvailable() ? 4 : 3), document.querySelectorAll('#view-apphome .home-card').length);
       document.getElementById('apphome-portal').click(); await sleep(300);
       check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
@@ -1361,7 +1361,7 @@
       check('portal server: the settings offer the three voices (warm, light, brief)', document.querySelectorAll('.psheet [data-voice]').length === 3 && /חמה ורכה/.test(document.querySelector('.psheet').textContent) && /קלילה והומוריסטית/.test(document.querySelector('.psheet').textContent) && /קצרה ועניינית/.test(document.querySelector('.psheet').textContent), 'no options');
       const gcard = document.querySelector('.psheet .sheet-card');
       check('portal server: the settings sheet scrolls inside itself and stays within the screen (a small phone must reach the last voice)', getComputedStyle(gcard).overflowY === 'auto' && gcard.getBoundingClientRect().height <= window.innerHeight, getComputedStyle(gcard).overflowY + ' / ' + gcard.getBoundingClientRect().height + ' / ' + window.innerHeight);
-      check('portal server: the settings do not offer to switch the reminders off', !document.querySelector('.psheet [data-set-rem]') && !/תזכורות/.test(document.querySelector('.psheet').textContent), '');
+      check('portal server: the settings offer to switch the reminders off (Guy 2026-10-21: the button stays)', !!document.querySelector('.psheet [data-set-rem="0"]'), 'no button');
       document.querySelector('.psheet [data-voice="brief"]').click(); await sleep(400);
       check('portal server: choosing the brief voice changes the screen at once', srv.voice === 'brief' && /נא להגיש העדפות|ההעדפות הוגשו\./.test(document.getElementById('portal-body').textContent), srv.voice + ' / ' + document.querySelector('.pstatus').textContent);
       document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-voice="light"]').click(); await sleep(400);
@@ -1957,7 +1957,7 @@
         // the second test instructor is also a therapist (a combined role); the coordinator gives her two children
         const fl = await sbPersonal.from('staff_private').update({ is_therapist:true }).eq('staff_id', th);
         check('therapy portal: the coordinator marks somebody as "also a therapist"', !fl.error, (fl.error || {}).message);
-        const as = await sbPersonal.from('child_therapist').upsert([{ child_id:'c1', staff_id:th }, { child_id:'c2', staff_id:th }]);
+        const as = await sbPersonal.from('child_therapist').upsert([{ child_id:'c1', staff_id:th }, { child_id:'c2', staff_id:th }, { child_id:'c15', staff_id:th }]);
         const rows = await sbPersonal.from('child_therapist').select('child_id,staff_id').in('child_id', ['c1', 'c2']);
         check('therapy portal: the coordinator assigns a responsible therapist to a child', !as.error && rows.data && rows.data.length === 2 && rows.data.every(r => r.staff_id === th), (as.error || {}).message || JSON.stringify(rows.data));
         const bad = await sbPersonal.from('child_therapist').upsert({ child_id:'c3', staff_id:plain });
@@ -1982,20 +1982,105 @@
         // the therapist: her own children first
         if(!(await enter('instructor2'))){ check('therapy portal: the therapist signs in', false, 'no'); return; }
         const tMine = await sbPersonal.rpc('my_therapy_children'), ids = (tMine.data || []).map(r => typeof r === 'string' ? r : r.my_therapy_children).sort();
-        check('therapy portal: the therapist gets exactly the children she is responsible for', !tMine.error && ids.join(',') === 'c1,c2', JSON.stringify(tMine.data));
+        check('therapy portal: the therapist gets exactly the children she is responsible for', !tMine.error && ids.join(',') === 'c1,c15,c2', JSON.stringify(tMine.data));
         const tTry = await sbPersonal.from('child_therapist').upsert({ child_id:'c5', staff_id:th });
         check('therapy portal: a therapist cannot assign children to herself', !!tTry.error, 'accepted');
+        // stage 2: the plan of a child (scheduling-v32.sql)
+        const v32 = !(await sbPersonal.from('child_plans').select('child_id').limit(1)).error;
+        if(!v32) check('(info) therapy portal: the plans need scheduling-v32.sql', true, '');
+        else {
+          const draft = { summary:'בדיקה אוטומטית: תקציר קצר', avoid:'בדיקה: לא להרים את הקול', goals:[
+            { id:'gA', title:'ויסות רגשי', focus:true, targets:'נרגע/ת תוך כמה דקות', interventions:'להציע את פינת השקט', seen:'סוד: לא לצוות', needs:'', why:'', planet_id:'moon', strengths:['סבלנות'] },
+            { id:'gB', title:'בקשת עזרה', focus:false, targets:'פונה למבוגר', interventions:'לשאול "במה אפשר לעזור?"', seen:'', needs:'', why:'', planet_id:null, strengths:['אומץ'] }] };
+          const sv = await sbPersonal.from('child_plans').upsert({ child_id:'c1', draft });
+          check('plans: the therapist saves a draft of the plan of her child', !sv.error, (sv.error || {}).message);
+          const other = await sbPersonal.from('child_plans').upsert({ child_id:'c9', draft });
+          check('plans: ... but not of a child she is not responsible for', !!other.error, 'accepted');
+          const sneak = await sbPersonal.from('child_plans').update({ published:Object.assign({}, draft, { summary:'שינוי עוקף ' + Date.now() }) }).eq('child_id', 'c1');
+          check('plans: a plan is published only through "פרסום" (a direct change is refused)', !!sneak.error, 'accepted');
+          const pb = await sbPersonal.rpc('plan_publish', { p_child:'c1', p_important:false });
+          const vs = await sbPersonal.from('child_plan_versions').select('version').eq('child_id', 'c1').order('version', { ascending:false }).limit(1);
+          check('plans: publishing makes a new version, and every version is kept', !pb.error && pb.data >= 1 && vs.data && vs.data[0] && vs.data[0].version === pb.data, (pb.error || {}).message || JSON.stringify(vs.data));
+          await thpLoad(); planOpenEditor('c1'); await sleep(150);
+          check('plans: the editor shows the plan (summary, what to avoid, the goals, focus, planet, strengths)', document.querySelector('#pe-summary').value === draft.summary && document.querySelectorAll('.th-goal').length === 2 && document.querySelector('.th-goal .pe-g-focus').checked && document.querySelector('.th-goal .pe-g-planet').value === 'moon' && /סבלנות/.test(document.querySelector('.th-goal .pe-g-strengths').textContent), document.querySelectorAll('.th-goal').length);
+          { document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); await sleep(80);
+            const boxes = [...document.querySelectorAll('.th-goal .pe-g-focus')]; boxes.forEach(b => { if(!b.checked){ b.checked = true; b.dispatchEvent(new Event('change')); } });
+            check('plans: at most 3 goals in focus', document.querySelectorAll('.th-goal .pe-g-focus:checked').length === 3, document.querySelectorAll('.th-goal .pe-g-focus:checked').length); }
+          // a plain instructor: the guidance, without the thinking of the therapist
+          if(!(await enter('instructor'))){ check('plans: the instructor signs in', false, 'no'); return; }
+          const gd = await sbPersonal.rpc('plan_guidance'), g1 = (gd.data || []).find(r => r.child_id === 'c1'), rawI = await sbPersonal.from('child_plans').select('child_id');
+          check('plans: the staff gets the published plan as guidance, without the thinking of the therapist', !gd.error && !!g1 && g1.content.goals.length === 2 && !g1.content.goals.some(x => 'seen' in x || 'why' in x || 'needs' in x) && !JSON.stringify(g1.content).includes('סוד'), JSON.stringify(g1 && g1.content).slice(0, 160));
+          check('plans: an instructor cannot read the plans themselves', !rawI.error && !(rawI.data || []).length, JSON.stringify(rawI.data));
+          const nt = await sbPersonal.from('notices').select('text,kind').eq('to_staff', srv.me).eq('kind', 'plan').order('created_at', { ascending:false }).limit(1);
+          check('plans: the staff is told that a plan was published', !!(nt.data && nt.data[0] && /תוכנית/.test(nt.data[0].text)), JSON.stringify(nt.data));
+          await showTherapyPortal();
+          const card = document.querySelector('#view-therapy [data-th-kid="c1"]');
+          check('plans: the card of the child says what is in focus', !!card && /במוקד: ויסות רגשי/.test(card.textContent), card ? card.textContent : 'no card');
+          card.click(); await sleep(150);
+          check('plans: the child opens with "what to avoid" first, then the goals in focus', !!document.querySelector('.psheet .th-avoid') && /לא להרים את הקול/.test(document.querySelector('.psheet .th-avoid').textContent) && /פינת השקט/.test(document.querySelector('.psheet').textContent) && !document.querySelector('.psheet #th-edit-plan'), 'sheet');
+          { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(80); } }
+          const libI = await sbPersonal.from('mercury_library').insert({ scope:'center', kind:'goal', title:'בדיקה אוטומטית של מדריך' });
+          check('plans: an instructor cannot add to the library', !!libI.error, 'accepted');
+          // stage 5: an observation (text, and a short recording in the private storage)
+          const ob = await sbPersonal.from('observations').insert({ child_id:'c1', text:'בדיקה אוטומטית: ביקש עזרה בלי לצעוק', goal_id:'gA' }).select('id').single();
+          check('observations: an instructor sends an observation on a child', !ob.error && !!ob.data, (ob.error || {}).message);
+          const up = await sbPersonal.storage.from('mercury').upload(`audio/c1/check-${Date.now()}.webm`, new Blob(['test'], { type:'audio/webm' }), { contentType:'audio/webm' });
+          check('observations: a recording goes to the private storage', !up.error, (up.error || {}).message);
+          const ownObs = await sbPersonal.from('observations').select('id,reply').eq('id', ob.data && ob.data.id);
+          check('observations: the writer sees her own observation', !ownObs.error && (ownObs.data || []).length === 1, JSON.stringify(ownObs.data));
+          const selfReply = await sbPersonal.from('observations').update({ reply:'לא שלי' }).eq('id', ob.data && ob.data.id).select('id');
+          check('observations: the writer cannot answer it herself', !!selfReply.error || !(selfReply.data || []).length, JSON.stringify(selfReply.data));
+          // stage 3: the strengths of a child (the temple)
+          const STR = 'בדיקה חוזקה';
+          const bs = await sbPersonal.rpc('brick_strengths', { p_child:'c1' }), bsNone = await sbPersonal.rpc('brick_strengths', { p_child:'c9' });
+          check('temple: a brick for a child with a plan offers the strengths of the plan; without a plan, the general list', !bs.error && bs.data && (bs.data.plan || []).includes('סבלנות') && (bs.data.plan || []).includes('אומץ') && !bsNone.error && bsNone.data === null, JSON.stringify([bs.data, bsNone.data]));
+          await sbPersonal.rpc('strength_set', { p_child:'c1', p_strength:STR, p_status:'extra' }).then(() => {}, () => {});          // (refused for an instructor; only to be sure it starts fresh when the therapist resets it below)
+          const n1 = await sbPersonal.rpc('note_strength', { p_child:'c1', p_strength:STR });
+          check('temple: a new strength goes first to the "additional suggestions" of the child', !n1.error && ['extra', 'main'].includes(n1.data), JSON.stringify(n1));
+          if(!(await enter('instructor2'))){ check('plans: the therapist signs in again', false, 'no'); return; }
+          const libT = await sbPersonal.from('mercury_library').insert({ scope:'center', kind:'goal', title:'בדיקה אוטומטית' }), libM = await sbPersonal.from('mercury_library').insert({ scope:'mercury', kind:'goal', title:'בדיקה אוטומטית למרקורי' });
+          check('plans: a therapist adds to the library of the center, not to the library of Mercury', (!libT.error || /duplicate|unique/i.test(libT.error.message)) && !!libM.error, JSON.stringify([(libT.error || {}).message, (libM.error || {}).message]));
+          const n2 = await sbPersonal.rpc('note_strength', { p_child:'c1', p_strength:'בדיקה חוזקה' }), bs2 = await sbPersonal.rpc('brick_strengths', { p_child:'c1' });
+          check('temple: chosen by a second instructor -> the main suggestions of the child', !n2.error && n2.data === 'main' && (bs2.data.main || []).includes('בדיקה חוזקה'), JSON.stringify([n2.data, bs2.data]));
+          const rm = await sbPersonal.rpc('strength_set', { p_child:'c1', p_strength:'בדיקה חוזקה', p_status:'removed' }), bs3 = await sbPersonal.rpc('brick_strengths', { p_child:'c1' });
+          check('temple: the therapist can take a strength down', !rm.error && !(bs3.data.main || []).includes('בדיקה חוזקה'), JSON.stringify([(rm.error || {}).message, bs3.data]));
+          await sbPersonal.from('child_strengths').select('child_id').limit(1);
+          { await sbPersonal.rpc('strength_set', { p_child:'c1', p_strength:'בדיקה חוזקה', p_status:'extra' }); }
+          // (the next run starts again from "extra"; the pickers stay, so the two-instructors rule is checked by the status above)
+          // stage 5: the therapist sees the observation, answers it, and was told
+          const tObs = await sbPersonal.from('observations').select('id,text,reply').eq('child_id', 'c1').order('created_at', { ascending:false }).limit(1);
+          check('observations: the responsible therapist sees the observation', !tObs.error && tObs.data[0] && /ביקש עזרה/.test(tObs.data[0].text), JSON.stringify(tObs.data));
+          const ans = await sbPersonal.from('observations').update({ reply:'ראיתי, תודה' }).eq('id', tObs.data[0].id).select('reply');
+          check('observations: she answers "ראיתי, תודה"', !ans.error && ans.data && ans.data[0] && ans.data[0].reply === 'ראיתי, תודה', (ans.error || {}).message);
+          const tn = await sbPersonal.from('notices').select('text').eq('to_staff', srv.me).eq('kind', 'therapy').order('created_at', { ascending:false }).limit(5);
+          check('observations: the therapist is told of a new observation (by her choice: here a notice, the daily summary by e-mail)', !tn.error && (tn.data || []).some(n => /תצפית/.test(n.text)), JSON.stringify(tn.data));
+          // stage 4: the journey of a child (c15)
+          const rt = await sbPersonal.rpc('journey_set_route', { p_child:'c15', p_route:['moon', 'mercury'] });
+          check('journey: the therapist sets the route of her child', !rt.error, (rt.error || {}).message);
+          const pl = await sbPersonal.rpc('journey_place', { p_child:'c15', p_planet_idx:0, p_stage:'climb', p_step:0 });
+          check('journey: only the admin places a child on the journey', !!pl.error, 'accepted');
+          const s1 = await sbPersonal.rpc('journey_step', { p_child:'c15' }), s2 = await sbPersonal.rpc('journey_step', { p_child:'c15' });
+          check('journey: one step a day (a second step the same day is refused)', (!s1.error || /already today/.test(s1.error.message)) && !!s2.error && /already today/.test(s2.error.message), JSON.stringify([(s1.error || {}).message, s1.data, (s2.error || {}).message]));
+          const tvj = await sbPersonal.rpc('tv_journeys', { p_token:null }), jc = (tvj.data || []).find(r => r.child_id === 'c15');
+          check('journey: the TV gets the positions (no skill names)', !tvj.error && !!jc && jc.stage && !('skill' in jc), JSON.stringify(jc));
+          const ap = await sbPersonal.rpc('journey_approve_next', { p_child:'c15', p_ok:true });
+          check('journey: the therapist approves the next planet', !ap.error, (ap.error || {}).message);
+          await thpLoad(); planOpenEditor('c1'); for(let i = 0; i < 30 && !document.querySelector('#pe-track .trk-table'); i++) await sleep(150);
+          check('tracking: the plan page has the observations and an 8-week summary per goal', !!document.querySelector('#pe-obs .obs-item') && !!document.querySelector('#pe-track .trk-table') && /השבוע:/.test(document.querySelector('#pe-track').textContent) && document.querySelectorAll('#pe-track thead th').length === 9, document.querySelector('#pe-track') ? document.querySelector('#pe-track').textContent.slice(0, 80) : 'none');
+          for(let i = 0; i < 30 && !document.querySelector('#pe-journey .journey-admin, #pe-journey .pnote'); i++) await sleep(150);
+          check('journey: the plan page has the route of the child', !!document.querySelector('#pe-journey .journey-admin, #pe-journey .pnote'), document.querySelector('#pe-journey') ? document.querySelector('#pe-journey').innerHTML.slice(0, 80) : 'no box');
+        }
         await showTherapyPortal();
         const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
-        check('therapy portal: the therapist opens on "my children" (2), and also has "all the children"', t3.join(',') === 'mine,all' && document.querySelectorAll('#view-therapy [data-th-kid]').length === 2, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        check('therapy portal: the therapist opens on "my children" (3), and also has "all the children" and the library', t3.join(',') === (v32 ? 'mine,all,library' : 'mine,all') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
         // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)
         { const me = portalMe(), was = me.role; me.role = 'therapist';
           showAppHome(); await sleep(100);
           check('therapy portal: somebody who is only a therapist gets no "instructor portal" card', !document.getElementById('apphome-portal') && !!document.getElementById('apphome-therapy') && !!document.getElementById('apphome-ramzor'), 'cards wrong');
-          check('therapy portal: ... and only the tab of her own children', thpTabs().map(t => t[0]).join(',') === 'mine', thpTabs().map(t => t[0]).join(','));
+          check('therapy portal: ... and only the tab of her own children (and the library)', thpTabs().map(t => t[0]).join(',') === (thp.v32 ? 'mine,library' : 'mine'), thpTabs().map(t => t[0]).join(','));
           me.role = was; }
       } finally {
-        if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }
+        if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5', 'c15']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; showHub();
       }
       // the management of the children: the therapist choice next to every child (with the manager's sign-in)

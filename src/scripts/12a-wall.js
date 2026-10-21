@@ -51,15 +51,26 @@ async function renderWallsBoard(){
 // ---- the instructor names the strength before a brick is given: "איזה כוח ראית בו עכשיו?" (one quick tap)
 const BRICK_STRENGTHS = ['אומץ', 'התמדה', 'גמישות', 'בקשת עזרה', 'סבלנות', 'נדיבות', 'קבלה'];
 const cleanStrength = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+// Mercury (stage 3): the strengths offered are the plan's and the child's own; a child with no published plan gets the general list (decisions 26, 28)
+async function brickStrengthList(child){
+  try {
+    const r = await sb.rpc('brick_strengths', { p_child:child.id });
+    if(r.error || !r.data) return { main:BRICK_STRENGTHS, extra:[] };
+    const main = [...new Set([].concat(r.data.plan || [], r.data.main || []).map(cleanStrength).filter(Boolean))];
+    const extra = (r.data.extra || []).map(cleanStrength).filter(s => s && !main.includes(s)).slice(0, 8);
+    return main.length || extra.length ? { main, extra } : { main:BRICK_STRENGTHS, extra:[] };
+  } catch(e){ return { main:BRICK_STRENGTHS, extra:[] }; }
+}
 // resolves to the strength's name ('' is never returned: "אחר" without text gives 'אחר'), or null if they went back
-function askBrickStrength(child){
+async function askBrickStrength(child){
+  const list = await brickStrengthList(child);
   return new Promise(resolve => {
     const wrap = document.createElement('div');
     wrap.className = 'sheet strength-sheet';
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
     wrap.innerHTML = `<div class="sheet-card">
         <h2></h2>
-        <div class="strength-chips">${BRICK_STRENGTHS.map(s => `<button type="button" class="strength-chip" data-s="${s}">${s}</button>`).join('')}<button type="button" class="strength-chip strength-other-btn">אחר</button></div>
+        <div class="strength-chips">${list.main.map(s => `<button type="button" class="strength-chip" data-s="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}<button type="button" class="strength-chip strength-other-btn">אחר</button></div>${list.extra.length ? `<div class="strength-extra-label">הצעות נוספות</div><div class="strength-chips strength-extra">${list.extra.map(s => `<button type="button" class="strength-chip" data-s="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}</div>` : ''}
         <div class="strength-other" hidden><input type="text" class="confirm-input strength-input" maxlength="20" autocomplete="off" placeholder="איזה כוח? (לא חובה)" aria-label="כוח אחר"><button type="button" class="btn strength-ok">הוספת לבנה</button></div>
         <div class="confirm-actions strength-actions"><button type="button" class="btn ghost strength-cancel">חזרה</button></div>
       </div>`;

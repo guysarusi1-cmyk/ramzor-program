@@ -333,6 +333,7 @@ async function giveBrick(childId, strength){
   const n = r.after.bricks || 0;
   const msg = (n >= WALL_BRICKS ? `🧱🎉 המקדש של ${displayName(child)} הושלם!` : `🧱 לבנה נוספה ל${displayName(child)} — ${n} מתוך ${WALL_BRICKS}`) + (why ? ` · כוח: ${why}` : '');
   logFeedbackEvent(child.id, 'bricks', msg);
+  if(why) sb.rpc('note_strength', { p_child:child.id, p_strength:why }).then(() => {}, () => {});          // (Mercury: the child's strengths; chosen by two instructors -> the child's main suggestions)
   toast(msg);
   return true;
 }
@@ -341,6 +342,7 @@ async function renderMoonPanel(containerId){
   const child = roster.find(c=>c.id===selectedStaffChild);
   const state = await getChildState(selectedStaffChild);
   const fb = document.getElementById(containerId);
+  if(typeof journeyPanel === 'function' && await journeyPanel(child, fb, containerId)) return;          // (Mercury: the new journey by skills, 14y-journey.js; a child placed there or new)
   const inStage2 = (state.moonSteps || 0) >= 7;
   const stage2Done = (state.mercurySteps || 0) >= 7;
 

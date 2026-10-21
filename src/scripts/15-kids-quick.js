@@ -7,6 +7,7 @@ const KIDS_QUICK_TITLES = {
   moon: 'בחרו ילד/ה — המסע בחלל',
   brick: 'בחרו ילד/ה — המקדש שלי',
   yellow: 'בחרו ילד/ה — רמזור צהוב',
+  observe: 'בחרו ילד/ה — תצפית לאיש/אשת הטיפול',
 };
 
 function kidsQuickShowColorPicker(){
@@ -48,6 +49,8 @@ function kidsQuickShowChildPicker(mode){
         document.getElementById('kids-quick-pick-child').style.display = 'none';
         document.getElementById('kids-quick-moon-panel').style.display = 'block';
         await renderMoonPanel('kids-quick-moon-feedback');
+      } else if(kidsQuickMode === 'observe'){
+        if(typeof obsOpen === 'function') obsOpen(selectedStaffChild);          // (Mercury: an observation for the responsible therapist)
       } else if(kidsQuickMode === 'yellow'){
         document.getElementById('kids-quick-pick-child').style.display = 'none';
         document.getElementById('kids-quick-yellow-list').style.display = 'block';
@@ -69,6 +72,7 @@ document.getElementById('hub-kids-btn').addEventListener('click', async ()=>{
 document.getElementById('kq-give-star-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('star'); });
 document.getElementById('kq-moon-journey-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('moon'); });
 document.getElementById('kq-brick-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('brick'); });
+document.getElementById('kq-observe-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('observe'); });
 // the daily-operations gold screen reaches those same two buttons (see openKidsQuickFrom)
 document.getElementById('gold-give-star-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-give-star-btn', 'gold'));
 document.getElementById('gold-moon-journey-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-moon-journey-btn', 'gold'));

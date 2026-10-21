@@ -2,7 +2,7 @@
 // A third card on the app home, "פורטל הטיפול", with the personal sign-in only. Everybody on the staff sees every child (the guidance of
 // the plans comes in stage 2); a therapist sees the children they are responsible for; the admin and the coordinator assign the
 // responsible therapist of every child. (scheduling-v31.sql; Mercury spec, decisions 1-6, 44-46)
-const thp = { loaded:false, ok:false, mine:[], assign:{}, therapists:[], tab:null };
+const thp = { loaded:false, ok:false, mine:[], assign:{}, therapists:[], tab:null, guidance:{}, plans:{}, planets:[], library:[], v32:false, editing:null };
 const therapyAvailable = () => typeof portalServerOn !== 'undefined' && portalServerOn && !!srv.profile && 'therapist' in srv.profile;          // (my_profile carries "therapist" from v31)
 const isTherapistMe = () => !!(srv.profile && srv.profile.therapist);
 const isPureTherapist = () => (portalMe() || {}).role === 'therapist';
@@ -27,6 +27,16 @@ async function thpLoad(){
     }
     thp.ok = true;
   } catch(e){ thp.ok = false; }
+  // stage 2: the plans (scheduling-v32.sql): the guidance every staff member sees, the plans this person may edit, the planets and the libraries
+  thp.guidance = {}; thp.plans = {}; thp.planets = []; thp.library = []; thp.v32 = false;
+  if(thp.ok) try {
+    const [g, pl, pn, lb] = await Promise.all([sbPersonal.rpc('plan_guidance'), sbPersonal.from('child_plans').select('*'), sbPersonal.from('journey_planets').select('*').order('created_at'), sbPersonal.from('mercury_library').select('*').order('title')]);
+    if(g.error || pl.error || pn.error || lb.error) throw (g.error || pl.error || pn.error || lb.error);
+    (g.data || []).forEach(r => { thp.guidance[r.child_id] = r; });
+    (pl.data || []).forEach(r => { thp.plans[r.child_id] = r; });
+    thp.planets = pn.data || []; thp.library = lb.data || []; thp.v32 = true;
+    if(isTherapistMe()) await obsLoadNotify();
+  } catch(e){ thp.v32 = false; }
   thp.loaded = true;
 }
 
@@ -36,12 +46,13 @@ function thpTabs(){
   if(isTherapistMe()) t.push(['mine', 'הילדים שבאחריותי']);
   if(!isPureTherapist()) t.push(['all', 'כל הילדים']);
   if(canAssignTherapist()) t.push(['assign', 'שיוך אנשי טיפול']);
+  if(thp.v32 && (isTherapistMe() || (srv.profile && srv.profile.admin))) t.push(['library', 'ספרייה']);
   return t;
 }
 async function showTherapyPortal(){
   portalActivateView('view-therapy');
   const view = document.getElementById('view-therapy');
-  thp.tab = null;          // (every entry starts on the first tab of this person)
+  thp.tab = null; thp.editing = null;          // (every entry starts on the first tab of this person)
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}"><div class="pnote">טוען...</div></div>`;
   await thpLoad();
   thpRender();
@@ -52,14 +63,16 @@ function thpRender(){
   const view = document.getElementById('view-therapy'); if(!view) return;
   const tabs = thpTabs(); if(!tabs.some(t => t[0] === thp.tab)) thp.tab = tabs.length ? tabs[0][0] : null;
   const me = portalMe() || {}, kids = thpKids(), mine = new Set(thp.mine);
-  const card = c => `<button type="button" class="th-kid" data-th-kid="${pEsc(c.id)}">${thpAvatar(c)}<span class="th-kid-text"><b class="ar-keep">${pEsc(displayName(c))}</b><small>עוד אין תוכנית טיפולית</small></span></button>`;
+  const card = c => `<button type="button" class="th-kid${thp.guidance[c.id] ? ' has-plan' : ''}" data-th-kid="${pEsc(c.id)}">${thpAvatar(c)}<span class="th-kid-text"><b class="ar-keep">${pEsc(displayName(c))}</b><small>${pEsc(planCardSub(c.id))}</small></span></button>`;
   let inner = '';
   if(!thp.ok) inner = '<div class="pnote">פורטל הטיפול עוד לא מוכן בשרת הזה, או שאין חיבור כרגע. אפשר לנסות שוב בעוד רגע.</div>';
   else if(thp.tab === 'mine'){
     const list = kids.filter(c => mine.has(c.id));
-    inner = `<div class="pnote">הילדים שאת/ה איש/אשת הטיפול האחראי/ת שלהם. בניית התוכניות תגיע בשלב הבא.</div>${list.length ? `<div class="th-kids">${list.map(card).join('')}</div>` : '<div class="pnote">עוד לא שויכו אלייך ילדים. השיוך נעשה אצל הרכזת או מנהל המערכת.</div>'}`;
+    inner = `${thp.v32 ? obsNotifyHtml() : ''}<div class="pnote">${thp.v32 ? 'הילדים שאת/ה איש/אשת הטיפול האחראי/ת שלהם. לחיצה על ילד פותחת את התוכנית שלו.' : 'הילדים שאת/ה איש/אשת הטיפול האחראי/ת שלהם. בניית התוכניות תגיע בשלב הבא.'}</div>${list.length ? `<div class="th-kids">${list.map(card).join('')}</div>` : '<div class="pnote">עוד לא שויכו אלייך ילדים. השיוך נעשה אצל הרכזת או מנהל המערכת.</div>'}`;
   } else if(thp.tab === 'all'){
     inner = `<div class="pnote">ההכוונה של כל ילד, לפי התוכנית הטיפולית שלו: מה במוקד, מה לעשות וממה להימנע. התוכניות יופיעו כאן כשאנשי הטיפול יפרסמו אותן.</div><div class="th-kids">${kids.map(card).join('')}</div>`;
+  } else if(thp.tab === 'library'){
+    inner = planLibraryHtml();
   } else if(thp.tab === 'assign'){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
@@ -73,8 +86,11 @@ function thpRender(){
       <div id="therapy-body">${inner}</div>
     </div>`;
   view.querySelector('#therapy-home').addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); });
-  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thpRender(); }));
-  view.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => thpOpenChild(b.dataset.thKid)));
+  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thpRender(); }));
+  view.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(thp.v32 && thp.tab === 'mine' && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid); else thpOpenChild(b.dataset.thKid); }));
+  if(thp.tab === 'library') planWireLibrary(view.querySelector('#therapy-body'));
+  if(thp.tab === 'mine' && thp.v32) obsWireNotify(view.querySelector('#therapy-body'));
+  if(thp.editing && thp.v32 && planCanEdit(thp.editing)) planOpenEditor(thp.editing);
   view.querySelectorAll('[data-th-assign]').forEach(s => s.addEventListener('change', async () => {
     const child = s.dataset.thAssign, to = s.value || null, was = thp.assign[child] || null; s.disabled = true;
     const r = to ? await sbPersonal.from('child_therapist').upsert({ child_id:child, staff_id:to }) : await sbPersonal.from('child_therapist').delete().eq('child_id', child);
@@ -88,7 +104,13 @@ function thpRender(){
 // one child (stage 1: the frame; the plan, the guidance and the observations come in the next stages)
 function thpOpenChild(id){
   const c = roster.find(x => x.id === id); if(!c) return;
-  portalSheet(`<div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div>
-    <div class="pnote">עוד אין תוכנית טיפולית ל${pEsc(displayName(c))}. כשאיש/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע.</div>
-    <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סגירה</button></div>`);
+  const g = thp.guidance && thp.guidance[id], edit = thp.v32 && planCanEdit(id);
+  const sh = portalSheet(`<div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div>
+    ${g ? planGuidanceHtml(g) : `<div class="pnote">עוד אין תוכנית טיפולית ל${pEsc(displayName(c))}. כשאיש/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע.</div>`}
+    ${thp.v32 ? '<button type="button" class="btn ghost" id="th-observe" style="width:100%;margin-top:8px">📝 תצפית לאיש/אשת הטיפול</button>' : ''}
+    ${thp.v32 && srv.profile && srv.profile.admin ? '<button type="button" class="btn ghost" id="th-place" style="width:100%;margin-top:8px">מיקום במסע בחלל (מנהל)</button>' : ''}
+    <div class="confirm-actions" style="grid-template-columns:${edit ? '1fr 1fr' : '1fr'}">${edit ? '<button type="button" class="btn ghost" id="th-edit-plan">עריכת התוכנית</button>' : ''}<button type="button" class="btn" data-close>סגירה</button></div>`);
+  const pl = sh.querySelector('#th-place'); if(pl) pl.addEventListener('click', () => { sh.close(); journeyPlaceSheet(id); });
+  const ob = sh.querySelector('#th-observe'); if(ob) ob.addEventListener('click', () => { sh.close(); obsOpen(id); });
+  const ed = sh.querySelector('#th-edit-plan'); if(ed) ed.addEventListener('click', () => { sh.close(); planOpenEditor(id); });
 }

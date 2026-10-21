@@ -109,6 +109,8 @@
   /* the strength sheet of "המקדש שלי" */
   .strength-sheet .sheet-card{ max-width:520px; }
   .strength-chips{ display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+  .strength-extra-label{ font-size:13px; color:var(--muted); margin-top:4px; }          /* (Mercury: the child's own strengths that are not main yet) */
+  .strength-extra .strength-chip{ opacity:.85; font-size:.92em; }
   .strength-chip{
     flex:1 1 calc(33% - 10px); min-width:96px; min-height:54px; padding:10px 8px; border-radius:14px; cursor:pointer;
     font-family:inherit; font-size:17px; font-weight:700; color:var(--text); background:var(--panel-2); border:1px solid #d9b46a66;

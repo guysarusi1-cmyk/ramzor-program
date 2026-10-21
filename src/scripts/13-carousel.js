@@ -192,6 +192,7 @@ function celebrateFeedbackEvent(ev){
   if(!document.getElementById('view-display').classList.contains('active')) return;
   const type = ev.type, childId = ev.child_id;
   const child = roster.find(c => c.id === childId);
+  if(type === 'journey'){ if(child && typeof journeyCelebrate === 'function') journeyCelebrate(ev, child); return; }          // (Mercury: a step of the new journey)
   if(!(type in EVENT_TYPE_SLIDE) || type === 'bonus' || !child) return;
   queueCelebration(async () => {
     const state = await getChildState(childId);
