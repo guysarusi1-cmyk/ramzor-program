@@ -41,17 +41,18 @@ function thpTabs(){
 async function showTherapyPortal(){
   portalActivateView('view-therapy');
   const view = document.getElementById('view-therapy');
+  thp.tab = null;          // (every entry starts on the first tab of this person)
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}"><div class="pnote">טוען...</div></div>`;
   await thpLoad();
   thpRender();
 }
 const thpKids = () => (typeof roster !== 'undefined' ? roster : []).slice().sort((a, b) => displayName(a).localeCompare(displayName(b), 'he'));
-const thpAvatar = c => { const k = typeof characterFor === 'function' && characterFor(c.id); return k ? `<span class="th-av">${charImgHtml(k)}</span>` : `<span class="th-av th-av-name">${pEsc(displayName(c).slice(0, 2))}</span>`; };
+const thpAvatar = c => { const k = typeof characterFor === 'function' && characterFor(c.id); return k ? `<span class="th-av">${charImgHtml(k)}</span>` : `<span class="th-av th-av-name ar-keep">${pEsc(displayName(c).slice(0, 2))}</span>`; };
 function thpRender(){
   const view = document.getElementById('view-therapy'); if(!view) return;
   const tabs = thpTabs(); if(!tabs.some(t => t[0] === thp.tab)) thp.tab = tabs.length ? tabs[0][0] : null;
   const me = portalMe() || {}, kids = thpKids(), mine = new Set(thp.mine);
-  const card = c => `<button type="button" class="th-kid" data-th-kid="${pEsc(c.id)}">${thpAvatar(c)}<span class="th-kid-text"><b>${pEsc(displayName(c))}</b><small>עוד אין תוכנית טיפולית</small></span></button>`;
+  const card = c => `<button type="button" class="th-kid" data-th-kid="${pEsc(c.id)}">${thpAvatar(c)}<span class="th-kid-text"><b class="ar-keep">${pEsc(displayName(c))}</b><small>עוד אין תוכנית טיפולית</small></span></button>`;
   let inner = '';
   if(!thp.ok) inner = '<div class="pnote">פורטל הטיפול עוד לא מוכן בשרת הזה, או שאין חיבור כרגע. אפשר לנסות שוב בעוד רגע.</div>';
   else if(thp.tab === 'mine'){
@@ -63,7 +64,7 @@ function thpRender(){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
       ${thp.therapists.length ? '' : '<div class="pnote">עוד אין אנשי טיפול במערכת. מוסיפים בהגדרות (תפקיד "איש/אשת טיפול"), או מסמנים "גם איש/אשת טיפול" בפורטל הניהול.</div>'}
-      <div class="th-assign">${kids.map(c => `<div class="th-assign-row">${thpAvatar(c)}<b>${pEsc(displayName(c))}</b><select data-th-assign="${pEsc(c.id)}" aria-label="איש/אשת הטיפול של ${pEsc(displayName(c))}">${opts(thp.assign[c.id] || '')}</select></div>`).join('')}</div>`;
+      <div class="th-assign">${kids.map(c => `<div class="th-assign-row">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b><select data-th-assign="${pEsc(c.id)}" aria-label="איש/אשת הטיפול של ${pEsc(displayName(c))}">${opts(thp.assign[c.id] || '')}</select></div>`).join('')}</div>`;
   }
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}">
       <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1><span></span></div>
@@ -87,7 +88,7 @@ function thpRender(){
 // one child (stage 1: the frame; the plan, the guidance and the observations come in the next stages)
 function thpOpenChild(id){
   const c = roster.find(x => x.id === id); if(!c) return;
-  portalSheet(`<div class="th-child-head">${thpAvatar(c)}<h2>${pEsc(displayName(c))}</h2></div>
+  portalSheet(`<div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div>
     <div class="pnote">עוד אין תוכנית טיפולית ל${pEsc(displayName(c))}. כשאיש/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע.</div>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סגירה</button></div>`);
 }
