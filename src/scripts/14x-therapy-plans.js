@@ -13,17 +13,17 @@ const thpLib = kind => (thp.library || []).filter(x => x.kind === kind && x.acti
 function planGuidanceHtml(g){
   if(!g || !g.content) return '';
   const c = g.content, goals = c.goals || [], focus = goals.filter(x => x.focus), rest = goals.filter(x => !x.focus);
-  const goalHtml = x => `<div class="th-g"><b>${pEsc(x.title || '')}</b>
-      ${x.targets ? `<div class="th-g-row"><span>מה רואים כשמצליח/ה:</span> ${pEsc(x.targets)}</div>` : ''}
-      ${x.interventions ? `<div class="th-g-row"><span>מה עושים:</span> ${pEsc(x.interventions)}</div>` : ''}
-      ${(x.strengths || []).length ? `<div class="th-chips">${x.strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}</div>`;
-  return `${c.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div>${pEsc(c.avoid)}</div></div>` : ''}
-    ${c.summary ? `<div class="th-summary">${pEsc(c.summary)}</div>` : ''}
+  const goalHtml = x => `<div class="th-g"><b class="ar-keep">${pEsc(x.title || '')}</b>
+      ${x.targets ? `<div class="th-g-row"><span>מה רואים כשמצליח/ה:</span> <em class="ar-keep">${pEsc(x.targets)}</em></div>` : ''}
+      ${x.interventions ? `<div class="th-g-row"><span>מה עושים:</span> <em class="ar-keep">${pEsc(x.interventions)}</em></div>` : ''}
+      ${(x.strengths || []).length ? `<div class="th-chips ar-keep">${x.strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}</div>`;
+  return `${c.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(c.avoid)}</div></div>` : ''}
+    ${c.summary ? `<div class="th-summary ar-keep">${pEsc(c.summary)}</div>` : ''}
     ${focus.length ? `<h3 class="psec">במוקד</h3>${focus.map(goalHtml).join('')}` : ''}
     ${rest.length ? `<details class="pfold th-rest"><summary><span>מטרות נוספות (${rest.length})</span></summary><div class="pfold-body">${rest.map(goalHtml).join('')}</div></details>` : ''}
     <div class="th-ver">גרסה ${g.version}${g.published_at ? ' · ' + pEsc(dayLabel(String(g.published_at).slice(0, 10))) : ''}</div>`;
 }
-const planCardSub = id => { const g = thp.guidance && thp.guidance[id]; if(!g) return 'עוד אין תוכנית טיפולית'; const f = (g.content.goals || []).filter(x => x.focus).map(x => x.title).filter(Boolean); return f.length ? 'במוקד: ' + f.join(' · ') : 'יש תוכנית טיפולית'; };
+const planCardSub = id => { const g = thp.guidance && thp.guidance[id]; if(!g) return 'עוד אין תוכנית טיפולית'; const f = (g.content.goals || []).filter(x => x.focus).map(x => x.title).filter(Boolean); return f.length ? 'במוקד: <span class="ar-keep">' + pEsc(f.join(' · ')) + '</span>' : 'יש תוכנית טיפולית'; };          // (html: the therapist's words stay as written, decision 35)
 
 // one goal box of the editor
 function planGoalHtml(g, i){

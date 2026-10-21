@@ -5,7 +5,7 @@
 // It only ever runs against the test project, never the live site.
 (function(){
   if(!/[?&]runchecks\b/.test(location.search)) return;
-  window.__portalNoHome = true;
+  window.__portalNoHome = true; window.__staffPasswordOn = true;          // (the checks still sign in with the staff password of the test site)
   const results = [];
   window.__checkResults = results;                 // (so that a person watching the page can see how far the checks got)
   const check =(name, ok, detail) => results.push({ name, ok: !!ok, detail: ok ? '' : String(detail ?? '') });
@@ -2065,7 +2065,7 @@
           check('journey: the TV gets the positions (no skill names)', !tvj.error && !!jc && jc.stage && !('skill' in jc), JSON.stringify(jc));
           const ap = await sbPersonal.rpc('journey_approve_next', { p_child:'c15', p_ok:true });
           check('journey: the therapist approves the next planet', !ap.error, (ap.error || {}).message);
-          await thpLoad(); planOpenEditor('c1'); for(let i = 0; i < 30 && !document.querySelector('#pe-track .trk-table'); i++) await sleep(150);
+          await thpLoad(); planOpenEditor('c1'); for(let i = 0; i < 40 && !(document.querySelector('#pe-track .trk-table') && document.querySelector('#pe-obs .obs-item')); i++) await sleep(150);
           check('tracking: the plan page has the observations and an 8-week summary per goal', !!document.querySelector('#pe-obs .obs-item') && !!document.querySelector('#pe-track .trk-table') && /השבוע:/.test(document.querySelector('#pe-track').textContent) && document.querySelectorAll('#pe-track thead th').length === 9, document.querySelector('#pe-track') ? document.querySelector('#pe-track').textContent.slice(0, 80) : 'none');
           for(let i = 0; i < 30 && !document.querySelector('#pe-journey .journey-admin, #pe-journey .pnote'); i++) await sleep(150);
           check('journey: the plan page has the route of the child', !!document.querySelector('#pe-journey .journey-admin, #pe-journey .pnote'), document.querySelector('#pe-journey') ? document.querySelector('#pe-journey').innerHTML.slice(0, 80) : 'no box');
@@ -2083,6 +2083,17 @@
         if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5', 'c15']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; showHub();
       }
+      // stage 6: no staff password; the kids' screen joins by a code
+      { window.__staffPasswordOn = false; const live = srvLoginHtml('email'); window.__staffPasswordOn = true;
+        check('stage 6: without the checks, the sign-in screen has no staff password link', !/plogin-staff/.test(live) && /plogin-staff/.test(srvLoginHtml('email')), 'link still there');
+        const chk = await sb.rpc('tv_check', { p_token:'not-a-token' }), pr = await sb.rpc('tv_pair', { p_code:'000000', p_name:'בדיקה' });
+        if(chk.error && /could not find|schema cache/i.test(chk.error.message)) check('(info) stage 6: the screen code needs scheduling-v32.sql', true, '');
+        else {
+          check('stage 6: an unknown screen is not let in, and a wrong code gives nothing', !chk.error && chk.data === false && !pr.error && pr.data === null, JSON.stringify([chk, pr]));
+          tvPairScreen(); await sleep(100); const el = document.getElementById('tv-pair');
+          check('stage 6: a screen without a sign-in asks for the code (6 digits)', !!el && !el.hidden && !!el.querySelector('#tvp-code') && /חיבור מסך הילדים/.test(el.textContent), 'no screen');
+          if(el) el.remove();
+        } }
       // the management of the children: the therapist choice next to every child (with the manager's sign-in)
       rosterTh = null; renderManageRoster();
       for(let i = 0; i < 30 && rosterTh === undefined; i++) await sleep(150);

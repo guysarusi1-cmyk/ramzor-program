@@ -63,7 +63,7 @@ function thpRender(){
   const view = document.getElementById('view-therapy'); if(!view) return;
   const tabs = thpTabs(); if(!tabs.some(t => t[0] === thp.tab)) thp.tab = tabs.length ? tabs[0][0] : null;
   const me = portalMe() || {}, kids = thpKids(), mine = new Set(thp.mine);
-  const card = c => `<button type="button" class="th-kid${thp.guidance[c.id] ? ' has-plan' : ''}" data-th-kid="${pEsc(c.id)}">${thpAvatar(c)}<span class="th-kid-text"><b class="ar-keep">${pEsc(displayName(c))}</b><small>${pEsc(planCardSub(c.id))}</small></span></button>`;
+  const card = c => `<button type="button" class="th-kid${thp.guidance[c.id] ? ' has-plan' : ''}" data-th-kid="${pEsc(c.id)}">${thpAvatar(c)}<span class="th-kid-text"><b class="ar-keep">${pEsc(displayName(c))}</b><small>${planCardSub(c.id)}</small></span></button>`;
   let inner = '';
   if(!thp.ok) inner = '<div class="pnote">פורטל הטיפול עוד לא מוכן בשרת הזה, או שאין חיבור כרגע. אפשר לנסות שוב בעוד רגע.</div>';
   else if(thp.tab === 'mine'){

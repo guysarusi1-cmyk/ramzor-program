@@ -253,7 +253,7 @@ async function srvSwapAction(fn, args){
 }
 // ---- sign in: the personal password (chosen at the first entry), or a code by e-mail (the first entry, or a forgotten password)
 function srvLoginHtml(step, email){
-  const staffLink = location.hash === '#portal' || !STAFF_PASSWORD_ON ? '' : '<button type="button" class="plogin-staff-link" id="plogin-staff">כניסה למכשיר של המרכז (סיסמת צוות)</button>';          // (not on the first screen: a small link at the bottom)
+  const staffLink = location.hash === '#portal' || !staffPasswordOn() ? '' : '<button type="button" class="plogin-staff-link" id="plogin-staff">כניסה למכשיר של המרכז (סיסמת צוות)</button>';          // (not on the first screen: a small link at the bottom)
   let inner;
   if(step === 'code') inner = `
         <h2>הקלידו את הקוד</h2>
