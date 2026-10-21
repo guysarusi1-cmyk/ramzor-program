@@ -883,7 +883,7 @@
       const baseT = await bricksT();
       const openTemple = async () => { showHub(); $('hub-kids-btn').click(); await sleep(250); $('kq-brick-btn').click(); document.querySelector(`#kids-quick-roster .chip[data-id="${kidT}"]`).click(); await sleep(250); return document.querySelector('.strength-sheet'); };
       let sh = await openTemple();
-      check('temple: before a brick the instructor is asked which strength they saw', !!sh && /איזה כוח ראית/.test(sh.textContent) && ['אומץ', 'התמדה', 'גמישות', 'בקשת עזרה', 'סבלנות', 'נדיבות', 'קבלה', 'אחר'].every(n => [...sh.querySelectorAll('.strength-chip')].some(b => b.textContent === n)), sh ? sh.textContent : 'no sheet');
+      check('temple: before a brick the instructor is asked which strength they saw (the strengths of the plan, or the general list; and "אחר")', !!sh && /איזה כוח ראית/.test(sh.textContent) && sh.querySelectorAll('.strength-chip[data-s]').length >= 1 && [...sh.querySelectorAll('.strength-chip')].some(b => b.textContent === 'אחר'), sh ? sh.textContent : 'no sheet');
       check('temple: nothing is added while the question is open', (await bricksT()) === baseT, 'brick added early');
       sh.querySelector('.strength-cancel').click(); await sleep(300);
       check('temple: going back adds no brick', !document.querySelector('.strength-sheet') && (await bricksT()) === baseT, 'brick added');
@@ -1977,7 +1977,7 @@
         await showTherapyPortal();
         check('therapy portal: an instructor sees every child (no tabs to choose)', !document.querySelector('#view-therapy [data-th-tab]') && document.querySelectorAll('#view-therapy [data-th-kid]').length === roster.length, document.querySelectorAll('#view-therapy [data-th-kid]').length);
         document.querySelector('#view-therapy [data-th-kid]').click(); await sleep(150);
-        check('therapy portal: a tap on a child opens the child (no plan yet)', !!document.querySelector('.psheet .th-child-head') && /עוד אין תוכנית טיפולית/.test(document.querySelector('.psheet').textContent), 'not opened');
+        check('therapy portal: a tap on a child opens the child (the plan, or "no plan yet")', !!document.querySelector('.psheet .th-child-head') && (/עוד אין תוכנית טיפולית/.test(document.querySelector('.psheet').textContent) || !!document.querySelector('.psheet .th-g, .psheet .th-avoid')), 'not opened');
         { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
         // the therapist: her own children first
         if(!(await enter('instructor2'))){ check('therapy portal: the therapist signs in', false, 'no'); return; }
@@ -2032,7 +2032,7 @@
           check('observations: the writer cannot answer it herself', !!selfReply.error || !(selfReply.data || []).length, JSON.stringify(selfReply.data));
           // stage 3: the strengths of a child (the temple)
           const STR = 'בדיקה חוזקה';
-          const bs = await sbPersonal.rpc('brick_strengths', { p_child:'c1' }), bsNone = await sbPersonal.rpc('brick_strengths', { p_child:'c9' });
+          const bs = await sbPersonal.rpc('brick_strengths', { p_child:'c1' }), bsNone = await sbPersonal.rpc('brick_strengths', { p_child:'no-such-child' });          // (every test child has a made-up plan now)
           check('temple: a brick for a child with a plan offers the strengths of the plan; without a plan, the general list', !bs.error && bs.data && (bs.data.plan || []).includes('סבלנות') && (bs.data.plan || []).includes('אומץ') && !bsNone.error && bsNone.data === null, JSON.stringify([bs.data, bsNone.data]));
           await sbPersonal.rpc('strength_set', { p_child:'c1', p_strength:STR, p_status:'extra' }).then(() => {}, () => {});          // (refused for an instructor; only to be sure it starts fresh when the therapist resets it below)
           const n1 = await sbPersonal.rpc('note_strength', { p_child:'c1', p_strength:STR });
