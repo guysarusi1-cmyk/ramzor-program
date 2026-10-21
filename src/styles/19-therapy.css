@@ -1,0 +1,18 @@
+  /* ---------- Mercury: the therapy portal (14w-therapy-portal.js) ---------- */
+  #view-therapy .portal-shell{ max-width:960px; margin:0 auto; }
+  .th-kids{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; margin:12px 0; }
+  .th-kid{ display:flex; align-items:center; gap:12px; min-height:64px; padding:10px 12px; text-align:right; border-radius:14px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); color:var(--p-text, var(--text)); font-family:inherit; cursor:pointer; }
+  .th-kid:hover, .th-kid:focus-visible{ border-color:var(--gold); }
+  .th-kid-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .th-kid-text b{ font-size:16px; overflow-wrap:anywhere; }
+  .th-kid-text small{ font-size:12.5px; color:var(--p-muted, var(--muted)); }
+  .th-av{ flex:none; width:44px; height:44px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--p-panel2, var(--panel-2)); border:1px solid var(--p-line, var(--line)); }
+  .th-av img{ width:100%; height:100%; object-fit:cover; }
+  .th-av-name{ font-weight:800; font-size:14px; color:var(--p-text, var(--text)); }
+  .th-assign{ display:flex; flex-direction:column; gap:6px; margin:12px 0; }
+  .th-assign-row{ display:grid; grid-template-columns:44px 1fr minmax(140px, 220px); align-items:center; gap:10px; padding:6px 10px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); }
+  .th-assign-row b{ min-width:0; overflow-wrap:anywhere; }
+  .th-assign-row select{ min-height:44px; border-radius:10px; padding:6px 8px; font-family:inherit; font-size:15px; background:var(--p-panel2, var(--panel-2)); color:var(--p-text, var(--text)); border:1px solid var(--p-line, var(--line)); }
+  .th-child-head{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .th-child-head h2{ margin:0; }
+  @media (max-width:480px){ .th-assign-row{ grid-template-columns:40px 1fr; } .th-assign-row select{ grid-column:1 / -1; } }

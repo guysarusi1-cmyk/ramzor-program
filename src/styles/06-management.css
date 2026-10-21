@@ -131,11 +131,13 @@
   #view-manage .add-row{ flex-wrap:wrap; }
   #view-manage .add-row input, #view-manage .add-row select{ min-width:0; flex:1 1 120px; }
   #view-manage .add-row input[type=number]{ flex:0 1 90px; }
-  .roster-sw{
+  .roster-sw, .roster-th{
     flex:0 0 auto; width:104px; min-height:44px; padding:0 8px; background:var(--panel); color:var(--text); border:1px solid var(--line);
     border-radius:10px; font-family:'Rubik', sans-serif; font-size:13px; cursor:pointer;
   }
   .roster-row{ flex-wrap:nowrap; }
+  .roster-th{ width:118px; }
+  @media (max-width:520px){ .roster-row:has(.roster-th){ flex-wrap:wrap; } .roster-row:has(.roster-th) .roster-name{ flex:1 1 40%; } }          /* (Mercury: the therapist choice moves to a second line on a phone) */
   .roster-name{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ---- folded protocol reminder ---- */

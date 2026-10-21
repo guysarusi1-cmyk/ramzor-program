@@ -87,7 +87,7 @@
       $('login-submit-btn').click();
       for(let i=0;i<40 && !(roster && roster.length);i++) await sleep(250);
       check('sign-in opens the app', visible($('protected-app')) && !visible($('login-screen')), 'protected app not shown');
-      check('roster loaded (14 fictional children)', roster.length === 14, 'roster has ' + roster.length);
+      check('roster loaded (15 fictional children)', roster.length === 15, 'roster has ' + roster.length);
       check('environment is the test one', APP_ENV === 'test' && /סביבת בדיקות/.test(document.body.innerText), 'no test banner');
       check('daily step limit is OFF in test', MOON_DAILY_LIMIT_ENABLED === false, 'limit is on');
     });
@@ -407,7 +407,8 @@
       gear();
       for(let i = 0; i < 30 && activeView() !== 'view-manage'; i++) await sleep(100);
       check('gear opens the management screen', activeView() === 'view-manage', activeView());
-      check('management lists all children', document.querySelectorAll('#roster-list > *').length === 14, 'children not listed');
+      for(let i = 0; i < 40 && document.querySelectorAll('#roster-list > *').length < roster.length; i++) await sleep(100);          // (the list is drawn once the lists have loaded, a moment after the sign-in)
+      check('management lists all children', document.querySelectorAll('#roster-list > *').length === 15, 'listed ' + document.querySelectorAll('#roster-list > *').length + ' of ' + roster.length);
       check('manual reset buttons exist', !!$('reset-stars-btn') && !!$('reset-mercury-btn'), 'missing');
       check('test tools card exists in test', !!$('temp-goto-display-btn-manage'), 'missing');
       $('manage-back-to-hub').click();
@@ -718,7 +719,7 @@
         document.querySelector(`.roster-row[data-id="${kid.id}"] .rm`).click();
         await answerSheet('מחיקה');
         for(let i=0;i<20 && roster.length > 14;i++) await sleep(250);
-        check(`new child (${stage}) removed again`, roster.length === 14, 'roster ' + roster.length);
+        check(`new child (${stage}) removed again`, roster.length === 15, 'roster ' + roster.length);
       }
       $('manage-back-to-hub').click();
     });
@@ -1939,6 +1940,69 @@
         }
       }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; showHub();
+    });
+    // ---- Mercury, stage 1: the therapist, the children they are responsible for, the therapy portal (scheduling-v31.sql)
+    await step('therapy portal', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local';
+      const enter = async kind => { await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; srv.profileFor = null; const { error } = await signInRetry(M(kind), PW); if(error) return false; portalServerOn = true; if(!(await srvLoad())) return false; portalUi.persona = srv.me; return true; };
+      if(!(await enter('coordinator'))){ check('therapy portal: the coordinator signs in', false, 'no'); return; }
+      const probe = await sbPersonal.rpc('my_therapy_children');
+      if(probe.error){ check('(info) therapy portal: skipped, scheduling-v31.sql was not run on this server', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; showHub(); return; }
+      const t2 = await sbPersonal.from('staff_private').select('staff_id').eq('email', M('instructor2')).single(), t1 = await sbPersonal.from('staff_private').select('staff_id').eq('email', M('instructor')).single();
+      const th = t2.data && t2.data.staff_id, plain = t1.data && t1.data.staff_id;
+      try {
+        showAppHome(); await sleep(150);
+        check('therapy portal: the app home has a third card "פורטל הטיפול"', !!document.getElementById('apphome-therapy') && /פורטל הטיפול/.test(document.getElementById('apphome-therapy').textContent), 'no card');
+        // the second test instructor is also a therapist (a combined role); the coordinator gives her two children
+        const fl = await sbPersonal.from('staff_private').update({ is_therapist:true }).eq('staff_id', th);
+        check('therapy portal: the coordinator marks somebody as "also a therapist"', !fl.error, (fl.error || {}).message);
+        const as = await sbPersonal.from('child_therapist').upsert([{ child_id:'c1', staff_id:th }, { child_id:'c2', staff_id:th }]);
+        const rows = await sbPersonal.from('child_therapist').select('child_id,staff_id').in('child_id', ['c1', 'c2']);
+        check('therapy portal: the coordinator assigns a responsible therapist to a child', !as.error && rows.data && rows.data.length === 2 && rows.data.every(r => r.staff_id === th), (as.error || {}).message || JSON.stringify(rows.data));
+        const bad = await sbPersonal.from('child_therapist').upsert({ child_id:'c3', staff_id:plain });
+        check('therapy portal: the database refuses a "therapist" who is not one', !!bad.error, 'accepted');
+        const au = await sbPersonal.from('audit_log').select('what,detail').like('what', 'child_therapist_%').order('at', { ascending:false }).limit(5);
+        check('therapy portal: every assignment is written in the audit log', !au.error && (au.data || []).some(r => r.detail && r.detail.child === 'c1'), (au.error || {}).message || JSON.stringify(au.data));
+        await showTherapyPortal();
+        const tabs = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
+        check('therapy portal: the coordinator has "all the children" and "assign therapists"', tabs.join(',') === 'all,assign' && document.querySelectorAll('#view-therapy [data-th-kid]').length === roster.length, tabs.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        document.querySelector('#view-therapy [data-th-tab="assign"]').click(); await sleep(150);
+        const sel = document.querySelector('#view-therapy [data-th-assign="c1"]');
+        check('therapy portal: the assign tab has a choice for every child, with the therapist already chosen', document.querySelectorAll('#view-therapy [data-th-assign]').length === roster.length && !!sel && sel.value === th, sel ? sel.value : 'none');
+        // a plain instructor: every child, no assignments, no way to change them
+        if(!(await enter('instructor'))){ check('therapy portal: the instructor signs in', false, 'no'); return; }
+        const iMine = await sbPersonal.rpc('my_therapy_children'), iSee = await sbPersonal.from('child_therapist').select('child_id'), iTry = await sbPersonal.from('child_therapist').upsert({ child_id:'c4', staff_id:th });
+        check('therapy portal: an instructor sees no assignments and cannot make one', !iMine.error && !(iMine.data || []).length && !iSee.error && !(iSee.data || []).length && !!iTry.error, JSON.stringify([iMine.data, iSee.data, (iTry.error || {}).message]));
+        await showTherapyPortal();
+        check('therapy portal: an instructor sees every child (no tabs to choose)', !document.querySelector('#view-therapy [data-th-tab]') && document.querySelectorAll('#view-therapy [data-th-kid]').length === roster.length, document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        document.querySelector('#view-therapy [data-th-kid]').click(); await sleep(150);
+        check('therapy portal: a tap on a child opens the child (no plan yet)', !!document.querySelector('.psheet .th-child-head') && /עוד אין תוכנית טיפולית/.test(document.querySelector('.psheet').textContent), 'not opened');
+        { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+        // the therapist: her own children first
+        if(!(await enter('instructor2'))){ check('therapy portal: the therapist signs in', false, 'no'); return; }
+        const tMine = await sbPersonal.rpc('my_therapy_children'), ids = (tMine.data || []).map(r => typeof r === 'string' ? r : r.my_therapy_children).sort();
+        check('therapy portal: the therapist gets exactly the children she is responsible for', !tMine.error && ids.join(',') === 'c1,c2', JSON.stringify(tMine.data));
+        const tTry = await sbPersonal.from('child_therapist').upsert({ child_id:'c5', staff_id:th });
+        check('therapy portal: a therapist cannot assign children to herself', !!tTry.error, 'accepted');
+        await showTherapyPortal();
+        const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
+        check('therapy portal: the therapist opens on "my children" (2), and also has "all the children"', t3.join(',') === 'mine,all' && document.querySelectorAll('#view-therapy [data-th-kid]').length === 2, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)
+        { const me = portalMe(), was = me.role; me.role = 'therapist';
+          showAppHome(); await sleep(100);
+          check('therapy portal: somebody who is only a therapist gets no "instructor portal" card', !document.getElementById('apphome-portal') && !!document.getElementById('apphome-therapy') && !!document.getElementById('apphome-ramzor'), 'cards wrong');
+          check('therapy portal: ... and only the tab of her own children', thpTabs().map(t => t[0]).join(',') === 'mine', thpTabs().map(t => t[0]).join(','));
+          me.role = was; }
+      } finally {
+        if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; portalUi.persona = 'c1'; portalUi.tab = null; showHub();
+      }
+      // the management of the children: the therapist choice next to every child (with the manager's sign-in)
+      rosterTh = null; renderManageRoster();
+      for(let i = 0; i < 30 && rosterTh === undefined; i++) await sleep(150);
+      await sleep(150);
+      check('therapy portal: the management of the children has a therapist choice next to every child', !!rosterTh && document.querySelectorAll('#roster-list .roster-th').length === roster.length, String(rosterTh) + ' / ' + document.querySelectorAll('#roster-list .roster-th').length);
     });
     // ---- Arabic: the portal of an instructor and of a service girl in Arabic; everything that stayed in Hebrew is listed (people's names excepted)
     await step('arabic', async () => {

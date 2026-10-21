@@ -87,13 +87,14 @@ insert into roster (id, first_name, last_initial, age, sw_name, sw_phone) values
   ('c11', 'דור',   'י', '6',   'רונית', '972500000002'),
   ('c12', 'ענבר',  'כ', '5',   'רונית', '972500000002'),
   ('c13', 'אלון',  'ל', '3.5', 'דנה',   '972500000001'),
-  ('c14', 'הילה',  'מ', '5',   'רונית', '972500000002');
+  ('c14', 'הילה',  'מ', '5',   'רונית', '972500000002'),
+  ('c15', 'עומר',  'נ', '6',   'דנה',   '972500000001');          -- (a 15th fictional child: Mercury test data, 2026-10-21)
 
 -- everyone already finished the moon journey; a spread of Mercury steps incl. a crowded start position
 insert into child_state (child_id, moon_steps, mercury_steps, stars) values
   ('c1', 7, 0, 0), ('c2', 7, 3, 2), ('c3', 7, 0, 0), ('c4', 7, 0, 1), ('c5', 7, 0, 0),
   ('c6', 7, 0, 0), ('c7', 7, 6, 0), ('c8', 7, 0, 0), ('c9', 7, 0, 0), ('c10', 7, 1, 4),
-  ('c11', 7, 0, 0), ('c12', 7, 0, 0), ('c13', 7, 7, 0), ('c14', 7, 1, 0);
+  ('c11', 7, 0, 0), ('c12', 7, 0, 0), ('c13', 7, 7, 0), ('c14', 7, 1, 0), ('c15', 7, 0, 0);
 
 -- ---------- lists: bonuses (with their days / hours) and the duty roster ----------
 insert into mini_lists (key, items) values

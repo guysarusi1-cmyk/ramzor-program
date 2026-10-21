@@ -1,7 +1,7 @@
 
 // ---------- THE PORTAL ON THE SERVER: the coordinator's other screens (who submitted, absences, vacation requests, settings) ----------
 const ABSENCE_REASONS = [['sick', 'מחלה'], ['reserve', 'מילואים'], ['leave', 'חופשה מיוחדת / לידה'], ['other', 'אחר']];
-const KIND_WORD = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת' };
+const KIND_WORD = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', therapist:'איש/אשת טיפול' };
 const nameOf = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
 const shortDate = d => `${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`;
 // the days of one person as ranges: ['2026-12-03','2026-12-04','2026-12-05'] -> '3/12–5/12'
@@ -17,7 +17,7 @@ function srvRenderSubmissions(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad();
   if(!portalUi.smonth) portalUi.smonth = addMonths(monthKeyOf(srvToday()), 1);
-  const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role !== 'coordinator');
+  const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role));          // (a therapist hands in no preferences)
   const missing = people.filter(p => !m.submitted[p.id]), done = people.filter(p => m.submitted[p.id]);
   const subRow = p => { const pr = m.prefs[p.id] || { slots:{}, absent:[], hours:{} }, c = { avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { if(c[v] !== undefined) c[v]++; });
     const note = m.notes && m.notes[p.id];
@@ -36,7 +36,7 @@ function srvRenderSubmissions(body){
   document.getElementById('abs-add').addEventListener('click', () => srvAbsenceSheet(body));
 }
 function srvAbsenceSheet(body){
-  const st = portalLoad(), people = st.instructors.filter(p => p.active && p.role !== 'coordinator'), today = srvToday();
+  const st = portalLoad(), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role)), today = srvToday();
   const sh = portalSheet(`<h2>הוספת היעדרות</h2>
     <label class="pfield">מי<select id="ab-who">${people.map(p => `<option value="${p.id}">${pEsc(instrName(p, st.instructors))}</option>`).join('')}</select></label>
     <label class="pfield">סיבה<select id="ab-why">${ABSENCE_REASONS.map(r => `<option value="${r[0]}">${r[1]}</option>`).join('')}</select></label>
@@ -143,7 +143,7 @@ function srvRenderCoordSettings(body){
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
-      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option></select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
+      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
         box.querySelectorAll('[data-phone]').forEach(inp => inp.addEventListener('change', async () => {          // (for a WhatsApp chat from the schedule; scheduling-v21.sql)
           const phone = inp.value.trim() || null;
@@ -193,7 +193,7 @@ function srvRenderCoordSettings(body){
           const s = await sbPersonal.from('staff').insert({ display_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
           if(s.error){ toast('ההוספה נכשלה'); return; }
           const role = kind === 'instructor' ? roleSel.value : 'plain';
-          const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, is_leader:role === 'leader', ahmash_rank:role === 'ahmash' ? 1 : 0, leader_priority:kind === 'instructor' ? instr.length + 1 : null });
+          const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, is_leader:role === 'leader', ahmash_rank:role === 'ahmash' ? 1 : 0, leader_priority:kind === 'instructor' ? instr.length + 1 : null, ...(kind === 'therapist' ? { is_therapist:true } : {}) });          // (a therapist: scheduling-v31.sql)
           toast(pr.error ? 'האדם נוסף, אבל המייל לא נשמר' : 'נוסף. אפשר ליצור לו התחברות.'); again();
         });
       };

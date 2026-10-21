@@ -52,11 +52,31 @@ async function setChildSocialWorker(childId, worker){
   child.swName = worker ? worker.name : ''; child.swPhone = worker ? worker.phone : '';
   return true;
 }
+// Mercury: the responsible therapist of every child, chosen next to the child (scheduling-v31.sql). null = not read yet, false = not available here
+let rosterTh = null;
+async function loadRosterTherapists(){
+  const client = (typeof ramzorPersonal !== 'undefined' && ramzorPersonal) ? sb : (MANAGER_LOGIN && typeof sbAdmin !== 'undefined' ? sbAdmin : sb);
+  try {
+    const [a, s, p] = await Promise.all([client.from('child_therapist').select('child_id,staff_id'), client.from('staff').select('id,display_name,kind,active'), client.from('staff_private').select('staff_id,is_therapist')]);
+    if(a.error || s.error || p.error) throw (a.error || s.error || p.error);
+    const flag = {}; (p.data || []).forEach(r => { flag[r.staff_id] = !!r.is_therapist; });
+    const map = {}; (a.data || []).forEach(r => { map[r.child_id] = r.staff_id; });
+    rosterTh = { map, list:(s.data || []).filter(x => x.active && (x.kind === 'therapist' || flag[x.id])).sort((x, y) => String(x.display_name).localeCompare(String(y.display_name), 'he')) };
+  } catch(e){ rosterTh = false; }
+}
+async function setChildTherapist(childId, staffId){
+  const client = (typeof ramzorPersonal !== 'undefined' && ramzorPersonal) ? sb : await adminClient(); if(!client) return false;
+  const r = staffId ? await client.from('child_therapist').upsert({ child_id:childId, staff_id:staffId }) : await client.from('child_therapist').delete().eq('child_id', childId);
+  if(r.error){ console.error(r.error); return false; }
+  if(staffId) rosterTh.map[childId] = staffId; else delete rosterTh.map[childId];
+  return true;
+}
 let shipPickerOpenFor = null;
 let charPickerOpenFor = null;
 function renderManageRoster(){
   const el = document.getElementById('roster-list');
   if(!roster.length){ el.innerHTML = '<div class="empty">אין עדיין ילדים ברשימה</div>'; return; }
+  if(rosterTh === null){ rosterTh = undefined; loadRosterTherapists().then(() => { if(rosterTh) renderManageRoster(); }); }          // (read once; the list shows at once and the therapist choice joins it)
   el.innerHTML = roster.map(c => {
     const ship = shipFor(c.id);
     const picker = c.id !== shipPickerOpenFor ? '' : `
@@ -85,6 +105,7 @@ function renderManageRoster(){
           <option value="">ללא עו״סית</option>
           ${socialWorkers().map(w => `<option value="${w.phone}"${digitsOnly(c.swPhone) === w.phone ? ' selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}
         </select>
+        ${rosterTh ? `<select class="roster-th" data-th-for="${c.id}" aria-label="איש/אשת הטיפול של ${escapeHtml(displayName(c))}"><option value="">ללא איש טיפול</option>${rosterTh.list.map(x => `<option value="${x.id}"${rosterTh.map[c.id] === x.id ? ' selected' : ''}>${escapeHtml(x.display_name)}</option>`).join('')}</select>` : ''}
         <button type="button" class="rm" data-id="${c.id}" aria-label="מחיקה">✕</button>
       </div>${picker}${charPicker}`;
   }).join('');
@@ -100,6 +121,13 @@ function renderManageRoster(){
     });
   });
 
+  el.querySelectorAll('.roster-th').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const ok = await setChildTherapist(sel.dataset.thFor, sel.value || null);
+      toast(ok ? 'איש/אשת הטיפול עודכנו' : 'השמירה נכשלה — בדקו חיבור ונסו שוב');
+      renderManageRoster();
+    });
+  });
   el.querySelectorAll('.roster-sw').forEach(sel => {
     sel.addEventListener('change', async () => {
       const worker = socialWorkers().find(w => w.phone === sel.value) || null;

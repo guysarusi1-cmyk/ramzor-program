@@ -105,7 +105,7 @@ async function ctlShifts(box){
   }));
   box.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => {
     const code = b.dataset.add, here = new Set(groups[code].filter(p => !p.removed).map(p => p.id));
-    const people = st.instructors.filter(p => p.active && p.role !== 'coordinator' && !here.has(p.id)).sort((a, c) => String(a.first).localeCompare(String(c.first), 'he'));
+    const people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role) && !here.has(p.id)).sort((a, c) => String(a.first).localeCompare(String(c.first), 'he'));
     const sh = portalSheet(`<h2>הוספה למשמרת ה${CTL_SHIFTS.find(x => x[0] === code)[1]}</h2>
       <input type="search" class="ctl-search" id="ctl-search" placeholder="חיפוש שם" autocomplete="off">
       <div class="ctl-pick">${people.map(p => `<button type="button" class="ctl-pick-item" data-pick="${p.id}" data-name="${pEsc(p.first)}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><small>${KIND_WORD[p.role] || ''}</small></button>`).join('')}</div>
