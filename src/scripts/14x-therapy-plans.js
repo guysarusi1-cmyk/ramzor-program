@@ -46,12 +46,10 @@ function planGoalHtml(g, i){
 }
 // ---- the plan editor (the responsible therapist, or the admin)
 function planEditorHtml(id){
-  const c = roster.find(x => x.id === id), row = thp.plans[id] || {}, d = row.draft || row.published || planEmpty();
-  const status = row.published_version ? `פורסמה גרסה ${row.published_version}${row.draft && JSON.stringify(row.draft) !== JSON.stringify(row.published) ? ' · יש שינויים שלא פורסמו' : ''}` : (row.draft ? 'טיוטה, עוד לא פורסמה' : 'תוכנית חדשה');
+  const row = thp.plans[id] || {}, d = row.draft || row.published || planEmpty();
   return `<div class="th-editor" data-plan="${pEsc(id)}">
     <datalist id="th-lib-goals">${thpLib('goal').map(x => `<option value="${pEsc(x.title)}">`).join('')}</datalist>
     <datalist id="th-lib-strengths">${thpLib('strength').map(x => `<option value="${pEsc(x.title)}">`).join('')}</datalist>
-    <div class="th-ed-head"><button type="button" class="btn ghost small" id="pe-back">→ חזרה</button><div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div><span class="th-status">${status}</span></div>
     <label class="pfield">תקציר קצר לצוות<textarea id="pe-summary" rows="3" placeholder="בכמה משפטים: מה חשוב לדעת על הילד/ה עכשיו">${pEsc(d.summary || '')}</textarea></label>
     <label class="pfield th-avoid-field">ממה להימנע (מצבים או מילים שמעוררים את הילד/ה)<textarea id="pe-avoid" rows="2">${pEsc(d.avoid || '')}</textarea></label>
     <h3 class="psec">מטרות <small>(עד ${PLAN_FOCUS_MAX} במוקד)</small></h3>
@@ -64,10 +62,6 @@ function planEditorHtml(id){
     <label class="th-important"><input type="checkbox" id="pe-important"> שינוי חשוב: לשלוח לצוות גם מייל</label>
     <div class="th-actions"><button type="button" class="btn ghost" id="pe-save">שמירת טיוטה</button><button type="button" class="btn" id="pe-publish">פרסום</button>
       <button type="button" class="btn ghost" id="pe-versions"${row.published_version ? '' : ' disabled'}>גרסאות קודמות</button><button type="button" class="btn ghost" id="pe-print">הדפסה / PDF</button></div>
-    <div id="pe-temple" class="th-temple"></div>
-    <h3 class="psec">המסע בחלל</h3><div id="pe-journey"></div>
-    <h3 class="psec">תצפיות מהצוות</h3><div id="pe-obs"></div>
-    <h3 class="psec">מעקב, 8 שבועות</h3><div id="pe-track"></div>
   </div>`;
 }
 // the editor as it is on the screen now -> the draft
@@ -87,11 +81,28 @@ async function planSave(id, draft, review){
   if(r.error) return false;
   thp.plans[id] = r.data; return true;
 }
-function planOpenEditor(id){
-  thp.editing = id;
+// the therapist's workspace of one child: the plan, the observations, the tracking, the journey, the temple — each in its own tab
+const PLAN_WS_TABS = [['plan', 'התוכנית'], ['obs', 'תצפיות'], ['track', 'מעקב'], ['journey', 'המסע בחלל'], ['temple', 'המקדש']];
+const planStatus = id => { const row = thp.plans[id] || {}; return row.published_version ? `פורסמה גרסה ${row.published_version}${row.draft && JSON.stringify(row.draft) !== JSON.stringify(row.published) ? ' · יש שינויים שלא פורסמו' : ''}${row.review_date ? ' · בדיקה מחדש ' + dayLabel(row.review_date) : ''}` : (row.draft ? 'טיוטה, עוד לא פורסמה' : 'עוד אין תוכנית'); };
+function planOpenEditor(id, tab){
+  thp.editing = id; if(tab) thp.wtab = tab; if(!PLAN_WS_TABS.some(x => x[0] === thp.wtab)) thp.wtab = 'plan';
   const body = document.getElementById('therapy-body'); if(!body) return;
-  body.innerHTML = planEditorHtml(id);
-  const root = body.querySelector('.th-editor'), goalsBox = root.querySelector('#pe-goals');
+  const c = roster.find(x => x.id === id), unseen = (thp.unseen && thp.unseen[id]) || 0;
+  body.innerHTML = `<div class="th-ws" data-ws="${pEsc(id)}">
+    <div class="th-ed-head"><button type="button" class="btn ghost small" id="pe-back">→ חזרה</button><div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div><span class="th-status">${pEsc(planStatus(id))}</span></div>
+    <nav class="portal-tabs th-ws-tabs" role="tablist">${PLAN_WS_TABS.map(([k, w]) => `<button type="button" role="tab" data-ws-tab="${k}" class="${k === thp.wtab ? 'active' : ''}">${w}${k === 'obs' && unseen ? ` <span class="pcount">${unseen}</span>` : ''}</button>`).join('')}</nav>
+    <div id="th-ws-body"></div></div>`;
+  body.querySelector('#pe-back').addEventListener('click', () => { thp.editing = null; thp.wtab = null; thpRender(); });
+  body.querySelectorAll('[data-ws-tab]').forEach(b => b.addEventListener('click', () => planOpenEditor(id, b.dataset.wsTab)));
+  const wb = body.querySelector('#th-ws-body');
+  if(thp.wtab === 'plan'){ wb.innerHTML = planEditorHtml(id); planWireEditor(id, wb.querySelector('.th-editor')); }
+  else if(thp.wtab === 'obs'){ wb.innerHTML = '<div id="pe-obs"></div>'; obsSection(id, wb.querySelector('#pe-obs')).then(() => { if(thp.unseen) thp.unseen[id] = 0; }); }
+  else if(thp.wtab === 'track'){ wb.innerHTML = '<div id="pe-track"></div>'; trackSection(id, wb.querySelector('#pe-track')); }
+  else if(thp.wtab === 'journey'){ wb.innerHTML = '<div id="pe-journey"></div>'; const jb = wb.querySelector('#pe-journey'), draw = async () => { jb.innerHTML = await journeyAdminHtml(id); journeyWireAdmin(jb, id, draw); }; draw(); }
+  else { wb.innerHTML = '<div id="pe-temple" class="th-temple"></div>'; planTemple(id, wb.querySelector('#pe-temple')); }
+}
+function planWireEditor(id, root){
+  const goalsBox = root.querySelector('#pe-goals');
   const wireGoal = el => {
     el.querySelector('.pe-g-rm').addEventListener('click', () => { el.remove(); });
     el.querySelector('.pe-g-focus').addEventListener('change', e => { if(e.target.checked && root.querySelectorAll('.pe-g-focus:checked').length > PLAN_FOCUS_MAX){ e.target.checked = false; toast(`אפשר עד ${PLAN_FOCUS_MAX} מטרות במוקד`); } });
@@ -107,7 +118,6 @@ function planOpenEditor(id){
     const tmp = document.createElement('div'); const g = planNewGoal();
     tmp.innerHTML = planGoalHtml(g, goalsBox.children.length); const el = tmp.firstElementChild; goalsBox.appendChild(el); wireGoal(el); el.querySelector('.pe-g-title').focus();
   });
-  root.querySelector('#pe-back').addEventListener('click', () => { thp.editing = null; thpRender(); });
   const save = async () => { const ok = await planSave(id, planRead(root), root.querySelector('#pe-review').value); if(!ok) toast('השמירה נכשלה. אפשר לנסות שוב בעוד רגע'); return ok; };
   root.querySelector('#pe-save').addEventListener('click', async e => { e.target.disabled = true; if(await save()){ toast('הטיוטה נשמרה. הצוות עוד רואה את הגרסה שפורסמה'); planOpenEditor(id); } else e.target.disabled = false; });
   root.querySelector('#pe-publish').addEventListener('click', async e => {
@@ -122,9 +132,6 @@ function planOpenEditor(id){
     await thpLoad(); thp.editing = id; planOpenEditor(id);
   });
   root.querySelector('#pe-versions').addEventListener('click', () => planVersions(id));
-  planTemple(id, root.querySelector('#pe-temple'));
-  { const jb = root.querySelector('#pe-journey'), draw = async () => { jb.innerHTML = await journeyAdminHtml(id); journeyWireAdmin(jb, id, draw); }; draw(); }
-  obsSection(id, root.querySelector('#pe-obs')); trackSection(id, root.querySelector('#pe-track'));
   root.querySelector('#pe-print').addEventListener('click', () => planPrint(id, planRead(root)));
   const fin = root.querySelector('#pe-file');
   fin.addEventListener('change', async () => {
