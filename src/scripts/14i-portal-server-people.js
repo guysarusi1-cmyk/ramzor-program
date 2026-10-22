@@ -153,7 +153,7 @@ async function srvRenderVacation(body){
 const SVC_OPTS = [['early', '07:00–15:00'], ['late', '14:00–22:00'], ['both', 'שתיהן'], ['none', 'לא זמינה']];
 const svcOptsFor = d => dowOf(d) === 0 ? [['late', '11:00–19:00'], ['none', 'לא זמינה']] : dowOf(d) === 4 ? SVC_OPTS.filter(o => o[0] === 'early' || o[0] === 'none') : SVC_OPTS;
 async function srvRenderAvailability(body){
-  const mk = portalUi.pmonth || (portalUi.pmonth = addMonths(monthKeyOf(srvToday()), 1)), m = portalMonth(mk), locked = !srvPrefsOpen(mk);
+  const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
   body.innerHTML = '<div class="pnote">רק רגע...</div>';
   const days = daysOfMonth(mk).filter(d => dowOf(d) <= 4);
   const r = await sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srv.me).gte('day', days[0]).lte('day', days[days.length - 1]);
@@ -162,7 +162,7 @@ async function srvRenderAvailability(body){
   const fixed = srvPrefsOf(m, srv.me).fixed.map(f => f.day);
   const submitted = !!m.submitted[srv.me], left = days.filter(d => !have[d] && !fixed.includes(d)).length;
   body.innerHTML = `
-    ${monthNavHtml(mk)}
+    ${monthFixedHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'הזמינות שלכן אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.' : 'נשמח לדעת מתי אתן זמינות, ככה נוכל לסדר לכן את החודש.'} · אפשר להגיש עד 24/${addMonths(mk, -1).slice(5)} בשעה 22:30</div>
     ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע. לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.</div>' : ''}
     <div class="pnote">לכל יום נשמח שתבחרו מתי נוח לכן. ביום ראשון 11:00–19:00; בשני עד רביעי בוקר (07:00–15:00), צהריים (14:00–22:00) או שתיהן; ביום חמישי רק בוקר (07:00–15:00).</div>
@@ -184,12 +184,12 @@ async function srvRenderAvailability(body){
 
 // ---------------------------------------------------------------- teachers: the fixed hours, confirmed with one press
 async function srvRenderTeacherHours(body){
-  const mk = portalUi.pmonth || (portalUi.pmonth = addMonths(monthKeyOf(srvToday()), 1)), m = portalMonth(mk), locked = !srvPrefsOpen(mk);
+  const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
   const fx = await sbPersonal.rpc('my_fixed_hours');
   if(!body.isConnected) return;
   const spans = fx.data || {}, submitted = !!m.submitted[srv.me];
   body.innerHTML = `
-    ${monthNavHtml(mk)}
+    ${monthFixedHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'השעות שלכן אושרו, תודה!' : 'נשמח שתאשרו את השעות הקבועות שלכן.'} · אם לא תספיקו עד ה-24 בשעה 22:30, לא נורא: השעות הקבועות יישלחו בשבילכן אוטומטית.</div>
     <div class="pnote">הימים והשעות הקבועים שלכן:</div>
     <div class="psvc">${[0, 1, 2, 3, 4, 5].filter(d => spans[String(d)]).map(d => `<div class="psvc-row"><b>${DOW_NAMES[d]}</b><span>${rangeHtml(spans[String(d)][0], spans[String(d)][1])}</span></div>`).join('') || '<div class="pnote">עוד לא הוגדרו שעות קבועות. נשמח אם תפנו לרכזת.</div>'}</div>

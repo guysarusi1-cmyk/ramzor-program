@@ -140,6 +140,9 @@ function portalRefresh(){ portalRenderTab(); }
 function monthNavHtml(mk, extra){
   return `<div class="pmonth"><button type="button" data-pmonth="-1" aria-label="חודש קודם"><bdi dir="ltr">›</bdi></button><b>${monthLabel(mk)}</b><button type="button" data-pmonth="1" aria-label="חודש הבא"><bdi dir="ltr">‹</bdi></button>${extra || ''}</div>`;          // (the arrows are fixed left-to-right, so that no phone mirrors them: the right one points right, the left one points left)
 }
+// the preferences are handed in for next month only (Guy, 2026-10-22): no other month to move to; on the 1st of a month it moves on by itself
+const prefsMonthNow = () => addMonths(monthKeyOf(typeof srvToday === 'function' && portalServerOn ? srvToday() : isoDate(new Date())), 1);
+const monthFixedHtml = mk => `<div class="pmonth pmonth-fixed"><b>${monthLabel(mk)}</b></div>`;
 function wireMonthNav(root, key){
   key = key || 'month';
   root.querySelectorAll('[data-pmonth]').forEach(b => b.addEventListener('click', () => { portalUi[key] = addMonths(portalUi[key], Number(b.dataset.pmonth)); portalRefresh(); }));

@@ -1501,7 +1501,10 @@
       const refused = await sbPersonal.from('prefs_slot').insert({ staff_id:srv.me, day:daysOfMonth(closed)[20], shift:'M', level:'no' });
       check('portal server: the database refuses a change in a closed month', !!refused.error, 'accepted!');
       portalUi.pmonth = closed; showPortal('prefs'); await sleep(100);
-      check('portal server: a closed month is shown as closed (no clicking)', /סגורה/.test(document.getElementById('portal-body').textContent), 'not shown');
+      check('portal server: the preferences are for next month only, with no way to another month', portalUi.pmonth === addMonths(monthKeyOf(srvToday()), 1) && !document.querySelector('#portal-body [data-pmonth]') && document.querySelector('#portal-body .pmonth-fixed b').textContent === monthLabel(portalUi.pmonth), portalUi.pmonth);
+      { const real = srvPrefsOpen; srvPrefsOpen = () => false; showPortal('prefs'); await sleep(100);
+        check('portal server: a closed month is shown as closed (no clicking)', /סגורה/.test(document.getElementById('portal-body').textContent), 'not shown');
+        srvPrefsOpen = real; showPortal('prefs'); await sleep(50); }
       // --- the coordinator sees every submission
       if(await asPerson('coordinator')){
         check('portal server: the coordinator is recognised', srv.meRow.role === 'coordinator', srv.meRow.role);
