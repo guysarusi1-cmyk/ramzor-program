@@ -83,6 +83,11 @@ const prefOther = () => portalServerOn && typeof srvEditingFor === 'function' &&
 const prefFixedKinds = () => { const o = prefOther(), st = portalLoad(), prof = o ? (st.priv || {})[o] : srv.profile; const k = new Set(portalServerOn ? (o ? (st.fixedNo || {})[o] || [] : srv.fixedNo || []) : []); if(portalServerOn && prof && prof.no_nights) k.add('n'); return k; };
 const prefFixedNo = key => portalServerOn && prefFixedKinds().has(String(key).split('|')[1]);
 const prefNoNight = prefFixedNo;
+// the long weekend is one package (Guy, 2026-10-22): with "כן" or "יכול" on it, Friday afternoon and night and Saturday morning and afternoon are
+// inside it and are not chosen one by one (the engine places them only as the whole weekend); Friday morning and Saturday night stay free
+const LONG_INSIDE = { 5:['e', 'n'], 6:['m', 'e'] };
+const prefLongFri = key => { const [d, s] = key.split('|'), w = dowOf(d); return (LONG_INSIDE[w] || []).includes(s) ? (w === 5 ? d : addDays(d, -1)) : null; };
+const prefInsideLong = (prefs, key) => { const fri = portalServerOn && prefLongFri(key); return !!fri && ['yes', 'can', 'avoid'].includes(prefs.slots[`${fri}|l`]); };
 const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? (prefNoNight(key) ? 'no' : 'neutral') : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
 const DEFAULT_SHIFT_LEGEND = types => types.map(s => (s.letter || s.label.charAt(0)) + ' = ' + s.label);
 const FIXED_REASON = { vacation:'חופשה', sick:'מחלה', reserve:'מילואים', leave:'חופשה מיוחדת', other:'היעדרות', self:'היעדרות' };
@@ -122,12 +127,13 @@ function renderInstructorPrefs(body){
   for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
     const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
-    if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`] && !prefNoNight(`${date}|${s.id}`)).length;
+    if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`] && !prefNoNight(`${date}|${s.id}`) && !prefInsideLong(prefs, `${date}|${s.id}`)).length;
     cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${barOn && [5, 6].includes(dowOf(date)) && days.includes(dowOf(date) === 5 ? date : addDays(date, -1)) ? ' linked' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${fx ? `<span class="pday-fixed">${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}</span>` : ''}
       ${hrs ? `<span class="pday-hrs" title="שעות אחרות">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</span>` : ''}
-      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const lv = absent ? 'no' : prefLevelOf(prefs, `${date}|${s.id}`); return `<button type="button" class="pshift lv-${lv}" data-pslot="${date}|${s.id}" aria-label="${pEsc(s.label)}">${pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>
+      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = !absent && prefInsideLong(prefs, key), lv = absent ? 'no' : inLong ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
+        return `<button type="button" class="pshift lv-${lv}${inLong ? ' in-long' : ''}" data-pslot="${key}" aria-label="${pEsc(s.label)}${inLong ? ' (בתוך הסופ&quot;ש הארוך)' : ''}">${inLong ? '🕯️' : pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>
     </div>`;
     if(portalServerOn && dowOf(date) === 6 && days.includes(addDays(date, -1))) cells += longBar(addDays(date, -1));
     else if(portalServerOn && dowOf(date) === 5 && date === days[days.length - 1]) cells += longBar(date);
@@ -187,6 +193,7 @@ function renderInstructorPrefs(body){
     if(locked) return;
     const shown = b.dataset.pslot.split('|')[0], key = prefKeyOf(b.dataset.pslot), date = key.split('|')[0], lv = portalUi.level;
     if(fixedOn(date) || fixedOn(shown)) return;
+    if(prefInsideLong(prefs, key) && lv !== 'absent'){ toast(tx('long_inside')); return; }
     if(lv === 'hours'){ openHoursSheet(shown, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
     else if(lv === 'yes' && !portalServerOn){ delete prefs.slots[key]; }                      // (the demo: "כן" is the default, so nothing needs to be stored; on the server "כן" is a mark like the others)
@@ -199,6 +206,10 @@ function renderInstructorPrefs(body){
     if(fixedOn(fri) || prefs.absent.includes(fri)) return;
     if(lv === 'hours' || lv === 'absent'){ toast(tx('long_levels')); return; }
     if(prefs.slots[key] === lv) delete prefs.slots[key]; else prefs.slots[key] = lv;
+    if(['yes', 'can', 'avoid'].includes(prefs.slots[key])){          // (the shifts inside the long weekend: their own marks give way to it)
+      const sat = addDays(fri, 1), inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(k => prefs.slots[k]);
+      inside.forEach(k => delete prefs.slots[k]); if(inside.length) toast(tx('long_replaced'));
+    }
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-ppick]').forEach(b => b.addEventListener('click', () => {          // "only one of these weekends": the Fridays that belong to the group
@@ -208,7 +219,7 @@ function renderInstructorPrefs(body){
   }));
   body.querySelectorAll('[data-pday]').forEach(b => b.addEventListener('click', () => {
     if(locked) return;
-    const date = b.dataset.pday, lv = portalUi.level, keys = prefShiftsFor(date).map(s => prefKeyOf(`${date}|${s.id}`)).filter(k => !prefFixedNo(k));          // (a shift of a fixed preference changes only when it is pressed by itself)
+    const date = b.dataset.pday, lv = portalUi.level, keys = prefShiftsFor(date).map(s => prefKeyOf(`${date}|${s.id}`)).filter(k => !prefFixedNo(k) && !prefInsideLong(prefs, k));          // (a shift of a fixed preference changes only when it is pressed by itself)
     if(fixedOn(date)) return;
     if(lv === 'hours'){ openHoursSheet(date, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }

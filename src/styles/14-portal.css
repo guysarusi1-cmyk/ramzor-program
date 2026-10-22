@@ -435,3 +435,4 @@
   .adm-viewas.act{ background:rgba(255,120,80,.16); border-color:rgba(255,120,80,.6); }
   .adm-act-coord{ width:100%; margin:0 0 12px; }
   .cs-count-table td.cs-count-w{ font-weight:700; }
+  .pshift.in-long{ opacity:.55; border-style:dashed; cursor:not-allowed; font-size:11px; }          /* inside a chosen long weekend: not chosen one by one */

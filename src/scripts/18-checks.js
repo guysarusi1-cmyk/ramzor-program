@@ -1430,7 +1430,15 @@
         check('portal server: marking the whole Friday "לא" does not change the long weekend (it stays neutral)', [...document.querySelectorAll(`[data-pslot^="${fri}|"]`)].every(b => b.classList.contains('lv-no')) && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
         document.querySelector('[data-plevel="avoid"]').click(); await sleep(50); document.querySelector(`[data-plong="${fri}"]`).click(); await sleep(50);
         check('portal server: the long-weekend button takes the chosen level (יכול)', srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`] === 'avoid' && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-avoid'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
+        { const sat = addDays(fri, 1), sl = () => srvPrefsOf(portalMonth(next), srv.me).slots, cell = k => document.querySelector(`[data-pslot="${k}"]`);
+          const inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(cell);
+          check('long weekend package: with "יכול" on it, Friday afternoon and night and Saturday morning and afternoon are locked inside it', inside.length >= 2 && inside.every(k => cell(k).classList.contains('in-long')), inside.map(k => k + ':' + cell(k).className).join(' '));
+          check('long weekend package: ... their own marks were replaced by it, and Friday morning stays free with its mark', !sl()[`${fri}|e`] && !sl()[`${fri}|n`] && !cell(`${fri}|m`).classList.contains('in-long') && sl()[`${fri}|m`] === 'no' && (!cell(`${sat}|n`) || !cell(`${sat}|n`).classList.contains('in-long')), JSON.stringify(sl()));
+          document.querySelector('[data-plevel="yes"]').click(); await sleep(50); cell(`${fri}|e`).click(); await sleep(50);
+          check('long weekend package: a locked shift cannot be chosen by itself', !sl()[`${fri}|e`] && cell(`${fri}|e`).classList.contains('in-long'), JSON.stringify(sl()[`${fri}|e`]));
+          document.querySelector('[data-plevel="avoid"]').click(); await sleep(50); }
         document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-plong="${fri}"]`).click(); await sleep(50);
+        check('long weekend package: "לא" on the long weekend opens the shifts inside it again', !document.querySelector(`[data-pslot^="${fri}|"].in-long`), document.querySelectorAll('.in-long').length);
         check('portal server: "only one of these" is not offered by default', !document.querySelector('.ppick') && !srv.pickOne, document.querySelectorAll('.ppick').length);
         document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-set-pick="1"]').click(); for(let i = 0; i < 40 && !document.querySelector('.ppick'); i++) await sleep(100);
         const fris = daysOfMonth(next).filter(d => dowOf(d) === 5), chips = [...document.querySelectorAll('.ppick')];
