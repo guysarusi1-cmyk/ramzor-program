@@ -881,7 +881,7 @@
       const kidT = 'c6';
       const bricksT = async () => (await getChildState(kidT)).bricks || 0;
       const baseT = await bricksT();
-      const openTemple = async () => { showHub(); $('hub-kids-btn').click(); await sleep(250); $('kq-brick-btn').click(); document.querySelector(`#kids-quick-roster .chip[data-id="${kidT}"]`).click(); await sleep(250); return document.querySelector('.strength-sheet'); };
+      const openTemple = async () => { showHub(); $('hub-kids-btn').click(); await sleep(250); $('kq-brick-btn').click(); for(let i = 0; i < 30 && !document.querySelector(`#kids-quick-roster .chip[data-id="${kidT}"]`); i++) await sleep(100); document.querySelector(`#kids-quick-roster .chip[data-id="${kidT}"]`).click(); for(let i = 0; i < 40 && !document.querySelector('.strength-sheet'); i++) await sleep(100); return document.querySelector('.strength-sheet'); };          // (waits for the sheet: the strengths come from the server, slower late in a long run)
       let sh = await openTemple();
       check('temple: before a brick the instructor is asked which strength they saw (the strengths of the plan, or the general list; and "אחר")', !!sh && /איזה כוח ראית/.test(sh.textContent) && sh.querySelectorAll('.strength-chip[data-s]').length >= 1 && [...sh.querySelectorAll('.strength-chip')].some(b => b.textContent === 'אחר'), sh ? sh.textContent : 'no sheet');
       check('temple: nothing is added while the question is open', (await bricksT()) === baseT, 'brick added early');
