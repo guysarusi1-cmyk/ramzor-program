@@ -54,7 +54,8 @@ Invoke-Git pull --ff-only origin main
 Invoke-Git merge --no-edit dev
 Copy-Item (Join-Path $root 'dist\live\*') $root -Recurse -Force   # index.html + manifest + sw.js + icons
 Invoke-Git add -A
-Invoke-Git commit -m "Release: $Message"
+$msgFile = Join-Path $env:TEMP 'ramzor-release-msg.txt'; [IO.File]::WriteAllText($msgFile, "Release: $Message", (New-Object Text.UTF8Encoding $false))          # (from a file: quotes in the message, like סופ"ש, broke the command line)
+Invoke-Git commit -F $msgFile
 Invoke-Git push origin main
 Invoke-Git checkout dev
 Invoke-Git merge --ff-only main
