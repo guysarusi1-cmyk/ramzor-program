@@ -19,7 +19,7 @@ function tvPairScreen(){
     let el = document.getElementById('tv-pair');
     if(!el){ el = document.createElement('div'); el.id = 'tv-pair'; document.body.appendChild(el); }
     el.innerHTML = `<div class="tvp-card"><div class="tvp-emoji" aria-hidden="true">📺</div><h1>חיבור מסך הילדים</h1>
-      <p>מבקשים קוד בפורטל הרכזת: הגדרות ← מסכי הילדים בחדר ← "שליחת קוד למסך חדש". הקוד מגיע במייל ותקף ל-15 דקות.</p>
+      <p>מבקשים קוד בפורטל הרכזת: הגדרות ← מסכי הילדים בחדר ← "קוד למסך חדש". הקוד תקף ל-15 דקות.</p>
       <input type="text" id="tvp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="הקוד (6 ספרות)" aria-label="הקוד">
       <button type="button" class="btn" id="tvp-go">חיבור</button><div class="tvp-err" id="tvp-err" aria-live="polite"></div></div>`;
     el.hidden = false;

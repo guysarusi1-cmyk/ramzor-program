@@ -282,11 +282,15 @@ function srvRenderCoordSettings(body){
       const r = await sbPersonal.from('tv_devices').select('id,name,created_at,last_seen,active').order('created_at', { ascending:false });
       if(r.error) return { html:'<div class="pnote">צריך את SQL 32.</div>', wire:() => {} };
       const when = x => x ? new Date(x).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' }) : 'עוד לא';
-      const html = `<div class="pnote">מסך ילדים מתחבר פעם אחת בקוד קצר. הקוד נשלח במייל אלייך, תקף ל-15 דקות, ומקלידים אותו במסך (בכתובת של מסך הילדים).</div>
-        <button type="button" class="btn" id="tv-code-new">שליחת קוד למסך חדש</button>
+      const html = `<div class="pnote">מסך ילדים מתחבר פעם אחת בקוד קצר. הקוד מופיע כאן מיד (ונשלח גם במייל), תקף ל-15 דקות, ומקלידים אותו במסך (בכתובת של מסך הילדים).</div>
+        <button type="button" class="btn" id="tv-code-new">קוד למסך חדש</button>
         ${(r.data || []).map(d => `<div class="pmine-row"><span><b>${pEsc(d.name)}</b><br><small>חובר ${when(d.created_at)} · נראה לאחרונה ${when(d.last_seen)}${d.active ? '' : ' · מנותק'}</small></span>${d.active ? `<button type="button" class="btn ghost small" data-tv-off="${d.id}">ניתוק</button>` : ''}</div>`).join('') || '<div class="pnote">עוד אין מסכים מחוברים.</div>'}`;
       return { html, wire:box => {
-        box.querySelector('#tv-code-new').addEventListener('click', async e => { e.target.disabled = true; const x = await sbPersonal.rpc('tv_code_new'); e.target.disabled = false; toast(x.error ? 'שליחת הקוד נכשלה' : 'הקוד נשלח למייל שלך. הוא תקף ל-15 דקות'); });
+        box.querySelector('#tv-code-new').addEventListener('click', async e => { e.target.disabled = true; const x = await sbPersonal.rpc('tv_code_new'); e.target.disabled = false; if(x.error){ toast('יצירת הקוד נכשלה'); return; }
+          // the code at once on the screen (the e-mail goes out with the hourly sending, later than the 15 minutes): read from her own notice
+          const n = await sbPersonal.from('notices').select('text').eq('to_staff', srv.me).eq('kind', 'tv').order('created_at', { ascending:false }).limit(1), code = ((((n.data || [])[0] || {}).text || '').match(/\b(\d{6})\b/) || [])[1];
+          if(!code){ toast('הקוד נשלח למייל שלך. הוא תקף ל-15 דקות'); return; }
+          portalSheet(`<h2>הקוד למסך הילדים</h2><div class="tv-code-big" dir="ltr">${code}</div><div class="pnote">מקלידים אותו במסך הילדים (בכתובת של מסך הילדים). תקף ל-15 דקות, לשימוש אחד. נשלח גם למייל שלך.</div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סגירה</button></div>`); });
         box.querySelectorAll('[data-tv-off]').forEach(b => b.addEventListener('click', async () => { if(!(await confirmSheet({ title:'לנתק את המסך?', text:'המסך יפסיק להציג עד שיחובר מחדש בקוד.', okLabel:'כן, לנתק', cancelLabel:'חזרה', danger:true }))) return; const x = await sbPersonal.rpc('tv_revoke', { p_id:b.dataset.tvOff }); toast(x.error ? 'הניתוק נכשל' : 'המסך נותק'); again(); }));
       } };
     }]

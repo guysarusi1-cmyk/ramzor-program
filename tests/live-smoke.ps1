@@ -34,10 +34,20 @@ try {
   $profile = Join-Path $env:TEMP ('ramzor-smoke-' + [Guid]::NewGuid().ToString('N').Substring(0,6))
   Start-Process $browser -Wait -RedirectStandardOutput $out -ArgumentList '--headless=new','--disable-gpu','--no-first-run',"--user-data-dir=$profile",'--window-size=1920,1080','--virtual-time-budget=12000','--dump-dom',"http://localhost:$port/#tv" | Out-Null
   $dom = [IO.File]::ReadAllText($out, [Text.Encoding]::UTF8)
+  # no staff password any more (Mercury stage 6): a screen nobody connected must ask for its code, and show no child
+  $pair = $dom -match 'id="tv-pair"' -and $dom -match 'id="tvp-code"'
+  $dom = [regex]::Replace($dom, '(?s)<script.*?</script>', '')          # (only what is drawn, not the code of the page)
   $cards = ([regex]::Matches($dom, 'class="bonus-board-item')).Count + ([regex]::Matches($dom, 'class="star-card"')).Count + ([regex]::Matches($dom, 'class="kid-marker"')).Count
-  $stage = $dom -match 'id="view-display"[^>]*class="view active"|class="view active" id="view-display"'
-  Write-Host "kids' TV open: $stage, things drawn from live data: $cards"
-  if(-not $stage -or $cards -lt 1){ Write-Host 'LIVE SMOKE TEST FAILED' -ForegroundColor Red; exit 1 }
-  Write-Host 'live build opens and draws the live data' -ForegroundColor Green
+  Write-Host "kids' TV of an unknown screen asks for the code: $pair, children drawn without a code: $cards"
+  if(-not $pair -or $cards -gt 0){ Write-Host 'LIVE SMOKE TEST FAILED' -ForegroundColor Red; exit 1 }
+  # and the app itself opens on the sign-in
+  $out2 = Join-Path $env:TEMP 'ramzor-live-smoke2.html'; if(Test-Path $out2){ [IO.File]::Delete($out2) }
+  $profile2 = Join-Path $env:TEMP ('ramzor-smoke-' + [Guid]::NewGuid().ToString('N').Substring(0,6))
+  Start-Process $browser -Wait -RedirectStandardOutput $out2 -ArgumentList '--headless=new','--disable-gpu','--no-first-run',"--user-data-dir=$profile2",'--window-size=390,844','--virtual-time-budget=12000','--dump-dom',"http://localhost:$port/" | Out-Null
+  $dom2 = [IO.File]::ReadAllText($out2, [Text.Encoding]::UTF8)
+  $signin = $dom2 -match 'class="plogin'
+  Write-Host "the app opens on the personal sign-in: $signin"
+  if(-not $signin){ Write-Host 'LIVE SMOKE TEST FAILED' -ForegroundColor Red; exit 1 }
+  Write-Host 'live build opens (sign-in, and the kids TV asks for its code)' -ForegroundColor Green
 } finally { Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue }
 exit 0
