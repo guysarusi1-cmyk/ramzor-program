@@ -22,11 +22,24 @@ function israelNow(){
   return { date:`${o.year}-${o.month}-${o.day}`, minutes:Number(o.hour) * 60 + Number(o.minute) };
 }
 // preferences for a month are open from the 1st of the previous month until the 24th of it at 22:30 (same rule as the database)
+// From scheduling-v34.sql the month stays open after the 24th until the coordinator presses "צור סידור אוטומטי": what the database says wins (srv.prefsOpenSrv)
 function srvPrefsOpen(mk){
   if(srvEditingFor()) return true;          // (the admin fills preferences for somebody: also after the closing time, e.g. from a paper)
+  if(srv.prefsOpenSrv && mk in srv.prefsOpenSrv) return srv.prefsOpenSrv[mk];
   const n = israelNow(), prev = addMonths(mk, -1), end = prev + '-24';
   if(n.date < prev + '-01' || n.date > end) return false;
   return !(n.date === end && n.minutes >= 22 * 60 + 30);
+}
+
+// the 24th at 22:30 of the month before: the date the staff are told; from then on the coordinator may press "צור סידור אוטומטי"
+function srvPrefsDeadlinePassed(mk){
+  const n = israelNow(), end = addMonths(mk, -1) + '-24';
+  return n.date > end || (n.date === end && n.minutes >= 22 * 60 + 30);
+}
+async function srvLoadPrefsOpen(){
+  srv.prefsOpenSrv = srv.prefsOpenSrv || {};
+  const nm = prefsMonthNow();
+  try { const r = await sbPersonal.rpc('prefs_open', { m:firstOf(nm) }); if(!r.error && typeof r.data === 'boolean') srv.prefsOpenSrv[nm] = r.data; } catch(e){}
 }
 
 // ---- reading everything the person is allowed to see
@@ -96,6 +109,7 @@ async function srvLoad(){
   st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
   if(!fresh()) return false;
   if(old){ Object.keys(old).forEach(k => { if(!(k in st)) st[k] = old[k]; }); portalState = st; }          // (what only the coordinator's load adds stays until it is read again, just below)
+  await srvLoadPrefsOpen();
   srv.saved = {};
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
   if(srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)) await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)
@@ -193,6 +207,8 @@ async function srvFlush(){
     const unseen = portalState.notices.filter(n => n.seen && n.fromServer && !n.sent);
     for(const n of unseen){ const r = await sbPersonal.from('notices').update({ seen:true }).eq('id', n.id); if(!r.error) n.sent = true; }
   } catch(e){
+    const nm = prefsMonthNow(), wasOpen = srvPrefsOpen(nm); await srvLoadPrefsOpen();
+    if(wasOpen && !srvPrefsOpen(nm)){ srv.failed = false; srv.busy = false; toast('ההגשה נסגרה: הרכזת כבר התחילה לבנות את הסידור', 6000); portalRefresh(); return; }          // (closed while the screen was open)
     srv.failed = true; toast('לא הצלחנו לשמור כרגע, ננסה שוב אוטומטית בעוד רגע');
     setTimeout(srvQueueSave, 5000);
   }

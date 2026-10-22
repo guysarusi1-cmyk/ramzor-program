@@ -107,7 +107,7 @@ function prefStartFill(mk, id, prefs, days){
 function renderInstructorPrefs(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad();
-  if(portalServerOn) portalUi.pmonth = prefsMonthNow(); else if(!portalUi.pmonth) portalUi.pmonth = addMonths(monthKeyOf(isoDate(new Date())), 1);          // (on the server: next month only)
+  if(portalServerOn) portalUi.pmonth = portalUi.prefsPast ? addMonths(prefsMonthNow(), -1) : prefsMonthNow(); else if(!portalUi.pmonth) portalUi.pmonth = addMonths(monthKeyOf(isoDate(new Date())), 1);          // (on the server: next month only; or, to look, this month)
   const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalServerOn ? srvPrefsOf(m, me.id) : portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
   const days = daysOfMonth(mk), lead = dowOf(days[0]);
   const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
@@ -151,8 +151,12 @@ function renderInstructorPrefs(body){
   }
   const neutralHint = portalServerOn && !locked && neutral > 0 ? `<div class="pnote pnote-soft" id="neutral-note">${tx('neutral_note', neutral)}</div>` : '';
   const goalBtn = (v, label, sub) => `<button type="button" class="pgoal-opt${(goal || '') === (v || '') ? ' on' : ''}" data-goal="${v || ''}"${locked ? ' disabled' : ''}><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const past = portalServerOn && !!portalUi.prefsPast;
   body.innerHTML = `
     ${portalServerOn ? monthFixedHtml(mk) : monthNavHtml(mk)}
+    ${past ? `<div class="pprefs-past"><span>👁️ ההעדפות שהגשת ל${pEsc(monthLabel(mk))} · לצפייה בלבד</span><button type="button" class="btn small" id="prefs-past-end">חזרה להעדפות של ${pEsc(monthLabel(addMonths(mk, 1)))}</button></div>`
+      : portalServerOn ? `<button type="button" class="btn ghost small prefs-past-btn" id="prefs-past">👁️ ההעדפות שהגשת ל${pEsc(monthLabel(addMonths(mk, -1)))}</button>` : ''}
+    ${portalServerOn && !past && !locked && srvPrefsDeadlinePassed(mk) ? `<div class="pnote">${tx('late')}</div>` : ''}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
     ${locked ? `<div class="pnote">${tx('locked')}</div>` : ''}
     ${fixedList.length ? `<div class="pnote">הימים שאושרו לך או שהרכזת סימנה: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
@@ -180,6 +184,9 @@ function renderInstructorPrefs(body){
     <div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
     <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
+  { const pp = body.querySelector('#prefs-past'), pe = body.querySelector('#prefs-past-end');
+    if(pp) pp.addEventListener('click', () => { portalUi.prefsPast = true; renderInstructorPrefs(body); });
+    if(pe) pe.addEventListener('click', () => { portalUi.prefsPast = false; renderInstructorPrefs(body); }); }
   body.querySelectorAll('[data-plevel]').forEach(b => b.addEventListener('click', () => { portalUi.level = b.dataset.plevel; renderInstructorPrefs(body); }));
   body.querySelectorAll('[data-goal]').forEach(b => b.addEventListener('click', () => {
     if(locked) return;

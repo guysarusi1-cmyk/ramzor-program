@@ -436,3 +436,6 @@
   .adm-act-coord{ width:100%; margin:0 0 12px; }
   .cs-count-table td.cs-count-w{ font-weight:700; }
   .pshift.in-long{ opacity:.55; border-style:dashed; cursor:not-allowed; font-size:11px; }          /* inside a chosen long weekend: not chosen one by one */
+  /* the preferences handed in for this month, to look at (14f-portal-instructor.js) */
+  .prefs-past-btn{ display:block; margin:0 auto 10px; }
+  .pprefs-past{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 10px; padding:8px 12px; border-radius:12px; background:rgba(90,160,255,.14); border:1px solid rgba(90,160,255,.5); font-weight:700; }

@@ -178,23 +178,24 @@ function srvBuildBoxHtml(mk){
   const m = portalMonth(mk); if(m.published) return '';
   const req = srvBuildReqOf(mk), waiting = req && !req.done_at, failed = req && req.done_at && /^נכשל/.test(req.result || '');
   if(waiting) return `<div class="cs-build waiting" id="cs-build"><span aria-hidden="true">⏳</span><div><b>הסידור בבנייה</b><small>יהיה מוכן תוך שעה לכל היותר, ותקבלי הודעה. אפשר לסגור את הפורטל בינתיים.</small></div></div>`;
-  if(srvPrefsOpen(mk)){
+  if(!srvPrefsDeadlinePassed(mk)){
     const end = addMonths(mk, -1) + '-24';
-    return `<div class="cs-build" id="cs-build"><button type="button" class="btn" disabled>צור סידור אוטומטי</button><small>אפשר אחרי שההגשה נסגרת: ${pEsc(dayLabel(end))} בשעה 22:30.</small></div>`;
+    return `<div class="cs-build" id="cs-build"><button type="button" class="btn" disabled>צור סידור אוטומטי</button><small>אפשר מ-${pEsc(dayLabel(end))} בשעה 22:30. הלחיצה סוגרת את ההגשה לכולם.</small></div>`;
   }
   const missing = portalLoad().instructors.filter(p => p.active && p.role === 'instructor' && !m.submitted[p.id]).length;
   return `<div class="cs-build" id="cs-build"><button type="button" class="btn${m.status ? ' ghost' : ''}" id="cs-build-go">${m.status ? 'בנייה מחדש של הסידור' : 'צור סידור אוטומטי'}</button>
-    <small>${failed ? `הבנייה הקודמת לא הצליחה (${pEsc(req.result.replace(/^נכשל:\s*/, '').slice(0, 80))}). אפשר לנסות שוב.` : m.status ? 'בונה סידור חדש במקום הנוכחי, כולל השינויים הידניים שנעשו בו.' : `לוקח עד שעה.${missing ? ` ${missing} מדריכים לא הגישו העדפות.` : ''}`}</small></div>`;
+    <small>${failed ? `הבנייה הקודמת לא הצליחה (${pEsc(req.result.replace(/^נכשל:\s*/, '').slice(0, 80))}). אפשר לנסות שוב.` : m.status ? 'בונה סידור חדש במקום הנוכחי, כולל השינויים הידניים שנעשו בו.' : `הלחיצה סוגרת את ההגשה לכולם. לוקח עד שעה.${missing ? ` ${missing} מדריכים עוד לא הגישו העדפות.` : ''}`}</small></div>`;
 }
 function srvBuildWire(body, mk){
   const go = body.querySelector('#cs-build-go'); if(!go) return;
   go.addEventListener('click', async () => {
     const m = portalMonth(mk);
     if(m.status && !(await confirmSheet({ title:`לבנות מחדש את ${monthLabel(mk)}?`, text:'הסידור הנוכחי יוחלף בסידור חדש, כולל שינויים ידניים שנעשו בו.', okLabel:'כן, לבנות מחדש', cancelLabel:'חזרה', danger:true }))) return;
+    if(!m.status && !(await confirmSheet({ title:`לבנות את הסידור של ${monthLabel(mk)}?`, text:'ההגשה תיסגר לכולם עכשיו: מי שעוד לא הגיש/ה לא יוכל/תוכל להגיש. הסידור יהיה מוכן תוך שעה.', okLabel:'כן, לבנות', cancelLabel:'חזרה' }))) return;
     go.disabled = true;
     const r = await sbPersonal.from('sched_requests').insert({ month:firstOf(mk), requested_by:srv.me }).select('id,month,at,done_at,result').single();
     if(r.error){ go.disabled = false; toast('הבקשה לא נשלחה. אפשר לנסות שוב בעוד רגע'); return; }
-    const st = portalLoad(); st.buildReqs = [r.data].concat(st.buildReqs || []);
+    const st = portalLoad(); st.buildReqs = [r.data].concat(st.buildReqs || []); if(srv.prefsOpenSrv) srv.prefsOpenSrv[mk] = false;
     toast('הסידור בבנייה. יהיה מוכן תוך שעה לכל היותר, ותקבלי הודעה.', 5000); srvRenderCoordSchedule(body);
   });
 }

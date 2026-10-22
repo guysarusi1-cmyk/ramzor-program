@@ -1502,6 +1502,15 @@
       check('portal server: the database refuses a change in a closed month', !!refused.error, 'accepted!');
       portalUi.pmonth = closed; showPortal('prefs'); await sleep(100);
       check('portal server: the preferences are for next month only, with no way to another month', portalUi.pmonth === addMonths(monthKeyOf(srvToday()), 1) && !document.querySelector('#portal-body [data-pmonth]') && document.querySelector('#portal-body .pmonth-fixed b').textContent === monthLabel(portalUi.pmonth), portalUi.pmonth);
+      { const pb = document.querySelector('#prefs-past');
+        check('past preferences: a button shows what was handed in for this month', !!pb && pb.textContent.includes(monthLabel(addMonths(portalUi.pmonth, -1))), pb ? pb.textContent : 'none');
+        if(pb){ pb.click(); await sleep(100);
+          check('past preferences: ... this month, read only, with a way back to next month', portalUi.pmonth === monthKeyOf(srvToday()) && !!document.querySelector('.pprefs-past') && /סגורה/.test(document.getElementById('portal-body').textContent), portalUi.pmonth);
+          document.querySelector('#prefs-past-end').click(); await sleep(100);
+          check('past preferences: ... and back to next month', portalUi.pmonth === addMonths(monthKeyOf(srvToday()), 1) && !document.querySelector('.pprefs-past'), portalUi.pmonth); } }
+      check('submission: the coordinator may press only from the 24th at 22:30 (the date the staff are told)', srvPrefsDeadlinePassed(addMonths(monthKeyOf(srvToday()), 0)) && !srvPrefsDeadlinePassed(addMonths(monthKeyOf(srvToday()), 2)), '');
+      { const pr = await sbPersonal.rpc('prefs_open', { m:firstOf(addMonths(monthKeyOf(srvToday()), 1)) });
+        check('submission: whether next month is open comes from the database (it closes when the coordinator presses)', !pr.error && pr.data === srvPrefsOpen(addMonths(monthKeyOf(srvToday()), 1)), JSON.stringify([pr.data, pr.error && pr.error.message])); }
       { const real = srvPrefsOpen; srvPrefsOpen = () => false; showPortal('prefs'); await sleep(100);
         check('portal server: a closed month is shown as closed (no clicking)', /סגורה/.test(document.getElementById('portal-body').textContent), 'not shown');
         srvPrefsOpen = real; showPortal('prefs'); await sleep(50); }
@@ -1638,8 +1647,8 @@
             check('build: ... and the weekend column counts Friday morning to Saturday night', r1.children[5].textContent === ([5, 6].includes(dowOf(day)) ? '1' : '') && [...cf.querySelectorAll('thead th')].some(th => th.textContent === 'סופ"ש'), r1.children[5].textContent + ' / ' + dowOf(day)); } }
         check('build: a month whose submission closed has the button (here "build again", as there is a schedule)', !!document.querySelector('#cs-build-go') && /בנייה מחדש/.test(document.querySelector('#cs-build-go').textContent), (document.querySelector('#cs-build') || {}).textContent || 'none');
         check('build: a month with no schedule and the submission closed: "צור סידור אוטומטי"', /id="cs-build-go"[^>]*>צור סידור אוטומטי/.test(srvBuildBoxHtml('2020-01')), srvBuildBoxHtml('2020-01').slice(0, 120));
-        if(srvPrefsOpen(next)){
-          check('build: while the submission is open, the button is locked and says from when', /disabled/.test(srvBuildBoxHtml(next)) && /אפשר אחרי שההגשה נסגרת/.test(srvBuildBoxHtml(next)), srvBuildBoxHtml(next).slice(0, 120));
+        if(!srvPrefsDeadlinePassed(next)){
+          check('build: before the 24th at 22:30, the button is locked and says from when', /disabled/.test(srvBuildBoxHtml(next)) && /אפשר מ-/.test(srvBuildBoxHtml(next)), srvBuildBoxHtml(next).slice(0, 120));
           const early = await sbPersonal.from('sched_requests').insert({ month:firstOf(next), requested_by:srv.me });
           check('build: ... and the database refuses a request while the submission is open', !!early.error, 'accepted');
         }

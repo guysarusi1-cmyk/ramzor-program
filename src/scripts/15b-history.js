@@ -24,12 +24,12 @@
       for(const [k, id] of [['child', 'kids-quick-pick-child'], ['moon', 'kids-quick-moon-panel'], ['intro', 'kids-quick-yellow-intro'], ['list', 'kids-quick-yellow-list']]) if(shown(id)) return 'kq:' + k;
       return 'kq:color';
     }
-    if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}`;
+    if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}${portalUi.prefsPast ? 'p' : ''}`;
     if(v.id === 'view-therapy' && typeof thp !== 'undefined') return `therapy:${thp.mode}|${thp.tab || ''}|${thp.editing || ''}|${thp.editing ? thp.wtab || '' : ''}`;
     return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control' })[v.id] || 'hub';
   }
   function snapshot(key){
-    if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona };
+    if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona, prefsPast:!!portalUi.prefsPast };
     if(key.startsWith('therapy:')) return { mode:thp.mode, tab:thp.tab, editing:thp.editing, wtab:thp.wtab };
     return null;
   }
@@ -57,7 +57,7 @@
     if(key.startsWith('portal:') && snap){
       if(portalUi.editPrefs && !snap.editPrefs && typeof srvFlush === 'function'){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled for somebody is saved before leaving)
       const wasEditing = !!portalUi.editPrefs;
-      Object.assign(portalUi, { tab:snap.tab, viewAs:snap.viewAs, actAs:snap.actAs, editPrefs:snap.editPrefs, manager:snap.manager, persona:snap.persona });
+      Object.assign(portalUi, { tab:snap.tab, viewAs:snap.viewAs, actAs:snap.actAs, editPrefs:snap.editPrefs, manager:snap.manager, persona:snap.persona, prefsPast:!!snap.prefsPast });
       if(wasEditing !== !!snap.editPrefs && typeof srvResnap === 'function') srvResnap();
       return showPortal(snap.tab);
     }
