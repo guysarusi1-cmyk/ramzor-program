@@ -50,15 +50,10 @@ function showAppHome(){
           <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
           <span class="home-card-sub">משמרות, העדפות והודעות</span>
         </button>`}
-        ${typeof therapyAvailable === 'function' && therapyAvailable() && canTherapistPortal() ? `<button type="button" class="home-card" id="apphome-therapist">
-          <span class="apphome-emoji" aria-hidden="true">🩺</span>
-          <span class="home-card-title">פורטל איש הטיפול</span>
-          <span class="home-card-sub">מה מחכה לך, התוכניות, התצפיות והמעקב</span>
-        </button>` : ''}
-        ${typeof therapyAvailable === 'function' && therapyAvailable() && canStaffPortal() ? `<button type="button" class="home-card" id="apphome-therapy">
+        ${typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
           <span class="apphome-emoji" aria-hidden="true">🌱</span>
           <span class="home-card-title">פורטל הטיפול</span>
-          <span class="home-card-sub">מה עושים עם כל ילד, וממה להימנע</span>
+          <span class="home-card-sub">${canTherapistPortal() ? 'מה מחכה לך, התוכניות, התצפיות והמעקב' : 'מה עושים עם כל ילד, וממה להימנע'}</span>
         </button>` : ''}
         ${portalServerOn && (portalMe() || {}).admin && (portalMe() || {}).role !== 'coordinator' ? `<button type="button" class="home-card" id="apphome-manage">
           <span class="apphome-emoji" aria-hidden="true">🛠️</span>
@@ -70,8 +65,7 @@ function showAppHome(){
       ${portalServerOn || sbPersonal ? '' : '<div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>'}
     </div>`;
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
-  { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal('staff')); }          // (Mercury: the two therapy portals, 14w-therapy-portal.js)
-  { const tt = document.getElementById('apphome-therapist'); if(tt) tt.addEventListener('click', () => showTherapyPortal('therapist')); }
+  { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
   const mg = document.getElementById('apphome-manage'); if(mg) mg.addEventListener('click', () => { portalUi.manager = true; srvOpenPortal(); });
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
@@ -122,7 +116,7 @@ function showPortal(tab){
   }
   document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
-  { const th = document.getElementById('portal-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal('staff')); }          // (service girls and teachers: their way to the therapy portal)
+  { const th = document.getElementById('portal-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (service girls and teachers: their way to the therapy portal)
   const prob = document.getElementById('portal-problem'); if(prob) prob.addEventListener('click', openProblemReport);
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
   if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
