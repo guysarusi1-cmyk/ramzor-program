@@ -1,4 +1,4 @@
-# Runs the automatic checks of the whole app in a hidden browser (phone, desktop and TV sizes).
+﻿# Runs the automatic checks of the whole app in a hidden browser (phone, desktop and TV sizes).
 # Exit code 0 = everything passed; anything else = something is broken (details are printed).
 #   .\tests\run-checks.ps1            (everything)
 #   .\tests\run-checks.ps1 -Only 'portal people'   (just one step, to find what is wrong faster)
@@ -31,6 +31,7 @@ try {
     if(-not (Test-Path $resultFile)){ Write-Host "[$($size[0])] no result within $Wait s" -ForegroundColor Red; $allOk = $false; continue }
     Start-Sleep -Milliseconds 300
     $res = Get-Content $resultFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    Copy-Item $resultFile (Join-Path $env:TEMP "ramzor-check-results-$($size[0]).json") -Force          # (kept per size: the release shows only that something failed)
     $bad = @($res.results | Where-Object { -not $_.ok })
     if($bad.Count -eq 0){ Write-Host "[$($size[0])] all $($res.total) checks passed" -ForegroundColor Green }
     else {
