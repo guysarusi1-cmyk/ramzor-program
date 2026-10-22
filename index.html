@@ -463,6 +463,17 @@
     body:has(#view-display.active) .bottom-nav,
     #protected-app.guided-focus:has(#view-staff.active) > .bottom-nav{ display:none; }
   }
+  /* "→ חזור" (15b-history.js): next to "בית" in the bar on a phone; floating at the bottom on a wide screen; hidden on the first page */
+  .nav-back-float{ position:fixed; bottom:18px; inset-inline-end:18px; z-index:50; min-height:44px; padding:8px 16px; border-radius:22px;
+    border:1px solid var(--line); background:rgba(18,23,42,.92); color:var(--text); font-family:'Rubik', sans-serif; font-size:14px; font-weight:700; cursor:pointer;
+    box-shadow:0 4px 16px rgba(0,0,0,.35); }
+  .nav-back-float:hover, .nav-back-float:focus-visible{ border-color:var(--gold); }
+  .nav-back-float[hidden], .bottom-nav-btn[hidden]{ display:none !important; }
+  body:has(#view-display.active) .nav-back-float{ display:none; }
+  @media (max-width:700px){
+    .nav-back-float{ display:none; }
+    .bottom-nav.has-back{ grid-template-columns:1fr 1fr; gap:6px; }
+  }
 
 /* ---- management screen: children list with ship picker, bonus editor ---- */
   .add-row select{
@@ -1563,6 +1574,10 @@
   .adm-va-mode{ margin:0 0 10px; }
   .adm-people .adm-sub{ font-size:11.5px; color:var(--p-yes, #7be0a0); }
   .tv-code-big{ font-size:44px; font-weight:800; letter-spacing:.18em; text-align:center; margin:10px 0 14px; font-variant-numeric:tabular-nums; color:var(--p-text); }
+  .adm-viewas.act{ background:rgba(255,120,80,.16); border-color:rgba(255,120,80,.6); }
+  .adm-act-coord{ width:100%; margin:0 0 12px; }
+  .cs-count-table td.cs-count-w{ font-weight:700; }
+  .pshift.in-long{ opacity:.55; border-style:dashed; cursor:not-allowed; font-size:11px; }          /* inside a chosen long weekend: not chosen one by one */
 
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
@@ -5681,7 +5696,7 @@ function queueEmail(to, subject, body){
 // ---- the first screen after login: two cards
 function showAppHome(){
   stopCarousel(); document.body.classList.remove('leopard-bg');
-  if(portalUi.viewAs){ const was = portalUi.editPrefs; portalUi.viewAs = null; portalUi.editPrefs = false; if(typeof srv !== 'undefined' && srv.me) portalUi.persona = srv.me; if(was && typeof srvResnap === 'function') srvResnap(); }          // (leaving "looking as somebody" by any way: back to being oneself)
+  if(portalUi.viewAs){ const was = portalUi.editPrefs; portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.actAs = false; if(typeof srv !== 'undefined' && srv.me) portalUi.persona = srv.me; if(was && typeof srvResnap === 'function') srvResnap(); }          // (leaving "looking as somebody" by any way: back to being oneself)
   portalActivateView('view-apphome');
   document.getElementById('view-apphome').innerHTML = `
     <div class="apphome">
@@ -5757,7 +5772,7 @@ function showPortal(tab){
         <span class="portal-demo-tag">דמו</span>
       </label>`}
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
-      ${portalServerOn && portalUi.viewAs ? (portalUi.editPrefs ? `<div class="adm-viewas edit"><span>✏️ ממלא/ת העדפות עבור ${pEsc(me.first)} · נשמר אצלו/ה</span><button type="button" class="btn small" id="viewas-end">סיום</button></div>` : `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>`) : ''}
+      ${portalServerOn && portalUi.viewAs ? (portalUi.actAs ? `<div class="adm-viewas act"><span>🛠️ במסך של ${pEsc(me.first)} · שליטה מלאה, כל פעולה נרשמת על שמך</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>` : portalUi.editPrefs ? `<div class="adm-viewas edit"><span>✏️ ממלא/ת העדפות עבור ${pEsc(me.first)} · נשמר אצלו/ה</span><button type="button" class="btn small" id="viewas-end">סיום</button></div>` : `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>`) : ''}
       <div id="portal-body"></div>
       ${portalServerOn && srv.meRow && !['instructor', 'coordinator'].includes(srv.meRow.role) && !srv.meRow.admin ? installLinkHtml() : ''}
       ${portalServerOn ? '<button type="button" class="portal-problem" id="portal-problem">משהו לא עובד? דיווח על תקלה</button>' : ''}
@@ -5765,7 +5780,7 @@ function showPortal(tab){
   if(portalServerOn && portalUi.viewAs){          // (the admin looks at somebody's portal: folds, months and tabs work; nothing can be changed)
     document.getElementById('viewas-end').addEventListener('click', adminViewAsEnd);
     document.getElementById('portal-body').addEventListener('click', ev => {
-      if(portalUi.editPrefs) return;          // (filling somebody's preferences: the preference screen works as for them)
+      if(portalUi.editPrefs || portalUi.actAs) return;          // (filling somebody's preferences, or working in the coordinator's screen: everything works)
       if(ev.target.closest('summary, [data-pmonth], .pfold > summary')) return;
       if(ev.target.closest('button, input, select, textarea, a, [data-pslot], [data-pday], [role=button]')){ ev.preventDefault(); ev.stopPropagation(); toast('זו צפייה בלבד'); }
     }, true);
@@ -6014,6 +6029,11 @@ const prefOther = () => portalServerOn && typeof srvEditingFor === 'function' &&
 const prefFixedKinds = () => { const o = prefOther(), st = portalLoad(), prof = o ? (st.priv || {})[o] : srv.profile; const k = new Set(portalServerOn ? (o ? (st.fixedNo || {})[o] || [] : srv.fixedNo || []) : []); if(portalServerOn && prof && prof.no_nights) k.add('n'); return k; };
 const prefFixedNo = key => portalServerOn && prefFixedKinds().has(String(key).split('|')[1]);
 const prefNoNight = prefFixedNo;
+// the long weekend is one package (Guy, 2026-10-22): with "כן" or "יכול" on it, Friday afternoon and night and Saturday morning and afternoon are
+// inside it and are not chosen one by one (the engine places them only as the whole weekend); Friday morning and Saturday night stay free
+const LONG_INSIDE = { 5:['e', 'n'], 6:['m', 'e'] };
+const prefLongFri = key => { const [d, s] = key.split('|'), w = dowOf(d); return (LONG_INSIDE[w] || []).includes(s) ? (w === 5 ? d : addDays(d, -1)) : null; };
+const prefInsideLong = (prefs, key) => { const fri = portalServerOn && prefLongFri(key); return !!fri && ['yes', 'can', 'avoid'].includes(prefs.slots[`${fri}|l`]); };
 const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? (prefNoNight(key) ? 'no' : 'neutral') : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
 const DEFAULT_SHIFT_LEGEND = types => types.map(s => (s.letter || s.label.charAt(0)) + ' = ' + s.label);
 const FIXED_REASON = { vacation:'חופשה', sick:'מחלה', reserve:'מילואים', leave:'חופשה מיוחדת', other:'היעדרות', self:'היעדרות' };
@@ -6053,12 +6073,13 @@ function renderInstructorPrefs(body){
   for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
     const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
-    if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`] && !prefNoNight(`${date}|${s.id}`)).length;
+    if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`] && !prefNoNight(`${date}|${s.id}`) && !prefInsideLong(prefs, `${date}|${s.id}`)).length;
     cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${barOn && [5, 6].includes(dowOf(date)) && days.includes(dowOf(date) === 5 ? date : addDays(date, -1)) ? ' linked' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${fx ? `<span class="pday-fixed">${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}</span>` : ''}
       ${hrs ? `<span class="pday-hrs" title="שעות אחרות">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</span>` : ''}
-      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const lv = absent ? 'no' : prefLevelOf(prefs, `${date}|${s.id}`); return `<button type="button" class="pshift lv-${lv}" data-pslot="${date}|${s.id}" aria-label="${pEsc(s.label)}">${pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>
+      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = !absent && prefInsideLong(prefs, key), lv = absent ? 'no' : inLong ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
+        return `<button type="button" class="pshift lv-${lv}${inLong ? ' in-long' : ''}" data-pslot="${key}" aria-label="${pEsc(s.label)}${inLong ? ' (בתוך הסופ&quot;ש הארוך)' : ''}">${inLong ? '🕯️' : pEsc(s.letter || s.label.charAt(0))}</button>`; }).join('')}</div>
     </div>`;
     if(portalServerOn && dowOf(date) === 6 && days.includes(addDays(date, -1))) cells += longBar(addDays(date, -1));
     else if(portalServerOn && dowOf(date) === 5 && date === days[days.length - 1]) cells += longBar(date);
@@ -6118,6 +6139,7 @@ function renderInstructorPrefs(body){
     if(locked) return;
     const shown = b.dataset.pslot.split('|')[0], key = prefKeyOf(b.dataset.pslot), date = key.split('|')[0], lv = portalUi.level;
     if(fixedOn(date) || fixedOn(shown)) return;
+    if(prefInsideLong(prefs, key) && lv !== 'absent'){ toast(tx('long_inside')); return; }
     if(lv === 'hours'){ openHoursSheet(shown, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
     else if(lv === 'yes' && !portalServerOn){ delete prefs.slots[key]; }                      // (the demo: "כן" is the default, so nothing needs to be stored; on the server "כן" is a mark like the others)
@@ -6130,6 +6152,10 @@ function renderInstructorPrefs(body){
     if(fixedOn(fri) || prefs.absent.includes(fri)) return;
     if(lv === 'hours' || lv === 'absent'){ toast(tx('long_levels')); return; }
     if(prefs.slots[key] === lv) delete prefs.slots[key]; else prefs.slots[key] = lv;
+    if(['yes', 'can', 'avoid'].includes(prefs.slots[key])){          // (the shifts inside the long weekend: their own marks give way to it)
+      const sat = addDays(fri, 1), inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(k => prefs.slots[k]);
+      inside.forEach(k => delete prefs.slots[k]); if(inside.length) toast(tx('long_replaced'));
+    }
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-ppick]').forEach(b => b.addEventListener('click', () => {          // "only one of these weekends": the Fridays that belong to the group
@@ -6139,7 +6165,7 @@ function renderInstructorPrefs(body){
   }));
   body.querySelectorAll('[data-pday]').forEach(b => b.addEventListener('click', () => {
     if(locked) return;
-    const date = b.dataset.pday, lv = portalUi.level, keys = prefShiftsFor(date).map(s => prefKeyOf(`${date}|${s.id}`)).filter(k => !prefFixedNo(k));          // (a shift of a fixed preference changes only when it is pressed by itself)
+    const date = b.dataset.pday, lv = portalUi.level, keys = prefShiftsFor(date).map(s => prefKeyOf(`${date}|${s.id}`)).filter(k => !prefFixedNo(k) && !prefInsideLong(prefs, k));          // (a shift of a fixed preference changes only when it is pressed by itself)
     if(fixedOn(date)) return;
     if(lv === 'hours'){ openHoursSheet(date, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
@@ -6900,7 +6926,7 @@ async function srvStart(){
 let ramzorPersonal = false;
 const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
 async function personalEnter(){
-  portalServerOn = true; portalUi.viewAs = null; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
+  portalServerOn = true; portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoadFirst())) return false;
   portalUi.persona = srv.me;
   document.getElementById('login-screen').style.display = 'none';
@@ -6917,7 +6943,7 @@ async function personalLeave(){
   await sbPersonal.auth.signOut();
   sb = sbShared; ramzorPersonal = false; portalServerOn = false; portalState = null; srv.me = null; srv.profile = null; srv.profileFor = null;
   if(typeof arApply === 'function') arApply();          // (back to Hebrew)
-  portalUi.viewAs = null; portalUi.manager = false; portalUi.persona = null;
+  portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false; portalUi.persona = null;
 }
 async function srvSignOut(){
   await srvFlush();
@@ -7400,14 +7426,15 @@ function srvBuildWire(body, mk){
 function srvCountFoldHtml(mk){
   const st = portalLoad(), people = st.instructors.filter(p => p.role === 'instructor'), c = {};
   (st.rows || []).forEach(r => { if(monthKeyOf(r.day) !== mk || !people.some(p => p.id === r.staff)) return;
-    const x = c[r.staff] = c[r.staff] || { all:0, M:0, A:0, N:0, L:0 }; x.all++; x[r.shift === 'S' ? 'M' : r.shift] = (x[r.shift === 'S' ? 'M' : r.shift] || 0) + 1; });
-  const list = people.filter(p => p.active || c[p.id]).map(p => ({ p, x:c[p.id] || { all:0, M:0, A:0, N:0, L:0 } })).sort((a, b) => b.x.all - a.x.all || String(a.p.first).localeCompare(String(b.p.first), 'he'));
+    const x = c[r.staff] = c[r.staff] || { all:0, M:0, A:0, N:0, L:0, W:0 }; x.all++; x[r.shift === 'S' ? 'M' : r.shift] = (x[r.shift === 'S' ? 'M' : r.shift] || 0) + 1;
+    if(r.shift !== 'L' && [5, 6].includes(dowOf(r.day))) x.W++; });          // (the weekend: from Friday morning to Saturday night, both included; the long weekend has its own column)
+  const list = people.filter(p => p.active || c[p.id]).map(p => ({ p, x:c[p.id] || { all:0, M:0, A:0, N:0, L:0, W:0 } })).sort((a, b) => b.x.all - a.x.all || String(a.p.first).localeCompare(String(b.p.first), 'he'));
   if(!list.length) return '';
   const nums = list.map(r => r.x.all), lo = Math.min(...nums), hi = Math.max(...nums), total = nums.reduce((a, b) => a + b, 0);
   return `<details class="pissues cs-count" id="cs-count"${portalUi.csCount ? ' open' : ''}><summary>כמה משמרות לכל אחד · ${total} משמרות, ${lo === hi ? lo : `${lo}–${hi}`} לאדם</summary>
-    <div class="cs-count-scroll"><table class="cs-count-table"><thead><tr><th>שם</th><th>סה"כ</th><th>בוקר</th><th>צהריים</th><th>לילה</th><th>סופ"ש ארוך</th></tr></thead><tbody>
-    ${list.map(({ p, x }) => `<tr${x.all ? '' : ' class="zero"'}><th>${pEsc(instrName(p, st.instructors))}</th><td><b>${x.all}</b></td><td>${x.M || ''}</td><td>${x.A || ''}</td><td>${x.N || ''}</td><td>${x.L || ''}</td></tr>`).join('')}
-    </tbody></table></div><div class="pnote">סופ"ש ארוך נספר כמשמרת אחת. בנות שירות ומורות לא נכללות.</div></details>`;
+    <div class="cs-count-scroll"><table class="cs-count-table"><thead><tr><th>שם</th><th>סה"כ</th><th>בוקר</th><th>צהריים</th><th>לילה</th><th>סופ"ש</th><th>סופ"ש ארוך</th></tr></thead><tbody>
+    ${list.map(({ p, x }) => `<tr${x.all ? '' : ' class="zero"'}><th>${pEsc(instrName(p, st.instructors))}</th><td><b>${x.all}</b></td><td>${x.M || ''}</td><td>${x.A || ''}</td><td>${x.N || ''}</td><td class="cs-count-w">${x.W || ''}</td><td>${x.L || ''}</td></tr>`).join('')}
+    </tbody></table></div><div class="pnote">סופ"ש = המשמרות משישי בוקר עד שבת לילה (כולל), מתוך הסה"כ. סופ"ש ארוך לא נספר בו: הוא בעמודה משלו, כמשמרת אחת. בנות שירות ומורות לא נכללות.</div></details>`;
 }
 
 // ---- edit one shift: who is on it (with hours), remove, add (with warnings; the coordinator may override them)
@@ -8112,6 +8139,8 @@ const VOICES = {
   hint_low:   { warm:(f, m) => `שמנו לב שבסימונים הנוכחיים נשארו ${f} משמרות שמתאימות לך. כדי שנצליח לשבץ אותך במינימום (בערך ${m} משמרות) כדאי להשאיר קצת יותר גמישות. אם משהו מגביל אותך, נשמח לשמוע ולמצוא פתרון יחד.`, light:(f, m) => `ספרנו, ונשארו ${f} משמרות שמתאימות לך, והמינימום הוא בערך ${m}. קצת יותר גמישות והחשבון יסתדר. ואם משהו באמת מגביל, ספרו לנו.`, brief:(f, m) => `נשארו ${f} משמרות זמינות, והמינימום הוא ${m}. כדאי להוסיף גמישות.` },
   neutral_note:{ warm:(n) => `נשארו ${n} משמרות שעוד לא סימנתם. נשמח אם תעברו על כל החודש ותסמנו לכל משמרת "כן", "יכול" או "לא", כדי שנוכל לבנות סידור שמתאים לכם. משמרת שלא סומנה נשבץ רק אם לא תהיה ברירה אחרת.`, light:(n) => `נשארו ${n} משמרות בלי סימון. כל אחת מחכה ל"כן", ל"יכול" או ל"לא", ואז הסידור כבר יידע מה לעשות איתכם.`, brief:(n) => `${n} משמרות ללא סימון. יש למלא את כל החודש.` },
   submit_neutral:{ warm:(n) => `תודה, ההעדפות נשמרו. אבל ההגשה עדיין לא הושלמה: נשארו ${n} משמרות בלי סימון. נשמח מאוד שתשלימו אותן עד סגירת ההגשה`, light:(n) => `שמרנו, אבל עוד לא סיימנו: ${n} משמרות מחכות לסימון, וההגשה לא שלמה בלעדיהן. כדאי להשלים לפני הסגירה`, brief:(n) => `ההגשה לא שלמה: ${n} משמרות ללא סימון. יש להשלים עד הסגירה` },
+  long_inside:{ warm:() => 'המשמרת הזו היא חלק מהסופ"ש הארוך שבחרת. בסופ"ש הזה אפשר לבחור בנפרד רק את שישי בבוקר ואת שבת בלילה', light:() => 'זו כבר בתוך הסופ"ש הארוך שלך 🕯️ בנפרד אפשר רק שישי בוקר ושבת לילה', brief:() => 'בתוך הסופ"ש הארוך. בנפרד: רק שישי בוקר ושבת לילה' },
+  long_replaced:{ warm:() => 'הסימונים של שישי צהריים ולילה ושל שבת בוקר וצהריים הוחלפו בסופ"ש הארוך', light:() => 'שישי צהריים-לילה ושבת בוקר-צהריים עכשיו בתוך הסופ"ש הארוך 🕯️', brief:() => 'המשמרות שבתוך הסופ"ש הוחלפו בסופ"ש הארוך' },
   long_levels:{ warm:() => 'לסופ"ש ארוך אפשר לבחור "כן", "יכול" או "לא"', light:() => 'לסופ"ש ארוך בוחרים "כן", "יכול" או "לא". בלי שעות מיוחדות', brief:() => 'כאן: כן, יכול או לא' },
   long_setting:{ warm:() => 'סופ"ש ארוך (שישי אחר הצהריים עד אחרי צאת שבת) לא מוצג כברירת מחדל. כשמפעילים, מופיע מתחת לכל שישי ושבת כפתור אחד שמסומן בו אם מתאים לכם. לא נשבץ אתכם אליו בלי שסימנתם.', light:() => 'סופ"ש ארוך לא מופיע כברירת מחדל. מפעילים, ומתחת לכל שישי ושבת מופיע כפתור אחד. בלי סימון שלכם אנחנו לא נוגעים בו.', brief:() => 'מציג סופ"ש ארוך מתחת לשישי ולשבת. בלי סימון: לא משבצים.' },
   pick_setting:{ warm:() => 'כשהאפשרות פעילה, בכל סופ"ש במסך ההעדפות מופיע כפתור קטן "רק אחד מאלה". מסמנים כמה סופי שבוע שמתאימים לכם, והמערכת תשבץ אתכם באחד מהם בלבד.', light:() => 'כשזה פעיל, כל סופ"ש מקבל כפתור קטן "רק אחד מאלה". פותחים למערכת כמה אפשרויות, והיא בוחרת אחת בלבד.', brief:() => 'מוסיף כפתור "רק אחד מאלה" בסופי שבוע. המערכת תשבץ אחד מהם בלבד.' },
@@ -8837,8 +8866,11 @@ const ADMIN_SHIFT_WORD = { M:'בוקר', S:'בוקר קצר', A:'צהריים', 
 function srvRenderAdmin(body){
   portalUi.adminFold = portalUi.adminFold || {};
   const fold = (id, title) => `<details class="pfold" data-afold="${id}"${portalUi.adminFold[id] ? ' open' : ''}><summary><span>${title}</span></summary><div class="pfold-body" data-abody="${id}"></div></details>`;
-  body.innerHTML = `<div class="pnote">כאן מה שרק למנהל יש: כל פרטי הצוות, צפייה בפורטל כמו שמדריך מסוים רואה אותו, הגדרות המערכת, בנייה מחדש של סידור ויומן מלא.</div>
+  const coords = portalLoad().instructors.filter(p => p.active && p.role === 'coordinator' && p.id !== srv.me);
+  body.innerHTML = `${coords.map(p => `<button type="button" class="btn adm-act-coord" data-act-as="${p.id}">🛠️ כניסה למסך של ${pEsc(p.first)} (שליטה מלאה)</button>`).join('')}
+    <div class="pnote">כאן מה שרק למנהל יש: כל פרטי הצוות, צפייה בפורטל כמו שמדריך מסוים רואה אותו, הגדרות המערכת, בנייה מחדש של סידור ויומן מלא.</div>
     ${fold('problems', 'תקלות ודיווחים')}${fold('staff', 'פרטי הצוות')}${fold('viewas', 'צפייה כמו מדריך מסוים')}${fold('system', 'הגדרות מערכת')}${fold('rebuild', 'בנייה מחדש של סידור')}${fold('log', 'יומן מלא')}`;
+  body.querySelectorAll('[data-act-as]').forEach(b => b.addEventListener('click', () => adminActAs(b.dataset.actAs)));
   const fill = async id => {
     const box = body.querySelector(`[data-abody="${id}"]`); if(!box) return;
     box.innerHTML = '<div class="pnote">רק רגע...</div>';
@@ -8914,9 +8946,11 @@ function adminViewAs(box){
     portalUi.tab = fill ? 'prefs' : null; portalUi.pmonth = null; if(fill) srvResnap(); showPortal(fill ? 'prefs' : undefined);
   }));
 }
+// the coordinator's own screen, with full control: everything she sees and does (the database lets the admin do all of it; each action is recorded as the admin's)
+function adminActAs(id){ portalUi.viewAs = id; portalUi.persona = id; portalUi.actAs = true; portalUi.editPrefs = false; portalUi.manager = false; portalUi.tab = null; portalUi.month = null; showPortal(); }
 async function adminViewAsEnd(){
   if(portalUi.editPrefs){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled is saved before leaving)
-  portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.persona = srv.me; portalUi.manager = true; portalUi.tab = 'admin'; portalUi.pmonth = null; srvResnap(); showPortal('admin');
+  portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.actAs = false; portalUi.persona = srv.me; portalUi.manager = true; portalUi.tab = 'admin'; portalUi.pmonth = null; srvResnap(); showPortal('admin');
 }
 
 // ---- 3. the system settings: the hours of the shifts, how early a long vacation is asked for, the numbers of the rules
@@ -9198,6 +9232,8 @@ const AR_VOICES = {
   hint_low:(f, m) => `لاحظنا أنه حسب اختياراتك الحالية بقيت ${f} مناوبات تناسبك. لكي ننجح في جدولتك بالحد الأدنى (حوالي ${m} مناوبات) من الأفضل ترك مرونة أكثر قليلًا. إذا كان هناك ما يقيّدك، يسعدنا أن نسمع ونجد حلًّا معًا.`,
   neutral_note:(n) => `بقيت ${n} مناوبات لم تختاروا لها بعد. يسعدنا أن تمرّوا على الشهر كله وتختاروا لكل مناوبة "نعم" أو "ممكن" أو "لا"، لكي نبني جدولًا يناسبكم. المناوبة غير المحددة نجدولكم فيها فقط إذا لم يكن هناك خيار آخر.`,
   submit_neutral:(n) => `شكرًا، تم حفظ التفضيلات. لكن التقديم لم يكتمل بعد: بقيت ${n} مناوبات بدون اختيار. يسعدنا جدًا أن تكملوها حتى إغلاق التقديم`,
+  long_inside:() => 'هذه المناوبة جزء من نهاية الأسبوع الطويلة التي اخترتها. في نهاية الأسبوع هذه يمكن اختيار صباح الجمعة وليل السبت فقط بشكل منفصل',
+  long_replaced:() => 'اختيارات ما بعد ظهر وليل الجمعة وصباح وما بعد ظهر السبت استُبدلت بنهاية الأسبوع الطويلة',
   long_levels:() => 'لنهاية الأسبوع الطويلة يمكن اختيار "نعم" أو "ممكن" أو "لا"',
   long_setting:() => 'نهاية الأسبوع الطويلة (من الجمعة بعد الظهر حتى بعد خروج السبت) لا تظهر بشكل افتراضي. عند التفعيل يظهر تحت كل جمعة وسبت زر واحد تختارون فيه إن كان يناسبكم. لن نجدولكم لها بدون اختياركم.',
   pick_setting:() => 'عند تفعيل هذا الخيار يظهر في كل نهاية أسبوع زر صغير "واحدة فقط من هذه". تختارون عدة نهايات أسبوع تناسبكم، والنظام يجدولكم في واحدة منها فقط.',
@@ -9267,7 +9303,7 @@ const AR = {
   'הסידור':'الجدول', 'העדפות':'التفضيلات', 'החלפות':'الاستبدالات', 'חופשה':'إجازة', 'הודעות':'الرسائل', 'זמינות':'التوفّر', 'שעות':'الساعات', 'משמרות חסרות':'مناوبات ناقصة',
   'פורטל המדריך':'بوابة المرشد', 'פורטל בנות השירות':'بوابة متطوعات الخدمة', 'מרכז חירום':'مركز الطوارئ', 'מה תרצו לפתוח?':'ماذا تريدون أن تفتحوا؟',
   'הרמזור':'الإشارة الضوئية', 'תפעול יומיומי ומסך הילדים':'التشغيل اليومي وشاشة الأطفال', 'משמרות, העדפות והודעות':'مناوبات، تفضيلات ورسائل',
-  'יציאה':'خروج', '→ מסך ראשי':'→ الشاشة الرئيسية', 'בית':'الرئيسية', 'העדפות מערכת':'إعدادات النظام', 'סיום':'إنهاء',
+  'יציאה':'خروج', '→ מסך ראשי':'→ الشاشة الرئيسية', 'בית':'الرئيسية', 'חזור':'رجوع', 'העדפות מערכת':'إعدادات النظام', 'סיום':'إنهاء',
   'המשמרות שלי':'مناوباتي', 'הצוות כולו':'الطاقم كله', 'איך הלכו הבקשות שלך':'كيف سارت طلباتك', 'משמרות פתוחות':'مناوبات مفتوحة', 'הודעות חדשות':'رسائل جديدة',
   'המשמרת הבאה שלך':'مناوبتك القادمة', 'בקשת החלפה':'طلب استبدال', 'הבנתי, תודה':'فهمت، شكرًا', 'סימון של כולן כנקראו':'تعليم الكل كمقروء',
   'העדכונים שלך':'تحديثاتك', 'הודעות מהרכזת':'رسائل من المركّزة', 'הבקשות שלי':'طلباتي', 'בקשות החלפה פתוחות':'طلبات استبدال مفتوحة',
@@ -10278,18 +10314,21 @@ function updateBottomNav(){
 const bottomNavObserver = new MutationObserver(updateBottomNav);
 document.querySelectorAll('.view').forEach(v => bottomNavObserver.observe(v, { attributes:true, attributeFilter:['class'] }));
 updateBottomNav();
-
-// ---------- THE PHONE'S BACK BUTTON ----------
-// The app is one page, so by default the Back button / back swipe (and an installed app's Back) leaves the app
-// from wherever you are. Here every screen the staff walk into adds one browser-history entry, and Back goes
-// up one level: step by step back through a protocol, then to the traffic light, then home — and only from
-// home does Back leave. Open sheets (a question, the step list, accessibility...) close first.
+// ---------- BACK: ONE PAGE BACK, ALWAYS (the "→ חזור" button and the phone's own Back) ----------
+// The app is one page, so by default the phone's Back (and an installed app's Back) leaves the app from wherever you are.
+// Here every page the person walks into adds one browser-history entry — a screen of the Ramzor, the app home, a tab of a
+// portal, a tab of a child in the therapy portal — and Back returns to the page before it: step by step back through a
+// protocol, then to the traffic light, then home; from a portal tab to the tab before it, then to the screen before the portal.
+// Only from the first page does Back leave. Open sheets (a question, a portal sheet, accessibility...) close first.
+// The bottom bar has a "→ חזור" button that does the same (Guy, 2026-10-22); on a wide screen it floats at the bottom.
 (function(){
   if(location.hash === '#tv' || location.hash === '#diag' || IS_TV_PREVIEW) return;   // the room TV has no Back button to care about
 
   const el = id => document.getElementById(id);
   const shown = id => { const e = el(id); return !!e && getComputedStyle(e).display !== 'none'; };
+  const portalOn = () => typeof portalUi !== 'undefined';
 
+  // the page on the screen now: a key (two pages with the same key are the same page) and what is needed to bring it back
   function currentScreenKey(){
     const v = document.querySelector('.view.active');
     if(!v) return 'hub';
@@ -10301,10 +10340,18 @@ updateBottomNav();
       for(const [k, id] of [['child', 'kids-quick-pick-child'], ['moon', 'kids-quick-moon-panel'], ['intro', 'kids-quick-yellow-intro'], ['list', 'kids-quick-yellow-list']]) if(shown(id)) return 'kq:' + k;
       return 'kq:color';
     }
-    return ({ 'view-manage':'manage', 'view-display':'display' })[v.id] || 'hub';
+    if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}`;
+    if(v.id === 'view-therapy' && typeof thp !== 'undefined') return `therapy:${thp.mode}|${thp.tab || ''}|${thp.editing || ''}|${thp.editing ? thp.wtab || '' : ''}`;
+    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control' })[v.id] || 'hub';
   }
+  function snapshot(key){
+    if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona };
+    if(key.startsWith('therapy:')) return { mode:thp.mode, tab:thp.tab, editing:thp.editing, wtab:thp.wtab };
+    return null;
+  }
+  const isRamzorFlow = key => key.startsWith('staff:') || key.startsWith('kq:');
 
-  // what "one level up" means on each screen = what that screen's own back button does
+  // the Ramzor's flows: "one page back" = what that screen's own back button does
   function goUp(key){
     switch(key){
       case 'staff:guided': if(guidedStep > 0){ el('guided-prev-btn').click(); return 'stay'; } el('staff-screen-guided').querySelector('.back-btn').click(); break;
@@ -10315,73 +10362,111 @@ updateBottomNav();
       case 'kq:moon':      el('kids-quick-back-to-children').click(); break;
       case 'kq:intro':     el('kids-quick-yellow-intro-back').click(); break;
       case 'kq:list':      el('kids-quick-yellow-list-back').click(); break;
-      case 'kq:color':     showHub(); break;
-      case 'manage':       el('manage-back-to-hub').click(); break;
       default:             showHub();
     }
+  }
+  // any other page: brought back as it was
+  async function restorePage(key, snap){
+    if(key === 'apphome' && typeof showAppHome === 'function') return showAppHome();
+    if(key === 'manage' && typeof openManagement === 'function') return openManagement();
+    if(key === 'control' && typeof showControl === 'function') return showControl();
+    if(key.startsWith('portal:') && snap){
+      if(portalUi.editPrefs && !snap.editPrefs && typeof srvFlush === 'function'){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled for somebody is saved before leaving)
+      const wasEditing = !!portalUi.editPrefs;
+      Object.assign(portalUi, { tab:snap.tab, viewAs:snap.viewAs, actAs:snap.actAs, editPrefs:snap.editPrefs, manager:snap.manager, persona:snap.persona });
+      if(wasEditing !== !!snap.editPrefs && typeof srvResnap === 'function') srvResnap();
+      return showPortal(snap.tab);
+    }
+    if(key.startsWith('therapy:') && snap){
+      if(!el('view-therapy').classList.contains('active') || thp.mode !== snap.mode) await showTherapyPortal(snap.mode);
+      Object.assign(thp, { tab:snap.tab, editing:snap.editing, wtab:snap.wtab });
+      return thpRender();
+    }
+    showHub();
   }
 
   // anything open on top of a screen is closed by Back before the screen changes
   function closeOpenSheet(){
     const confirm = document.querySelector('.confirm-sheet');
     if(confirm){ const c = confirm.querySelector('.confirm-cancel'); if(c){ c.click(); return true; } }
+    const ps = [...document.querySelectorAll('.psheet')].pop();
+    if(ps){ const c = ps.querySelector('[data-close]'); if(c) c.click(); else if(ps.close) ps.close(); else ps.remove(); return true; }
     for(const id of ['a11y-sheet', 'install-sheet']) if(el(id) && !el(id).hidden){ el(id).hidden = true; return true; }
     return false;
   }
 
-  // The trail of screens (stack[i] <-> history entry i). Every entry carries its own number, so when the browser
-  // reports "now at entry N" we know whether it was us moving (expectedEntry) or the person pressing Back.
-  let stack = ['hub'];
-  let expectedEntry = null, expectedUntil = 0;      // a move WE made stays 'expected' for a moment only (a missed event must never swallow a real Back)
-  const expect = entry => { expectedEntry = entry; expectedUntil = Date.now() + 1200; };
+  // The trail of pages is kept here (stack + how to bring each page back). The browser's history only needs ONE extra entry,
+  // a guard, while there is a page to go back to: the phone's Back takes the guard away, the app goes one page back and puts the
+  // guard back. On the first page there is no guard, so Back leaves the app, as usual. (Never several history steps at once:
+  // the browser does those late, and a quick second Back got lost.)
+  let stack = ['hub'], snaps = [null], rootSet = false, guardOn = false;
+  let ignoreUntil = 0;                // the moment our own history.back() (taking the guard away) lands: not a Back of the person
   let muteScreenWatcher = false;      // while the app answers a Back press, the watcher stays quiet
-  history.replaceState({ entry:0 }, '');
-  const pushEntry = () => history.pushState({ entry: stack.length - 1 }, '');
-  // Going home rewinds the history, which the browser does a moment later. Screens opened in that moment are only
-  // added to the trail, and their history entries are created once the rewind has landed (or after a short wait).
-  let rewinding = false;
-  function finishRewind(){
-    if(!rewinding) return; rewinding = false;
-    for(let i = 1; i < stack.length; i++) history.pushState({ entry: i }, '');
+  history.replaceState({ nav:'base' }, '');
+  function syncGuard(){
+    if(stack.length > 1 && !guardOn){ history.pushState({ nav:'guard' }, ''); guardOn = true; }
+    else if(stack.length <= 1 && guardOn){ guardOn = false; ignoreUntil = Date.now() + 1200; history.back(); }
   }
 
   let queued = false;
-  new MutationObserver(() => {
-    if(queued) return; queued = true;
-    queueMicrotask(() => { queued = false; screenMayHaveChanged(); });
-  }).observe(el('protected-app'), { subtree:true, attributes:true, attributeFilter:['class', 'style'] });
+  const watch = () => { if(queued) return; queued = true; queueMicrotask(() => { queued = false; screenMayHaveChanged(); }); };
+  new MutationObserver(watch).observe(el('protected-app'), { subtree:true, attributes:true, attributeFilter:['class', 'style'] });
+  for(const id of ['view-portal', 'view-therapy']) if(el(id)) new MutationObserver(watch).observe(el(id), { childList:true, subtree:id === 'view-therapy' });          // (a portal tab redraws the view without a class change)
 
   function screenMayHaveChanged(){
     if(muteScreenWatcher) return;
+    if(!shown('protected-app')){ rootSet = false; stack = ['hub']; snaps = [null]; syncGuard(); updateBack(); return; }          // (the sign-in screen: the next sign-in starts a new trail)
     const key = currentScreenKey();
+    if(!rootSet){ rootSet = true; stack = [key]; snaps = [snapshot(key)]; syncGuard(); updateBack(); return; }          // the first page after signing in is the start of the trail
     const top = stack[stack.length - 1];
-    if(key === top) return;
-    const here = stack.length - 1;
-    if(key === 'hub'){                                    // home from anywhere: forget the trail, rewind the history to the start
-      stack = ['hub'];
-      if(here > 0){ rewinding = true; expect(0); history.go(-here); setTimeout(finishRewind, 1500); }
-    } else if(key === stack[stack.length - 2]){            // an in-app "back" button was used: keep the history in step
-      stack.pop(); expect(stack.length - 1); history.back();
-    } else {
-      stack.push(key); if(!rewinding) pushEntry();
-    }
+    if(key === top){ snaps[snaps.length - 1] = snapshot(key); return; }
+    if(key === 'apphome' || (key === 'hub' && stack[0] !== 'apphome')){ stack = [key]; snaps = [snapshot(key)]; }          // home from anywhere: a new trail
+    else if(stack.lastIndexOf(key) >= 0){ stack.length = stack.lastIndexOf(key) + 1; snaps.length = stack.length; snaps[snaps.length - 1] = snapshot(key); }          // a page already in the trail (an in-app "back" button, or a tab visited before): back to it
+    else { stack.push(key); snaps.push(snapshot(key)); }
+    syncGuard(); updateBack();
   }
 
-  window.addEventListener('popstate', e => {
-    const landed = e.state && typeof e.state.entry === 'number' ? e.state.entry : 0;
-    if(expectedEntry !== null && Date.now() < expectedUntil && landed === expectedEntry){ expectedEntry = null; finishRewind(); return; }   // our own move
-    expectedEntry = null;
-    const top = stack[stack.length - 1];
-    if(landed >= stack.length - 1) return;                                // forward / unknown: leave it
-    if(closeOpenSheet()){ pushEntry(); return; }                          // Back only closed a sheet: the screen stays (entry restored)
-    if(stack.length <= 1) return;                                         // at home: Back leaves the app, as usual
-    muteScreenWatcher = true; setTimeout(() => { muteScreenWatcher = false; }, 0);
-    const result = goUp(top);
-    if(result === 'stay'){ pushEntry(); return; }                         // one protocol step back, same screen
-    stack.length = Math.max(1, landed + 1);
-    const now = currentScreenKey();                                       // if a jump made the screen differ from the trail, trust the screen
-    if(now !== stack[stack.length - 1]) stack = now === 'hub' ? ['hub'] : ['hub', now];
+  window.addEventListener('popstate', async () => {
+    if(Date.now() < ignoreUntil){ ignoreUntil = 0; return; }             // our own move (the guard taken away)
+    guardOn = false;                                                      // (the person's Back took the guard)
+    if(closeOpenSheet()){ syncGuard(); return; }                          // Back only closed a sheet: the page stays
+    if(stack.length <= 1){ syncGuard(); return; }                         // at the first page: the next Back leaves the app
+    const top = stack[stack.length - 1], target = stack[stack.length - 2], snap = snaps[stack.length - 2];
+    muteScreenWatcher = true;
+    try {
+      if(isRamzorFlow(top) && (isRamzorFlow(target) || target === 'hub')){
+        if(goUp(top) === 'stay'){ syncGuard(); return; }                  // one protocol step back, same screen
+      } else await restorePage(target, snap);
+    } finally { setTimeout(() => { muteScreenWatcher = false; }, 0); }
+    stack.pop(); snaps.pop();
+    const now = currentScreenKey();                                       // if the page differs from the trail, trust the screen
+    if(now !== stack[stack.length - 1]){ stack[stack.length - 1] = now; snaps[snaps.length - 1] = snapshot(now); }
+    syncGuard(); updateBack();
   });
+
+  // the "→ חזור" button: in the bottom bar on a phone, floating on a wide screen; hidden on the first page (nothing to go back to)
+  const backBtns = [];
+  function makeBack(){
+    const nav = el('bottom-nav');
+    if(nav && !el('bnav-back')){
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'bottom-nav-btn'; b.id = 'bnav-back';
+      b.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><span>חזור</span>';
+      nav.insertBefore(b, nav.firstChild); backBtns.push(b);
+    }
+    if(!el('nav-back-float')){
+      const f = document.createElement('button'); f.type = 'button'; f.id = 'nav-back-float'; f.className = 'nav-back-float'; f.textContent = '→ חזור';
+      el('protected-app').appendChild(f); backBtns.push(f);
+    }
+    backBtns.forEach(b => b.addEventListener('click', () => { if(stack.length > 1) history.back(); }));
+  }
+  function updateBack(){
+    const can = rootSet && stack.length > 1;
+    backBtns.forEach(b => { b.hidden = !can; });
+    const nav = el('bottom-nav'); if(nav) nav.classList.toggle('has-back', can);
+  }
+  makeBack(); updateBack();
+  window.navCanGoBack = () => rootSet && stack.length > 1;          // (for the checks)
+  window.navTrail = () => stack.slice();
 })();
 // ---------- KIDS QUICK ACCESS (הענקת כוכב / תכנית המסע בחלל / רמזור צהוב) ----------
 let kidsQuickMode = null; // 'star' | 'moon' | 'yellow'
