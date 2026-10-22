@@ -1273,6 +1273,16 @@
         check('admin fills preferences: ... and back to the admin\'s own afterwards', srvWho() === srv.me && !srvPrefsOpen('2020-01'), srvWho());
         const bx = document.createElement('div'); portalUi.admFill = true; adminViewAs(bx); portalUi.admFill = false;
         check('admin fills preferences: the list in "fill" mode has only instructors', bx.querySelectorAll('[data-view-as]').length >= 1 && [...bx.querySelectorAll('[data-view-as]')].every(b => (portalPerson(b.dataset.viewAs) || {}).role === 'instructor'), bx.querySelectorAll('[data-view-as]').length); }
+        const coord = portalLoad().instructors.find(p => p.active && p.role === 'coordinator');
+        if(coord){
+          adminActAs(coord.id); await sleep(200);
+          const tabsC = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab);
+          check('admin in the coordinator\'s screen: her own tabs, with a banner of full control', tabsC.includes('schedule') && tabsC.includes('submissions') && tabsC.includes('settings') && !tabsC.includes('admin') && !!document.querySelector('.adm-viewas.act'), tabsC.join(','));
+          document.querySelector('[data-ptab="submissions"]').click(); await sleep(200);
+          check('admin in the coordinator\'s screen: ... and it works (not "only to look")', portalUi.tab === 'submissions' && !!document.querySelector('.adm-viewas.act'), portalUi.tab);
+          await adminViewAsEnd(); await sleep(150);
+          check('admin in the coordinator\'s screen: "חזרה לפורטל הניהול" brings back the admin', !portalUi.actAs && !portalUi.viewAs && portalUi.persona === srv.me && !document.querySelector('.adm-viewas'), String(portalUi.persona === srv.me));
+        }
       document.getElementById('apphome-portal').click(); await sleep(300);
       check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);

@@ -432,3 +432,5 @@
   .adm-va-mode{ margin:0 0 10px; }
   .adm-people .adm-sub{ font-size:11.5px; color:var(--p-yes, #7be0a0); }
   .tv-code-big{ font-size:44px; font-weight:800; letter-spacing:.18em; text-align:center; margin:10px 0 14px; font-variant-numeric:tabular-nums; color:var(--p-text); }
+  .adm-viewas.act{ background:rgba(255,120,80,.16); border-color:rgba(255,120,80,.6); }
+  .adm-act-coord{ width:100%; margin:0 0 12px; }

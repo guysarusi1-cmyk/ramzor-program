@@ -363,7 +363,7 @@ async function srvStart(){
 let ramzorPersonal = false;
 const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
 async function personalEnter(){
-  portalServerOn = true; portalUi.viewAs = null; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
+  portalServerOn = true; portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoadFirst())) return false;
   portalUi.persona = srv.me;
   document.getElementById('login-screen').style.display = 'none';
@@ -380,7 +380,7 @@ async function personalLeave(){
   await sbPersonal.auth.signOut();
   sb = sbShared; ramzorPersonal = false; portalServerOn = false; portalState = null; srv.me = null; srv.profile = null; srv.profileFor = null;
   if(typeof arApply === 'function') arApply();          // (back to Hebrew)
-  portalUi.viewAs = null; portalUi.manager = false; portalUi.persona = null;
+  portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false; portalUi.persona = null;
 }
 async function srvSignOut(){
   await srvFlush();

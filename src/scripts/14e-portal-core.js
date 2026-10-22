@@ -31,7 +31,7 @@ function queueEmail(to, subject, body){
 // ---- the first screen after login: two cards
 function showAppHome(){
   stopCarousel(); document.body.classList.remove('leopard-bg');
-  if(portalUi.viewAs){ const was = portalUi.editPrefs; portalUi.viewAs = null; portalUi.editPrefs = false; if(typeof srv !== 'undefined' && srv.me) portalUi.persona = srv.me; if(was && typeof srvResnap === 'function') srvResnap(); }          // (leaving "looking as somebody" by any way: back to being oneself)
+  if(portalUi.viewAs){ const was = portalUi.editPrefs; portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.actAs = false; if(typeof srv !== 'undefined' && srv.me) portalUi.persona = srv.me; if(was && typeof srvResnap === 'function') srvResnap(); }          // (leaving "looking as somebody" by any way: back to being oneself)
   portalActivateView('view-apphome');
   document.getElementById('view-apphome').innerHTML = `
     <div class="apphome">
@@ -107,7 +107,7 @@ function showPortal(tab){
         <span class="portal-demo-tag">דמו</span>
       </label>`}
       <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
-      ${portalServerOn && portalUi.viewAs ? (portalUi.editPrefs ? `<div class="adm-viewas edit"><span>✏️ ממלא/ת העדפות עבור ${pEsc(me.first)} · נשמר אצלו/ה</span><button type="button" class="btn small" id="viewas-end">סיום</button></div>` : `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>`) : ''}
+      ${portalServerOn && portalUi.viewAs ? (portalUi.actAs ? `<div class="adm-viewas act"><span>🛠️ במסך של ${pEsc(me.first)} · שליטה מלאה, כל פעולה נרשמת על שמך</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>` : portalUi.editPrefs ? `<div class="adm-viewas edit"><span>✏️ ממלא/ת העדפות עבור ${pEsc(me.first)} · נשמר אצלו/ה</span><button type="button" class="btn small" id="viewas-end">סיום</button></div>` : `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>`) : ''}
       <div id="portal-body"></div>
       ${portalServerOn && srv.meRow && !['instructor', 'coordinator'].includes(srv.meRow.role) && !srv.meRow.admin ? installLinkHtml() : ''}
       ${portalServerOn ? '<button type="button" class="portal-problem" id="portal-problem">משהו לא עובד? דיווח על תקלה</button>' : ''}
@@ -115,7 +115,7 @@ function showPortal(tab){
   if(portalServerOn && portalUi.viewAs){          // (the admin looks at somebody's portal: folds, months and tabs work; nothing can be changed)
     document.getElementById('viewas-end').addEventListener('click', adminViewAsEnd);
     document.getElementById('portal-body').addEventListener('click', ev => {
-      if(portalUi.editPrefs) return;          // (filling somebody's preferences: the preference screen works as for them)
+      if(portalUi.editPrefs || portalUi.actAs) return;          // (filling somebody's preferences, or working in the coordinator's screen: everything works)
       if(ev.target.closest('summary, [data-pmonth], .pfold > summary')) return;
       if(ev.target.closest('button, input, select, textarea, a, [data-pslot], [data-pday], [role=button]')){ ev.preventDefault(); ev.stopPropagation(); toast('זו צפייה בלבד'); }
     }, true);

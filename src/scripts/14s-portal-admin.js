@@ -16,8 +16,11 @@ const ADMIN_SHIFT_WORD = { M:'בוקר', S:'בוקר קצר', A:'צהריים', 
 function srvRenderAdmin(body){
   portalUi.adminFold = portalUi.adminFold || {};
   const fold = (id, title) => `<details class="pfold" data-afold="${id}"${portalUi.adminFold[id] ? ' open' : ''}><summary><span>${title}</span></summary><div class="pfold-body" data-abody="${id}"></div></details>`;
-  body.innerHTML = `<div class="pnote">כאן מה שרק למנהל יש: כל פרטי הצוות, צפייה בפורטל כמו שמדריך מסוים רואה אותו, הגדרות המערכת, בנייה מחדש של סידור ויומן מלא.</div>
+  const coords = portalLoad().instructors.filter(p => p.active && p.role === 'coordinator' && p.id !== srv.me);
+  body.innerHTML = `${coords.map(p => `<button type="button" class="btn adm-act-coord" data-act-as="${p.id}">🛠️ כניסה למסך של ${pEsc(p.first)} (שליטה מלאה)</button>`).join('')}
+    <div class="pnote">כאן מה שרק למנהל יש: כל פרטי הצוות, צפייה בפורטל כמו שמדריך מסוים רואה אותו, הגדרות המערכת, בנייה מחדש של סידור ויומן מלא.</div>
     ${fold('problems', 'תקלות ודיווחים')}${fold('staff', 'פרטי הצוות')}${fold('viewas', 'צפייה כמו מדריך מסוים')}${fold('system', 'הגדרות מערכת')}${fold('rebuild', 'בנייה מחדש של סידור')}${fold('log', 'יומן מלא')}`;
+  body.querySelectorAll('[data-act-as]').forEach(b => b.addEventListener('click', () => adminActAs(b.dataset.actAs)));
   const fill = async id => {
     const box = body.querySelector(`[data-abody="${id}"]`); if(!box) return;
     box.innerHTML = '<div class="pnote">רק רגע...</div>';
@@ -93,9 +96,11 @@ function adminViewAs(box){
     portalUi.tab = fill ? 'prefs' : null; portalUi.pmonth = null; if(fill) srvResnap(); showPortal(fill ? 'prefs' : undefined);
   }));
 }
+// the coordinator's own screen, with full control: everything she sees and does (the database lets the admin do all of it; each action is recorded as the admin's)
+function adminActAs(id){ portalUi.viewAs = id; portalUi.persona = id; portalUi.actAs = true; portalUi.editPrefs = false; portalUi.manager = false; portalUi.tab = null; portalUi.month = null; showPortal(); }
 async function adminViewAsEnd(){
   if(portalUi.editPrefs){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled is saved before leaving)
-  portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.persona = srv.me; portalUi.manager = true; portalUi.tab = 'admin'; portalUi.pmonth = null; srvResnap(); showPortal('admin');
+  portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.actAs = false; portalUi.persona = srv.me; portalUi.manager = true; portalUi.tab = 'admin'; portalUi.pmonth = null; srvResnap(); showPortal('admin');
 }
 
 // ---- 3. the system settings: the hours of the shifts, how early a long vacation is asked for, the numbers of the rules
