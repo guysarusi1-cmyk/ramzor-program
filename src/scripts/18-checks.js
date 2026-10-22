@@ -1603,7 +1603,8 @@
           if(cf){ cf.querySelector('summary').click(); await sleep(60);
             const row = id => [...cf.querySelectorAll('tbody tr')].find(tr => tr.querySelector('th').textContent === instrName(portalLoad().instructors.find(p => p.id === id), portalLoad().instructors));
             const r1 = row(i1), r2 = row(i2);
-            check('build: ... opened, every instructor with the total and the kinds (here: one noon shift, one night)', !!r1 && !!r2 && r1.children[1].textContent === '1' && r1.children[3].textContent === '1' && r2.children[4].textContent === '1', r1 ? r1.textContent : 'no row'); } }
+            check('build: ... opened, every instructor with the total and the kinds (here: one noon shift, one night)', !!r1 && !!r2 && r1.children[1].textContent === '1' && r1.children[3].textContent === '1' && r2.children[4].textContent === '1', r1 ? r1.textContent : 'no row');
+            check('build: ... and the weekend column counts Friday morning to Saturday night', r1.children[5].textContent === ([5, 6].includes(dowOf(day)) ? '1' : '') && [...cf.querySelectorAll('thead th')].some(th => th.textContent === 'סופ"ש'), r1.children[5].textContent + ' / ' + dowOf(day)); } }
         check('build: a month whose submission closed has the button (here "build again", as there is a schedule)', !!document.querySelector('#cs-build-go') && /בנייה מחדש/.test(document.querySelector('#cs-build-go').textContent), (document.querySelector('#cs-build') || {}).textContent || 'none');
         check('build: a month with no schedule and the submission closed: "צור סידור אוטומטי"', /id="cs-build-go"[^>]*>צור סידור אוטומטי/.test(srvBuildBoxHtml('2020-01')), srvBuildBoxHtml('2020-01').slice(0, 120));
         if(srvPrefsOpen(next)){

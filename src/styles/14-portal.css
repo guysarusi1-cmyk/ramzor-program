@@ -434,3 +434,4 @@
   .tv-code-big{ font-size:44px; font-weight:800; letter-spacing:.18em; text-align:center; margin:10px 0 14px; font-variant-numeric:tabular-nums; color:var(--p-text); }
   .adm-viewas.act{ background:rgba(255,120,80,.16); border-color:rgba(255,120,80,.6); }
   .adm-act-coord{ width:100%; margin:0 0 12px; }
+  .cs-count-table td.cs-count-w{ font-weight:700; }

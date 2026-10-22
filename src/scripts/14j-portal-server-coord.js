@@ -202,14 +202,15 @@ function srvBuildWire(body, mk){
 function srvCountFoldHtml(mk){
   const st = portalLoad(), people = st.instructors.filter(p => p.role === 'instructor'), c = {};
   (st.rows || []).forEach(r => { if(monthKeyOf(r.day) !== mk || !people.some(p => p.id === r.staff)) return;
-    const x = c[r.staff] = c[r.staff] || { all:0, M:0, A:0, N:0, L:0 }; x.all++; x[r.shift === 'S' ? 'M' : r.shift] = (x[r.shift === 'S' ? 'M' : r.shift] || 0) + 1; });
-  const list = people.filter(p => p.active || c[p.id]).map(p => ({ p, x:c[p.id] || { all:0, M:0, A:0, N:0, L:0 } })).sort((a, b) => b.x.all - a.x.all || String(a.p.first).localeCompare(String(b.p.first), 'he'));
+    const x = c[r.staff] = c[r.staff] || { all:0, M:0, A:0, N:0, L:0, W:0 }; x.all++; x[r.shift === 'S' ? 'M' : r.shift] = (x[r.shift === 'S' ? 'M' : r.shift] || 0) + 1;
+    if(r.shift === 'L' || [5, 6].includes(dowOf(r.day))) x.W++; });          // (the weekend: from Friday morning to Saturday night, both included)
+  const list = people.filter(p => p.active || c[p.id]).map(p => ({ p, x:c[p.id] || { all:0, M:0, A:0, N:0, L:0, W:0 } })).sort((a, b) => b.x.all - a.x.all || String(a.p.first).localeCompare(String(b.p.first), 'he'));
   if(!list.length) return '';
   const nums = list.map(r => r.x.all), lo = Math.min(...nums), hi = Math.max(...nums), total = nums.reduce((a, b) => a + b, 0);
   return `<details class="pissues cs-count" id="cs-count"${portalUi.csCount ? ' open' : ''}><summary>כמה משמרות לכל אחד · ${total} משמרות, ${lo === hi ? lo : `${lo}–${hi}`} לאדם</summary>
-    <div class="cs-count-scroll"><table class="cs-count-table"><thead><tr><th>שם</th><th>סה"כ</th><th>בוקר</th><th>צהריים</th><th>לילה</th><th>סופ"ש ארוך</th></tr></thead><tbody>
-    ${list.map(({ p, x }) => `<tr${x.all ? '' : ' class="zero"'}><th>${pEsc(instrName(p, st.instructors))}</th><td><b>${x.all}</b></td><td>${x.M || ''}</td><td>${x.A || ''}</td><td>${x.N || ''}</td><td>${x.L || ''}</td></tr>`).join('')}
-    </tbody></table></div><div class="pnote">סופ"ש ארוך נספר כמשמרת אחת. בנות שירות ומורות לא נכללות.</div></details>`;
+    <div class="cs-count-scroll"><table class="cs-count-table"><thead><tr><th>שם</th><th>סה"כ</th><th>בוקר</th><th>צהריים</th><th>לילה</th><th>סופ"ש</th><th>סופ"ש ארוך</th></tr></thead><tbody>
+    ${list.map(({ p, x }) => `<tr${x.all ? '' : ' class="zero"'}><th>${pEsc(instrName(p, st.instructors))}</th><td><b>${x.all}</b></td><td>${x.M || ''}</td><td>${x.A || ''}</td><td>${x.N || ''}</td><td class="cs-count-w">${x.W || ''}</td><td>${x.L || ''}</td></tr>`).join('')}
+    </tbody></table></div><div class="pnote">סופ"ש = המשמרות משישי בוקר עד שבת לילה (כולל), מתוך הסה"כ. סופ"ש ארוך נספר כמשמרת אחת. בנות שירות ומורות לא נכללות.</div></details>`;
 }
 
 // ---- edit one shift: who is on it (with hours), remove, add (with warnings; the coordinator may override them)
