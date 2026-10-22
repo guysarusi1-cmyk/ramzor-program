@@ -25,3 +25,14 @@
     body:has(#view-display.active) .bottom-nav,
     #protected-app.guided-focus:has(#view-staff.active) > .bottom-nav{ display:none; }
   }
+  /* "→ חזור" (15b-history.js): next to "בית" in the bar on a phone; floating at the bottom on a wide screen; hidden on the first page */
+  .nav-back-float{ position:fixed; bottom:18px; inset-inline-end:18px; z-index:50; min-height:44px; padding:8px 16px; border-radius:22px;
+    border:1px solid var(--line); background:rgba(18,23,42,.92); color:var(--text); font-family:'Rubik', sans-serif; font-size:14px; font-weight:700; cursor:pointer;
+    box-shadow:0 4px 16px rgba(0,0,0,.35); }
+  .nav-back-float:hover, .nav-back-float:focus-visible{ border-color:var(--gold); }
+  .nav-back-float[hidden], .bottom-nav-btn[hidden]{ display:none !important; }
+  body:has(#view-display.active) .nav-back-float{ display:none; }
+  @media (max-width:700px){
+    .nav-back-float{ display:none; }
+    .bottom-nav.has-back{ grid-template-columns:1fr 1fr; gap:6px; }
+  }

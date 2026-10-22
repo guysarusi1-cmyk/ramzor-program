@@ -119,8 +119,8 @@
       const phone = innerWidth <= 700;
       check(phone ? 'bottom bar shows on phones' : 'bottom bar hidden on bigger screens', visible($('bottom-nav')) === phone, 'visible=' + visible($('bottom-nav')));
       if(!phone) return;
-      const labels = [...document.querySelectorAll('#bottom-nav .bottom-nav-btn')].map(b => b.textContent.trim());
-      check('bottom bar has only "בית"', labels.join('|') === 'בית', labels.join('|'));
+      const labels = [...document.querySelectorAll('#bottom-nav .bottom-nav-btn')].filter(b => !b.hidden).map(b => b.textContent.trim());
+      check('bottom bar: "בית", and "חזור" when there is a page to go back to', labels.join('|') === (navCanGoBack() ? 'חזור|בית' : 'בית'), labels.join('|') + ' / ' + navCanGoBack());
       $('hub-kids-btn').click(); await sleep(150);
       $('bnav-home').click(); await sleep(150);
       check('bar: "בית" goes to the first screen (the choice between the Ramzor and the portal)', activeView() === (PORTAL_ENABLED ? 'view-apphome' : 'view-hub'), activeView());
@@ -417,12 +417,13 @@
     // ---- the phone's Back button walks up one level at a time instead of leaving the app
     await step('back button', async () => {
       const pressBack = async () => { history.back(); await sleep(350); };
-      showHub(); await sleep(150);
+      showHub(); await sleep(400);
+      const e0 = navTrail().length;
       $('hub-daily-btn').click(); await sleep(100);
       openLightFlow('red'); await sleep(100);
       for(let i = 0; i < 2; i++) $('guided-next-btn').click();
       await sleep(100);
-      check('each new screen adds a history entry', history.state && history.state.entry === 2, JSON.stringify(history.state));
+      check('each new screen is a page in the trail (and Back has something to go back to)', navTrail().length === e0 + 2 && history.state && history.state.nav === 'guard', navTrail().join(' > '));
       check('(setup) protocol is on step 3', guidedStep === 2, 'step ' + (guidedStep + 1));
       await pressBack(); check('Back: previous step of the protocol', visible($('staff-screen-guided')) && guidedStep === 1, 'step ' + (guidedStep + 1));
       await pressBack(); check('Back again: step 1', visible($('staff-screen-guided')) && guidedStep === 0, 'step ' + (guidedStep + 1));
@@ -1263,6 +1264,25 @@
       check('personal sign-in: the Ramzor home has a small link to the portal', !document.getElementById('hub-portal-link').hidden, 'hidden');
       document.getElementById('hub-portal-link').click(); await sleep(500);
       check('personal sign-in: ... which opens the portal of the same person, with a way back to the two choices', activeView() === 'view-portal' && /מסך ראשי/.test((document.getElementById('portal-home') || {}).textContent || ''), activeView());
+      { const pressBack = async () => { history.back(); await sleep(450); };
+        showAppHome(); await sleep(400);
+        check('back: on the first page there is no "חזור" (nothing to go back to)', !navCanGoBack() && (!$('bnav-back') || $('bnav-back').hidden), String(navCanGoBack()));
+        document.getElementById('apphome-portal').click(); await sleep(400);
+        const firstTab = portalUi.tab, other = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab).find(x => x !== firstTab);
+        check('back: in the portal there is a "חזור" button', navCanGoBack() && !!$('bnav-back') && !$('bnav-back').hidden, String(navCanGoBack()));
+        document.querySelector(`[data-ptab="${other}"]`).click(); await sleep(300);
+        await pressBack();
+        check('back: from a portal tab back to the tab before it', activeView() === 'view-portal' && portalUi.tab === firstTab, portalUi.tab + ' / ' + firstTab + ' / ' + navTrail().join(' > '));
+        await pressBack();
+        check('back: ... and from the first tab back to the app home', activeView() === 'view-apphome', activeView());
+        document.getElementById('apphome-portal').click(); await sleep(400);
+        document.querySelector(`[data-ptab="${other}"]`).click(); await sleep(300);
+        portalSheet('<p>בדיקה</p><button type="button" data-close>סגירה</button>'); await sleep(50);
+        await pressBack();
+        check('back: an open sheet closes first, the tab stays', !document.querySelector('.psheet') && portalUi.tab === other, portalUi.tab);
+        $('bnav-back').click(); await sleep(450);
+        check('back: the "חזור" button does the same as the phone\'s Back', portalUi.tab === firstTab && activeView() === 'view-portal', portalUi.tab);
+        showAppHome(); await sleep(300); }
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
       check('personal sign-in: an instructor who is the admin gets three cards (Ramzor, his instructor portal, the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && document.querySelectorAll('#view-apphome .home-card').length === (therapyAvailable() ? 4 : 3), document.querySelectorAll('#view-apphome .home-card').length);
