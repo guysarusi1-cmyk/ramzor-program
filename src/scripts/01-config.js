@@ -5,7 +5,10 @@ if(location.hash === '#t') history.replaceState(null, '', location.pathname + lo
 // ---------- ENVIRONMENT + SUPABASE CONFIG (filled in by build.ps1 from config/<env>.json) ----------
 const APP_ENV = '@env@';   // 'live' (what staff use) or 'test' (the safe sandbox)
 // Mercury stage 6: the shared staff password is gone (decision 32); only the automatic checks and the demo of the test site still sign in with it
-const staffPasswordOn = () => APP_ENV === 'test' && !!window.__staffPasswordOn;          // (set by the test-only checks and demo, which are not in the live build)
+const staffPasswordOn = () => APP_ENV === 'test' && !!window.__staffPasswordOn;
+// Mercury (the therapy portals, observations, the new space journey, the plan's strengths in the temple): only on the test site for now (Guy, 2026-10-22).
+// The kids' screen code (no staff password) is not part of this: it is on everywhere.
+const mercuryOn = () => APP_ENV === 'test';          // (set by the test-only checks and demo, which are not in the live build)
 const SUPABASE_URL = '@config(supabaseUrl)';
 const SUPABASE_ANON_KEY = '@config(anonKey)';
 const STAFF_EMAIL = 'staff@merkaz-cherum.local';

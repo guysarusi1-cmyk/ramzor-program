@@ -342,7 +342,7 @@ async function renderMoonPanel(containerId){
   const child = roster.find(c=>c.id===selectedStaffChild);
   const state = await getChildState(selectedStaffChild);
   const fb = document.getElementById(containerId);
-  if(typeof journeyPanel === 'function' && await journeyPanel(child, fb, containerId)) return;          // (Mercury: the new journey by skills, 14y-journey.js; a child placed there or new)
+  if(typeof journeyPanel === 'function' && mercuryOn() && await journeyPanel(child, fb, containerId)) return;          // (Mercury: the new journey by skills, 14y-journey.js; a child placed there or new)
   const inStage2 = (state.moonSteps || 0) >= 7;
   const stage2Done = (state.mercurySteps || 0) >= 7;
 

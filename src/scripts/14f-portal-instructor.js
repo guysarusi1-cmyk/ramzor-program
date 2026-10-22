@@ -79,7 +79,8 @@ const prefShiftsFor = date => portalLoad().shiftTypes;
 const prefKeyOf = key => key;
 // fixed preferences (the gear: "does not do mornings / afternoons / nights"; and the admin's "does not do nights"): those shifts start as "no".
 // She can still change one of them by pressing that shift; pressing the whole day leaves them as they are.
-const prefFixedKinds = () => { const k = new Set(portalServerOn ? (srv.fixedNo || []) : []); if(portalServerOn && srv.profile && srv.profile.no_nights) k.add('n'); return k; };
+const prefOther = () => portalServerOn && typeof srvEditingFor === 'function' && srvEditingFor() ? portalUi.viewAs : null;          // (the admin fills somebody's preferences: that person's fixed preferences and minimums)
+const prefFixedKinds = () => { const o = prefOther(), st = portalLoad(), prof = o ? (st.priv || {})[o] : srv.profile; const k = new Set(portalServerOn ? (o ? (st.fixedNo || {})[o] || [] : srv.fixedNo || []) : []); if(portalServerOn && prof && prof.no_nights) k.add('n'); return k; };
 const prefFixedNo = key => portalServerOn && prefFixedKinds().has(String(key).split('|')[1]);
 const prefNoNight = prefFixedNo;
 const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? (prefNoNight(key) ? 'no' : 'neutral') : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
@@ -136,7 +137,7 @@ function renderInstructorPrefs(body){
   const cons = prefs.consent || { extend:null, pull:null };
   const choice = (name, v) => `<div class="pchoice" role="group"><button type="button" class="${cons[name] === true ? 'on' : ''}" data-consent="${name}:1"${locked ? ' disabled' : ''}>כן</button><button type="button" class="${cons[name] === false ? 'on' : ''}" data-consent="${name}:0"${locked ? ' disabled' : ''}>לא</button></div>`;
   const levels = portalServerOn ? SRV_LEVEL_BUTTONS : LEVEL_BUTTONS;
-  const goal = portalServerOn ? ((m.goals || {})[me.id] || null) : null, minInfo = portalServerOn ? fbMinimum(srv.profile, mk) : null;
+  const goal = portalServerOn ? ((m.goals || {})[me.id] || null) : null, minInfo = portalServerOn ? fbMinimum(prefOther() ? (portalLoad().priv || {})[prefOther()] || {} : srv.profile, mk) : null;
   let availHint = '';
   if(portalServerOn && minInfo && minInfo.total){                  // a gentle word when the marks leave little room for the minimum
     const free = days.filter(d => !fixedOn(d) && !prefs.absent.includes(d)).reduce((n, d) => n + ['m', 'e', 'n'].filter(id => ['yes', 'avoid'].includes(prefs.slots[`${d}|${id}`])).length, 0);          // (only "yes" and "can": a shift that was not marked is used only when there is no other way)

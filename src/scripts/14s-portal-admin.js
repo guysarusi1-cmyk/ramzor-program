@@ -37,7 +37,7 @@ async function adminStaff(box, body){
   ]);
   const extra = !priv.error;          // (personal minimums, the day colleague and the language come with scheduling-v25.sql)
   if(!extra) priv = await sbPersonal.from('staff_private').select(BASE);
-  const thr = await sbPersonal.from('staff_private').select('staff_id,is_therapist'), mercury = !thr.error;          // (Mercury: "also a therapist", scheduling-v31.sql)
+  const thr = await sbPersonal.from('staff_private').select('staff_id,is_therapist'), mercury = !thr.error && mercuryOn();          // (Mercury: "also a therapist", scheduling-v31.sql)
   const isTh = {}; if(mercury) (thr.data || []).forEach(r => { isTh[r.staff_id] = !!r.is_therapist; });
   if(staff.error || priv.error) throw staff.error || priv.error;
   const pv = {}; (priv.data || []).forEach(p => { pv[p.staff_id] = p; });
@@ -82,12 +82,21 @@ async function adminStaff(box, body){
 
 // ---- 2. the portal as one person sees it (only to look: nothing can be changed there)
 function adminViewAs(box){
-  const st = portalLoad(), people = st.instructors.filter(p => p.active && p.id !== srv.me).sort((a, b) => String(a.first).localeCompare(String(b.first), 'he'));
-  box.innerHTML = `<div class="pnote">בחירה באדם פותחת את הפורטל בדיוק כמו שהוא רואה אותו: הסידור, ההעדפות, ההחלפות. רק לצפייה, בלי אפשרות לשנות דבר.</div>
-    <div class="adm-people">${people.map(p => `<button type="button" class="cs-name" data-view-as="${p.id}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>`;
-  box.querySelectorAll('[data-view-as]').forEach(b => b.addEventListener('click', () => { portalUi.viewAs = b.dataset.viewAs; portalUi.persona = b.dataset.viewAs; portalUi.manager = false; portalUi.tab = null; showPortal(); }));
+  const st = portalLoad(), fill = !!portalUi.admFill;
+  const people = st.instructors.filter(p => p.active && p.id !== srv.me && (!fill || p.role === 'instructor')).sort((a, b) => String(a.first).localeCompare(String(b.first), 'he'));
+  box.innerHTML = `<div class="pchoice adm-va-mode" role="group" aria-label="מה לעשות"><button type="button" class="${fill ? '' : 'on'}" data-va-mode="look">👁️ צפייה</button><button type="button" class="${fill ? 'on' : ''}" data-va-mode="fill">✏️ מילוי העדפות</button></div>
+    <div class="pnote">${fill ? 'בחירה במדריך/ה פותחת את מסך ההעדפות שלו/ה, ואפשר למלא ולהגיש בשבילו/ה (למשל מדף שמסר/ה). נשמר אצלו/ה, גם אחרי סגירת ההגשה. כל שינוי נרשם.' : 'בחירה באדם פותחת את הפורטל בדיוק כמו שהוא רואה אותו: הסידור, ההעדפות, ההחלפות. רק לצפייה, בלי אפשרות לשנות דבר.'}</div>
+    <div class="adm-people">${people.map(p => `<button type="button" class="cs-name" data-view-as="${p.id}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${fill && portalMonth(addMonths(monthKeyOf(srvToday()), 1)).submitted[p.id] ? ' <small class="adm-sub">✓ הגיש/ה</small>' : ''}</button>`).join('')}</div>`;
+  box.querySelectorAll('[data-va-mode]').forEach(b => b.addEventListener('click', () => { portalUi.admFill = b.dataset.vaMode === 'fill'; adminViewAs(box); }));
+  box.querySelectorAll('[data-view-as]').forEach(b => b.addEventListener('click', () => {
+    portalUi.viewAs = b.dataset.viewAs; portalUi.persona = b.dataset.viewAs; portalUi.manager = false; portalUi.editPrefs = fill;
+    portalUi.tab = fill ? 'prefs' : null; portalUi.pmonth = null; if(fill) srvResnap(); showPortal(fill ? 'prefs' : undefined);
+  }));
 }
-function adminViewAsEnd(){ portalUi.viewAs = null; portalUi.persona = srv.me; portalUi.manager = true; portalUi.tab = 'admin'; showPortal('admin'); }
+async function adminViewAsEnd(){
+  if(portalUi.editPrefs){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled is saved before leaving)
+  portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.persona = srv.me; portalUi.manager = true; portalUi.tab = 'admin'; portalUi.pmonth = null; srvResnap(); showPortal('admin');
+}
 
 // ---- 3. the system settings: the hours of the shifts, how early a long vacation is asked for, the numbers of the rules
 async function adminSystem(box){

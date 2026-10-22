@@ -73,6 +73,7 @@ async function srvLoadCoord(){
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; try { const sr = await sbPersonal.from('sick_reports').select('assignment_id,note').order('created_at'); (sr.data || []).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; }); } catch(e){}          // (the reason an instructor gave when she reported that she cannot come)
   await srvOdLoad();          // (the open days for sign-up and who took them: scheduling-v25.sql)
+  st.buildReqs = []; try { const r = await sbPersonal.from('sched_requests').select('id,month,at,done_at,result').order('at', { ascending:false }).limit(12); st.buildReqs = r.error ? [] : (r.data || []); } catch(e){}          // ("צור סידור אוטומטי": scheduling-v33.sql)
   st.openReqs = []; try { const r = await sbPersonal.from('open_shift_requests').select('id,staff_id,day,shift,created_at').eq('status', 'pending').order('created_at'); st.openReqs = r.error ? [] : (r.data || []); } catch(e){}          // (the requests to join an open shift; they come with scheduling-v11.sql)
 }
 
@@ -103,7 +104,8 @@ function srvRenderCoordSchedule(body){
   const odAlerts = m.published ? srvOdAlerts(mk) : [], lookCount = needLook.length + odAlerts.length;
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
-    ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. המערכת בונה אותו אוטומטית פעם אחת: טיוטה ב-24 בחודש ב-23:00, והסידור הסופי בלילה שבין ה-24 ל-25 (בין חצות ל-06:00), והוא נשלח אלייך. מכאן אפשר לערוך אותו ידנית.</div>'}
+    ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. כשההגשה נסגרת, לוחצים על "צור סידור אוטומטי" והמערכת בונה אותו לפי ההעדפות והחוקים. מכאן אפשר לערוך אותו ידנית.</div>'}
+    ${srvBuildBoxHtml(mk)}
     ${has ? `<div class="pactions">
       <button type="button" class="btn" id="cs-publish"${m.published ? ' disabled' : ''}>${m.published ? 'הסידור פורסם' : 'פרסום הסידור'}</button>
       <button type="button" class="btn ghost" id="cs-xlsx">ייצוא לאקסל</button>
@@ -114,10 +116,13 @@ function srvRenderCoordSchedule(body){
     ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
     ${m.published ? srvOdFoldHtml(mk) : ''}
+    ${srvCountFoldHtml(mk)}
     <div class="pnote cs-note-row"><span>לחיצה על משמרת בלוח פותחת עריכה.</span><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
     <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
   wireMonthNav(body);
+  srvBuildWire(body, mk);
   if(!has) return;
+  { const cf = body.querySelector('#cs-count'); if(cf) cf.addEventListener('toggle', () => { portalUi.csCount = cf.open; }); }
   { const ob = body.querySelector('#cs-others'); if(ob) ob.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-hide-others', csHideOthers() ? '0' : '1'); } catch(e){} srvRenderCoordSchedule(body); }); }
   if(m.published) srvOdWire(body, mk);
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
@@ -156,6 +161,47 @@ function srvRenderCoordSchedule(body){
   });
   document.getElementById('cs-xlsx').addEventListener('click', () => { downloadScheduleXlsx(ctx, m.assignments); toast('קובץ האקסל נוצר'); });
   document.getElementById('cs-print').addEventListener('click', () => printSchedule(ctx, m.assignments));
+}
+
+// ---- "צור סידור אוטומטי": the schedule is built only when the coordinator asks, after the submission closed (the hourly job builds it,
+// within an hour; a published month is never built again). (scheduling-v33.sql; the engine's monthly build is off unless sched_settings.auto_build)
+const srvBuildReqOf = mk => (portalLoad().buildReqs || []).find(r => r.month && r.month.slice(0, 7) === mk);
+function srvBuildBoxHtml(mk){
+  const m = portalMonth(mk); if(m.published) return '';
+  const req = srvBuildReqOf(mk), waiting = req && !req.done_at, failed = req && req.done_at && /^נכשל/.test(req.result || '');
+  if(waiting) return `<div class="cs-build waiting" id="cs-build"><span aria-hidden="true">⏳</span><div><b>הסידור בבנייה</b><small>יהיה מוכן תוך שעה לכל היותר, ותקבלי הודעה. אפשר לסגור את הפורטל בינתיים.</small></div></div>`;
+  if(srvPrefsOpen(mk)){
+    const end = addMonths(mk, -1) + '-24';
+    return `<div class="cs-build" id="cs-build"><button type="button" class="btn" disabled>צור סידור אוטומטי</button><small>אפשר אחרי שההגשה נסגרת: ${pEsc(dayLabel(end))} בשעה 22:30.</small></div>`;
+  }
+  const missing = portalLoad().instructors.filter(p => p.active && p.role === 'instructor' && !m.submitted[p.id]).length;
+  return `<div class="cs-build" id="cs-build"><button type="button" class="btn${m.status ? ' ghost' : ''}" id="cs-build-go">${m.status ? 'בנייה מחדש של הסידור' : 'צור סידור אוטומטי'}</button>
+    <small>${failed ? `הבנייה הקודמת לא הצליחה (${pEsc(req.result.replace(/^נכשל:\s*/, '').slice(0, 80))}). אפשר לנסות שוב.` : m.status ? 'בונה סידור חדש במקום הנוכחי, כולל השינויים הידניים שנעשו בו.' : `לוקח עד שעה.${missing ? ` ${missing} מדריכים לא הגישו העדפות.` : ''}`}</small></div>`;
+}
+function srvBuildWire(body, mk){
+  const go = body.querySelector('#cs-build-go'); if(!go) return;
+  go.addEventListener('click', async () => {
+    const m = portalMonth(mk);
+    if(m.status && !(await confirmSheet({ title:`לבנות מחדש את ${monthLabel(mk)}?`, text:'הסידור הנוכחי יוחלף בסידור חדש, כולל שינויים ידניים שנעשו בו.', okLabel:'כן, לבנות מחדש', cancelLabel:'חזרה', danger:true }))) return;
+    go.disabled = true;
+    const r = await sbPersonal.from('sched_requests').insert({ month:firstOf(mk), requested_by:srv.me }).select('id,month,at,done_at,result').single();
+    if(r.error){ go.disabled = false; toast('הבקשה לא נשלחה. אפשר לנסות שוב בעוד רגע'); return; }
+    const st = portalLoad(); st.buildReqs = [r.data].concat(st.buildReqs || []);
+    toast('הסידור בבנייה. יהיה מוכן תוך שעה לכל היותר, ותקבלי הודעה.', 5000); srvRenderCoordSchedule(body);
+  });
+}
+// ---- how many shifts each instructor got this month (folded: one short line; opened: everybody, with the kinds of shifts)
+function srvCountFoldHtml(mk){
+  const st = portalLoad(), people = st.instructors.filter(p => p.role === 'instructor'), c = {};
+  (st.rows || []).forEach(r => { if(monthKeyOf(r.day) !== mk || !people.some(p => p.id === r.staff)) return;
+    const x = c[r.staff] = c[r.staff] || { all:0, M:0, A:0, N:0, L:0 }; x.all++; x[r.shift === 'S' ? 'M' : r.shift] = (x[r.shift === 'S' ? 'M' : r.shift] || 0) + 1; });
+  const list = people.filter(p => p.active || c[p.id]).map(p => ({ p, x:c[p.id] || { all:0, M:0, A:0, N:0, L:0 } })).sort((a, b) => b.x.all - a.x.all || String(a.p.first).localeCompare(String(b.p.first), 'he'));
+  if(!list.length) return '';
+  const nums = list.map(r => r.x.all), lo = Math.min(...nums), hi = Math.max(...nums), total = nums.reduce((a, b) => a + b, 0);
+  return `<details class="pissues cs-count" id="cs-count"${portalUi.csCount ? ' open' : ''}><summary>כמה משמרות לכל אחד · ${total} משמרות, ${lo === hi ? lo : `${lo}–${hi}`} לאדם</summary>
+    <div class="cs-count-scroll"><table class="cs-count-table"><thead><tr><th>שם</th><th>סה"כ</th><th>בוקר</th><th>צהריים</th><th>לילה</th><th>סופ"ש ארוך</th></tr></thead><tbody>
+    ${list.map(({ p, x }) => `<tr${x.all ? '' : ' class="zero"'}><th>${pEsc(instrName(p, st.instructors))}</th><td><b>${x.all}</b></td><td>${x.M || ''}</td><td>${x.A || ''}</td><td>${x.N || ''}</td><td>${x.L || ''}</td></tr>`).join('')}
+    </tbody></table></div><div class="pnote">סופ"ש ארוך נספר כמשמרת אחת. בנות שירות ומורות לא נכללות.</div></details>`;
 }
 
 // ---- edit one shift: who is on it (with hours), remove, add (with warnings; the coordinator may override them)

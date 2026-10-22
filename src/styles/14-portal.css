@@ -416,3 +416,18 @@
   .od-hours{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .od-hours[hidden]{ display:none; } .od-nums{ grid-template-columns:1fr 1fr; }
   body.lang-ar .portal-tabs{ flex-wrap:wrap; justify-content:center; }          /* (Arabic words are longer: the tabs go to a second row instead of being cut) */
   .plogin-staff-link{ display:block; margin:26px auto 0; background:none; border:0; padding:8px 12px; font:inherit; font-size:13px; color:var(--muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }          /* the staff password: a quiet link under the personal sign-in */
+  /* "צור סידור אוטומטי" and how many shifts each one got (14j-portal-server-coord.js) */
+  .cs-build{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:10px 0; padding:12px 14px; border-radius:14px; background:var(--p-panel); border:1px solid var(--p-line); }
+  .cs-build small{ color:var(--p-muted); font-size:13px; flex:1; min-width:200px; }
+  .cs-build.waiting{ border-color:var(--gold); } .cs-build.waiting > span{ font-size:26px; } .cs-build.waiting div{ display:flex; flex-direction:column; gap:2px; }
+  .cs-count-scroll{ overflow-x:auto; margin-top:8px; }
+  .cs-count-table{ border-collapse:collapse; width:100%; font-size:14px; font-variant-numeric:tabular-nums; }
+  .cs-count-table th, .cs-count-table td{ padding:6px 8px; text-align:center; border-bottom:1px solid var(--p-line); white-space:nowrap; }
+  .cs-count-table tbody th{ text-align:right; font-weight:600; }
+  .cs-count-table thead th{ color:var(--p-muted); font-size:12.5px; font-weight:700; }
+  .cs-count-table tr.zero{ color:var(--p-muted); }
+  .cs-count summary{ color:var(--p-text); }
+  /* the admin fills somebody's preferences (14s-portal-admin.js) */
+  .adm-viewas.edit{ background:rgba(90,160,255,.16); border-color:rgba(90,160,255,.55); }
+  .adm-va-mode{ margin:0 0 10px; }
+  .adm-people .adm-sub{ font-size:11.5px; color:var(--p-yes, #7be0a0); }

@@ -55,6 +55,7 @@ async function setChildSocialWorker(childId, worker){
 // Mercury: the responsible therapist of every child, chosen next to the child (scheduling-v31.sql). null = not read yet, false = not available here
 let rosterTh = null;
 async function loadRosterTherapists(){
+  if(!mercuryOn()){ rosterTh = false; return; }          // (Mercury is on the test site only)
   const client = (typeof ramzorPersonal !== 'undefined' && ramzorPersonal) ? sb : (MANAGER_LOGIN && typeof sbAdmin !== 'undefined' ? sbAdmin : sb);
   try {
     const [a, s, p] = await Promise.all([client.from('child_therapist').select('child_id,staff_id'), client.from('staff').select('id,display_name,kind,active'), client.from('staff_private').select('staff_id,is_therapist')]);

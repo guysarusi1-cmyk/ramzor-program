@@ -9,7 +9,7 @@
 // child (in the staff portal). The personal sign-in only. (scheduling-v31.sql, v32.sql; Mercury spec, decisions 1-6, 44-46)
 const thp = { loaded:false, ok:false, mode:'staff', mine:[], assign:{}, therapists:[], tab:null, guidance:{}, plans:{}, planets:[], library:[], v32:false,
   editing:null, wtab:null, unseen:{}, journeys:{}, risen:[], myObs:[], q:'' };
-const therapyAvailable = () => typeof portalServerOn !== 'undefined' && portalServerOn && !!srv.profile && 'therapist' in srv.profile;          // (my_profile carries "therapist" from v31)
+const therapyAvailable = () => mercuryOn() && typeof portalServerOn !== 'undefined' && portalServerOn && !!srv.profile && 'therapist' in srv.profile;          // (my_profile carries "therapist" from v31)
 const isTherapistMe = () => !!(srv.profile && srv.profile.therapist);
 const isPureTherapist = () => (portalMe() || {}).role === 'therapist';
 const canAssignTherapist = () => !!(srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin));

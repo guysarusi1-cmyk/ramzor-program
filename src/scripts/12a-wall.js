@@ -53,6 +53,7 @@ const BRICK_STRENGTHS = ['אומץ', 'התמדה', 'גמישות', 'בקשת ע�
 const cleanStrength = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 20);
 // Mercury (stage 3): the strengths offered are the plan's and the child's own; a child with no published plan gets the general list (decisions 26, 28)
 async function brickStrengthList(child){
+  if(!mercuryOn()) return { main:BRICK_STRENGTHS, extra:[] };
   try {
     const r = await sb.rpc('brick_strengths', { p_child:child.id });
     if(r.error || !r.data) return { main:BRICK_STRENGTHS, extra:[] };

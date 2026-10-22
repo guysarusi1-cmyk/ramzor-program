@@ -1266,6 +1266,13 @@
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
       check('personal sign-in: an instructor who is the admin gets three cards (Ramzor, his instructor portal, the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && document.querySelectorAll('#view-apphome .home-card').length === (therapyAvailable() ? 4 : 3), document.querySelectorAll('#view-apphome .home-card').length);
+      { const other = portalLoad().instructors.find(p => p.active && p.role === 'instructor' && p.id !== srv.me);
+        portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.editPrefs = true;
+        check('admin fills preferences: the screen writes the other person\'s preferences, only the preferences tab, also after the closing time', srvWho() === other.id && srvTabs(portalMe()).map(x => x[0]).join(',') === 'prefs' && srvPrefsOpen('2020-01'), [srvWho(), srvTabs(portalMe()).map(x => x[0]).join(',')].join(' / '));
+        portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.persona = srv.me;
+        check('admin fills preferences: ... and back to the admin\'s own afterwards', srvWho() === srv.me && !srvPrefsOpen('2020-01'), srvWho());
+        const bx = document.createElement('div'); portalUi.admFill = true; adminViewAs(bx); portalUi.admFill = false;
+        check('admin fills preferences: the list in "fill" mode has only instructors', bx.querySelectorAll('[data-view-as]').length >= 1 && [...bx.querySelectorAll('[data-view-as]')].every(b => (portalPerson(b.dataset.viewAs) || {}).role === 'instructor'), bx.querySelectorAll('[data-view-as]').length); }
       document.getElementById('apphome-portal').click(); await sleep(300);
       check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
@@ -1581,6 +1588,19 @@
         const txt = () => document.getElementById('portal-body').textContent;
         check('portal people: the coordinator sees the schedule that was sent to her, and its status', /נשלח אלייך/.test(txt()) && !!document.querySelector('#cs-publish') && !document.querySelector('#cs-publish').disabled, txt().slice(0, 80));
         check('portal people: the coordinator sees the schedule as the monthly calendar of the instructors (the two people are on it, no automatic build button)', document.querySelectorAll('.mcal .mcal-name').length >= 2 && !!document.querySelector('.mcal-label') && !document.querySelector('.pboard') && !/שבץ אוטומטית/.test(document.getElementById('view-portal').textContent), document.querySelectorAll('.mcal .mcal-name').length + ' / rows ' + portalLoad().rows.length);
+        { const cf = document.querySelector('#cs-count');
+          check('build: next to the schedule, a folded summary of how many shifts each one got', !!cf && !cf.open && /כמה משמרות לכל אחד/.test(cf.querySelector('summary').textContent), cf ? cf.outerHTML.slice(0, 80) : 'none');
+          if(cf){ cf.querySelector('summary').click(); await sleep(60);
+            const row = id => [...cf.querySelectorAll('tbody tr')].find(tr => tr.querySelector('th').textContent === instrName(portalLoad().instructors.find(p => p.id === id), portalLoad().instructors));
+            const r1 = row(i1), r2 = row(i2);
+            check('build: ... opened, every instructor with the total and the kinds (here: one noon shift, one night)', !!r1 && !!r2 && r1.children[1].textContent === '1' && r1.children[3].textContent === '1' && r2.children[4].textContent === '1', r1 ? r1.textContent : 'no row'); } }
+        check('build: a month whose submission closed has the button (here "build again", as there is a schedule)', !!document.querySelector('#cs-build-go') && /בנייה מחדש/.test(document.querySelector('#cs-build-go').textContent), (document.querySelector('#cs-build') || {}).textContent || 'none');
+        check('build: a month with no schedule and the submission closed: "צור סידור אוטומטי"', /id="cs-build-go"[^>]*>צור סידור אוטומטי/.test(srvBuildBoxHtml('2020-01')), srvBuildBoxHtml('2020-01').slice(0, 120));
+        if(srvPrefsOpen(next)){
+          check('build: while the submission is open, the button is locked and says from when', /disabled/.test(srvBuildBoxHtml(next)) && /אפשר אחרי שההגשה נסגרת/.test(srvBuildBoxHtml(next)), srvBuildBoxHtml(next).slice(0, 120));
+          const early = await sbPersonal.from('sched_requests').insert({ month:firstOf(next), requested_by:srv.me });
+          check('build: ... and the database refuses a request while the submission is open', !!early.error, 'accepted');
+        }
         { const bg = s => getComputedStyle(document.querySelector(`.mcal-cell[data-shift="${s}"]:not(.weekend)`)).backgroundColor, bt = getComputedStyle(document.querySelector('.mcal-cell[data-shift="e"]')).borderTopWidth;
           check('portal people: the morning, noon and night shifts have clearly different backgrounds, with a thick line between them', bg('m') !== bg('e') && bg('e') !== bg('n') && bg('m') !== bg('n') && parseFloat(bt) >= 1.5, [bg('m'), bg('e'), bg('n'), bt].join(' | ')); }
         check('portal people: the instructors panel is folded, a slim tab at the left of the schedule (after the calendar in the page, so it is on the left)', !!document.getElementById('cs-open') && !document.querySelector('.cs-side') && !!document.querySelector('.cs-layout .cs-main + #cs-open') && !!document.querySelector('#cs-open .mcal-key .wish-yes') && !!document.querySelector('#cs-open .mcal-key .wish-none') && !document.querySelector('.cs-main .mcal-key'), 'not folded');

@@ -23,6 +23,7 @@ function israelNow(){
 }
 // preferences for a month are open from the 1st of the previous month until the 24th of it at 22:30 (same rule as the database)
 function srvPrefsOpen(mk){
+  if(srvEditingFor()) return true;          // (the admin fills preferences for somebody: also after the closing time, e.g. from a paper)
   const n = israelNow(), prev = addMonths(mk, -1), end = prev + '-24';
   if(n.date < prev + '-01' || n.date > end) return false;
   return !(n.date === end && n.minutes >= 22 * 60 + 30);
@@ -144,29 +145,33 @@ function srvAddRow(st, r){
   if(r.shift !== 'L'){ const key = keys[0].join('|'); st.assignmentIds[r.id] = { key, staff:r.staff_id }; st.assignmentIds[`${key}|${r.staff_id}`] = r.id; }       // (both ways: id -> shift, and shift + person -> id)
 }
 const srvPrefsOf = (m, id) => (m.prefs[id] = m.prefs[id] || { slots:{}, absent:[] }, Object.assign(m.prefs[id], { fixed:m.prefs[id].fixed || [], hours:m.prefs[id].hours || {}, pick:m.prefs[id].pick || [], consent:m.prefs[id].consent || { extend:null, pull:null } }));
-const srvSnapshot = mk => { const p = srvPrefsOf(portalMonth(mk), srv.me); return JSON.stringify({ s:Object.keys(p.slots).sort().map(k => k + '=' + p.slots[k]), a:p.absent.slice().sort(), h:Object.keys(p.hours).sort().map(k => k + '=' + JSON.stringify(p.hours[k])), k:p.pick.slice().sort(), c:p.consent.extend !== null && p.consent.pull !== null ? p.consent : null }); };
+// whose preferences the screen writes: the person's own, or (the admin, "מילוי העדפות עבור") the one the admin fills them for (scheduling-v33.sql)
+const srvEditingFor = () => !!(portalUi.viewAs && portalUi.editPrefs);
+const srvWho = () => srvEditingFor() ? portalUi.viewAs : srv.me;
+function srvResnap(){ srv.saved = {}; Object.keys(portalLoad().months || {}).forEach(mk => { srv.saved[mk] = srvSnapshot(mk); }); }          // (after switching whose preferences are on the screen)
+const srvSnapshot = mk => { const p = srvPrefsOf(portalMonth(mk), srvWho()); return JSON.stringify({ s:Object.keys(p.slots).sort().map(k => k + '=' + p.slots[k]), a:p.absent.slice().sort(), h:Object.keys(p.hours).sort().map(k => k + '=' + JSON.stringify(p.hours[k])), k:p.pick.slice().sort(), c:p.consent.extend !== null && p.consent.pull !== null ? p.consent : null }); };
 
 // ---- writing the person's own preferences (the database accepts only their own rows, only while the month is open)
 async function srvSyncPrefs(mk){
-  const p = portalPrefsOf(mk, srv.me), days = daysOfMonth(mk), first = days[0], last = days[days.length - 1], snap = srvSnapshot(mk);
-  let r = await sbPersonal.from('prefs_slot').delete().eq('staff_id', srv.me).gte('day', first).lte('day', last);
+  const p = portalPrefsOf(mk, srvWho()), days = daysOfMonth(mk), first = days[0], last = days[days.length - 1], snap = srvSnapshot(mk);
+  let r = await sbPersonal.from('prefs_slot').delete().eq('staff_id', srvWho()).gte('day', first).lte('day', last);
   if(r.error) throw r.error;
-  r = await sbPersonal.from('prefs_absence').delete().eq('staff_id', srv.me).gte('day', first).lte('day', last);
+  r = await sbPersonal.from('prefs_absence').delete().eq('staff_id', srvWho()).eq('reason', 'self').gte('day', first).lte('day', last);
   if(r.error) throw r.error;
-  const slotRows = Object.keys(p.slots).map(k => { const [d, s] = k.split('|'); return { staff_id:srv.me, day:d, shift:SRV_SHIFT_DB[s], level:p.slots[k] === 'avoid' ? 'can' : p.slots[k] }; });
+  const slotRows = Object.keys(p.slots).map(k => { const [d, s] = k.split('|'); return { staff_id:srvWho(), day:d, shift:SRV_SHIFT_DB[s], level:p.slots[k] === 'avoid' ? 'can' : p.slots[k] }; });
   if(slotRows.length){ r = await sbPersonal.from('prefs_slot').insert(slotRows); if(r.error) throw r.error; }
-  if(p.absent.length){ r = await sbPersonal.from('prefs_absence').insert(p.absent.map(d => ({ staff_id:srv.me, day:d, reason:'self' }))); if(r.error) throw r.error; }
-  r = await sbPersonal.from('prefs_hours').delete().eq('staff_id', srv.me).gte('day', first).lte('day', last);
+  if(p.absent.length){ r = await sbPersonal.from('prefs_absence').insert(p.absent.map(d => ({ staff_id:srvWho(), day:d, reason:'self' }))); if(r.error) throw r.error; }
+  r = await sbPersonal.from('prefs_hours').delete().eq('staff_id', srvWho()).gte('day', first).lte('day', last);
   if(r.error) throw r.error;
-  const hourRows = []; Object.keys(p.hours).forEach(d => p.hours[d].forEach(([a, b]) => hourRows.push({ staff_id:srv.me, day:d, from_time:String(a).padStart(2, '0') + ':00', to_time:b >= 24 ? '23:59' : String(b).padStart(2, '0') + ':00' })));
+  const hourRows = []; Object.keys(p.hours).forEach(d => p.hours[d].forEach(([a, b]) => hourRows.push({ staff_id:srvWho(), day:d, from_time:String(a).padStart(2, '0') + ':00', to_time:b >= 24 ? '23:59' : String(b).padStart(2, '0') + ':00' })));
   if(hourRows.length){ r = await sbPersonal.from('prefs_hours').insert(hourRows); if(r.error) throw r.error; }
   if(srv.pickOk !== false){                                          // ("only one of these weekends"; before scheduling-v8.sql the table does not exist, and nothing is lost)
-    r = await sbPersonal.from('prefs_pickone').delete().eq('staff_id', srv.me).gte('friday', first).lte('friday', last);
+    r = await sbPersonal.from('prefs_pickone').delete().eq('staff_id', srvWho()).gte('friday', first).lte('friday', last);
     if(r.error){ if(/prefs_pickone|relation|schema cache/i.test(r.error.message || '')) srv.pickOk = false; else throw r.error; }
-    else if((p.pick || []).length){ r = await sbPersonal.from('prefs_pickone').insert(p.pick.map(f => ({ staff_id:srv.me, friday:f }))); if(r.error) throw r.error; }
+    else if((p.pick || []).length){ r = await sbPersonal.from('prefs_pickone').insert(p.pick.map(f => ({ staff_id:srvWho(), friday:f }))); if(r.error) throw r.error; }
   }
   if(p.consent.extend !== null && p.consent.pull !== null){          // the two consents are asked again every month; saved once both are answered
-    r = await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(mk), extend_morning:p.consent.extend, pull_to_sunday:p.consent.pull, answered_at:new Date().toISOString() });
+    r = await sbPersonal.from('prefs_consent').upsert({ staff_id:srvWho(), month:firstOf(mk), extend_morning:p.consent.extend, pull_to_sunday:p.consent.pull, answered_at:new Date().toISOString() });
     if(r.error) throw r.error;
   }
   srv.saved[mk] = snap;
@@ -177,7 +182,7 @@ function srvQueueSave(){
   srv.timer = setTimeout(srvFlush, 500);
 }
 async function srvFlush(){
-  if(!srv.me || srv.busy) { if(srv.busy) srvQueueSave(); return; }
+  if(!srvWho() || srv.busy) { if(srv.busy) srvQueueSave(); return; }
   srv.busy = true;
   try {
     for(const mk of Object.keys(srv.saved)){
@@ -198,18 +203,19 @@ async function srvSubmit(mk, note, goal){
   // first everything on the screen must be saved (a save that is already running is waited for, not skipped)
   for(let i = 0; i < 80 && (srv.busy || srvSnapshot(mk) !== srv.saved[mk]); i++){ if(!srv.busy) await srvFlush(); else await new Promise(r => setTimeout(r, 150)); }
   if(srv.failed || srvSnapshot(mk) !== srv.saved[mk]) throw new Error('not saved');
-  const row = { staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() };
+  const row = { staff_id:srvWho(), month:firstOf(mk), submitted_at:new Date().toISOString() };
   if(note !== undefined) row.note = note || null;
-  if(goal !== undefined && (goal || portalMonth(mk).goals[srv.me])) row.goal = goal || null;          // (sent only when there is something to say, so that it works before and after scheduling-v5.sql)
+  if(goal !== undefined && (goal || portalMonth(mk).goals[srvWho()])) row.goal = goal || null;          // (sent only when there is something to say, so that it works before and after scheduling-v5.sql)
   const r = await sbPersonal.from('prefs_submission').upsert(row);
   if(r.error) throw r.error;
-  portalMonth(mk).submitted[srv.me] = true;
-  if(note) portalMonth(mk).notes[srv.me] = note;
-  if(goal !== undefined){ if(goal) portalMonth(mk).goals[srv.me] = goal; else delete portalMonth(mk).goals[srv.me]; }
+  portalMonth(mk).submitted[srvWho()] = true;
+  if(note) portalMonth(mk).notes[srvWho()] = note;
+  if(goal !== undefined){ if(goal) portalMonth(mk).goals[srvWho()] = goal; else delete portalMonth(mk).goals[srvWho()]; }
 }
 
 // ---- the screens in server mode
 function srvTabs(me){
+  if(srvEditingFor()) return [['prefs', 'העדפות']];          // (the admin fills somebody's preferences: only that tab)
   if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];

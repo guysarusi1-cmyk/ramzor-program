@@ -104,7 +104,7 @@ async function renderJourneyBoard(){
       <span class="tvj-track">${Array.from({ length:len }, (_, i) => `<i class="${i < r.step ? 'on' : ''}"></i>`).join('')}</span>
       <span class="tvj-goal">${r.stage === 'climb' ? '⛰️' : (planets[r.planet] || {}).art === 'moon' ? '🌙' : '🪐'}</span></div>`; }).join('')}</div>` : '';
 }
-if(typeof SLIDES !== 'undefined' && SLIDES.length === 13){
+if(mercuryOn() && typeof SLIDES !== 'undefined' && SLIDES.length === 13){
   SLIDES.push({ id:13, label:'המסע בחלל', render: renderJourneyBoard, hidden:true });
   const before = refreshJourneyBoards;
   refreshJourneyBoards = async function(){ await before(); try { SLIDES[13].hidden = !(await journeyTvRows()).length; } catch(e){} };

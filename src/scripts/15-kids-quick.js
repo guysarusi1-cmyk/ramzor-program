@@ -72,6 +72,7 @@ document.getElementById('hub-kids-btn').addEventListener('click', async ()=>{
 document.getElementById('kq-give-star-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('star'); });
 document.getElementById('kq-moon-journey-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('moon'); });
 document.getElementById('kq-brick-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('brick'); });
+if(!mercuryOn()) document.getElementById('kq-observe-btn').style.display = 'none';          // (Mercury is on the test site only)
 document.getElementById('kq-observe-btn').addEventListener('click', ()=>{ kqOrigin = null; kidsQuickShowChildPicker('observe'); });
 // the daily-operations gold screen reaches those same two buttons (see openKidsQuickFrom)
 document.getElementById('gold-give-star-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-give-star-btn', 'gold'));
