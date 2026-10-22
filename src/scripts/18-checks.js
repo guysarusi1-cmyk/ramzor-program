@@ -1422,7 +1422,7 @@
         check('portal server: the long-weekend button takes the chosen level (יכול)', srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`] === 'avoid' && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-avoid'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
         document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-plong="${fri}"]`).click(); await sleep(50);
         check('portal server: "only one of these" is not offered by default', !document.querySelector('.ppick') && !srv.pickOne, document.querySelectorAll('.ppick').length);
-        document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-set-pick="1"]').click(); await sleep(400);
+        document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-set-pick="1"]').click(); for(let i = 0; i < 40 && !document.querySelector('.ppick'); i++) await sleep(100);
         const fris = daysOfMonth(next).filter(d => dowOf(d) === 5), chips = [...document.querySelectorAll('.ppick')];
         check('portal server: switching it on in the settings shows a small "רק אחד" button for every weekend', srv.pickOne === true && chips.length === document.querySelectorAll('.plong').length && /רק אחד/.test(chips[0].textContent), chips.length + ' / ' + srv.pickOne);
         document.querySelector(`[data-ppick="${fris[0]}"]`).click(); await sleep(50); document.querySelector(`[data-ppick="${fris[2]}"]`).click(); await sleep(50);

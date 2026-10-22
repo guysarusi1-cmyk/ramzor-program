@@ -58,23 +58,31 @@ function srvShiftWarnings(day, shift, rows){
 // ---- the coordinator's data that only she may read
 async function srvLoadCoord(){
   const st = portalLoad();
-  const [priv, flags, vac] = await Promise.all([
+  // everything is read at the same time (one after the other made the coordinator's sign-in slow); a part that fails or is missing (an older database) is just empty
+  const q = build => Promise.resolve().then(build).catch(e => ({ error:e }));
+  const [priv, flags, vac, ph, pm, wm, sv, sr, br, orq] = await Promise.all([
     srvAll(() => sbPersonal.from('staff_private').select('staff_id,email,female,is_leader,ahmash_rank,leader_priority,no_nights,manual_only,only_long_weekend,latest_end_hour,auth_user_id')),
     srvAll(() => sbPersonal.from('coordinator_flags').select('id,month,day,kind,text,staff_id,resolved').eq('resolved', false).order('day', { nullsFirst:true })),
-    srvAll(() => sbPersonal.from('vacation_requests').select('id,staff_id,from_day,to_day,note,status,created_at').order('created_at', { ascending:false }).limit(60))
+    srvAll(() => sbPersonal.from('vacation_requests').select('id,staff_id,from_day,to_day,note,status,created_at').order('created_at', { ascending:false }).limit(60)),
+    q(() => sbPersonal.from('staff_private').select('staff_id,phone')),                                                        // (the phones: scheduling-v21.sql)
+    q(() => sbPersonal.from('staff_private').select('staff_id,min_mid,min_nights,min_weekend,day_buddy,lang')),                // (personal minimums, the day colleague, the language: scheduling-v25.sql)
+    q(() => sbPersonal.from('sched_settings').select('value').eq('key', 'wa_messages').maybeSingle()),                         // (the WhatsApp messages as the coordinator wrote them)
+    q(() => sbPersonal.from('staff_settings').select('*')),                                                                     // (each person's voice, fixed preferences (v27) and language (v25))
+    q(() => sbPersonal.from('sick_reports').select('assignment_id,note').order('created_at')),                                 // (the reason an instructor gave when she reported that she cannot come)
+    q(() => sbPersonal.from('sched_requests').select('id,month,at,done_at,result').order('at', { ascending:false }).limit(12)),  // ("צור סידור אוטומטי": scheduling-v33.sql)
+    q(() => sbPersonal.from('open_shift_requests').select('id,staff_id,day,shift,created_at').eq('status', 'pending').order('created_at')),  // (the requests to join an open shift: scheduling-v11.sql)
+    srvOdLoad()                                                                                                                 // (the open days for sign-up and who took them: scheduling-v25.sql)
   ]);
+  const rows = r => (r && !r.error && r.data) || [];
   st.priv = {}; priv.forEach(r => { st.priv[r.staff_id] = r; });
-  try { const ph = await sbPersonal.from('staff_private').select('staff_id,phone'); if(!ph.error) (ph.data || []).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; }); } catch(e){}          // (the phones: scheduling-v21.sql)
-  try { const pm = await sbPersonal.from('staff_private').select('staff_id,min_mid,min_nights,min_weekend,day_buddy,lang'); if(!pm.error) (pm.data || []).forEach(r => { if(st.priv[r.staff_id]) Object.assign(st.priv[r.staff_id], r); }); } catch(e){}          // (personal minimums, the day colleague, the language: scheduling-v25.sql)
-  st.waMsg = {}; try { const wm = await sbPersonal.from('sched_settings').select('value').eq('key', 'wa_messages').maybeSingle(); if(!wm.error && wm.data && wm.data.value) st.waMsg = wm.data.value; } catch(e){}          // (the WhatsApp messages as the coordinator wrote them)
-  st.voices = {}; try { const sv = await sbPersonal.from('staff_settings').select('staff_id,voice'); (sv.data || []).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; }); } catch(e){}
-  st.fixedNo = {}; try { const sf = await sbPersonal.from('staff_settings').select('staff_id,fixed_no'); if(!sf.error) (sf.data || []).forEach(r => { if((r.fixed_no || []).length) st.fixedNo[r.staff_id] = r.fixed_no; }); } catch(e){}          // (fixed preferences: scheduling-v27.sql)
-  st.langs = {}; try { const sl = await sbPersonal.from('staff_settings').select('staff_id,lang'); if(!sl.error) (sl.data || []).forEach(r => { if(r.lang) st.langs[r.staff_id] = r.lang; }); } catch(e){}          // (each person's own choice of language; scheduling-v25.sql)          // (each person's chosen voice, so that her feedback is written in it)
+  rows(ph).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; });
+  rows(pm).forEach(r => { if(st.priv[r.staff_id]) Object.assign(st.priv[r.staff_id], r); });
+  st.waMsg = (wm && !wm.error && wm.data && wm.data.value) || {};
+  st.voices = {}; st.fixedNo = {}; st.langs = {};
+  rows(sv).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; if((r.fixed_no || []).length) st.fixedNo[r.staff_id] = r.fixed_no; if(r.lang) st.langs[r.staff_id] = r.lang; });
   st.flags = flags; st.vacations = vac;
-  st.reasons = {}; try { const sr = await sbPersonal.from('sick_reports').select('assignment_id,note').order('created_at'); (sr.data || []).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; }); } catch(e){}          // (the reason an instructor gave when she reported that she cannot come)
-  await srvOdLoad();          // (the open days for sign-up and who took them: scheduling-v25.sql)
-  st.buildReqs = []; try { const r = await sbPersonal.from('sched_requests').select('id,month,at,done_at,result').order('at', { ascending:false }).limit(12); st.buildReqs = r.error ? [] : (r.data || []); } catch(e){}          // ("צור סידור אוטומטי": scheduling-v33.sql)
-  st.openReqs = []; try { const r = await sbPersonal.from('open_shift_requests').select('id,staff_id,day,shift,created_at').eq('status', 'pending').order('created_at'); st.openReqs = r.error ? [] : (r.data || []); } catch(e){}          // (the requests to join an open shift; they come with scheduling-v11.sql)
+  st.reasons = {}; rows(sr).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; });
+  st.buildReqs = rows(br); st.openReqs = rows(orq);
 }
 
 // the shifts that are below the minimum number of instructors (the same standard numbers as the database): after publishing they are offered to the instructors who could fill them
