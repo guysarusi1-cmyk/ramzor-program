@@ -104,6 +104,19 @@ function prefStartFill(mk, id, prefs, days){
   try { localStorage.setItem(key, '1'); } catch(e){}
   portalSave(); return true;
 }
+// the start chosen in the settings applies at once (Guy, 2026-10-23): every shift of the open month that is still unmarked gets it; what was marked stays
+function prefStartApplyNow(lv){
+  if(!portalServerOn || (lv !== 'yes' && lv !== 'no')) return 0;
+  const mk = prefsMonthNow(); if(!srvPrefsOpen(mk)) return 0;
+  const prefs = srvPrefsOf(portalMonth(mk), srv.me); let n = 0;
+  daysOfMonth(mk).forEach(date => {
+    if(prefs.absent.includes(date) || prefs.fixed.some(f => f.day === date)) return;
+    prefShiftsFor(date).forEach(s => { const k = `${date}|${s.id}`; if(!prefs.slots[k] && !prefNoNight(k) && !prefInsideLong(prefs, k)){ prefs.slots[k] = lv; n++; } });
+  });
+  try { localStorage.setItem(`ramzor-prefstart-${srv.me}-${mk}`, '1'); } catch(e){}
+  if(n) portalSave();
+  return n;
+}
 function renderInstructorPrefs(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad();

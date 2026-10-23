@@ -2278,10 +2278,11 @@
           check('settings: "how the preferences start every month" offers unmarked, all yes, all no', pb.map(b => b.textContent).join('|') === 'הכל לא סומן|הכל "כן"|הכל "לא"', pb.map(b => b.textContent).join('|'));
           const probe30 = await sbPersonal.from('staff_settings').select('pref_start').eq('staff_id', srv.me).maybeSingle();
           if(probe30.error) check('(info) settings: saving how the preferences start needs scheduling-v30.sql', true, '');
-          else { pb[1].click(); await sleep(800);
+          else { const realApply = prefStartApplyNow; prefStartApplyNow = () => 0;          // (here only the saving; the immediate fill is checked below without touching the test data)
+            pb[1].click(); await sleep(800);
             const r2 = await sbPersonal.from('staff_settings').select('pref_start').eq('staff_id', srv.me).maybeSingle();
             check('settings: the choice "הכל כן" is saved for her', !!r2.data && r2.data.pref_start === 'yes', JSON.stringify(r2.data));
-            pb[0].click(); await sleep(800); } }
+            pb[0].click(); await sleep(800); prefStartApplyNow = realApply; } }
         { const c = document.querySelector('.psheet [data-close]'); if(c) c.click(); await sleep(100); }
         // a month opened for the first time is filled by that choice (a made-up month, nothing is saved)
         { const wasPs = srv.prefStart, wasSave = portalSave, mk0 = '2099-03', ds = daysOfMonth(mk0), away = ds[3];
@@ -2292,6 +2293,14 @@
           const vals = Object.entries(fake.slots);
           check('settings: with "הכל כן" a new month starts all "yes" (the fixed "no" ones stay "no", a day away stays away), and only once', filled && !again && vals.length > 40 && vals.every(([k, v]) => v === 'yes' && !k.startsWith(away) && !k.endsWith('|m')), vals.length + ' / ' + filled + ' / ' + again);
           srv.prefStart = wasPs; portalSave = wasSave; try { localStorage.removeItem(`ramzor-prefstart-chk-${mk0}`); } catch(e){} }
+        { const mk = prefsMonthNow(), wasSave = portalSave, pr = srvPrefsOf(portalMonth(mk), srv.me), saved = JSON.stringify(pr.slots);
+          if(srvPrefsOpen(mk)){
+            portalSave = () => {};
+            const ds = daysOfMonth(mk), marked = `${ds[2]}|m`, free = `${ds[3]}|e`; pr.slots = { [marked]:'avoid' };
+            const n = prefStartApplyNow('no');
+            check('settings: the start chosen applies at once to the shifts not marked yet, and leaves the marked ones', n > 0 && pr.slots[free] === 'no' && pr.slots[marked] === 'avoid', JSON.stringify([n, pr.slots[free], pr.slots[marked]]));
+            pr.slots = JSON.parse(saved); portalSave = wasSave;
+          } else check('(info) settings: next month is closed now, the immediate start was not exercised', true, ''); }
         const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k)) || portalUi.pmonth;
         portalUi.pmonth = mk; showPortal('prefs'); await sleep(400);
         const day = daysOfMonth(mk).find(d => !srvPrefsOf(portalMonth(mk), srv.me).slots[`${d}|m`] && !srvPrefsOf(portalMonth(mk), srv.me).absent.includes(d) && document.querySelector(`[data-pslot="${d}|m"]`));

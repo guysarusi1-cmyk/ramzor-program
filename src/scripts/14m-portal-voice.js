@@ -183,7 +183,9 @@ function openPortalSettings(){
     sh.querySelectorAll('[data-pref-start]').forEach(x => x.classList.toggle('on', x === b)); srv.prefStart = val;
     let ok = false; try { const r = await sbPersonal.from('staff_settings').upsert({ staff_id:srv.me, pref_start:val }); ok = !r.error; } catch(e){}          // (scheduling-v30.sql)
     if(!ok){ srv.prefStart = was; sh.querySelectorAll('[data-pref-start]').forEach(x => x.classList.toggle('on', (x.dataset.prefStart || null) === (was || null))); toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
-    toast('נשמר. בחודש הבא שייפתח, ההעדפות יתחילו כך');
+    const n = typeof prefStartApplyNow === 'function' ? prefStartApplyNow(val) : 0;
+    toast(n ? `נשמר. ${n} משמרות שעוד לא סימנת קיבלו עכשיו "${val === 'yes' ? 'כן' : 'לא'}". מה שכבר סימנת לא השתנה` : 'נשמר. כל חודש חדש יתחיל כך');
+    if(n && portalUi.tab === 'prefs'){ const pb = document.getElementById('portal-body'); if(pb) renderInstructorPrefs(pb); }
   }));
   sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
   sh.querySelectorAll('[data-fixed-no]').forEach(b => b.addEventListener('click', async () => {
