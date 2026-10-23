@@ -133,7 +133,7 @@ async function adminSystem(box){
 async function adminRebuild(box){
   const r = await sbPersonal.from('sched_requests').select('month,at,done_at,result,requested_by').order('at', { ascending:false }).limit(10);
   const months = [0, 1, 2].map(n => addMonths(monthKeyOf(srvToday()), n));
-  box.innerHTML = `<div class="pnote">המערכת תבנה את הסידור של החודש מחדש, לפי ההעדפות והחוקים העדכניים, ותשלח אותו לרכזת. זה קורה בשליחה השעתית, תוך שעה לכל היותר. סידור שכבר פורסם לא נבנה מחדש.</div>
+  box.innerHTML = `<div class="pnote">המערכת תבנה את הסידור של החודש מחדש, לפי ההעדפות והחוקים העדכניים, ותשלח אותו לרכזת. זה מתחיל מיד, ובדרך כלל מוכן תוך כרבע שעה (לכל היותר שעה). סידור שכבר פורסם לא נבנה מחדש.</div>
     <div class="ctl-actions">${months.map(mk => `<button type="button" class="btn ghost" data-rebuild="${mk}">לבנות מחדש את ${monthLabel(mk)}</button>`).join('')}</div>
     <h3 class="psec">בקשות אחרונות</h3>${r.error ? '<div class="pnote">נדרש scheduling-v19.sql</div>' : ((r.data || []).map(x => `<div class="pmine-row"><span>${monthLabel(x.month.slice(0, 7))} · <small>${new Date(x.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small><br><small>${x.done_at ? pEsc(x.result || 'בוצע') : 'ממתין לשליחה השעתית'}</small></span></div>`).join('') || '<div class="pnote">אין.</div>')}`;
   box.querySelectorAll('[data-rebuild]').forEach(b => b.addEventListener('click', async () => {
