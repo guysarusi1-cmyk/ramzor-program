@@ -199,8 +199,10 @@
   .star-card .avatar-initials{ width:42px; height:42px; font-size:15px; border:2px solid rgba(255,255,255,.6); box-shadow:0 2px 6px rgba(0,0,0,.35); flex-shrink:0; }
   .star-card-name{ font-family:'Rubik'; font-weight:700; font-size:11.5px; color:#fff; margin:6px 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
   .star-card-dots{ display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
-  .star-dot{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.3); border:1px solid rgba(255,255,255,.55); }
-  .star-dot.filled{ background:radial-gradient(circle at 35% 30%, #ffe9ad, var(--gold)); border-color:var(--gold); box-shadow:0 0 4px 1px rgba(232,185,74,.6); }
+  /* each star of the star programme is a star, not a dot (Guy, 2026-10-23): a five-pointed shape cut out of the square */
+  .star-dot{ width:13px; height:13px; justify-self:center; background:rgba(255,255,255,.32); clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .star-dot.filled{ background:radial-gradient(circle at 50% 45%, #fff3c4 0%, #ffe08a 35%, var(--gold) 75%); }
+  .star-card-dots:has(.star-dot.filled){ filter:drop-shadow(0 0 3px rgba(232,185,74,.55)); }          /* (a glow: a clipped shape cannot carry its own shadow) */
   @keyframes star-dot-pulse{
     0% { transform:scale(1); box-shadow:0 0 4px 1px rgba(232,185,74,.6); }
     40% { transform:scale(2.4); box-shadow:0 0 16px 7px rgba(255,233,173,.95); }
@@ -758,8 +760,8 @@
   .star-card{ border-radius:2vmin; padding:2vmin 1vmin 2.2vmin; background:rgba(18,23,42,.8); }
   .star-card .avatar-initials{ width:9vmin; height:9vmin; font-size:3.4vmin; border-width:.4vmin; }
   .star-card-name{ font-size:2.9vmin; margin:1.2vmin 0 1.4vmin; }
-  .star-card-dots{ grid-template-columns:repeat(6, 1fr); gap:.9vmin; }
-  .star-dot{ width:2.2vmin; height:2.2vmin; border-width:.2vmin; }
+  .star-card-dots{ grid-template-columns:repeat(6, 1fr); gap:.6vmin; }
+  .star-dot{ width:2.3vmin; height:2.3vmin; }          /* (six stars in a row stay inside the card) */
   .star-count-extra{ font-size:2.6vmin; margin-top:.6vmin; padding:.2vmin 1.2vmin; border-radius:1vmin; }
 
   /* journey boards: fit the whole artwork on screen; sizes inside use em, where 1em = 1% of the board width (set from script) */
@@ -7354,12 +7356,13 @@ function srvRenderCoordSchedule(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad(), mk = portalUi.month || (portalUi.month = srvDefaultCoordMonth()), m = portalMonth(mk), ctx = portalCtx(mk);
   const flags = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk), has = !!m.status;
-  const needLook = flags.filter(f => !['service_absent', 'service'].includes(f.kind)), info = flags.filter(f => ['service_absent', 'service'].includes(f.kind));
+  const needLook = flags.filter(f => !SRV_FLAG_HIDDEN.includes(f.kind) && f.kind !== 'service');          // (what Guy took off the screen: the engine still writes them)
+  const svcDays = [...new Set(flags.filter(f => f.kind === 'service' && f.day).map(f => f.day))].sort();          // (the days with fewer than two service girls: one line)
+  const svcLine = svcDays.length ? `<div class="pflag"><span><b>בנות שירות</b> · ב-${svcDays.length} ימים יש פחות משתי בנות שירות: ${svcDays.map(d => d.slice(8, 10) + '/' + d.slice(5, 7)).join(', ')}. כללי המדריכים שונו בהתאם.</span></div>` : '';
   const people = id => (st.instructors.find(p => p.id === id) || {}).first || '';
-  const odAlerts = m.published ? srvOdAlerts(mk) : [], lookCount = needLook.length + odAlerts.length;
+  const odAlerts = m.published ? srvOdAlerts(mk) : [], lookCount = needLook.length + odAlerts.length + (svcLine ? 1 : 0);
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
-    ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. כשההגשה נסגרת, לוחצים על "צור סידור אוטומטי" והמערכת בונה אותו לפי ההעדפות והחוקים. מכאן אפשר לערוך אותו ידנית.</div>'}
     ${srvBuildBoxHtml(mk)}
     ${has ? `<div class="pactions">
       <button type="button" class="btn" id="cs-publish"${m.published ? ' disabled' : ''}>${m.published ? 'הסידור פורסם' : 'פרסום הסידור'}</button>
@@ -7367,13 +7370,12 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
     </div>
-    ${m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>'}
-    ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
-    ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
+    ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}${svcLine}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
-    <div class="pnote cs-note-row"><span>לחיצה על משמרת בלוח פותחת עריכה.</span><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
+    <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
+    ${srvHelpFoldHtml(m, has)}`;
   wireMonthNav(body);
   srvBuildWire(body, mk);
   if(!has) return;
@@ -7418,6 +7420,13 @@ function srvRenderCoordSchedule(body){
   document.getElementById('cs-print').addEventListener('click', () => printSchedule(ctx, m.assignments));
 }
 
+// what Guy took off the coordinator's screen (2026-10-23): composition, personal minimums, the day colleague, a service girl's day off
+const SRV_FLAG_HIDDEN = ['composition', 'min', 'pair', 'service_absent'];
+// the fixed explanations, folded away in one place
+const srvHelpFoldHtml = (m, has) => `<details class="pfold cs-help"><summary><span>ℹ️ הסברים</span></summary><div class="pfold-body">
+    ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. כשההגשה נסגרת, לוחצים על "צור סידור אוטומטי" והמערכת בונה אותו לפי ההעדפות והחוקים. מכאן אפשר לערוך אותו ידנית.</div>'}
+    ${has ? (m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>') : ''}
+    ${has ? '<div class="pnote">לחיצה על משמרת בלוח פותחת עריכה.</div>' : ''}</div></details>`;
 // ---- "צור סידור אוטומטי": the schedule is built only when the coordinator asks, after the submission closed (the hourly job builds it,
 // within an hour; a published month is never built again). (scheduling-v33.sql; the engine's monthly build is off unless sched_settings.auto_build)
 const srvBuildReqOf = mk => (portalLoad().buildReqs || []).find(r => r.month && r.month.slice(0, 7) === mk);
@@ -7710,7 +7719,6 @@ function srvRenderSubmissions(body){
   const away = people.map(p => { const pr = m.prefs[p.id] || {}; const fx = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day)); return { p, fx }; }).filter(x => x.fx.length);
   body.innerHTML = `
     ${monthNavHtml(mk)}
-    <div class="pnote">ההגשה נסגרת ב-24 בחודש הקודם בשעה 22:30. עד ה-23 נשלחת אלייך רשימה של מי שעוד לא הגיש.</div>
     <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
     ${[['sdone', 'הגישו', done.map(subRow).join('') || '<div class="pnote">אין.</div>', done.length], ['smiss', 'לא הגישו', missing.map(subRow).join('') || '<div class="pnote">אין.</div>', missing.length], ['sabs', 'מי נעדר החודש', (away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'), away.length]].map(([key, title, inner, count]) => `<details class="pfold" data-fold="${key}"${openFold(key) ? ' open' : ''}>
       <summary><span>${title}</span><span class="pcount">${count}</span></summary>
@@ -7818,7 +7826,6 @@ function srvRenderCoordSettings(body){
       const priv = st.priv || {};
       const instr = st.instructors.filter(p => p.role === 'instructor').sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
       const html = `
-      <div class="pnote">כאן מזינים כתובת מייל לכל אחד ויוצרים לו התחברות. סדר המדריכים הוא סדר העדיפות בחלוקת המשמרות מעבר למינימום (למעלה = עדיפות גבוהה). המדריכים לא רואים אותו.</div>
       ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
