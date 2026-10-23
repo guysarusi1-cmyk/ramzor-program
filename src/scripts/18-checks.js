@@ -1517,6 +1517,14 @@
       // --- the coordinator sees every submission
       if(await asPerson('coordinator')){
         check('portal server: the coordinator is recognised', srv.meRow.role === 'coordinator', srv.meRow.role);
+        { const st = portalLoad(), was = st.flags, mkS = Object.keys(st.months).find(k => portalMonth(k).status), day = mkS && daysOfMonth(mkS)[3], f1 = mkS && firstOf(mkS), d2 = mkS && daysOfMonth(mkS)[4];
+          if(!mkS) check('(info) coordinator notes: no month with a schedule on the test server', true, ''); else { portalUi.month = mkS; portalUi.tab = 'schedule'; showPortal('schedule'); await sleep(150);
+          st.flags = (was || []).concat([['composition', day], ['min', day], ['pair', day], ['service_absent', day], ['service', day], ['service', d2], ['service', day]].map(([kind, d], i) => ({ id:'fake' + i, month:f1, day:d, kind, text:'בדיקה ' + kind, staff_id:null, resolved:false })));
+          srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(50);
+          const txt = (document.querySelector('#portal-body .pissues') || {}).textContent || '';
+          check('coordinator notes: composition, personal minimums, the day colleague and a service girl\'s day off are not shown; the service days are one line', !/בדיקה (composition|min|pair|service_absent)/.test(txt) && (txt.match(/פחות משתי בנות שירות/g) || []).length === 1 && txt.includes('ב-2 ימים') && !/הודעות על בנות שירות/.test(document.getElementById('portal-body').textContent), txt.slice(0, 160));
+          check('coordinator notes: the explanations are folded away in one place', !!document.querySelector('#portal-body details.cs-help') && !document.querySelector('#portal-body details.cs-help').open && !/לחיצה על משמרת בלוח/.test([...document.querySelectorAll('#portal-body > .pnote')].map(e => e.textContent).join(' ')), 'not folded');
+          st.flags = was; srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(50); } }
         const priv2 = await sbPersonal.from('staff_private').select('staff_id');
         check('portal server: the coordinator sees the private staff data', !priv2.error && priv2.data.length >= 20, priv2.error ? priv2.error.message : priv2.data.length);
         portalUi.persona = srv.me; portalUi.tab = 'submissions'; portalUi.smonth = next; showPortal('submissions'); await sleep(100);

@@ -107,12 +107,13 @@ function srvRenderCoordSchedule(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad(), mk = portalUi.month || (portalUi.month = srvDefaultCoordMonth()), m = portalMonth(mk), ctx = portalCtx(mk);
   const flags = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk), has = !!m.status;
-  const needLook = flags.filter(f => !['service_absent', 'service'].includes(f.kind)), info = flags.filter(f => ['service_absent', 'service'].includes(f.kind));
+  const needLook = flags.filter(f => !SRV_FLAG_HIDDEN.includes(f.kind) && f.kind !== 'service');          // (what Guy took off the screen: the engine still writes them)
+  const svcDays = [...new Set(flags.filter(f => f.kind === 'service' && f.day).map(f => f.day))].sort();          // (the days with fewer than two service girls: one line)
+  const svcLine = svcDays.length ? `<div class="pflag"><span><b>בנות שירות</b> · ב-${svcDays.length} ימים יש פחות משתי בנות שירות: ${svcDays.map(d => d.slice(8, 10) + '/' + d.slice(5, 7)).join(', ')}. כללי המדריכים שונו בהתאם.</span></div>` : '';
   const people = id => (st.instructors.find(p => p.id === id) || {}).first || '';
-  const odAlerts = m.published ? srvOdAlerts(mk) : [], lookCount = needLook.length + odAlerts.length;
+  const odAlerts = m.published ? srvOdAlerts(mk) : [], lookCount = needLook.length + odAlerts.length + (svcLine ? 1 : 0);
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
-    ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. כשההגשה נסגרת, לוחצים על "צור סידור אוטומטי" והמערכת בונה אותו לפי ההעדפות והחוקים. מכאן אפשר לערוך אותו ידנית.</div>'}
     ${srvBuildBoxHtml(mk)}
     ${has ? `<div class="pactions">
       <button type="button" class="btn" id="cs-publish"${m.published ? ' disabled' : ''}>${m.published ? 'הסידור פורסם' : 'פרסום הסידור'}</button>
@@ -120,13 +121,12 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
     </div>
-    ${m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>'}
-    ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
-    ${info.length ? `<details class="pissues"><summary>${info.length} הודעות על בנות שירות</summary>${info.map(f => `<div class="pflag"><span>${pEsc(f.text)}</span></div>`).join('')}</details>` : ''}
+    ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}${svcLine}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
-    <div class="pnote cs-note-row"><span>לחיצה על משמרת בלוח פותחת עריכה.</span><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}`;
+    <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
+    ${srvHelpFoldHtml(m, has)}`;
   wireMonthNav(body);
   srvBuildWire(body, mk);
   if(!has) return;
@@ -171,6 +171,13 @@ function srvRenderCoordSchedule(body){
   document.getElementById('cs-print').addEventListener('click', () => printSchedule(ctx, m.assignments));
 }
 
+// what Guy took off the coordinator's screen (2026-10-23): composition, personal minimums, the day colleague, a service girl's day off
+const SRV_FLAG_HIDDEN = ['composition', 'min', 'pair', 'service_absent'];
+// the fixed explanations, folded away in one place
+const srvHelpFoldHtml = (m, has) => `<details class="pfold cs-help"><summary><span>ℹ️ הסברים</span></summary><div class="pfold-body">
+    ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. כשההגשה נסגרת, לוחצים על "צור סידור אוטומטי" והמערכת בונה אותו לפי ההעדפות והחוקים. מכאן אפשר לערוך אותו ידנית.</div>'}
+    ${has ? (m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>') : ''}
+    ${has ? '<div class="pnote">לחיצה על משמרת בלוח פותחת עריכה.</div>' : ''}</div></details>`;
 // ---- "צור סידור אוטומטי": the schedule is built only when the coordinator asks, after the submission closed (the hourly job builds it,
 // within an hour; a published month is never built again). (scheduling-v33.sql; the engine's monthly build is off unless sched_settings.auto_build)
 const srvBuildReqOf = mk => (portalLoad().buildReqs || []).find(r => r.month && r.month.slice(0, 7) === mk);

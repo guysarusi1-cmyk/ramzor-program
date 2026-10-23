@@ -25,7 +25,6 @@ function srvRenderSubmissions(body){
   const away = people.map(p => { const pr = m.prefs[p.id] || {}; const fx = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day)); return { p, fx }; }).filter(x => x.fx.length);
   body.innerHTML = `
     ${monthNavHtml(mk)}
-    <div class="pnote">ההגשה נסגרת ב-24 בחודש הקודם בשעה 22:30. עד ה-23 נשלחת אלייך רשימה של מי שעוד לא הגיש.</div>
     <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
     ${[['sdone', 'הגישו', done.map(subRow).join('') || '<div class="pnote">אין.</div>', done.length], ['smiss', 'לא הגישו', missing.map(subRow).join('') || '<div class="pnote">אין.</div>', missing.length], ['sabs', 'מי נעדר החודש', (away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'), away.length]].map(([key, title, inner, count]) => `<details class="pfold" data-fold="${key}"${openFold(key) ? ' open' : ''}>
       <summary><span>${title}</span><span class="pcount">${count}</span></summary>
@@ -133,7 +132,6 @@ function srvRenderCoordSettings(body){
       const priv = st.priv || {};
       const instr = st.instructors.filter(p => p.role === 'instructor').sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
       const html = `
-      <div class="pnote">כאן מזינים כתובת מייל לכל אחד ויוצרים לו התחברות. סדר המדריכים הוא סדר העדיפות בחלוקת המשמרות מעבר למינימום (למעלה = עדיפות גבוהה). המדריכים לא רואים אותו.</div>
       ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">

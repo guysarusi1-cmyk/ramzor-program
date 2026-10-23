@@ -9,8 +9,10 @@
   .star-card .avatar-initials{ width:42px; height:42px; font-size:15px; border:2px solid rgba(255,255,255,.6); box-shadow:0 2px 6px rgba(0,0,0,.35); flex-shrink:0; }
   .star-card-name{ font-family:'Rubik'; font-weight:700; font-size:11.5px; color:#fff; margin:6px 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
   .star-card-dots{ display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
-  .star-dot{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.3); border:1px solid rgba(255,255,255,.55); }
-  .star-dot.filled{ background:radial-gradient(circle at 35% 30%, #ffe9ad, var(--gold)); border-color:var(--gold); box-shadow:0 0 4px 1px rgba(232,185,74,.6); }
+  /* each star of the star programme is a star, not a dot (Guy, 2026-10-23): a five-pointed shape cut out of the square */
+  .star-dot{ width:13px; height:13px; justify-self:center; background:rgba(255,255,255,.32); clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .star-dot.filled{ background:radial-gradient(circle at 50% 45%, #fff3c4 0%, #ffe08a 35%, var(--gold) 75%); }
+  .star-card-dots:has(.star-dot.filled){ filter:drop-shadow(0 0 3px rgba(232,185,74,.55)); }          /* (a glow: a clipped shape cannot carry its own shadow) */
   @keyframes star-dot-pulse{
     0% { transform:scale(1); box-shadow:0 0 4px 1px rgba(232,185,74,.6); }
     40% { transform:scale(2.4); box-shadow:0 0 16px 7px rgba(255,233,173,.95); }
