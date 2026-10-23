@@ -1480,8 +1480,11 @@
         else check('portal server: the weekends marked "רק אחד מאלה" are kept on the server', JSON.stringify(back.pick.slice().sort()) === JSON.stringify([fris[0], fris[2]].sort()), JSON.stringify(back.pick));
         portalUi.persona = srv.me; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
         const subAt = async () => { const r = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return r.data && r.data.length ? r.data[0].submitted_at : null; };
-        const sub0 = await subAt();
-        document.getElementById('prefs-submit').click();
+        const sub0 = await subAt(), hadUnmarked = prefUnmarkedKeys(next, srvPrefsOf(portalMonth(next), srv.me)).length;
+        document.getElementById('prefs-submit').click(); await sleep(200);
+        { const ask = document.querySelector('.psheet [data-um="can"]');
+          check('portal server: handing in with unmarked shifts asks how to treat them first', !!ask === hadUnmarked > 0, String(hadUnmarked));
+          if(ask) ask.click(); }          // ("יכול" for the rest; everything is cleared again below)
         let sub1 = null; for(let i = 0; i < 40; i++){ await sleep(150); sub1 = await subAt(); if(sub1 && (!sub0 || sub1 > sub0)) break; }
         check('portal server: submitting the preferences is recorded on the server (a new submission time)', !!sub1 && (!sub0 || sub1 > sub0), JSON.stringify([sub0, sub1]));
         // without answering the consents the submission is refused
@@ -2293,6 +2296,13 @@
           const vals = Object.entries(fake.slots);
           check('settings: with "הכל כן" a new month starts all "yes" (the fixed "no" ones stay "no", a day away stays away), and only once', filled && !again && vals.length > 40 && vals.every(([k, v]) => v === 'yes' && !k.startsWith(away) && !k.endsWith('|m')), vals.length + ' / ' + filled + ' / ' + again);
           srv.prefStart = wasPs; portalSave = wasSave; try { localStorage.removeItem(`ramzor-prefstart-chk-${mk0}`); } catch(e){} }
+        { const mk0 = '2099-04', ds = daysOfMonth(mk0), fake = { slots:{ [`${ds[0]}|m`]:'yes' }, absent:[ds[1]], fixed:[{ day:ds[2], reason:'vacation' }], hours:{} };
+          const ks = prefUnmarkedKeys(mk0, fake);
+          check('unmarked on hand-in: the unmarked shifts are counted (not the marked, not the days away)', ks.length > 0 && !ks.includes(`${ds[0]}|m`) && !ks.some(k => k.startsWith(ds[1]) || k.startsWith(ds[2])) && ks.includes(`${ds[0]}|e`), ks.length);
+          const ask = prefAskUnmarked(ks.length); await sleep(80); const sh = document.querySelector('.psheet .unmarked-choices');
+          check('unmarked on hand-in: a sheet asks how to treat them, with three choices (can / no / back to marking)', !!sh && sh.querySelectorAll('[data-um]').length === 3 && /יכול/.test(sh.textContent) && /חזרה לסימון/.test(sh.textContent), sh ? sh.textContent : 'no sheet');
+          if(sh) sh.querySelector('[data-um="back"]').click();
+          check('unmarked on hand-in: "חזרה לסימון" closes it and hands in nothing', (await ask) === 'back' && !document.querySelector('.psheet .unmarked-choices'), ''); }
         { const mk = prefsMonthNow(), wasSave = portalSave, pr = srvPrefsOf(portalMonth(mk), srv.me), saved = JSON.stringify(pr.slots);
           if(srvPrefsOpen(mk)){
             portalSave = () => {};

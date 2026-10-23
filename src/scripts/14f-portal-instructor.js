@@ -117,6 +117,24 @@ function prefStartApplyNow(lv){
   if(n) portalSave();
   return n;
 }
+// shifts still unmarked when handing in (Guy, 2026-10-24): the person is asked how to treat them — "יכול", "לא", or back to marking
+function prefUnmarkedKeys(mk, prefs){
+  const ks = [];
+  daysOfMonth(mk).forEach(date => {
+    if(prefs.absent.includes(date) || (prefs.fixed || []).some(f => f.day === date)) return;
+    prefShiftsFor(date).forEach(s => { const k = `${date}|${s.id}`; if(!prefs.slots[k] && !prefNoNight(k) && !prefInsideLong(prefs, k)) ks.push(k); });
+  });
+  return ks;
+}
+function prefAskUnmarked(n){
+  return new Promise(resolve => {
+    let done = false; const end = v => { if(done) return; done = true; sh.close(); resolve(v); };
+    const sh = portalSheet(`<h2>${tx('unmarked_title', n)}</h2><div class="pnote">${tx('unmarked_q')}</div>
+      <div class="unmarked-choices"><button type="button" class="btn" data-um="can">${tx('unmarked_can')}</button><button type="button" class="btn ghost" data-um="no">${tx('unmarked_no')}</button><button type="button" class="btn ghost" data-um="back">${tx('unmarked_back')}</button></div>`);
+    sh.querySelectorAll('[data-um]').forEach(b => b.addEventListener('click', () => end(b.dataset.um)));
+    sh.addEventListener('click', e => { if(e.target === sh) end('back'); });
+  });
+}
 function renderInstructorPrefs(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad();
@@ -256,6 +274,12 @@ function renderInstructorPrefs(body){
     if(locked) return;
     if(portalServerOn){
       if(cons.extend === null || cons.pull === null){ toast(tx('consent_needed')); const box = body.querySelector('.pconsents'); if(box) box.scrollIntoView({ block:'center' }); return; }
+      const um = prefUnmarkedKeys(mk, prefs);
+      if(um.length){
+        const how = await prefAskUnmarked(um.length);
+        if(how === 'back'){ const first = body.querySelector('.pshift.lv-neutral'); if(first) first.scrollIntoView({ block:'center' }); return; }
+        um.forEach(k => { prefs.slots[k] = how === 'can' ? 'avoid' : 'no'; }); portalSave(); renderInstructorPrefs(body);          // ("avoid" is the "יכול" of the screen)
+      }
       try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim(), m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
       if(neutral > 0) toast(tx('submit_neutral', neutral), 8000); else toast(tx('submit_ok'));          // (the "not complete yet" message stays long enough to be read)
       renderInstructorPrefs(body); return;
