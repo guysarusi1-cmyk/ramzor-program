@@ -1578,6 +1578,9 @@
   .adm-act-coord{ width:100%; margin:0 0 12px; }
   .cs-count-table td.cs-count-w{ font-weight:700; }
   .pshift.in-long{ opacity:.55; border-style:dashed; cursor:not-allowed; font-size:11px; }          /* inside a chosen long weekend: not chosen one by one */
+  /* the preferences handed in for this month, to look at (14f-portal-instructor.js) */
+  .prefs-past-btn{ display:block; margin:0 auto 10px; }
+  .pprefs-past{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 10px; padding:8px 12px; border-radius:12px; background:rgba(90,160,255,.14); border:1px solid rgba(90,160,255,.5); font-weight:700; }
 
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
@@ -5715,15 +5718,10 @@ function showAppHome(){
           <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
           <span class="home-card-sub">משמרות, העדפות והודעות</span>
         </button>`}
-        ${typeof therapyAvailable === 'function' && therapyAvailable() && canTherapistPortal() ? `<button type="button" class="home-card" id="apphome-therapist">
-          <span class="apphome-emoji" aria-hidden="true">🩺</span>
-          <span class="home-card-title">פורטל איש הטיפול</span>
-          <span class="home-card-sub">מה מחכה לך, התוכניות, התצפיות והמעקב</span>
-        </button>` : ''}
-        ${typeof therapyAvailable === 'function' && therapyAvailable() && canStaffPortal() ? `<button type="button" class="home-card" id="apphome-therapy">
+        ${typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
           <span class="apphome-emoji" aria-hidden="true">🌱</span>
           <span class="home-card-title">פורטל הטיפול</span>
-          <span class="home-card-sub">מה עושים עם כל ילד, וממה להימנע</span>
+          <span class="home-card-sub">${canTherapistPortal() ? 'מה מחכה לך, התוכניות, התצפיות והמעקב' : 'מה עושים עם כל ילד, וממה להימנע'}</span>
         </button>` : ''}
         ${portalServerOn && (portalMe() || {}).admin && (portalMe() || {}).role !== 'coordinator' ? `<button type="button" class="home-card" id="apphome-manage">
           <span class="apphome-emoji" aria-hidden="true">🛠️</span>
@@ -5735,8 +5733,7 @@ function showAppHome(){
       ${portalServerOn || sbPersonal ? '' : '<div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>'}
     </div>`;
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
-  { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal('staff')); }          // (Mercury: the two therapy portals, 14w-therapy-portal.js)
-  { const tt = document.getElementById('apphome-therapist'); if(tt) tt.addEventListener('click', () => showTherapyPortal('therapist')); }
+  { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
   const mg = document.getElementById('apphome-manage'); if(mg) mg.addEventListener('click', () => { portalUi.manager = true; srvOpenPortal(); });
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
@@ -5787,11 +5784,11 @@ function showPortal(tab){
   }
   document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
-  { const th = document.getElementById('portal-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal('staff')); }          // (service girls and teachers: their way to the therapy portal)
+  { const th = document.getElementById('portal-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (service girls and teachers: their way to the therapy portal)
   const prob = document.getElementById('portal-problem'); if(prob) prob.addEventListener('click', openProblemReport);
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
   if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
-  view.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.ptab; showPortal(); }));
+  view.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.ptab; portalUi.prefsPast = false; showPortal(); }));
   portalRenderTab();
 }
 function portalRenderTab(){
@@ -5811,6 +5808,9 @@ function portalRefresh(){ portalRenderTab(); }
 function monthNavHtml(mk, extra){
   return `<div class="pmonth"><button type="button" data-pmonth="-1" aria-label="חודש קודם"><bdi dir="ltr">›</bdi></button><b>${monthLabel(mk)}</b><button type="button" data-pmonth="1" aria-label="חודש הבא"><bdi dir="ltr">‹</bdi></button>${extra || ''}</div>`;          // (the arrows are fixed left-to-right, so that no phone mirrors them: the right one points right, the left one points left)
 }
+// the preferences are handed in for next month only (Guy, 2026-10-22): no other month to move to; on the 1st of a month it moves on by itself
+const prefsMonthNow = () => addMonths(monthKeyOf(typeof srvToday === 'function' && portalServerOn ? srvToday() : isoDate(new Date())), 1);
+const monthFixedHtml = mk => `<div class="pmonth pmonth-fixed"><b>${monthLabel(mk)}</b></div>`;
 function wireMonthNav(root, key){
   key = key || 'month';
   root.querySelectorAll('[data-pmonth]').forEach(b => b.addEventListener('click', () => { portalUi[key] = addMonths(portalUi[key], Number(b.dataset.pmonth)); portalRefresh(); }));
@@ -6053,7 +6053,7 @@ function prefStartFill(mk, id, prefs, days){
 function renderInstructorPrefs(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const me = portalMe(), st = portalLoad();
-  if(!portalUi.pmonth) portalUi.pmonth = addMonths(monthKeyOf(isoDate(new Date())), 1);
+  if(portalServerOn) portalUi.pmonth = portalUi.prefsPast ? addMonths(prefsMonthNow(), -1) : prefsMonthNow(); else if(!portalUi.pmonth) portalUi.pmonth = addMonths(monthKeyOf(isoDate(new Date())), 1);          // (on the server: next month only; or, to look, this month)
   const mk = portalUi.pmonth, m = portalMonth(mk), prefs = portalServerOn ? srvPrefsOf(m, me.id) : portalPrefsOf(mk, me.id), submitted = !!m.submitted[me.id];
   const days = daysOfMonth(mk), lead = dowOf(days[0]);
   const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
@@ -6097,8 +6097,12 @@ function renderInstructorPrefs(body){
   }
   const neutralHint = portalServerOn && !locked && neutral > 0 ? `<div class="pnote pnote-soft" id="neutral-note">${tx('neutral_note', neutral)}</div>` : '';
   const goalBtn = (v, label, sub) => `<button type="button" class="pgoal-opt${(goal || '') === (v || '') ? ' on' : ''}" data-goal="${v || ''}"${locked ? ' disabled' : ''}><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const past = portalServerOn && !!portalUi.prefsPast;
   body.innerHTML = `
-    ${monthNavHtml(mk)}
+    ${portalServerOn ? monthFixedHtml(mk) : monthNavHtml(mk)}
+    ${past ? `<div class="pprefs-past"><span>👁️ ההעדפות שהגשת ל${pEsc(monthLabel(mk))} · לצפייה בלבד</span><button type="button" class="btn small" id="prefs-past-end">חזרה להעדפות של ${pEsc(monthLabel(addMonths(mk, 1)))}</button></div>`
+      : portalServerOn ? `<button type="button" class="btn ghost small prefs-past-btn" id="prefs-past">👁️ ההעדפות שהגשת ל${pEsc(monthLabel(addMonths(mk, -1)))}</button>` : ''}
+    ${portalServerOn && !past && !locked && srvPrefsDeadlinePassed(mk) ? `<div class="pnote">${tx('late')}</div>` : ''}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
     ${locked ? `<div class="pnote">${tx('locked')}</div>` : ''}
     ${fixedList.length ? `<div class="pnote">הימים שאושרו לך או שהרכזת סימנה: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
@@ -6126,6 +6130,9 @@ function renderInstructorPrefs(body){
     <div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
     <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
+  { const pp = body.querySelector('#prefs-past'), pe = body.querySelector('#prefs-past-end');
+    if(pp) pp.addEventListener('click', () => { portalUi.prefsPast = true; renderInstructorPrefs(body); });
+    if(pe) pe.addEventListener('click', () => { portalUi.prefsPast = false; renderInstructorPrefs(body); }); }
   body.querySelectorAll('[data-plevel]').forEach(b => b.addEventListener('click', () => { portalUi.level = b.dataset.plevel; renderInstructorPrefs(body); }));
   body.querySelectorAll('[data-goal]').forEach(b => b.addEventListener('click', () => {
     if(locked) return;
@@ -6585,11 +6592,24 @@ function israelNow(){
   return { date:`${o.year}-${o.month}-${o.day}`, minutes:Number(o.hour) * 60 + Number(o.minute) };
 }
 // preferences for a month are open from the 1st of the previous month until the 24th of it at 22:30 (same rule as the database)
+// From scheduling-v34.sql the month stays open after the 24th until the coordinator presses "צור סידור אוטומטי": what the database says wins (srv.prefsOpenSrv)
 function srvPrefsOpen(mk){
   if(srvEditingFor()) return true;          // (the admin fills preferences for somebody: also after the closing time, e.g. from a paper)
+  if(srv.prefsOpenSrv && mk in srv.prefsOpenSrv) return srv.prefsOpenSrv[mk];
   const n = israelNow(), prev = addMonths(mk, -1), end = prev + '-24';
   if(n.date < prev + '-01' || n.date > end) return false;
   return !(n.date === end && n.minutes >= 22 * 60 + 30);
+}
+
+// the 24th at 22:30 of the month before: the date the staff are told; from then on the coordinator may press "צור סידור אוטומטי"
+function srvPrefsDeadlinePassed(mk){
+  const n = israelNow(), end = addMonths(mk, -1) + '-24';
+  return n.date > end || (n.date === end && n.minutes >= 22 * 60 + 30);
+}
+async function srvLoadPrefsOpen(){
+  srv.prefsOpenSrv = srv.prefsOpenSrv || {};
+  const nm = prefsMonthNow();
+  try { const r = await sbPersonal.rpc('prefs_open', { m:firstOf(nm) }); if(!r.error && typeof r.data === 'boolean') srv.prefsOpenSrv[nm] = r.data; } catch(e){}
 }
 
 // ---- reading everything the person is allowed to see
@@ -6659,6 +6679,7 @@ async function srvLoad(){
   st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
   if(!fresh()) return false;
   if(old){ Object.keys(old).forEach(k => { if(!(k in st)) st[k] = old[k]; }); portalState = st; }          // (what only the coordinator's load adds stays until it is read again, just below)
+  await srvLoadPrefsOpen();
   srv.saved = {};
   months.forEach(mk => { srv.saved[mk] = srvSnapshot(mk); });
   if(srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)) await srvLoadCoord();          // (what only the coordinator may read: personal flags, open items, vacation requests)
@@ -6756,6 +6777,8 @@ async function srvFlush(){
     const unseen = portalState.notices.filter(n => n.seen && n.fromServer && !n.sent);
     for(const n of unseen){ const r = await sbPersonal.from('notices').update({ seen:true }).eq('id', n.id); if(!r.error) n.sent = true; }
   } catch(e){
+    const nm = prefsMonthNow(), wasOpen = srvPrefsOpen(nm); await srvLoadPrefsOpen();
+    if(wasOpen && !srvPrefsOpen(nm)){ srv.failed = false; srv.busy = false; toast('ההגשה נסגרה: הרכזת כבר התחילה לבנות את הסידור', 6000); portalRefresh(); return; }          // (closed while the screen was open)
     srv.failed = true; toast('לא הצלחנו לשמור כרגע, ננסה שוב אוטומטית בעוד רגע');
     setTimeout(srvQueueSave, 5000);
   }
@@ -7113,7 +7136,7 @@ async function srvRenderVacation(body){
 const SVC_OPTS = [['early', '07:00–15:00'], ['late', '14:00–22:00'], ['both', 'שתיהן'], ['none', 'לא זמינה']];
 const svcOptsFor = d => dowOf(d) === 0 ? [['late', '11:00–19:00'], ['none', 'לא זמינה']] : dowOf(d) === 4 ? SVC_OPTS.filter(o => o[0] === 'early' || o[0] === 'none') : SVC_OPTS;
 async function srvRenderAvailability(body){
-  const mk = portalUi.pmonth || (portalUi.pmonth = addMonths(monthKeyOf(srvToday()), 1)), m = portalMonth(mk), locked = !srvPrefsOpen(mk);
+  const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
   body.innerHTML = '<div class="pnote">רק רגע...</div>';
   const days = daysOfMonth(mk).filter(d => dowOf(d) <= 4);
   const r = await sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srv.me).gte('day', days[0]).lte('day', days[days.length - 1]);
@@ -7122,7 +7145,7 @@ async function srvRenderAvailability(body){
   const fixed = srvPrefsOf(m, srv.me).fixed.map(f => f.day);
   const submitted = !!m.submitted[srv.me], left = days.filter(d => !have[d] && !fixed.includes(d)).length;
   body.innerHTML = `
-    ${monthNavHtml(mk)}
+    ${monthFixedHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'הזמינות שלכן אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.' : 'נשמח לדעת מתי אתן זמינות, ככה נוכל לסדר לכן את החודש.'} · אפשר להגיש עד 24/${addMonths(mk, -1).slice(5)} בשעה 22:30</div>
     ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע. לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.</div>' : ''}
     <div class="pnote">לכל יום נשמח שתבחרו מתי נוח לכן. ביום ראשון 11:00–19:00; בשני עד רביעי בוקר (07:00–15:00), צהריים (14:00–22:00) או שתיהן; ביום חמישי רק בוקר (07:00–15:00).</div>
@@ -7144,12 +7167,12 @@ async function srvRenderAvailability(body){
 
 // ---------------------------------------------------------------- teachers: the fixed hours, confirmed with one press
 async function srvRenderTeacherHours(body){
-  const mk = portalUi.pmonth || (portalUi.pmonth = addMonths(monthKeyOf(srvToday()), 1)), m = portalMonth(mk), locked = !srvPrefsOpen(mk);
+  const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
   const fx = await sbPersonal.rpc('my_fixed_hours');
   if(!body.isConnected) return;
   const spans = fx.data || {}, submitted = !!m.submitted[srv.me];
   body.innerHTML = `
-    ${monthNavHtml(mk)}
+    ${monthFixedHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'השעות שלכן אושרו, תודה!' : 'נשמח שתאשרו את השעות הקבועות שלכן.'} · אם לא תספיקו עד ה-24 בשעה 22:30, לא נורא: השעות הקבועות יישלחו בשבילכן אוטומטית.</div>
     <div class="pnote">הימים והשעות הקבועים שלכן:</div>
     <div class="psvc">${[0, 1, 2, 3, 4, 5].filter(d => spans[String(d)]).map(d => `<div class="psvc-row"><b>${DOW_NAMES[d]}</b><span>${rangeHtml(spans[String(d)][0], spans[String(d)][1])}</span></div>`).join('') || '<div class="pnote">עוד לא הוגדרו שעות קבועות. נשמח אם תפנו לרכזת.</div>'}</div>
@@ -7402,23 +7425,24 @@ function srvBuildBoxHtml(mk){
   const m = portalMonth(mk); if(m.published) return '';
   const req = srvBuildReqOf(mk), waiting = req && !req.done_at, failed = req && req.done_at && /^נכשל/.test(req.result || '');
   if(waiting) return `<div class="cs-build waiting" id="cs-build"><span aria-hidden="true">⏳</span><div><b>הסידור בבנייה</b><small>יהיה מוכן תוך שעה לכל היותר, ותקבלי הודעה. אפשר לסגור את הפורטל בינתיים.</small></div></div>`;
-  if(srvPrefsOpen(mk)){
+  if(!srvPrefsDeadlinePassed(mk)){
     const end = addMonths(mk, -1) + '-24';
-    return `<div class="cs-build" id="cs-build"><button type="button" class="btn" disabled>צור סידור אוטומטי</button><small>אפשר אחרי שההגשה נסגרת: ${pEsc(dayLabel(end))} בשעה 22:30.</small></div>`;
+    return `<div class="cs-build" id="cs-build"><button type="button" class="btn" disabled>צור סידור אוטומטי</button><small>אפשר מ-${pEsc(dayLabel(end))} בשעה 22:30. הלחיצה סוגרת את ההגשה לכולם.</small></div>`;
   }
   const missing = portalLoad().instructors.filter(p => p.active && p.role === 'instructor' && !m.submitted[p.id]).length;
   return `<div class="cs-build" id="cs-build"><button type="button" class="btn${m.status ? ' ghost' : ''}" id="cs-build-go">${m.status ? 'בנייה מחדש של הסידור' : 'צור סידור אוטומטי'}</button>
-    <small>${failed ? `הבנייה הקודמת לא הצליחה (${pEsc(req.result.replace(/^נכשל:\s*/, '').slice(0, 80))}). אפשר לנסות שוב.` : m.status ? 'בונה סידור חדש במקום הנוכחי, כולל השינויים הידניים שנעשו בו.' : `לוקח עד שעה.${missing ? ` ${missing} מדריכים לא הגישו העדפות.` : ''}`}</small></div>`;
+    <small>${failed ? `הבנייה הקודמת לא הצליחה (${pEsc(req.result.replace(/^נכשל:\s*/, '').slice(0, 80))}). אפשר לנסות שוב.` : m.status ? 'בונה סידור חדש במקום הנוכחי, כולל השינויים הידניים שנעשו בו.' : `הלחיצה סוגרת את ההגשה לכולם. לוקח עד שעה.${missing ? ` ${missing} מדריכים עוד לא הגישו העדפות.` : ''}`}</small></div>`;
 }
 function srvBuildWire(body, mk){
   const go = body.querySelector('#cs-build-go'); if(!go) return;
   go.addEventListener('click', async () => {
     const m = portalMonth(mk);
     if(m.status && !(await confirmSheet({ title:`לבנות מחדש את ${monthLabel(mk)}?`, text:'הסידור הנוכחי יוחלף בסידור חדש, כולל שינויים ידניים שנעשו בו.', okLabel:'כן, לבנות מחדש', cancelLabel:'חזרה', danger:true }))) return;
+    if(!m.status && !(await confirmSheet({ title:`לבנות את הסידור של ${monthLabel(mk)}?`, text:'ההגשה תיסגר לכולם עכשיו: מי שעוד לא הגיש/ה לא יוכל/תוכל להגיש. הסידור יהיה מוכן תוך שעה.', okLabel:'כן, לבנות', cancelLabel:'חזרה' }))) return;
     go.disabled = true;
     const r = await sbPersonal.from('sched_requests').insert({ month:firstOf(mk), requested_by:srv.me }).select('id,month,at,done_at,result').single();
     if(r.error){ go.disabled = false; toast('הבקשה לא נשלחה. אפשר לנסות שוב בעוד רגע'); return; }
-    const st = portalLoad(); st.buildReqs = [r.data].concat(st.buildReqs || []);
+    const st = portalLoad(); st.buildReqs = [r.data].concat(st.buildReqs || []); if(srv.prefsOpenSrv) srv.prefsOpenSrv[mk] = false;
     toast('הסידור בבנייה. יהיה מוכן תוך שעה לכל היותר, ותקבלי הודעה.', 5000); srvRenderCoordSchedule(body);
   });
 }
@@ -8129,7 +8153,8 @@ const VOICES = {
   // ---- the preferences screen
   st_unsub:   { warm:() => 'נשמח לקבל את ההעדפות שלך. זה עוזר לנו לבנות סידור שמתאים לך.', light:() => 'הסידור לא יכתוב את עצמו (עדיין). נשמח להעדפות שלך!', brief:() => 'נא להגיש העדפות.' },
   st_sub:     { warm:() => 'ההעדפות שלך אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.', light:() => 'קיבלנו, ושמנו במקום בטוח. אפשר לעדכן עד סגירת ההגשה.', brief:() => 'ההעדפות הוגשו. אפשר לעדכן עד הסגירה.' },
-  locked:     { warm:() => 'ההגשה לחודש הזה סגורה כרגע (היא נפתחת ב-1 בחודש הקודם ונסגרת ב-24 בו בשעה 22:30). לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.', light:() => 'ההגשה לחודש הזה סגורה כרגע (נפתחת ב-1 בחודש הקודם ונסגרת ב-24 ב-22:30). לשינויים הרכזת היא הכתובת, והיא מבטיחה לא לנשוך.', brief:() => 'ההגשה סגורה. לשינוי: הרכזת.' },
+  locked:     { warm:() => 'ההגשה לחודש הזה סגורה (הרכזת כבר בונה את הסידור). לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.', light:() => 'ההגשה לחודש הזה סגורה, הסידור כבר בבנייה. לשינויים הרכזת היא הכתובת, והיא מבטיחה לא לנשוך.', brief:() => 'ההגשה סגורה. לשינוי: הרכזת.' },
+  late:       { warm:() => 'מועד ההגשה (ה-24 ב-22:30) עבר, אבל עוד אפשר להגיש ולעדכן, עד שהרכזת מתחילה לבנות את הסידור.', light:() => 'איחרת קצת, אבל עוד לא מאוחר מדי: אפשר להגיש עד שהרכזת מתחילה לבנות את הסידור.', brief:() => 'המועד עבר. עוד אפשר להגיש עד שהסידור נבנה.' },
   submit_ok:  { warm:() => 'תודה! ההעדפות שלך הוגשו ✓', light:() => 'הוגש! שמנו על זה חותמת ✓', brief:() => 'הוגש ✓' },
   consent_needed:{ warm:() => 'נשמח אם תענו על שתי השאלות הקטנות לפני ההגשה. זה עוזר לנו לתכנן', light:() => 'עוד שתי שאלות קטנטנות ואנחנו שם. נשמח לתשובות לפני ההגשה', brief:() => 'יש לענות על שתי השאלות לפני ההגשה' },
   save_later: { warm:() => 'לא הצלחנו לשמור כרגע, ננסה שוב אוטומטית בעוד רגע', light:() => 'השמירה נתקעה לרגע. ננסה שוב לבד, בלי לקחת ללב', brief:() => 'השמירה נכשלה. ננסה שוב' },
@@ -9222,7 +9247,8 @@ const A = s => (s != null && AR[String(s).trim()] != null) ? AR[String(s).trim()
 const AR_VOICES = {
   st_unsub:() => 'يسعدنا أن نستلم تفضيلاتك. هذا يساعدنا على بناء جدول مناوبات يناسبك.',
   st_sub:() => 'تفضيلاتك وصلتنا، شكرًا! يمكن تعديلها حتى إغلاق التقديم.',
-  locked:() => 'التقديم لهذا الشهر مغلق الآن (يُفتح في 1 من الشهر السابق ويُغلق في 24 منه الساعة 22:30). لأي تغيير يمكن التوجه للمركّزة، ويسعدها أن تساعد.',
+  locked:() => 'التقديم لهذا الشهر مغلق (المركّزة تبني الجدول الآن). لأي تغيير يمكن التوجه للمركّزة، ويسعدها أن تساعد.',
+  late:() => 'موعد التقديم (24 الساعة 22:30) قد مضى، لكن لا يزال بالإمكان التقديم والتعديل حتى تبدأ المركّزة ببناء الجدول.',
   submit_ok:() => 'شكرًا! تم تقديم تفضيلاتك ✓',
   consent_needed:() => 'يسعدنا أن تجيبوا على السؤالين الصغيرين قبل التقديم. هذا يساعدنا في التخطيط',
   save_later:() => 'لم ننجح في الحفظ الآن، سنحاول مرة أخرى تلقائيًا بعد لحظة',
@@ -9401,6 +9427,9 @@ const AR_RX = [
   [/^מה עושים:$/, () => 'ماذا نفعل:'],
   [/^עוד אין תוכנית טיפולית ל(.+?)\. כשאיש\/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע\.$/, (m, n) => `لا توجد بعد خطة علاجية لـ${n}. عندما ينشرها المعالج ستظهر هنا: ما في التركيز، ماذا نفعل وممّا نمتنع.`],
   [/^שלום (.+)$/, (m, n) => `مرحبًا ${n}`],
+  [/^👁️ ההעדפות שהגשת ל(.+?) · לצפייה בלבד$/, (m, mo) => `👁️ التفضيلات التي قدّمتها لـ${arWords(mo)} · للمشاهدة فقط`],
+  [/^👁️ ההעדפות שהגשת ל(.+)$/, (m, mo) => `👁️ التفضيلات التي قدّمتها لـ${arWords(mo)}`],
+  [/^חזרה להעדפות של (.+)$/, (m, mo) => `العودة إلى تفضيلات ${arWords(mo)}`],
   [/^עוד (\d+) משמרות לסימון$/, (m, n) => `بقيت ${n} مناوبات للاختيار`],
   [/^נשארו (\d+) ימים לבחירה$/, (m, n) => `بقيت ${n} أيام للاختيار`],
   [/^נשארו (\d+) מקומות$/, (m, n) => `بقيت ${n} أماكن`],
@@ -9502,15 +9531,15 @@ async function srvSaveLang(lang){
   srv.lang = lang; try { localStorage.setItem('ramzor-portal-lang', lang); } catch(e){}
   try { const r = await sbPersonal.from('staff_settings').upsert({ staff_id:srv.me, lang }); return !r.error; } catch(e){ return false; }
 }
-// ---------- MERCURY: THE THERAPY PORTAL — two portals for two needs ----------
-// The therapist and the staff need different things, so the portal is two different portals:
-//  · "פורטל איש הטיפול" (🩺, the therapists and the admin): "מה דורש אותי" first (new observations, journeys waiting for an approval,
+// ---------- MERCURY: THE THERAPY PORTAL — one portal, what each one needs ----------
+// One card on the app home, "פורטל הטיפול" (Guy, 2026-10-22). The therapist and the staff need different things, so inside it each sees their own:
+//  · a therapist (and the admin): "מה דורש אותי" first (new observations, journeys waiting for an approval,
 //    strengths that rose in the temple, plans to review, children without a published plan), then "הילדים שלי" with the status of each,
 //    the library and the settings. A child opens as a workspace in tabs: the plan, the observations, the tracking, the journey, the temple.
-//  · "פורטל הטיפול" (🌱, the rest of the staff): phone-first. Every child's card shows what to avoid and what to do in focus without a
+//  · the rest of the staff: phone-first. Every child's card shows what to avoid and what to do in focus without a
 //    tap, an observation button on every card, "עודכן לאחרונה" on top, and "התצפיות שלי" with the therapist's answers.
-// Somebody with both roles gets both cards on the app home. The admin and the coordinator assign the responsible therapist of every
-// child (in the staff portal). The personal sign-in only. (scheduling-v31.sql, v32.sql; Mercury spec, decisions 1-6, 44-46)
+// Somebody with both roles (an instructor who is also a therapist, the admin) gets the therapist's tabs and the staff's two tabs too
+// ("כל הילדים", "התצפיות שלי"). The admin and the coordinator assign the responsible therapist of every child. The personal sign-in only. (scheduling-v31.sql, v32.sql; Mercury spec, decisions 1-6, 44-46)
 const thp = { loaded:false, ok:false, mode:'staff', mine:[], assign:{}, therapists:[], tab:null, guidance:{}, plans:{}, planets:[], library:[], v32:false,
   editing:null, wtab:null, unseen:{}, journeys:{}, risen:[], myObs:[], q:'' };
 const therapyAvailable = () => mercuryOn() && typeof portalServerOn !== 'undefined' && portalServerOn && !!srv.profile && 'therapist' in srv.profile;          // (my_profile carries "therapist" from v31)
@@ -9552,6 +9581,10 @@ async function thpLoad(){
   // what each portal needs on top: the therapist — what waits for them; the staff — their own observations
   thp.unseen = {}; thp.journeys = {}; thp.risen = []; thp.myObs = [];
   if(thp.v32) try {
+    if(canStaffPortal()){
+      const r = await sbPersonal.from('observations').select('id,child_id,text,audio_path,created_at,seen_at,reply,replied_at').eq('author', srv.me).order('created_at', { ascending:false }).limit(40);
+      thp.myObs = r.data || [];
+    }
     if(thp.mode === 'therapist'){
       const since = new Date(Date.now() - 14 * 864e5).toISOString();
       const [o, j, s] = await Promise.all([
@@ -9561,9 +9594,6 @@ async function thpLoad(){
       (o.data || []).forEach(r => { thp.unseen[r.child_id] = (thp.unseen[r.child_id] || 0) + 1; });
       (j.data || []).forEach(r => { thp.journeys[r.child_id] = r; });
       thp.risen = s.data || [];
-    } else {
-      const r = await sbPersonal.from('observations').select('id,child_id,text,audio_path,created_at,seen_at,reply,replied_at').eq('author', srv.me).order('created_at', { ascending:false }).limit(40);
-      thp.myObs = r.data || [];
     }
   } catch(e){}
   thp.loaded = true;
@@ -9574,8 +9604,10 @@ function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
     t.push(['todo', 'מה דורש אותי'], ['mine', 'הילדים שלי']);
+    if(canStaffPortal()){ t.push(['kids', 'כל הילדים']); if(thp.v32) t.push(['myobs', 'התצפיות שלי']); }          // (also on the staff: what the staff sees)
     if(thp.v32) t.push(['library', 'ספרייה']);
     if(thp.v32 && isTherapistMe()) t.push(['settings', 'הגדרות']);
+    if(canAssignTherapist()) t.push(['assign', 'שיוך אנשי טיפול']);
   } else {
     t.push(['kids', 'הילדים']);
     if(thp.v32) t.push(['myobs', 'התצפיות שלי']);
@@ -9583,10 +9615,9 @@ function thpTabs(){
   }
   return t;
 }
-// mode: 'therapist' (the 🩺 card) or 'staff' (the 🌱 card); a pure therapist has only the first, the staff only the second
-async function showTherapyPortal(mode){
-  thp.mode = mode === 'therapist' ? 'therapist' : 'staff';
-  if(!canTherapistPortal()) thp.mode = 'staff'; else if(!canStaffPortal()) thp.mode = 'therapist';
+// what the person sees inside: a therapist (or the admin) the therapist's tabs; everybody else the staff's
+async function showTherapyPortal(){
+  thp.mode = canTherapistPortal() ? 'therapist' : 'staff';
   portalActivateView('view-therapy');
   const view = document.getElementById('view-therapy');
   thp.tab = null; thp.editing = null; thp.wtab = null; thp.q = '';          // (every entry starts on the first tab of this portal)
@@ -9679,7 +9710,7 @@ function thpRender(){
   }
   const todoN = ther && thp.v32 ? thpTodo().length : 0;
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}" data-thmode="${thp.mode}">
-      <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">${ther ? 'פורטל איש הטיפול' : 'פורטל הטיפול'}</h1><span></span></div>
+      <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1><span></span></div>
       <div class="portal-hello">שלום ${pEsc(me.first || '')}</div>
       ${tabs.length > 1 ? `<nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-th-tab="${t[0]}" class="${t[0] === thp.tab ? 'active' : ''}">${t[1]}${t[0] === 'todo' && todoN ? ` <span class="pcount">${todoN}</span>` : ''}</button>`).join('')}</nav>` : ''}
       <div id="therapy-body">${inner}</div>
@@ -9687,7 +9718,7 @@ function thpRender(){
   view.querySelector('#therapy-home').addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); });
   view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thpRender(); }));
   const body = view.querySelector('#therapy-body');
-  const wireKids = box => box.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(ther && thp.v32 && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid, 'plan'); else thpOpenChild(b.dataset.thKid); }));
+  const wireKids = box => box.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(ther && thp.tab !== 'kids' && thp.v32 && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid, 'plan'); else thpOpenChild(b.dataset.thKid); }));          // (in "כל הילדים": the staff's view of the child)
   wireKids(body);
   body.querySelectorAll('[data-todo-kid]').forEach(b => b.addEventListener('click', () => { if(planCanEdit(b.dataset.todoKid)) planOpenEditor(b.dataset.todoKid, b.dataset.todoTab); else thpOpenChild(b.dataset.todoKid); }));
   const wireObs = box => box.querySelectorAll('[data-th-obs]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thObs)));
@@ -10340,12 +10371,12 @@ updateBottomNav();
       for(const [k, id] of [['child', 'kids-quick-pick-child'], ['moon', 'kids-quick-moon-panel'], ['intro', 'kids-quick-yellow-intro'], ['list', 'kids-quick-yellow-list']]) if(shown(id)) return 'kq:' + k;
       return 'kq:color';
     }
-    if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}`;
+    if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}${portalUi.prefsPast ? 'p' : ''}`;
     if(v.id === 'view-therapy' && typeof thp !== 'undefined') return `therapy:${thp.mode}|${thp.tab || ''}|${thp.editing || ''}|${thp.editing ? thp.wtab || '' : ''}`;
     return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control' })[v.id] || 'hub';
   }
   function snapshot(key){
-    if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona };
+    if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona, prefsPast:!!portalUi.prefsPast };
     if(key.startsWith('therapy:')) return { mode:thp.mode, tab:thp.tab, editing:thp.editing, wtab:thp.wtab };
     return null;
   }
@@ -10373,7 +10404,7 @@ updateBottomNav();
     if(key.startsWith('portal:') && snap){
       if(portalUi.editPrefs && !snap.editPrefs && typeof srvFlush === 'function'){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled for somebody is saved before leaving)
       const wasEditing = !!portalUi.editPrefs;
-      Object.assign(portalUi, { tab:snap.tab, viewAs:snap.viewAs, actAs:snap.actAs, editPrefs:snap.editPrefs, manager:snap.manager, persona:snap.persona });
+      Object.assign(portalUi, { tab:snap.tab, viewAs:snap.viewAs, actAs:snap.actAs, editPrefs:snap.editPrefs, manager:snap.manager, persona:snap.persona, prefsPast:!!snap.prefsPast });
       if(wasEditing !== !!snap.editPrefs && typeof srvResnap === 'function') srvResnap();
       return showPortal(snap.tab);
     }
