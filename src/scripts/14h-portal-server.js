@@ -36,6 +36,15 @@ function srvPrefsDeadlinePassed(mk){
   const n = israelNow(), end = addMonths(mk, -1) + '-24';
   return n.date > end || (n.date === end && n.minutes >= 22 * 60 + 30);
 }
+// Two windows of the same browser share one sign-in: signing in as somebody else in another window silently changed who this window is
+// (Guy saw "not allowed" in the coordinator's window after signing in as an instructor in a second one). Now this window notices and reloads.
+if(PORTAL_ENABLED) window.addEventListener('storage', e => {
+  if(e.key !== 'ramzor-personal-auth' || !srv.authUid) return;
+  let uid = null; try { const v = e.newValue && JSON.parse(e.newValue); uid = v && (v.user || (v.currentSession || {}).user || {}).id || null; } catch(err){}
+  if(uid === srv.authUid) return;          // (only the token was renewed)
+  srv.authUid = null; toast(uid ? 'נכנסת בחלון אחר עם משתמש אחר. הדף מתרענן כדי להמשיך עם המשתמש החדש' : 'יצאת מהמערכת בחלון אחר. הדף מתרענן', 4000);
+  setTimeout(() => location.reload(), 2500);
+});
 async function srvLoadPrefsOpen(){
   srv.prefsOpenSrv = srv.prefsOpenSrv || {};
   const nm = prefsMonthNow();
@@ -58,6 +67,7 @@ async function srvLoad(){
   const epoch = srv.epoch = (srv.epoch || 0) + 1, fresh = () => epoch === srv.epoch;
   const meId = (await sbPersonal.rpc('my_staff_id')).data;
   if(!meId) return false;
+  try { const { data:{ session } } = await sbPersonal.auth.getSession(); srv.authUid = session && session.user ? session.user.id : null; } catch(e){}          // (who this window signed in as: see the watcher below)
   const staff = await srvAll(() => sbPersonal.from('staff').select('id,display_name,kind,active,sort_order').order('sort_order').order('display_name'));
   const today = monthKeyOf(israelNow().date), months = [-1, 0, 1, 2].map(n => addMonths(today, n));
   const from = firstOf(months[0]), to = daysOfMonth(months[3]).slice(-1)[0];

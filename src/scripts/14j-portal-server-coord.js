@@ -125,7 +125,7 @@ function srvRenderCoordSchedule(body){
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
     <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   wireMonthNav(body);
   srvBuildWire(body, mk);

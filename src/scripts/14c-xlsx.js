@@ -96,9 +96,9 @@ function scheduleOthersOf(ctx){
 }
 // The export looks like the paper schedule the staff knows (Guy, 2026-10-24): a monthly calendar, the days of the week across (Sunday on the
 // right), a row per week; in every day the morning, the noon and the night, one line each. In a line the ahmash comes first, marked (אחמ"ש);
-// in the morning a teacher / kindergarten teacher comes first, marked; the service girls come last, marked; hours that are not the shift's
+// in the morning a teacher comes first, marked (מורה); the service girls come last (not marked: Guy); hours that are not the shift's
 // usual ones are in brackets ("עד 10", "מ-10"). The same in the Excel file and in the print / PDF.
-const CAL_ROLE = { teacher:'מורה', service:'בת שירות' };          // (a kindergarten teacher will be added when there is one, Guy 2026-10-24)
+const CAL_ROLE = { teacher:'מורה', service:'' };          // (a kindergarten teacher will be added when there is one, Guy 2026-10-24)
 function calHours(note, s){
   const m = String(note || '').match(/^(\d{1,2})[–-](\d{1,2})$/); if(!m) return note || '';
   const a = +m[1], b = +m[2], st = parseInt(s.start, 10), en = parseInt(s.end, 10);
@@ -110,13 +110,13 @@ function scheduleCalendarDays(ctx, assignments){
   return table.map(r => ({ date:r.date, lines:ctx.shiftTypes.map((s, i) => {
     const c = r.cells[i], oth = others[`${r.date}|${s.id}`] || [], items = [];
     const nm = (name, tag, note) => { const extra = [tag, note].filter(Boolean).join(', '); return extra ? `${name} (${extra})` : name; };
-    oth.filter(x => x.role === 'teacher').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.teacher, calHours(x.note, s)) }));
+    oth.filter(x => x.role === 'teacher').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.teacher, calHours(x.note, s)), kind:'teacher' }));
     if(c.slot){
       const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
-      lead.forEach(p => items.push({ text:nm(p.name, 'אחמ"ש', calHours(p.note, s)), ahm:true }));
-      rest.forEach(p => items.push({ text:nm(p.name, '', calHours(p.note, s)) }));
+      lead.forEach(p => items.push({ text:nm(p.name, 'אחמ"ש', calHours(p.note, s)), ahm:true, kind:'instructor' }));
+      rest.forEach(p => items.push({ text:nm(p.name, '', calHours(p.note, s)), kind:'instructor' }));
     }
-    oth.filter(x => x.role === 'service').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.service, calHours(x.note, s)) }));
+    oth.filter(x => x.role === 'service').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.service, calHours(x.note, s)), kind:'service' }));
     return { label:s.label, items, missing:c.slot ? c.missing : 0 };
   }).filter(l => l.items.length || l.missing) }));
 }
