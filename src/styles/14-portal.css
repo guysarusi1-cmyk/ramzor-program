@@ -139,7 +139,7 @@
   .lvbtn.lv-clear{ color:var(--muted); }
 
   /* coordinator: edit one shift, submissions, timetable, settings */
-  .pedit-list{ max-height:46vh; overflow:auto; margin:8px 0; }
+  .pedit-list{ margin:8px 0; }          /* (no scroll of its own inside the window: one scroll only — Guy 2026-10-24) */
   .pedit-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; margin:4px 0; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); cursor:pointer; min-height:48px; }
   .pedit-row img{ width:34px; height:34px; border-radius:50%; object-fit:cover; }
   .pedit-row span{ flex:1; font-weight:700; } .pedit-row em{ font-style:normal; font-size:12px; font-weight:700; white-space:nowrap; min-width:64px; text-align:end; }
@@ -264,7 +264,7 @@
   .pchange-opts{ display:flex; flex-direction:column; gap:10px; margin:8px 0 12px; }
   .pchange-opts .btn{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:start; padding:12px 14px; height:auto; line-height:1.4; }
   .pchange-opts .btn small{ font-weight:400; opacity:.85; font-size:12.5px; }
-  .pchange-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0 12px; max-height:52vh; overflow-y:auto; }
+  .pchange-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0 12px; }          /* (one scroll only) */
   .pmine-row.pick{ width:100%; cursor:pointer; font-family:inherit; color:var(--p-text); text-align:start; }
   /* the team as a monthly calendar: the days across, every week = a row of day numbers and the morning / noon / night under it; the shift names are written once per week, at its start */
   .mcal{ display:grid; grid-template-columns:36px repeat(7, minmax(0, 1fr)); column-gap:3px; row-gap:0; direction:rtl; }

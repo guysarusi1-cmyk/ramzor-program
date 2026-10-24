@@ -9,7 +9,7 @@
   .gi-count{ color:var(--muted); font-size:13px; }
   .gi-arrow{ color:var(--muted); transition:transform .2s; }
   .green-involved-btn[aria-expanded=true] .gi-arrow{ transform:rotate(180deg); }
-  .green-involved-panel{ border:1px solid var(--line); border-radius:12px; margin-top:6px; padding:8px 10px 10px; background:var(--panel); max-height:46vh; overflow:auto; }
+  .green-involved-panel{ border:1px solid var(--line); border-radius:12px; margin-top:6px; padding:8px 10px 10px; background:var(--panel); }          /* (no scroll of its own: the page scrolls) */
   .green-involved-panel[hidden]{ display:none; }
   .green-involved-panel .note{ margin:4px 4px 6px; }
   .gi-row{ display:flex; align-items:center; gap:12px; min-height:44px; padding:0 6px; border-radius:10px; cursor:pointer; font-size:14.5px; }
