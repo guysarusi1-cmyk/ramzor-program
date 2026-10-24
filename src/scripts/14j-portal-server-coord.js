@@ -153,6 +153,7 @@ function srvRenderCoordSchedule(body){
     c.addEventListener('dragleave', () => srvDropClear(c));
     c.addEventListener('drop', e => { e.preventDefault(); srvDropClear(c); const who = e.dataTransfer.getData('text/plain') || srvDragWho; if(who) srvAddToSlot(mk, c.dataset.key, who, body); });
   });
+  body.querySelectorAll('[data-cs-sort]').forEach(b => b.addEventListener('click', () => { portalUi.csSort = b.dataset.csSort; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
     const open = () => srvOpenSlot(mk, td.dataset.key, body);
@@ -213,11 +214,16 @@ function srvBuildWire(body, mk){
   });
 }
 // ---- how many shifts each instructor got this month (folded: one short line; opened: everybody, with the kinds of shifts)
-function srvCountFoldHtml(mk){
-  const st = portalLoad(), people = st.instructors.filter(p => p.role === 'instructor'), c = {};
-  (st.rows || []).forEach(r => { if(monthKeyOf(r.day) !== mk || !people.some(p => p.id === r.staff)) return;
+// how many shifts each instructor has in the month, by kind (the fold above the calendar and the instructors' panel): { staff id: { all, M, A, N, W, L } }
+function srvShiftCounts(mk){
+  const st = portalLoad(), ids = new Set(st.instructors.filter(p => p.role === 'instructor').map(p => p.id)), c = {};
+  (st.rows || []).forEach(r => { if(monthKeyOf(r.day) !== mk || !ids.has(r.staff)) return;
     const x = c[r.staff] = c[r.staff] || { all:0, M:0, A:0, N:0, L:0, W:0 }; x.all++; x[r.shift === 'S' ? 'M' : r.shift] = (x[r.shift === 'S' ? 'M' : r.shift] || 0) + 1;
     if(r.shift !== 'L' && [5, 6].includes(dowOf(r.day))) x.W++; });          // (the weekend: from Friday morning to Saturday night, both included; the long weekend has its own column)
+  return c;
+}
+function srvCountFoldHtml(mk){
+  const st = portalLoad(), people = st.instructors.filter(p => p.role === 'instructor'), c = srvShiftCounts(mk);
   const list = people.filter(p => p.active || c[p.id]).map(p => ({ p, x:c[p.id] || { all:0, M:0, A:0, N:0, L:0, W:0 } })).sort((a, b) => b.x.all - a.x.all || String(a.p.first).localeCompare(String(b.p.first), 'he'));
   if(!list.length) return '';
   const nums = list.map(r => r.x.all), lo = Math.min(...nums), hi = Math.max(...nums), total = nums.reduce((a, b) => a + b, 0);
@@ -344,7 +350,7 @@ function srvPersonRequestsHtml(p, mk){
   const by = { no:[], avoid:[], yes:[] };
   Object.keys(pr.slots || {}).sort().forEach(k => { const [d, id] = k.split('|'); if(by[pr.slots[k]] && daysOfMonth(mk).includes(d)) by[pr.slots[k]].push(`${shortDate(d)} ${shiftWord(id)}`); });
   const mine = st.rows.filter(r => r.staff === p.id && monthKeyOf(r.day) === mk);
-  const counts = { yes:0, avoid:0, no:0, none:0 };
+  const counts = { yes:0, avoid:0, no:0, none:0 }, got = srvShiftCounts(mk)[p.id] || { all:0, M:0, A:0, N:0, W:0, L:0 };
   mine.forEach(r => { const id = SRV_SHIFT_UI[r.shift === 'S' ? 'M' : r.shift]; if(!id) return; const lv = (pr.slots || {})[`${r.day}|${id}`]; counts[lv === 'avoid' ? 'avoid' : lv === 'no' ? 'no' : lv === 'yes' ? 'yes' : 'none']++; });
   const line = (cls, title, list) => `<div class="cs-req ${cls}"><b>${title}${list.length ? ` (${list.length})` : ''}</b><span>${list.length ? list.map(pEsc).join(' · ') : 'אין'}</span></div>`;
   const note = m.notes && m.notes[p.id], goal = (m.goals || {})[p.id], cons = pr.consent || {};
@@ -353,6 +359,7 @@ function srvPersonRequestsHtml(p, mk){
   return `<div class="cs-person">
     <div class="cs-person-head"><img src="${p.photo}" alt=""><div><b>${pEsc(instrName(p, st.instructors))}</b><small>${m.submitted[p.id] ? 'הגיש/ה ✓' : 'עוד לא הגיש/ה'} · ${monthLabel(mk)}</small></div></div>
     ${mine.length ? `<div class="cs-req"><b>שובצו ${mine.length} משמרות</b><span><span class="mcal-name wish-yes">כן ${counts.yes}</span> <span class="mcal-name wish-can">יכול ${counts.avoid}</span> <span class="mcal-name wish-no">לא ${counts.no}</span> <span class="mcal-name wish-none">לא סומן ${counts.none}</span></span></div>` : ''}
+    <div class="cs-req"><b>קיבל/ה ${got.all} משמרות</b><span>בוקר ${got.M} · צהריים ${got.A} · לילה ${got.N} · סופ"ש ${got.W}${got.L ? ` · סופ"ש ארוך ${got.L}` : ''}</span></div>
     ${line('no', 'לא', by.no)}${line('can', 'יכול', by.avoid)}${line('yes', 'כן', by.yes)}
     ${fixed.length ? `<div class="cs-req"><b>היעדרות</b><span>${[...new Set(fixed.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ') + ': ' + dayRanges(fixed.map(f => f.day))}</span></div>` : ''}
     ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
@@ -366,9 +373,12 @@ function srvPersonRequestsHtml(p, mk){
 function srvSidePanelHtml(mk){
   const st = portalLoad(), m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role === 'instructor'), sel = people.find(p => p.id === portalUi.csPerson);
   if(!portalUi.csOpen) return `<button type="button" class="cs-tab" id="cs-open" aria-expanded="false"><span class="cs-tab-text">בקשות המדריכים</span>${mcalKeyHtml('tab')}</button>`;          // (folded: a slim tab, with the colour key as plain coloured words under the text)          // (folded: a slim tab at the left of the schedule)
+  const cnt = srvShiftCounts(mk), byCount = portalUi.csSort === 'count';          // (a number by every name: how many shifts so far; sorting by it shows at once who got the fewest — Guy 2026-10-24)
+  const list = people.slice().sort((a, b) => (byCount ? ((cnt[a.id] || {}).all || 0) - ((cnt[b.id] || {}).all || 0) : 0) || String(instrName(a, st.instructors)).localeCompare(String(instrName(b, st.instructors)), 'he'));
   return `<aside class="cs-side" aria-label="בקשות המדריכים">
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3>${sel ? '' : mcalKeyHtml(true)}<button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
-    <div class="cs-names">${people.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>
+    <div class="cs-sort pchoice" role="group" aria-label="סדר הרשימה"><button type="button" class="${byCount ? '' : 'on'}" data-cs-sort="name">לפי שם</button><button type="button" class="${byCount ? 'on' : ''}" data-cs-sort="count">לפי מספר המשמרות</button></div>
+    <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b></button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
   </aside>`;
 }
