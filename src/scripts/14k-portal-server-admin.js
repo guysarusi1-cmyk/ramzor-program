@@ -19,14 +19,22 @@ function srvRenderSubmissions(body){
   if(!portalUi.smonth) portalUi.smonth = addMonths(monthKeyOf(srvToday()), 1);
   const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role));          // (a therapist hands in no preferences)
   const missing = people.filter(p => !m.submitted[p.id]), done = people.filter(p => m.submitted[p.id]);
-  const subRow = p => { const pr = m.prefs[p.id] || { slots:{}, absent:[], hours:{} }, c = { yes:0, avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { v = v === 'can' ? 'avoid' : v; if(c[v] !== undefined) c[v]++; });
-    const note = m.notes && m.notes[p.id];
-    return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>${KIND_WORD[p.role] || ''}${p.role === 'instructor' ? ` · כן ${c.yes} · יכול ${c.avoid} · לא ${c.no} · היעדרות ${(pr.absent || []).length}${Object.keys(pr.hours || {}).length ? ' · שעות אחרות ' + Object.keys(pr.hours).length : ''}${pr.consent && pr.consent.extend ? ' · מסכים להארכה' : ''}${pr.consent && pr.consent.pull ? ' · מסכים למשיכה' : ''}` : ''}</small>${note ? `<div class="psub-note">הערה: ${pEsc(note)}</div>` : ''}${p.role === 'service' ? `<button type="button" class="btn ghost small psub-fill" data-fill-for="${p.id}">✏️ מילוי זמינות</button>` : ''}</div>`; };
+  // compact (Guy, 2026-10-24): the instructors as one small table, a row each (yes / can / no / away / other hours / the two consents), and a
+  // line under it only for a note; the service girls and the teachers as one short line each, with "מילוי זמינות" for a service girl
+  const subRow = p => {          // (one instructor: a table row, and a thin line under it only when there is something to add)
+    const pr = m.prefs[p.id] || { slots:{}, absent:[], hours:{} }, c = { yes:0, avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { v = v === 'can' ? 'avoid' : v; if(c[v] !== undefined) c[v]++; });
+    const note = m.notes && m.notes[p.id], ok = v => v ? '✓' : '';
+    return `<tr class="psub-row"><th>${pEsc(instrName(p, st.instructors))}${note ? ' 📝' : ''}</th><td>${c.yes}</td><td>${c.avoid}</td><td>${c.no}</td><td>${(pr.absent || []).length || ''}</td><td>${Object.keys(pr.hours || {}).length || ''}</td><td>${ok(pr.consent && pr.consent.extend)}</td><td>${ok(pr.consent && pr.consent.pull)}</td></tr>${note ? `<tr class="psub-extra"><td colspan="8">הערה: ${pEsc(note)}</td></tr>` : ''}`;
+  };
+  const otherRow = p => `<div class="psub-row psub-other"><b>${pEsc(instrName(p, st.instructors))}</b><small>${KIND_WORD[p.role] || ''}</small>${p.role === 'service' ? `<button type="button" class="btn ghost small psub-fill" data-fill-for="${p.id}">✏️ מילוי זמינות</button>` : ''}</div>`;
+  const subList = list => { const ins = list.filter(p => p.role === 'instructor'), oth = list.filter(p => p.role !== 'instructor');
+    return (ins.length ? `<div class="psub-scroll"><table class="psub-table"><thead><tr><th>שם</th><th>כן</th><th>יכול</th><th>לא</th><th>היעדרות</th><th>שעות אחרות</th><th>הארכה</th><th>משיכה</th></tr></thead><tbody>${ins.map(subRow).join('')}</tbody></table></div>` : '')
+      + (oth.length ? `<div class="psub-others">${oth.map(otherRow).join('')}</div>` : '') || '<div class="pnote">אין.</div>'; };
   const away = people.map(p => { const pr = m.prefs[p.id] || {}; const fx = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day)); return { p, fx }; }).filter(x => x.fx.length);
   body.innerHTML = `
     ${monthNavHtml(mk)}
     <div class="pstatus ${missing.length ? 'bad' : 'ok'}">${missing.length ? `${missing.length} מתוך ${people.length} עוד לא הגישו` : 'כולם הגישו ✓'}</div>
-    ${[['sdone', 'הגישו', done.map(subRow).join('') || '<div class="pnote">אין.</div>', done.length], ['smiss', 'לא הגישו', missing.map(subRow).join('') || '<div class="pnote">אין.</div>', missing.length], ['sabs', 'מי נעדר החודש', (away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'), away.length]].map(([key, title, inner, count]) => `<details class="pfold" data-fold="${key}"${openFold(key) ? ' open' : ''}>
+    ${[['sdone', 'הגישו', subList(done), done.length], ['smiss', 'לא הגישו', subList(missing), missing.length], ['sabs', 'מי נעדר החודש', (away.length ? away.map(x => `<div class="pmine-row"><span><b>${pEsc(instrName(x.p, st.instructors))}</b><br><small>${[...new Set(x.fx.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ')}${x.fx.length ? ': ' + dayRanges(x.fx.map(f => f.day)) : ''}</small></span></div>`).join('') : '<div class="pnote">אין היעדרויות החודש.</div>'), away.length]].map(([key, title, inner, count]) => `<details class="pfold" data-fold="${key}"${openFold(key) ? ' open' : ''}>
       <summary><span>${title}</span><span class="pcount">${count}</span></summary>
       <div class="pfold-body"><div class="psubs">${inner}</div></div>
     </details>`).join('')}
