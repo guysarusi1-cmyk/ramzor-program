@@ -21,7 +21,7 @@ function srvRenderSubmissions(body){
   const missing = people.filter(p => !m.submitted[p.id]), done = people.filter(p => m.submitted[p.id]);
   const subRow = p => { const pr = m.prefs[p.id] || { slots:{}, absent:[], hours:{} }, c = { yes:0, avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { v = v === 'can' ? 'avoid' : v; if(c[v] !== undefined) c[v]++; });
     const note = m.notes && m.notes[p.id];
-    return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>${KIND_WORD[p.role] || ''}${p.role === 'instructor' ? ` · כן ${c.yes} · יכול ${c.avoid} · לא ${c.no} · היעדרות ${(pr.absent || []).length}${Object.keys(pr.hours || {}).length ? ' · שעות אחרות ' + Object.keys(pr.hours).length : ''}${pr.consent && pr.consent.extend ? ' · מסכים להארכה' : ''}${pr.consent && pr.consent.pull ? ' · מסכים למשיכה' : ''}` : ''}</small>${note ? `<div class="psub-note">הערה: ${pEsc(note)}</div>` : ''}</div>`; };
+    return `<div class="psub-row ${m.submitted[p.id] ? 'ok' : 'bad'}"><img src="${p.photo}" alt=""><b>${pEsc(instrName(p, st.instructors))}</b><span>${m.submitted[p.id] ? 'הוגש ✓' : 'לא הוגש'}</span><small>${KIND_WORD[p.role] || ''}${p.role === 'instructor' ? ` · כן ${c.yes} · יכול ${c.avoid} · לא ${c.no} · היעדרות ${(pr.absent || []).length}${Object.keys(pr.hours || {}).length ? ' · שעות אחרות ' + Object.keys(pr.hours).length : ''}${pr.consent && pr.consent.extend ? ' · מסכים להארכה' : ''}${pr.consent && pr.consent.pull ? ' · מסכים למשיכה' : ''}` : ''}</small>${note ? `<div class="psub-note">הערה: ${pEsc(note)}</div>` : ''}${p.role === 'service' ? `<button type="button" class="btn ghost small psub-fill" data-fill-for="${p.id}">✏️ מילוי זמינות</button>` : ''}</div>`; };
   const away = people.map(p => { const pr = m.prefs[p.id] || {}; const fx = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day)); return { p, fx }; }).filter(x => x.fx.length);
   body.innerHTML = `
     ${monthNavHtml(mk)}
@@ -33,6 +33,10 @@ function srvRenderSubmissions(body){
     <button type="button" class="btn ghost" id="abs-add">הוספת היעדרות (מחלה, מילואים, לידה...)</button>`;
   wireMonthNav(body, 'smonth'); wireFolds(body);
   document.getElementById('abs-add').addEventListener('click', () => srvAbsenceSheet(body));
+  body.querySelectorAll('[data-fill-for]').forEach(b => b.addEventListener('click', () => {          // (the coordinator fills a service girl's availability for her, e.g. after a phone call)
+    portalUi.fillReturn = { tab:portalUi.tab, manager:!!portalUi.manager }; portalUi.viewAs = b.dataset.fillFor; portalUi.persona = b.dataset.fillFor; portalUi.editPrefs = true; portalUi.manager = false;
+    portalUi.tab = 'avail'; portalUi.pmonth = null; srvResnap(); showPortal('avail');
+  }));
 }
 function srvAbsenceSheet(body){
   const st = portalLoad(), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role)), today = srvToday();

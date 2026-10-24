@@ -1292,7 +1292,7 @@
         portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.persona = srv.me;
         check('admin fills preferences: ... and back to the admin\'s own afterwards', srvWho() === srv.me && !srvPrefsOpen('2020-01'), srvWho());
         const bx = document.createElement('div'); portalUi.admFill = true; adminViewAs(bx); portalUi.admFill = false;
-        check('admin fills preferences: the list in "fill" mode has only instructors', bx.querySelectorAll('[data-view-as]').length >= 1 && [...bx.querySelectorAll('[data-view-as]')].every(b => (portalPerson(b.dataset.viewAs) || {}).role === 'instructor'), bx.querySelectorAll('[data-view-as]').length); }
+        check('admin fills preferences: the list in "fill" mode has the instructors and the service girls only', bx.querySelectorAll('[data-view-as]').length >= 1 && [...bx.querySelectorAll('[data-view-as]')].every(b => ['instructor', 'service'].includes((portalPerson(b.dataset.viewAs) || {}).role)), bx.querySelectorAll('[data-view-as]').length); }
         const coord = portalLoad().instructors.find(p => p.active && p.role === 'coordinator');
         if(coord){
           adminActAs(coord.id); await sleep(200);
@@ -1532,6 +1532,15 @@
         check('portal server: the coordinator sees the private staff data', !priv2.error && priv2.data.length >= 20, priv2.error ? priv2.error.message : priv2.data.length);
         portalUi.persona = srv.me; portalUi.tab = 'submissions'; portalUi.smonth = next; showPortal('submissions'); await sleep(100);
         check('portal server: the coordinator\'s submissions screen has two folded groups, those who submitted first, then those who did not, then who is away, and lists the instructors', [...document.querySelectorAll('#portal-body details.pfold')].map(d => d.dataset.fold).join() === 'sdone,smiss,sabs' && [...document.querySelectorAll('#portal-body details.pfold')].every(d => d.open === false) && document.querySelectorAll('#portal-body .psub-row').length >= 15, document.querySelectorAll('#portal-body .psub-row').length);
+        { const fb = document.querySelector('#portal-body [data-fill-for]');
+          check('fill for a service girl: in the submissions tab a service girl has "מילוי זמינות"', !!fb, 'no button');
+          if(fb){ const sid = fb.dataset.fillFor; fb.click(); await sleep(700);
+            check('fill for a service girl: ... it opens her availability screen, for her', portalUi.tab === 'avail' && srvWho() === sid && !!document.querySelector('.adm-viewas.edit') && !!document.querySelector('#portal-body .psvc'), portalUi.tab + ' / ' + srvWho());
+            const w = await sbPersonal.from('prefs_service').upsert({ staff_id:sid, day:'2099-01-05', opt:'early' });
+            if(w.error && /policy|permission|row-level/i.test(w.error.message)) check('(info) fill for a service girl: the coordinator saves it after scheduling-v36.sql', true, '');
+            else { check('fill for a service girl: the database keeps what the coordinator chose for her', !w.error, (w.error || {}).message); await sbPersonal.from('prefs_service').delete().eq('staff_id', sid).eq('day', '2099-01-05'); }
+            await adminViewAsEnd(); await sleep(200);
+            check('fill for a service girl: "סיום" goes back to the submissions tab', portalUi.tab === 'submissions' && !portalUi.viewAs && srvWho() === srv.me, portalUi.tab); } }
         check('portal server: the coordinator has no "build the schedule automatically" button', !/[Aa]uto|אוטומט/.test(document.getElementById('view-portal').textContent), 'found');
       }
       // --- a service girl sees only her own place

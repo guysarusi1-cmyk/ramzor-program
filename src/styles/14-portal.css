@@ -440,3 +440,4 @@
   .prefs-past-btn{ display:block; margin:0 auto 10px; }
   .pprefs-past{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 10px; padding:8px 12px; border-radius:12px; background:rgba(90,160,255,.14); border:1px solid rgba(90,160,255,.5); font-weight:700; }
   .unmarked-choices{ display:flex; flex-direction:column; gap:8px; margin-top:12px; } .unmarked-choices .btn{ width:100%; min-height:48px; }          /* the question about unmarked shifts (14f) */
+  .psub-fill{ grid-column:1 / -1; justify-self:start; margin-top:6px; }          /* the coordinator fills a service girl's availability (14k) */

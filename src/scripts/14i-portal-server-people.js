@@ -152,15 +152,15 @@ async function srvRenderVacation(body){
 // the hours of the service girls (Guy 2026-10-17): Sunday 11:00-19:00; Monday-Wednesday the morning (07:00-15:00), the afternoon (14:00-22:00) or both; Thursday only the morning
 const SVC_OPTS = [['early', '07:00–15:00'], ['late', '14:00–22:00'], ['both', 'שתיהן'], ['none', 'לא זמינה']];
 const svcOptsFor = d => dowOf(d) === 0 ? [['late', '11:00–19:00'], ['none', 'לא זמינה']] : dowOf(d) === 4 ? SVC_OPTS.filter(o => o[0] === 'early' || o[0] === 'none') : SVC_OPTS;
-async function srvRenderAvailability(body){
+async function srvRenderAvailability(body){          // (also the admin or the coordinator filling it for a service girl: srvWho())
   const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
   body.innerHTML = '<div class="pnote">רק רגע...</div>';
   const days = daysOfMonth(mk).filter(d => dowOf(d) <= 4);
-  const r = await sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srv.me).gte('day', days[0]).lte('day', days[days.length - 1]);
+  const r = await sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1]);
   if(!body.isConnected) return;
   const have = {}; (r.data || []).forEach(x => { have[x.day] = x.opt; });
-  const fixed = srvPrefsOf(m, srv.me).fixed.map(f => f.day);
-  const submitted = !!m.submitted[srv.me], left = days.filter(d => !have[d] && !fixed.includes(d)).length;
+  const fixed = srvPrefsOf(m, srvWho()).fixed.map(f => f.day);
+  const submitted = !!m.submitted[srvWho()], left = days.filter(d => !have[d] && !fixed.includes(d)).length;
   body.innerHTML = `
     ${monthFixedHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'הזמינות שלכן אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.' : 'נשמח לדעת מתי אתן זמינות, ככה נוכל לסדר לכן את החודש.'} · אפשר להגיש עד 24/${addMonths(mk, -1).slice(5)} בשעה 22:30</div>
@@ -171,14 +171,14 @@ async function srvRenderAvailability(body){
   wireMonthNav(body, 'pmonth');
   body.querySelectorAll('[data-svc]').forEach(b => b.addEventListener('click', async () => {
     const [d, opt] = b.dataset.svc.split('|');
-    const u = await sbPersonal.from('prefs_service').upsert({ staff_id:srv.me, day:d, opt });
+    const u = await sbPersonal.from('prefs_service').upsert({ staff_id:srvWho(), day:d, opt });
     if(u.error) toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב'); srvRenderAvailability(body);
   }));
   body.querySelector('#svc-submit').addEventListener('click', async () => {
     if(left){ toast('נשמח שתבחרו לכל יום לפני ההגשה, ככה נוכל לתכנן'); return; }
-    const u = await sbPersonal.from('prefs_submission').upsert({ staff_id:srv.me, month:firstOf(mk), submitted_at:new Date().toISOString() });
+    const u = await sbPersonal.from('prefs_submission').upsert({ staff_id:srvWho(), month:firstOf(mk), submitted_at:new Date().toISOString() });
     if(u.error){ toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
-    m.submitted[srv.me] = true; toast(tx('avail_ok')); srvRenderAvailability(body);
+    m.submitted[srvWho()] = true; toast(tx('avail_ok')); srvRenderAvailability(body);
   });
 }
 

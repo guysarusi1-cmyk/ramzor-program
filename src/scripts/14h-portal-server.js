@@ -231,7 +231,7 @@ async function srvSubmit(mk, note, goal){
 
 // ---- the screens in server mode
 function srvTabs(me){
-  if(srvEditingFor()) return [['prefs', 'העדפות']];          // (the admin fills somebody's preferences: only that tab)
+  if(srvEditingFor()) return me.role === 'service' ? [['avail', 'זמינות']] : [['prefs', 'העדפות']];          // (filling for somebody: only that tab — a service girl's availability, an instructor's preferences)
   if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];

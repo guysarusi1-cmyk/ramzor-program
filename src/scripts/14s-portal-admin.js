@@ -86,21 +86,25 @@ async function adminStaff(box, body){
 // ---- 2. the portal as one person sees it (only to look: nothing can be changed there)
 function adminViewAs(box){
   const st = portalLoad(), fill = !!portalUi.admFill;
-  const people = st.instructors.filter(p => p.active && p.id !== srv.me && (!fill || p.role === 'instructor')).sort((a, b) => String(a.first).localeCompare(String(b.first), 'he'));
+  const people = st.instructors.filter(p => p.active && p.id !== srv.me && (!fill || ['instructor', 'service'].includes(p.role))).sort((a, b) => String(a.first).localeCompare(String(b.first), 'he'));
   box.innerHTML = `<div class="pchoice adm-va-mode" role="group" aria-label="מה לעשות"><button type="button" class="${fill ? '' : 'on'}" data-va-mode="look">👁️ צפייה</button><button type="button" class="${fill ? 'on' : ''}" data-va-mode="fill">✏️ מילוי העדפות</button></div>
-    <div class="pnote">${fill ? 'בחירה במדריך/ה פותחת את מסך ההעדפות שלו/ה, ואפשר למלא ולהגיש בשבילו/ה (למשל מדף שמסר/ה). נשמר אצלו/ה, גם אחרי סגירת ההגשה. כל שינוי נרשם.' : 'בחירה באדם פותחת את הפורטל בדיוק כמו שהוא רואה אותו: הסידור, ההעדפות, ההחלפות. רק לצפייה, בלי אפשרות לשנות דבר.'}</div>
+    <div class="pnote">${fill ? 'בחירה במדריך/ה או בבת שירות פותחת את מסך ההעדפות (או הזמינות) שלו/ה, ואפשר למלא ולהגיש בשבילו/ה (למשל מדף שמסר/ה). נשמר אצלו/ה, גם אחרי סגירת ההגשה. כל שינוי נרשם.' : 'בחירה באדם פותחת את הפורטל בדיוק כמו שהוא רואה אותו: הסידור, ההעדפות, ההחלפות. רק לצפייה, בלי אפשרות לשנות דבר.'}</div>
     <div class="adm-people">${people.map(p => `<button type="button" class="cs-name" data-view-as="${p.id}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${fill && portalMonth(addMonths(monthKeyOf(srvToday()), 1)).submitted[p.id] ? ' <small class="adm-sub">✓ הגיש/ה</small>' : ''}</button>`).join('')}</div>`;
   box.querySelectorAll('[data-va-mode]').forEach(b => b.addEventListener('click', () => { portalUi.admFill = b.dataset.vaMode === 'fill'; adminViewAs(box); }));
   box.querySelectorAll('[data-view-as]').forEach(b => b.addEventListener('click', () => {
-    portalUi.viewAs = b.dataset.viewAs; portalUi.persona = b.dataset.viewAs; portalUi.manager = false; portalUi.editPrefs = fill;
-    portalUi.tab = fill ? 'prefs' : null; portalUi.pmonth = null; if(fill) srvResnap(); showPortal(fill ? 'prefs' : undefined);
+    const role = (portalPerson(b.dataset.viewAs) || {}).role, tab = fill ? (role === 'service' ? 'avail' : 'prefs') : null;
+    portalUi.fillReturn = null; portalUi.viewAs = b.dataset.viewAs; portalUi.persona = b.dataset.viewAs; portalUi.manager = false; portalUi.editPrefs = fill;
+    portalUi.tab = tab; portalUi.pmonth = null; if(fill) srvResnap(); showPortal(tab || undefined);
   }));
 }
 // the coordinator's own screen, with full control: everything she sees and does (the database lets the admin do all of it; each action is recorded as the admin's)
 function adminActAs(id){ portalUi.viewAs = id; portalUi.persona = id; portalUi.actAs = true; portalUi.editPrefs = false; portalUi.manager = false; portalUi.tab = null; portalUi.month = null; showPortal(); }
 async function adminViewAsEnd(){
   if(portalUi.editPrefs){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled is saved before leaving)
-  portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.actAs = false; portalUi.persona = srv.me; portalUi.manager = true; portalUi.tab = 'admin'; portalUi.pmonth = null; srvResnap(); showPortal('admin');
+  const back = portalUi.fillReturn; portalUi.fillReturn = null;          // (the coordinator came from the submissions tab: back there)
+  portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.actAs = false; portalUi.persona = srv.me; portalUi.pmonth = null; srvResnap();
+  if(back){ portalUi.manager = back.manager; portalUi.tab = back.tab; showPortal(back.tab); return; }
+  portalUi.manager = true; portalUi.tab = 'admin'; showPortal('admin');
 }
 
 // ---- 3. the system settings: the hours of the shifts, how early a long vacation is asked for, the numbers of the rules
