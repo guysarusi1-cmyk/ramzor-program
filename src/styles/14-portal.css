@@ -449,3 +449,4 @@
   .cs-sort-btn{ margin:0 0 8px; } .cs-sort-btn.on{ border-color:var(--gold); }
   .cs-others-fold{ margin-top:10px; } .cs-other-name{ cursor:grab; } .cs-other-name small{ color:var(--p-muted); font-size:11px; }          /* service girls and teachers to drag into the calendar (14j) */
   .mcal-name.extra{ opacity:.8; border-style:dashed; }          /* somebody from the shift next to it whose hours reach this one (14e) */
+  @media (min-width:701px){ .cs-side{ padding-bottom:70px; } }          /* (the last names scroll above the floating "→ חזור") */

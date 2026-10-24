@@ -388,7 +388,6 @@ function srvSidePanelHtml(mk){
     <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${byCount ? `<b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b>` : ''}</button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
     ${others.length ? `<details class="pfold cs-others-fold" id="cs-others-fold"${portalUi.csOthersOpen ? ' open' : ''}><summary><span>בנות שירות ומורות</span></summary><div class="pfold-body">
-      <div class="pnote">גוררים אל משמרת בלוח. בת שירות ביום ראשון נכנסת ל-11:00–19:00, ובשאר הימים לשעות של המשמרת. מורה נכנסת לשעות הקבועות שלה.</div>
       <div class="cs-names">${others.map(p => `<button type="button" class="cs-name cs-other-name" data-cs-other="${p.id}" title="גרירה אל משמרת בלוח"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><small>${p.role === 'teacher' ? 'מורה' : 'בת שירות'}</small></button>`).join('')}</div></div></details>` : ''}
   </aside>`;
 }
