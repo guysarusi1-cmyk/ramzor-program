@@ -2025,7 +2025,8 @@
           check('calendar: ... and "להציג את כולן" shows them again', !!document.querySelector('#portal-body .mcal-cell [data-role]'), 'not shown'); }
           { const was = portalUi.csOpen, ws = portalUi.csSort; portalUi.csOpen = true; portalUi.csSort = 'count';
             const box = document.createElement('div'); box.innerHTML = srvSidePanelHtml(mk); const nums = [...box.querySelectorAll('.cs-name-count')].map(x => +x.textContent), c = srvShiftCounts(mk);
-            check('instructors panel: every name has the number of shifts so far, and sorting by it puts the fewest first', nums.length > 0 && nums.every((n, k) => k === 0 || nums[k - 1] <= n) && !!box.querySelector('[data-cs-sort="name"]') && [...box.querySelectorAll('[data-cs-person]')].every(b => +b.querySelector('.cs-name-count').textContent === ((c[b.dataset.csPerson] || {}).all || 0)), nums.join(','));
+            portalUi.csSort = 'name'; const plain = document.createElement('div'); plain.innerHTML = srvSidePanelHtml(mk); portalUi.csSort = 'count';
+            check('instructors panel: by name with no numbers; "הצג את מספר המשמרות" shows the number by every name and puts the fewest first', !plain.querySelector('.cs-name-count') && /הצג את מספר המשמרות/.test(plain.textContent) && nums.length > 0 && nums.every((n, k) => k === 0 || nums[k - 1] <= n) && /הסתר את מספר המשמרות/.test(box.textContent) && [...box.querySelectorAll('[data-cs-person]')].every(b => +b.querySelector('.cs-name-count').textContent === ((c[b.dataset.csPerson] || {}).all || 0)), nums.join(','));
             portalUi.csOpen = was; portalUi.csSort = ws; }
         try { localStorage.removeItem('ramzor-cs-hide-others'); } catch(e){}
         // an instructor sees the line too (the month must be published for her), with no button to hide it

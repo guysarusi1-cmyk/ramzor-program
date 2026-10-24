@@ -373,12 +373,12 @@ function srvPersonRequestsHtml(p, mk){
 function srvSidePanelHtml(mk){
   const st = portalLoad(), m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role === 'instructor'), sel = people.find(p => p.id === portalUi.csPerson);
   if(!portalUi.csOpen) return `<button type="button" class="cs-tab" id="cs-open" aria-expanded="false"><span class="cs-tab-text">בקשות המדריכים</span>${mcalKeyHtml('tab')}</button>`;          // (folded: a slim tab, with the colour key as plain coloured words under the text)          // (folded: a slim tab at the left of the schedule)
-  const cnt = srvShiftCounts(mk), byCount = portalUi.csSort === 'count';          // (a number by every name: how many shifts so far; sorting by it shows at once who got the fewest — Guy 2026-10-24)
+  const cnt = srvShiftCounts(mk), byCount = portalUi.csSort === 'count';          // (by name; one button shows by every name how many shifts so far and sorts by it, the fewest first — Guy 2026-10-24)
   const list = people.slice().sort((a, b) => (byCount ? ((cnt[a.id] || {}).all || 0) - ((cnt[b.id] || {}).all || 0) : 0) || String(instrName(a, st.instructors)).localeCompare(String(instrName(b, st.instructors)), 'he'));
   return `<aside class="cs-side" aria-label="בקשות המדריכים">
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3>${sel ? '' : mcalKeyHtml(true)}<button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
-    <div class="cs-sort pchoice" role="group" aria-label="סדר הרשימה"><button type="button" class="${byCount ? '' : 'on'}" data-cs-sort="name">לפי שם</button><button type="button" class="${byCount ? 'on' : ''}" data-cs-sort="count">לפי מספר המשמרות</button></div>
-    <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b></button>`).join('')}</div>
+    <button type="button" class="btn ghost small cs-sort-btn${byCount ? ' on' : ''}" data-cs-sort="${byCount ? 'name' : 'count'}" aria-pressed="${byCount}">${byCount ? 'הסתר את מספר המשמרות' : 'הצג את מספר המשמרות'}</button>
+    <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${byCount ? `<b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b>` : ''}</button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
   </aside>`;
 }
