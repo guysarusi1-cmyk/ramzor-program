@@ -1006,8 +1006,9 @@
       const xmls = entries.map(e => new DOMParser().parseFromString(new TextDecoder().decode(e.data), 'application/xml'));
       check('Excel: every part is well-formed XML', xmls.every(x => !x.querySelector('parsererror')), 'parse error');
       const sheetXml = new TextDecoder().decode(entries.find(e => e.name === 'xl/worksheets/sheet1.xml').data);
-      check('Excel: rows are days, columns are shifts, names are coloured by how the wish was kept', (sheetXml.match(/<row /g) || []).length === daysOfMonth(mk).length + 2 && sheetXml.includes(XLSX_COLORS.yes) && /rightToLeft="1"/.test(sheetXml), 'rows ' + (sheetXml.match(/<row /g) || []).length);
-      check('print: the schedule table has a row per day', (scheduleHtmlTable(ctx, res.assignments).match(/<tr>/g) || []).length === daysOfMonth(mk).length + 1, 'rows');
+      { const weeks = Math.ceil((dowOf(daysOfMonth(mk)[0]) + daysOfMonth(mk).length) / 7);
+        check('Excel: a monthly calendar like the paper schedule (title, the days of the week, a row per week, notes), right to left', (sheetXml.match(/<row /g) || []).length === 2 + weeks + 1 && /יום ראשון/.test(sheetXml) && /יום שבת/.test(sheetXml) && /הערות/.test(sheetXml) && /rightToLeft="1"/.test(sheetXml) && /<mergeCell ref="A1:G1"\/>/.test(sheetXml), 'rows ' + (sheetXml.match(/<row /g) || []).length + ' / weeks ' + weeks); }
+      check('print: the same calendar (a row per week, the days of the week above, notes below)', (scheduleHtmlTable(ctx, res.assignments).match(/<tr>/g) || []).length === 1 + Math.ceil((dowOf(daysOfMonth(mk)[0]) + daysOfMonth(mk).length) / 7) + 1 && /יום ראשון/.test(scheduleHtmlTable(ctx, res.assignments)), 'rows');
 
       // --- app home
       showAppHome();
@@ -1991,10 +1992,12 @@
       if(!mk){ check('(info) excel others: skipped, no month with service girls or teachers on the test server', true, ''); }
       else {
         const ctx = portalCtx(mk), others = st.rows.filter(r => monthKeyOf(r.day) === mk && isOther(r));
-        const html = scheduleHtmlTable(ctx, portalMonth(mk).assignments), names = (html.match(/<td>[^]*?<\/td>/g) || []).length;
-        const xl = new TextDecoder().decode(buildScheduleXlsx(ctx, portalMonth(mk).assignments));
-        const shown = (html.split('<tr>').slice(2).map(tr => (tr.match(/<td>/g) || []).length)[0]) || 0;
-        check('excel others: the Excel file and the print have two more columns, the service girls and the teachers, with every one of them and her hours', /בנות שירות/.test(xl) && /מורות וגננות/.test(xl) && /<th>בנות שירות<\/th>/.test(html) && shown === ctx.shiftTypes.length + 2 && others.every(r => { const p = st.instructors.find(x => x.id === r.staff); return html.includes(instrName(p, st.instructors)) && (!r.from || html.includes(`${r.from}–${r.to}`)); }), `${others.length} rows, ${shown} columns, ${names} cells`);
+        const xl = new TextDecoder().decode(buildScheduleXlsx(ctx, portalMonth(mk).assignments)), cal = scheduleCalendarDays(ctx, portalMonth(mk).assignments);
+        const lines = cal.flatMap(d => d.lines), withOthers = lines.filter(l => l.items.some(it => /\((מורה\/גננת|בת שירות)/.test(it.text)));
+        const order = withOthers.every(l => { const kind = it => /\(מורה\/גננת/.test(it.text) ? 0 : /\(בת שירות/.test(it.text) ? 2 : 1, ks = l.items.map(kind); return ks.every((k, i) => i === 0 || ks[i - 1] <= k); });
+        check('excel others: in every line the teacher comes first and the service girls last, each marked, in the Excel file too', withOthers.length > 0 && order && /בת שירות/.test(xl), withOthers.length + ' / ' + order);
+        const ahmLines = lines.filter(l => l.items.some(it => it.ahm));
+        check('excel others: the ahmash comes first among the instructors, marked (אחמ"ש)', ahmLines.every(l => { const i = l.items.findIndex(it => it.ahm); return /\(אחמ"ש/.test(l.items[i].text) && l.items.slice(0, i).every(it => /\(מורה\/גננת/.test(it.text)); }), ahmLines.length);
       }
       // the calendars: a slim line of the service girls and the teachers under every day (all the calendars); the coordinator can hide it
       if(mk){

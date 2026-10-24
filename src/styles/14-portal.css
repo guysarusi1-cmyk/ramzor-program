@@ -181,6 +181,9 @@
     .print-table th, .print-table td{ border:1px solid #777; padding:4px 6px; text-align:center; }
     .print-table th{ background:#e8e2d0; } .print-table th span{ font-weight:400; font-size:9pt; }
     .print-table b{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    @page{ size:A4 landscape; margin:8mm; }
+    .print-cal{ table-layout:fixed; font-size:8.5pt; } .print-cal td{ text-align:right; vertical-align:top; padding:3px 4px; }
+    .print-cal .pc-num{ font-weight:800; font-size:10pt; } .print-cal .pc-line{ margin-top:2px; line-height:1.3; } .print-cal .pc-weekend{ background:#f4f1ea; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .print-table .lv-yes{ color:#2E7D32; background:none; } .print-table .lv-neutral{ color:#B26A00; } .print-table .lv-avoid{ color:#1565C0; background:none; } .print-table .lv-no{ color:#C62828; background:none; }
   }
 

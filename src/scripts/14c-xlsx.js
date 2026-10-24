@@ -1,7 +1,6 @@
 
 // ---------- EXPORT: Excel file (a real .xlsx, built here with no library) and print / PDF ----------
-// The schedule is written with rows = days and columns = shifts; every name is coloured by how well the wish was kept
-// (green = got what they wanted, orange = would rather not, red = "לא" or a missing person, dark = no preference).
+// The schedule is written as the monthly calendar of the paper schedule (see buildScheduleXlsx).
 const XLSX_COLORS = { yes:'FF2E7D32', neutral:'FFB26A00', avoid:'FF1565C0', no:'FFC62828' };          // (as in the coordinator's schedule: can = blue, not marked = orange)
 
 const CRC_TABLE = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -39,19 +38,24 @@ function xlsxCell(ref, cell){
   return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(cell.text == null ? '' : cell.text)}</t></is></c>`;
 }
 // rows: array of arrays of cells; widths: column widths
-function buildXlsx(sheetName, rows, widths){
+function buildXlsx(sheetName, rows, widths, opts){
+  opts = opts || {};
   const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
-  const sheetRows = rows.map((r, ri) => `<row r="${ri + 1}">${r.map((c, ci) => xlsxCell(xlsxColName(ci) + (ri + 1), c)).join('')}</row>`).join('');
+  const ht = opts.heights || [];
+  const sheetRows = rows.map((r, ri) => `<row r="${ri + 1}"${ht[ri] ? ` ht="${ht[ri]}" customHeight="1"` : ''}>${r.map((c, ci) => xlsxCell(xlsxColName(ci) + (ri + 1), c)).join('')}</row>`).join('');
   const cols = (widths || []).map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('');
-  const sheet = head + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols ? '<cols>' + cols + '</cols>' : ''}<sheetData>${sheetRows}</sheetData></worksheet>`;
+  const sheet = head + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols ? '<cols>' + cols + '</cols>' : ''}<sheetData>${sheetRows}</sheetData>${(opts.merges || []).length ? `<mergeCells count="${opts.merges.length}">${opts.merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : ''}</worksheet>`;
   const styles = head + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
-    + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8E2D0"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    + '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8E2D0"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF4F1EA"/><bgColor indexed="64"/></patternFill></fill></fills>'
     + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBBBBBB"/></left><right style="thin"><color rgb="FFBBBBBB"/></right><top style="thin"><color rgb="FFBBBBBB"/></top><bottom style="thin"><color rgb="FFBBBBBB"/></bottom><diagonal/></border></borders>'
     + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-    + '<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    + '<cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
     + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
     + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
-    + '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf></cellXfs></styleSheet>';
+    + '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+    + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top" wrapText="1" readingOrder="2"/></xf>'
+    + '<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top" wrapText="1" readingOrder="2"/></xf>'
+    + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf></cellXfs></styleSheet>';
   return zipStore([
     { name:'[Content_Types].xml', data:head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
     { name:'_rels/.rels', data:head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
@@ -90,18 +94,53 @@ function scheduleOthersOf(ctx){
   Object.values(out).forEach(d => ['service', 'teacher'].forEach(k => d[k].sort((a, b) => a.hours.localeCompare(b.hours) || a.name.localeCompare(b.name))));
   return any ? out : null;
 }
-const OTHERS_COLS = [['service', 'בנות שירות'], ['teacher', 'מורות וגננות']];
+// The export looks like the paper schedule the staff knows (Guy, 2026-10-24): a monthly calendar, the days of the week across (Sunday on the
+// right), a row per week; in every day the morning, the noon and the night, one line each. In a line the ahmash comes first, marked (אחמ"ש);
+// in the morning a teacher / kindergarten teacher comes first, marked; the service girls come last, marked; hours that are not the shift's
+// usual ones are in brackets ("עד 10", "מ-10"). The same in the Excel file and in the print / PDF.
+const CAL_ROLE = { teacher:'מורה/גננת', service:'בת שירות' };
+function calHours(note, s){
+  const m = String(note || '').match(/^(\d{1,2})[–-](\d{1,2})$/); if(!m) return note || '';
+  const a = +m[1], b = +m[2], st = parseInt(s.start, 10), en = parseInt(s.end, 10);
+  return a === st && b !== en ? `עד ${b}` : b === en && a !== st ? `מ-${a}` : `${a}–${b}`;
+}
+function scheduleCalendarDays(ctx, assignments){
+  const table = scheduleTable(ctx, assignments), others = typeof othersByShift === 'function' ? othersByShift(ctx) : {};
+  const rank = (typeof srv !== 'undefined' && srv.ahmash) || {}, picks = typeof ahmashPicks === 'function' ? ahmashPicks(table, ctx, rank) : {};
+  return table.map(r => ({ date:r.date, lines:ctx.shiftTypes.map((s, i) => {
+    const c = r.cells[i], oth = others[`${r.date}|${s.id}`] || [], items = [];
+    const nm = (name, tag, note) => { const extra = [tag, note].filter(Boolean).join(', '); return extra ? `${name} (${extra})` : name; };
+    oth.filter(x => x.role === 'teacher').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.teacher, calHours(x.note, s)) }));
+    if(c.slot){
+      const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
+      lead.forEach(p => items.push({ text:nm(p.name, 'אחמ"ש', calHours(p.note, s)), ahm:true }));
+      rest.forEach(p => items.push({ text:nm(p.name, '', calHours(p.note, s)) }));
+    }
+    oth.filter(x => x.role === 'service').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.service, calHours(x.note, s)) }));
+    return { label:s.label, items, missing:c.slot ? c.missing : 0 };
+  }).filter(l => l.items.length || l.missing) }));
+}
 function buildScheduleXlsx(ctx, assignments){
-  const table = scheduleTable(ctx, assignments), others = scheduleOthersOf(ctx);
-  const rows = [[{ text:'תאריך', s:1 }, ...ctx.shiftTypes.map(st => ({ text:`${st.label} (${st.start}–${st.end})`, s:1 })), ...(others ? OTHERS_COLS.map(c => ({ text:c[1], s:1 })) : [])]];
-  table.forEach(r => rows.push([{ text:dayLabel(r.date), s:3 }, ...r.cells.map(c => {
-    const runs = [];
-    c.people.forEach((p, i) => { if(i) runs.push({ text:'\n' }); runs.push({ text:p.name, color:XLSX_COLORS[p.level], bold:true }); if(p.note) runs.push({ text:` (${p.note})` }); });
-    if(c.missing){ if(runs.length) runs.push({ text:'\n' }); runs.push({ text:`חסר/ים ${c.missing}`, color:XLSX_COLORS.no, bold:true }); }
-    return runs.length ? { runs, s:2 } : { text:'', s:2 };
-  }), ...(others ? OTHERS_COLS.map(([k]) => { const list = (others[r.date] || {})[k] || []; return list.length ? { runs:list.flatMap((x, i) => [...(i ? [{ text:'\n' }] : []), { text:x.name, bold:true }, ...(x.hours ? [{ text:` ${x.hours}` }] : [])]), s:2 } : { text:'', s:2 }; }) : [])]));
-  rows.push([{ text:'מקרא', s:3 }, { runs:[{ text:'ירוק = קיבל/ה מה שרצה  ', color:XLSX_COLORS.yes, bold:true }, { text:'כחול = יכול/ה  ', color:XLSX_COLORS.avoid, bold:true }, { text:'אדום = לא / חסר  ', color:XLSX_COLORS.no, bold:true }, { text:'כתום = לא סומן', color:XLSX_COLORS.neutral, bold:true }], s:0 }]);
-  return buildXlsx('סידור ' + monthLabel(ctx.month), rows, [16, ...ctx.shiftTypes.map(() => 26), ...(others ? OTHERS_COLS.map(() => 24) : [])]);
+  const days = scheduleCalendarDays(ctx, assignments), lead = dowOf(days[0].date);
+  const flat = Array(lead).fill(null).concat(days); while(flat.length % 7) flat.push(null);
+  const rows = [[{ text:`סידור עבודה · ${monthLabel(ctx.month)}`, s:6 }, ...Array(6).fill({ text:'' })], DOW_NAMES.map(d => ({ text:'יום ' + d, s:1 }))], heights = [24, 20];
+  for(let w = 0; w < flat.length; w += 7){
+    let most = 1;
+    rows.push(flat.slice(w, w + 7).map(d => {
+      if(!d) return { text:'', s:4 };
+      const runs = [{ text:String(parseIso(d.date).getDate()), bold:true }];
+      d.lines.forEach(l => {
+        runs.push({ text:'\n' }, { text:`${l.label} - `, bold:true });
+        l.items.forEach((it, k) => runs.push({ text:(k ? ', ' : '') + it.text, bold:!!it.ahm }));
+        if(l.missing) runs.push({ text:`${l.items.length ? ' · ' : ''}חסר ${l.missing}`, color:XLSX_COLORS.no, bold:true });
+      });
+      most = Math.max(most, 1 + d.lines.reduce((a, l) => a + Math.ceil((l.label.length + l.items.reduce((x, it) => x + it.text.length + 2, 0)) / 34), 0));
+      return { runs, s:[5, 6].includes(dowOf(d.date)) ? 5 : 4 };
+    }));
+    heights.push(Math.max(60, most * 15 + 6));
+  }
+  rows.push([{ text:'הערות', s:3 }, ...Array(6).fill({ text:'', s:4 })]); heights.push(40);
+  return buildXlsx('סידור ' + monthLabel(ctx.month), rows, Array(7).fill(30), { heights, merges:['A1:G1', `B${rows.length}:G${rows.length}`] });
 }
 function downloadBytes(bytes, filename, mime){
   const url = URL.createObjectURL(new Blob([bytes], { type:mime }));
@@ -114,10 +153,12 @@ function downloadScheduleXlsx(ctx, assignments){
 
 // print / "save as PDF": only the schedule table is printed
 function scheduleHtmlTable(ctx, assignments){
-  const rows = scheduleTable(ctx, assignments), others = scheduleOthersOf(ctx);
-  const head = `<tr><th>תאריך</th>${ctx.shiftTypes.map(st => `<th>${escapeHtml(st.label)}<br><span>${st.start}–${st.end}</span></th>`).join('')}${others ? OTHERS_COLS.map(c => `<th>${c[1]}</th>`).join('') : ''}</tr>`;
-  const body = rows.map(r => `<tr><th>${dayLabel(r.date)}</th>${r.cells.map(c => `<td>${c.people.map(p => `<b class="lv-${p.level}">${escapeHtml(p.name)}</b>${p.note ? ` <small>(${escapeHtml(p.note)})</small>` : ''}`).join('<br>')}${c.missing ? `<br><b class="lv-no">חסר/ים ${c.missing}</b>` : ''}</td>`).join('')}${others ? OTHERS_COLS.map(([k]) => `<td>${((others[r.date] || {})[k] || []).map(x => `<b>${escapeHtml(x.name)}</b>${x.hours ? ` <small>${x.hours}</small>` : ''}`).join('<br>')}</td>`).join('') : ''}</tr>`).join('');
-  return `<table class="print-table"><caption>סידור עבודה — ${monthLabel(ctx.month)}</caption>${head}${body}</table>`;
+  const days = scheduleCalendarDays(ctx, assignments), lead = dowOf(days[0].date);
+  const flat = Array(lead).fill(null).concat(days); while(flat.length % 7) flat.push(null);
+  const cell = d => !d ? '<td class="pc-empty"></td>' : `<td class="${[5, 6].includes(dowOf(d.date)) ? 'pc-weekend' : ''}"><div class="pc-num">${parseIso(d.date).getDate()}</div>${d.lines.map(l =>
+    `<div class="pc-line"><b>${escapeHtml(l.label)} -</b> ${l.items.map(it => it.ahm ? `<b>${escapeHtml(it.text)}</b>` : escapeHtml(it.text)).join(', ')}${l.missing ? ` <b class="lv-no">חסר ${l.missing}</b>` : ''}</div>`).join('')}</td>`;
+  let body = ''; for(let w = 0; w < flat.length; w += 7) body += `<tr>${flat.slice(w, w + 7).map(cell).join('')}</tr>`;
+  return `<table class="print-table print-cal"><caption>סידור עבודה — ${monthLabel(ctx.month)}</caption><tr>${DOW_NAMES.map(d => `<th>יום ${d}</th>`).join('')}</tr>${body}<tr><th>הערות</th><td colspan="6"></td></tr></table>`;
 }
 function printSchedule(ctx, assignments){
   const box = document.createElement('div');
