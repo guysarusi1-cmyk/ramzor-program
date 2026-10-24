@@ -259,7 +259,7 @@ function srvOpenSlot(mk, key, body){
         <select id="add-who" hidden aria-label="מי">${'<option value="">בחרו מדריך/ה</option>' + ranked.map(({ p, lv }) => `<option value="${p.id}" class="opt-${LV[lv][0]}">${pEsc(instrName(p, portalLoad().instructors))}</option>`).join('')}</select>
         <button type="button" class="cs-pick-btn" id="cs-pick-btn" aria-haspopup="listbox" aria-expanded="false"><span>בחרו מדריך/ה</span><i aria-hidden="true">⌄</i></button>
         <div class="cs-pick-list" id="cs-pick-list" role="listbox" hidden>
-          <div class="cs-pick-head"><span class="cs-pick-title">בחרו מדריך/ה</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>
+          <div class="cs-pick-head"><span class="cs-pick-key">${mcalKeyChips()}</span></div>
           ${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-val="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('')}
         </div></div></div>
       <div class="phours-row"><select id="add-from" aria-label="משעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.start ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select><span>עד</span><select id="add-to" aria-label="עד שעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.end ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></div>
