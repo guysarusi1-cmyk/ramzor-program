@@ -2014,11 +2014,15 @@
         { const tb = document.querySelector('[data-ptab="schedule"]'); if(tb && !document.getElementById('cs-others')){ tb.click(); await sleep(300); } }          // (with new messages the portal opens on them)
         for(let i = 0; i < 40 && !document.getElementById('cs-others'); i++) await sleep(150);
         const ob = document.getElementById('cs-others');
-        check('calendar: the coordinator sees the service girls and the teachers inside the shifts, with a button "הסתרת בנות שירות ומורות"', !!ob && /הסתרת בנות שירות ומורות/.test(ob.textContent) && !!document.querySelector('#portal-body .mcal-cell [data-role]') && !document.querySelector('#portal-body .mcal-others'), ob ? ob.textContent : 'no button: tab ' + portalUi.tab + ' month ' + portalUi.month + '/' + mk + ' mcal ' + !!document.querySelector('#portal-body .mcal') + ' nosched ' + /עוד אין סידור/.test(document.getElementById('portal-body').textContent) + ' note ' + !!document.querySelector('.cs-note-row'));
-        if(ob){ ob.click(); await sleep(300);
-          check('calendar: ... a tap hides them, and the button now says "הצגת"', !document.querySelector('#portal-body .mcal-cell [data-role]') && /הצגת/.test(document.getElementById('cs-others').textContent), 'not hidden');
-          document.getElementById('cs-others').click(); await sleep(300);
-          check('calendar: ... and a second tap shows them again', !!document.querySelector('#portal-body .mcal-cell [data-role]'), 'not shown'); }
+        check('calendar: the coordinator sees the service girls and the teachers inside the shifts, with a button "הסתר מורות/בנות שירות"', !!ob && /הסתר מורות\/בנות שירות/.test(ob.textContent) && !!document.querySelector('#portal-body .mcal-cell [data-role]') && !document.querySelector('#portal-body .mcal-others'), ob ? ob.textContent : 'no button: tab ' + portalUi.tab + ' month ' + portalUi.month);
+        if(ob){
+          const pick = async k => { document.getElementById('cs-others').click(); await sleep(150); const b = document.querySelector(`.psheet [data-cs-hide="${k}"]`); if(b) b.click(); await sleep(300); return !!b; };
+          const has = role => !!document.querySelector(`#portal-body .mcal-cell [data-role="${role}"]`);
+          check('calendar: ... a tap asks what to hide: the teachers, the service girls, or both', (await pick('service')) && !has('service') && (has('teacher') || !document.querySelector('[data-role="teacher"]')), 'service still shown');
+          await pick('both');
+          check('calendar: ... both hidden', !document.querySelector('#portal-body .mcal-cell [data-role]') && /שתיהן מוסתרות/.test(document.getElementById('cs-others').textContent), 'still shown');
+          await pick('');
+          check('calendar: ... and "להציג את כולן" shows them again', !!document.querySelector('#portal-body .mcal-cell [data-role]'), 'not shown'); }
         try { localStorage.removeItem('ramzor-cs-hide-others'); } catch(e){}
         // an instructor sees the line too (the month must be published for her), with no button to hide it
         if(portalMonth(mk).published){

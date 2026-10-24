@@ -101,7 +101,10 @@ function srvDefaultCoordMonth(){
   return st.months[next] && st.months[next].status ? next : (st.months[cur] && st.months[cur].status ? cur : next);
 }
 // the coordinator may hide the line of the service girls and the teachers in her calendar (remembered on this device)
-function csHideOthers(){ try { return localStorage.getItem('ramzor-cs-hide-others') === '1'; } catch(e){ return false; } }
+// what the coordinator hides of her calendar (Guy, 2026-10-24): nothing, the teachers, the service girls, or both ('1' = both, as before)
+function csHiddenMode(){ try { const v = localStorage.getItem('ramzor-cs-hide-others'); return v === '1' ? 'both' : ['teacher', 'service', 'both'].includes(v) ? v : ''; } catch(e){ return ''; } }
+const csHideOthers = () => csHiddenMode() === 'both';
+const CS_HIDE_CHOICES = [['', 'להציג את כולן'], ['teacher', 'להסתיר מורות'], ['service', 'להסתיר בנות שירות'], ['both', 'להסתיר את שתיהן']];
 function srvRenderCoordSchedule(body){
   if(srvDragWho){ srvRenderAfterDrag = body; return; }          // (never redraw the calendar in the middle of a drag: the name being dragged would vanish and the drop would be lost; it redraws when the drag ends)
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
@@ -124,14 +127,17 @@ function srvRenderCoordSchedule(body){
     ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}${svcLine}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
-    <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
+    <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">הסתר מורות/בנות שירות${csHiddenMode() ? ` · <small>${({ teacher:'המורות מוסתרות', service:'בנות השירות מוסתרות', both:'שתיהן מוסתרות' })[csHiddenMode()]}</small>` : ''}</button></div>
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   wireMonthNav(body);
   srvBuildWire(body, mk);
   if(!has) return;
   { const cf = body.querySelector('#cs-count'); if(cf) cf.addEventListener('toggle', () => { portalUi.csCount = cf.open; }); }
-  { const ob = body.querySelector('#cs-others'); if(ob) ob.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-hide-others', csHideOthers() ? '0' : '1'); } catch(e){} srvRenderCoordSchedule(body); }); }
+  { const ob = body.querySelector('#cs-others'); if(ob) ob.addEventListener('click', () => {
+      const now = csHiddenMode(), sh = portalSheet(`<h2>הסתר מורות/בנות שירות</h2><div class="pchoice wrap cs-hide-choices">${CS_HIDE_CHOICES.map(([k, w]) => `<button type="button" class="${k === now ? 'on' : ''}" data-cs-hide="${k}">${w}</button>`).join('')}</div>`);
+      sh.querySelectorAll('[data-cs-hide]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-hide-others', b.dataset.csHide || '0'); } catch(e){} sh.close(); srvRenderCoordSchedule(body); }));
+    }); }
   if(m.published) srvOdWire(body, mk);
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });

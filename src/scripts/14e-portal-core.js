@@ -239,7 +239,7 @@ function monthCalHtml(ctx, assignments, opts){
   const shiftCell = (r, i) => {
     const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1 && !weekOthers;
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
-    const oth = inCells[`${r.date}|${s.id}`] || [], othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(x.note)}</small>` : ''}</span>`;
+    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(x.note)}</small>` : ''}</span>`;
     const teachers = oth.filter(x => x.role === 'teacher').map(othName).join(''), service = oth.filter(x => x.role === 'service').map(othName).join('');
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
