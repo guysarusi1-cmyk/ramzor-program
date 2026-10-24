@@ -104,8 +104,14 @@ function calHours(note, s){
   const a = +m[1], b = +m[2], st = parseInt(s.start, 10), en = parseInt(s.end, 10);
   return a === st && b !== en ? `עד ${b}` : b === en && a !== st ? `מ-${a}` : `${a}–${b}`;
 }
+// an instructor's own note "10–18" seen from one shift: only the part of it in that shift ("מ-10" in the morning)
+function calClip(note, s){
+  const m = String(note || '').match(/^(\d{1,2})[–-](\d{1,2})$/); if(!m) return note || '';
+  const st = parseInt(s.start, 10), en = parseInt(s.end, 10), a = +m[1], b = +m[2]; if(en <= st) return note;          // (a night: as it is)
+  const f = Math.max(a, st), t = Math.min(b <= a ? b + 24 : b, en); return f === st && t === en ? '' : `${f}–${t}`;
+}
 function scheduleCalendarDays(ctx, assignments){
-  const table = scheduleTable(ctx, assignments), others = typeof othersByShift === 'function' ? othersByShift(ctx) : {};
+  const table = scheduleTable(ctx, assignments), others = typeof othersByShift === 'function' ? othersByShift(ctx) : {}, extras = typeof overlapExtras === 'function' ? overlapExtras(ctx) : {};
   const rank = (typeof srv !== 'undefined' && srv.ahmash) || {}, picks = typeof ahmashPicks === 'function' ? ahmashPicks(table, ctx, rank) : {};
   return table.map(r => ({ date:r.date, lines:ctx.shiftTypes.map((s, i) => {
     const c = r.cells[i], oth = others[`${r.date}|${s.id}`] || [], items = [];
@@ -113,9 +119,10 @@ function scheduleCalendarDays(ctx, assignments){
     oth.filter(x => x.role === 'teacher').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.teacher, calHours(x.note, s)), kind:'teacher' }));
     if(c.slot){
       const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
-      lead.forEach(p => items.push({ text:nm(p.name, 'אחמ"ש', calHours(p.note, s)), ahm:true, kind:'instructor' }));
-      rest.forEach(p => items.push({ text:nm(p.name, '', calHours(p.note, s)), kind:'instructor' }));
+      lead.forEach(p => items.push({ text:nm(p.name, 'אחמ"ש', calHours(calClip(p.note, s), s)), ahm:true, kind:'instructor' }));
+      rest.forEach(p => items.push({ text:nm(p.name, '', calHours(calClip(p.note, s), s)), kind:'instructor' }));
     }
+    (extras[`${r.date}|${s.id}`] || []).forEach(x => items.push({ text:nm(x.name, '', calHours(x.note, s)), kind:'instructor', extra:true }));          // (from the shift next to it: she is here too)
     oth.filter(x => x.role === 'service').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.service, calHours(x.note, s)), kind:'service' }));
     return { label:s.label, items, missing:c.slot ? c.missing : 0 };
   }).filter(l => l.items.length || l.missing) }));

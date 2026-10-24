@@ -447,3 +447,5 @@
   .cs-hide-choices{ flex-direction:column; } .cs-hide-choices button{ width:100%; min-height:46px; }          /* the coordinator's choice what to hide (14j) */
   .cs-name-count{ min-width:22px; padding:0 6px; border-radius:10px; background:var(--p-panel); border:1px solid var(--p-line); font-size:12px; font-variant-numeric:tabular-nums; text-align:center; }          /* how many shifts so far (14j) */
   .cs-sort-btn{ margin:0 0 8px; } .cs-sort-btn.on{ border-color:var(--gold); }
+  .cs-others-fold{ margin-top:10px; } .cs-other-name{ cursor:grab; } .cs-other-name small{ color:var(--p-muted); font-size:11px; }          /* service girls and teachers to drag into the calendar (14j) */
+  .mcal-name.extra{ opacity:.8; border-style:dashed; }          /* somebody from the shift next to it whose hours reach this one (14e) */

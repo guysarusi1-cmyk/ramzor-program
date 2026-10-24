@@ -2027,6 +2027,10 @@
             const box = document.createElement('div'); box.innerHTML = srvSidePanelHtml(mk); const nums = [...box.querySelectorAll('.cs-name-count')].map(x => +x.textContent), c = srvShiftCounts(mk);
             portalUi.csSort = 'name'; const plain = document.createElement('div'); plain.innerHTML = srvSidePanelHtml(mk); portalUi.csSort = 'count';
             check('instructors panel: by name with no numbers; "הצג את מספר המשמרות" shows the number by every name and puts the fewest first', !plain.querySelector('.cs-name-count') && /הצג את מספר המשמרות/.test(plain.textContent) && nums.length > 0 && nums.every((n, k) => k === 0 || nums[k - 1] <= n) && /הסתר את מספר המשמרות/.test(box.textContent) && [...box.querySelectorAll('[data-cs-person]')].every(b => +b.querySelector('.cs-name-count').textContent === ((c[b.dataset.csPerson] || {}).all || 0)), nums.join(','));
+            { const st2 = portalLoad(), sh = id => st2.shiftTypes.find(x => x.id === id), sun = daysOfMonth(mk).find(d => dowOf(d) === 0), mon = daysOfMonth(mk).find(d => dowOf(d) === 1);
+              const a = srvOtherHours('service', sun, 'm', sh('m'), null), b = srvOtherHours('service', mon, 'e', sh('e'), null), c2 = srvOtherHours('teacher', mon, 'e', sh('e'), { '1':['08:00', '14:00'] }), d2 = srvOtherHours('teacher', sun, 'm', sh('m'), { '1':['08:00', '14:00'] });
+              check('drag a service girl / teacher: Sunday 11-19 for a service girl, the shift\'s hours on other days; a teacher her fixed hours (none that day: refused)', a.from === '11:00' && a.to === '19:00' && b.from === sh('e').start && c2.from === '08:00' && c2.to === '14:00' && d2 === null, JSON.stringify([a, b, c2, d2]));
+              check('drag a service girl / teacher: they are in a folded list at the bottom of the instructors\' panel', /בנות שירות ומורות/.test(box.textContent) && !!box.querySelector('#cs-others-fold [data-cs-other]'), 'no fold'); }
             portalUi.csOpen = was; portalUi.csSort = ws; }
         try { localStorage.removeItem('ramzor-cs-hide-others'); } catch(e){}
         // an instructor sees the line too (the month must be published for her), with no button to hide it

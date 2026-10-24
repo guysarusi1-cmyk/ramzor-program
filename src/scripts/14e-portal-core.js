@@ -212,6 +212,36 @@ function boardHtml(ctx, assignments, opts){
 // opts: me, ahmash ({ staff id: rank }); for the coordinator: sel (the person whose requests are open at the side; her names are outlined), colour (names coloured by how the wish was kept) and edit (a tap on a shift opens its editor)
 // the key of the colours of the coordinator's calendar (shown under her panel of the instructors' requests)
 const mcalKeyHtml = compact => compact === 'tab' ? `<span class="mcal-key tab-key" title="שובץ/ה במשמרת שסימן/ה כך"><span class="mcal-name wish-yes">כן</span><span class="mcal-name wish-can">יכול</span><span class="mcal-name wish-no">לא</span><span class="mcal-name wish-none">לא סומן</span></span>` : compact ? `<div class="mcal-key compact" title="שובץ/ה במשמרת שסימן/ה כך"><span class="mcal-name wish-yes">כן</span><span class="mcal-name wish-can">יכול</span><span class="mcal-name wish-no">לא</span><span class="mcal-name wish-none">לא סומן</span></div>` : '<div class="pnote mcal-key"><span class="mcal-name wish-yes">כן</span> <span class="mcal-name wish-can">יכול</span> <span class="mcal-name wish-no">לא</span> <span class="mcal-name wish-none">לא סומן</span> שובץ/ה במשמרת שסימן/ה כך.</div>';
+// Somebody whose hours cross into another shift (two hours or more) is shown in every shift she is there, with the hours of that shift she
+// covers (Guy, 2026-10-25): a service girl on Sunday 11-19 is in the morning "מ-11" and in the afternoon "עד 19"; the Excel file does the same.
+// Only hours that are not the shift's usual ones: the usual hour where two shifts meet (14-15, 7-8) never counts.
+const SHIFT_WIN = { m:[7, 15], e:[14, 22], n:[22, 32] };
+// -> [{ key:'day|m', note:'11–15' | '' }]: the shifts this row of the schedule covers (its own first), each with the part of it she is there
+function rowShiftParts(r, ownSid){
+  const hh = x => { const [h, mi] = String(x || '').split(':').map(Number); return h + (mi || 0) / 60; };
+  if(!r.from || !r.to || !ownSid) return ownSid ? [{ key:`${r.day}|${ownSid}`, note:'' }] : [];
+  let a = hh(r.from), b = hh(r.to); if(b <= a) b += 24;
+  const out = [], fmt = x => String(Math.round(x) % 24);
+  for(let d = 0; d < 2; d++) for(const sid of ['m', 'e', 'n']){
+    const ws = SHIFT_WIN[sid][0] + 24 * d, we = SHIFT_WIN[sid][1] + 24 * d, ov = Math.min(b, we) - Math.max(a, ws), own = d === 0 && sid === ownSid;
+    if(!own && ov < 2) continue;
+    const f = Math.max(a, ws), t = Math.min(b, we), whole = f === ws && t === we;
+    out.push({ key:`${addDays(r.day, d)}|${sid}`, note:whole ? '' : `${fmt(f)}–${fmt(t)}`, own });
+  }
+  return out.sort((x, y) => (y.own ? 1 : 0) - (x.own ? 1 : 0));
+}
+// the instructors whose own hours also reach another shift: shown there too (not counted there: the shift's count stays as it is)
+function overlapExtras(ctx){
+  if(typeof portalServerOn === 'undefined' || !portalServerOn || !portalState || !portalState.rows) return {};
+  const st = portalLoad(), out = {};
+  st.rows.forEach(r => {
+    if(monthKeyOf(r.day) !== ctx.month && monthKeyOf(addDays(r.day, 1)) !== ctx.month) return;
+    if(['L', 'S'].includes(r.shift)) return;
+    const p = st.instructors.find(x => x.id === r.staff); if(!p || p.role !== 'instructor') return;
+    rowShiftParts(r, SRV_SHIFT_UI[r.shift]).filter(x => !x.own).forEach(x => { (out[x.key] = out[x.key] || []).push({ id:p.id, name:instrName(p, st.instructors), note:x.note }); });
+  });
+  return out;
+}
 // the service girls and the teachers of a month by shift ("day|m"), each with her hours when they are not the shift's usual ones
 function othersByShift(ctx){
   if(typeof portalServerOn === 'undefined' || !portalServerOn || !portalState || !portalState.rows) return {};
@@ -219,9 +249,8 @@ function othersByShift(ctx){
   st.rows.forEach(r => {
     if(monthKeyOf(r.day) !== ctx.month) return;
     const p = st.instructors.find(x => x.id === r.staff); if(!p || !['service', 'teacher'].includes(p.role)) return;
-    const sid = (typeof SRV_SHIFT_UI !== 'undefined' && SRV_SHIFT_UI[r.shift]) || 'm', std = typeof SRV_STD !== 'undefined' ? SRV_STD[r.shift] : null;
-    const note = r.from && r.to && (!std || r.from !== std[0] || r.to !== std[1]) ? hh(r.from) + '–' + hh(r.to) : '';
-    (out[`${r.day}|${sid}`] = out[`${r.day}|${sid}`] || []).push({ id:p.id, role:p.role, name:instrName(p, st.instructors), note, from:r.from || '' });
+    const sid = (typeof SRV_SHIFT_UI !== 'undefined' && SRV_SHIFT_UI[r.shift]) || 'm';
+    rowShiftParts(r, sid).forEach(x => (out[x.key] = out[x.key] || []).push({ id:p.id, role:p.role, name:instrName(p, st.instructors), note:x.note, from:r.from || '' }));          // (in every shift she covers, with the hours of it)
   });
   Object.values(out).forEach(l => l.sort((a, b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name)));
   return out;
@@ -233,13 +262,15 @@ function monthCalHtml(ctx, assignments, opts){
   const hh = x => String(parseInt(x, 10)), hours = s => hh(s.start) + '-' + hh(s.end);
   const blank = '<div class="mcal-blank"></div>', lead = dowOf(table[0].date);
   const others = opts.others === false || opts.othersInCells || typeof scheduleOthersOf !== 'function' ? null : scheduleOthersOf(ctx);          // (the service girls and the teachers: one slim line under every day in the coordinator's calendar; she can hide it)
-  const inCells = opts.othersInCells ? othersByShift(ctx) : {};          // (the calendar of the staff: they are in the shifts like the instructors; a teacher first, the service girls last — Guy 2026-10-18)
+  const inCells = opts.othersInCells ? othersByShift(ctx) : {}, extras = opts.othersInCells || opts.edit ? overlapExtras(ctx) : {};          // (instructors whose hours reach this shift too)          // (the calendar of the staff: they are in the shifts like the instructors; a teacher first, the service girls last — Guy 2026-10-18)
   let weekOthers = false;
   const flat = Array(lead).fill(null).concat(table); while(flat.length % 7) flat.push(null);
   const shiftCell = (r, i) => {
     const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1 && !weekOthers;
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
-    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(x.note)}</small>` : ''}</span>`;
+    const hrs = n => n && typeof calHours === 'function' ? calHours(n, s) : n;
+    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}</span>`;
+    const extra = (extras[`${r.date}|${s.id}`] || []).map(x => `<span class="mcal-name extra${opts.me && x.id === opts.me ? ' me' : ''}" title="משובץ/ת במשמרת הסמוכה, ונמצא/ת גם כאן">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}</span>`).join('');
     const teachers = oth.filter(x => x.role === 'teacher').map(othName).join(''), service = oth.filter(x => x.role === 'service').map(othName).join('');
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
@@ -253,7 +284,7 @@ function monthCalHtml(ctx, assignments, opts){
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}">${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
     };
-    return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${service}${c.missing ? `<span class="mcal-missing">חסר ${c.missing}</span>` : ''}</div>`;
+    return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${c.missing ? `<span class="mcal-missing">חסר ${c.missing}</span>` : ''}</div>`;
   };
   let out = `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head">${d}</div>`).join('')}`;
   for(let w = 0; w < flat.length; w += 7){
