@@ -240,6 +240,7 @@ function overlapExtras(ctx){
     const p = st.instructors.find(x => x.id === r.staff); if(!p || p.role !== 'instructor') return;
     rowShiftParts(r, SRV_SHIFT_UI[r.shift]).filter(x => !x.own).forEach(x => { (out[x.key] = out[x.key] || []).push({ id:p.id, name:instrName(p, st.instructors), note:x.note }); });
   });
+  Object.values(out).forEach(l => l.sort((a, b) => String(a.name).localeCompare(String(b.name), 'he')));
   return out;
 }
 // the service girls and the teachers of a month by shift ("day|m"), each with her hours when they are not the shift's usual ones

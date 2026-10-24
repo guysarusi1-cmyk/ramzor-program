@@ -75,7 +75,7 @@ function scheduleTable(ctx, assignments){
     cells: ctx.shiftTypes.map(st => {
       const slot = slotMap[slotKey(date, st.id)];
       if(!slot) return { slot:null, people:[], missing:0 };
-      const list = (assignments[slot.key] || []).filter(pid => byId[pid]), annot = (portalMonth(ctx.month) || {}).annot || {};
+      const list = (assignments[slot.key] || []).filter(pid => byId[pid]).sort((x, y) => String(instrName(byId[x], ctx.instructors)).localeCompare(String(instrName(byId[y], ctx.instructors)), 'he')), annot = (portalMonth(ctx.month) || {}).annot || {};          // (by name: the order never jumps after an edit, Guy 2026-10-25)
       return { slot, people:list.map(pid => ({ iid:pid, name:instrName(byId[pid], ctx.instructors), level:levelOf(ctx.prefs, pid, slot), note:annot[`${slot.key}|${pid}`] || '' })), missing:Math.max(0, slot.need - list.length) };          // (note: other hours than the shift's, a short morning, the long weekend)
     })
   }));
