@@ -867,7 +867,7 @@
   .gi-count{ color:var(--muted); font-size:13px; }
   .gi-arrow{ color:var(--muted); transition:transform .2s; }
   .green-involved-btn[aria-expanded=true] .gi-arrow{ transform:rotate(180deg); }
-  .green-involved-panel{ border:1px solid var(--line); border-radius:12px; margin-top:6px; padding:8px 10px 10px; background:var(--panel); max-height:46vh; overflow:auto; }
+  .green-involved-panel{ border:1px solid var(--line); border-radius:12px; margin-top:6px; padding:8px 10px 10px; background:var(--panel); }          /* (no scroll of its own: the page scrolls) */
   .green-involved-panel[hidden]{ display:none; }
   .green-involved-panel .note{ margin:4px 4px 6px; }
   .gi-row{ display:flex; align-items:center; gap:12px; min-height:44px; padding:0 6px; border-radius:10px; cursor:pointer; font-size:14.5px; }
@@ -1283,16 +1283,16 @@
   .lvbtn.lv-clear{ color:var(--muted); }
 
   /* coordinator: edit one shift, submissions, timetable, settings */
-  .pedit-list{ max-height:46vh; overflow:auto; margin:8px 0; }
+  .pedit-list{ margin:8px 0; }          /* (no scroll of its own inside the window: one scroll only — Guy 2026-10-24) */
   .pedit-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; margin:4px 0; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); cursor:pointer; min-height:48px; }
   .pedit-row img{ width:34px; height:34px; border-radius:50%; object-fit:cover; }
   .pedit-row span{ flex:1; font-weight:700; } .pedit-row em{ font-style:normal; font-size:12px; font-weight:700; white-space:nowrap; min-width:64px; text-align:end; }
   .pedit-row input{ width:22px; height:22px; }
   .pedit-row.lv-yes, .pedit-row.lv-avoid, .pedit-row.lv-no{ border-width:1px; }
   .psubs{ margin-top:10px; }
-  .psub-row{ display:grid; grid-template-columns:36px 1fr auto; align-items:center; gap:2px 10px; padding:8px 10px; margin:6px 0; background:var(--p-panel); border:1px solid var(--p-line); border-radius:12px; }
-  .psub-row img{ width:34px; height:34px; border-radius:50%; grid-row:1 / 3; }
-  .psub-row small{ grid-column:2 / 4; color:var(--p-muted); font-size:12px; }
+  .psub-row{ display:grid; grid-template-columns:28px 1fr auto; align-items:center; gap:0 8px; padding:4px 8px; margin:3px 0; background:var(--p-panel); border:1px solid var(--p-line); border-radius:12px; }
+  .psub-row img{ width:26px; height:26px; border-radius:50%; grid-row:1 / 3; }
+  .psub-row small{ grid-column:2 / 4; color:var(--p-muted); font-size:12px; line-height:1.35; }
   .psub-row.ok span{ color:var(--p-yes); font-weight:700; } .psub-row.bad span{ color:var(--p-no); font-weight:700; }
   .pdays{ display:flex; gap:6px; margin:8px 0; } .pdays button{ flex:1; min-height:44px; border-radius:10px; border:1px solid var(--p-line); background:var(--p-panel2); color:var(--p-text); font-family:'Rubik', sans-serif; font-weight:800; cursor:pointer; } .pdays button.active{ background:var(--gold); color:#2a1d00; }
   .ptt{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }
@@ -1325,6 +1325,9 @@
     .print-table th, .print-table td{ border:1px solid #777; padding:4px 6px; text-align:center; }
     .print-table th{ background:#e8e2d0; } .print-table th span{ font-weight:400; font-size:9pt; }
     .print-table b{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    @page{ size:A4 landscape; margin:8mm; }
+    .print-cal{ table-layout:fixed; font-size:8.5pt; } .print-cal td{ text-align:right; vertical-align:top; padding:3px 4px; }
+    .print-cal .pc-num{ font-weight:800; font-size:10pt; } .print-cal .pc-line{ margin-top:2px; line-height:1.3; } .print-cal .pc-weekend{ background:#f4f1ea; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .print-table .lv-yes{ color:#2E7D32; background:none; } .print-table .lv-neutral{ color:#B26A00; } .print-table .lv-avoid{ color:#1565C0; background:none; } .print-table .lv-no{ color:#C62828; background:none; }
   }
 
@@ -1405,7 +1408,7 @@
   .pchange-opts{ display:flex; flex-direction:column; gap:10px; margin:8px 0 12px; }
   .pchange-opts .btn{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:start; padding:12px 14px; height:auto; line-height:1.4; }
   .pchange-opts .btn small{ font-weight:400; opacity:.85; font-size:12.5px; }
-  .pchange-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0 12px; max-height:52vh; overflow-y:auto; }
+  .pchange-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0 12px; }          /* (one scroll only) */
   .pmine-row.pick{ width:100%; cursor:pointer; font-family:inherit; color:var(--p-text); text-align:start; }
   /* the team as a monthly calendar: the days across, every week = a row of day numbers and the morning / noon / night under it; the shift names are written once per week, at its start */
   .mcal{ display:grid; grid-template-columns:36px repeat(7, minmax(0, 1fr)); column-gap:3px; row-gap:0; direction:rtl; }
@@ -1444,11 +1447,11 @@
   .mcal-name.wish-no{ background:var(--p-no-bg, #3a1a18); color:var(--p-no, #ff8a80); box-shadow:inset 0 0 0 1px var(--p-no, #ff8a80); }
   .mcal-name.wish-none{ background:var(--p-none-bg, #3d2a0e); color:var(--p-none, #ffb347); box-shadow:inset 0 0 0 1px var(--p-none, #ffb347); }
   .cs-pick{ position:relative; width:100%; }
-  .cs-pick-list.cs-repl-list{ position:static; margin:4px 0 8px; max-height:300px; }          /* (the "החלפה" list opens under its row, inside the window; floating, it fell outside the window and the button seemed dead) */
+  .cs-pick-list.cs-repl-list{ position:static; margin:4px 0 8px; }          /* (the "החלפה" list opens under its row, inside the window; floating, it fell outside the window and the button seemed dead) */
   .cs-pick-btn{ display:flex; align-items:center; justify-content:space-between; width:100%; min-height:44px; padding:8px 12px; border:1px solid var(--p-line); border-radius:10px; background:var(--p-panel2); color:var(--p-text); font:inherit; font-size:16px; cursor:pointer; }
   .cs-pick-btn.sel-yes{ background:#123322; color:#7be0a0; } .cs-pick-btn.sel-can{ background:var(--p-can-bg, #14263f); color:var(--p-can, #8ec0ff); } .cs-pick-btn.sel-none{ background:var(--p-none-bg, #3d2a0e); color:var(--p-none, #ffb347); } .cs-pick-btn.sel-no{ background:#3a1a18; color:#ff8a80; }
-  .cs-pick-list{ position:absolute; z-index:20; inset-inline:0; top:calc(100% + 4px); max-height:340px; overflow-y:auto; padding:6px; background:var(--p-panel); border:1px solid var(--p-line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.5); }
-  .cs-pick-head{ position:sticky; top:-6px; z-index:1; display:flex; align-items:center; gap:10px; margin:-6px -6px 4px; padding:8px 10px; background:var(--p-panel); border-bottom:1px solid var(--p-line); }
+  .cs-pick-list{ position:static; margin:4px 0 8px; padding:6px; background:var(--p-panel); border:1px solid var(--p-line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  .cs-pick-head{ position:static; display:flex; align-items:center; gap:10px; margin:-6px -6px 4px; padding:8px 10px; background:var(--p-panel); border-bottom:1px solid var(--p-line); }
   .cs-pick-title{ font-weight:700; } .cs-pick-key{ display:inline-flex; flex-wrap:wrap; gap:4px; margin-inline-start:auto; }
   .cs-pick-key .mcal-name{ display:inline-block; font-size:11px; padding:1px 7px; }
   .cs-pick-item{ display:block; width:100%; margin:2px 0; padding:7px 12px; text-align:start; border:1px solid transparent; border-radius:8px; font:inherit; font-size:15px; cursor:pointer; }
@@ -1585,6 +1588,9 @@
   .pprefs-past{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 10px; padding:8px 12px; border-radius:12px; background:rgba(90,160,255,.14); border:1px solid rgba(90,160,255,.5); font-weight:700; }
   .unmarked-choices{ display:flex; flex-direction:column; gap:8px; margin-top:12px; } .unmarked-choices .btn{ width:100%; min-height:48px; }          /* the question about unmarked shifts (14f) */
   .psub-fill{ grid-column:1 / -1; justify-self:start; margin-top:6px; }          /* the coordinator fills a service girl's availability (14k) */
+  .cs-hide-choices{ flex-direction:column; } .cs-hide-choices button{ width:100%; min-height:46px; }          /* the coordinator's choice what to hide (14j) */
+  .cs-name-count{ min-width:22px; padding:0 6px; border-radius:10px; background:var(--p-panel); border:1px solid var(--p-line); font-size:12px; font-variant-numeric:tabular-nums; text-align:center; }          /* how many shifts so far (14j) */
+  .cs-sort-btn{ margin:0 0 8px; } .cs-sort-btn.on{ border-color:var(--gold); }
 
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
@@ -1639,7 +1645,7 @@
   .ctl-x{ border:none; background:transparent; color:var(--muted); font-size:15px; padding:4px 8px; cursor:pointer; border-radius:12px; }
   .ctl-x:hover{ color:var(--text); background:rgba(255,255,255,.06); }
   .ctl-search{ width:100%; min-height:44px; margin-bottom:8px; background:var(--panel-2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font:inherit; font-size:16px; }
-  .ctl-pick{ display:flex; flex-direction:column; gap:4px; max-height:55vh; overflow-y:auto; }
+  .ctl-pick{ display:flex; flex-direction:column; gap:4px; }          /* (one scroll only) */
   .ctl-pick-item{ display:flex; align-items:center; gap:10px; padding:6px 8px; border:1px solid transparent; border-radius:10px; background:var(--panel-2); color:var(--text); font:inherit; text-align:start; cursor:pointer; }
   .ctl-pick-item:hover{ border-color:var(--gold); }
   .ctl-pick-item img{ width:32px; height:32px; border-radius:50%; object-fit:cover; }
@@ -1650,7 +1656,7 @@
   .ctl-tt-icon{ min-height:42px; font-size:22px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); cursor:pointer; }
   .ctl-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
   .ctl-fixed-pick{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:14px; padding-top:10px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
-  .ctl-icons{ display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:6px; max-height:60vh; overflow-y:auto; }
+  .ctl-icons{ display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:6px; }          /* (one scroll only) */
   .ctl-icon-opt{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 4px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); color:var(--text); cursor:pointer; font:inherit; }
   .ctl-icon-opt span{ font-size:28px; } .ctl-icon-opt small{ font-size:11.5px; color:var(--muted); }
   .ctl-icon-opt.on, .ctl-icon-opt:hover{ border-color:var(--gold); }
@@ -5427,8 +5433,7 @@ function whyAssigned(ctx, pid, slot){
 }
 
 // ---------- EXPORT: Excel file (a real .xlsx, built here with no library) and print / PDF ----------
-// The schedule is written with rows = days and columns = shifts; every name is coloured by how well the wish was kept
-// (green = got what they wanted, orange = would rather not, red = "לא" or a missing person, dark = no preference).
+// The schedule is written as the monthly calendar of the paper schedule (see buildScheduleXlsx).
 const XLSX_COLORS = { yes:'FF2E7D32', neutral:'FFB26A00', avoid:'FF1565C0', no:'FFC62828' };          // (as in the coordinator's schedule: can = blue, not marked = orange)
 
 const CRC_TABLE = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -5466,19 +5471,24 @@ function xlsxCell(ref, cell){
   return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(cell.text == null ? '' : cell.text)}</t></is></c>`;
 }
 // rows: array of arrays of cells; widths: column widths
-function buildXlsx(sheetName, rows, widths){
+function buildXlsx(sheetName, rows, widths, opts){
+  opts = opts || {};
   const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
-  const sheetRows = rows.map((r, ri) => `<row r="${ri + 1}">${r.map((c, ci) => xlsxCell(xlsxColName(ci) + (ri + 1), c)).join('')}</row>`).join('');
+  const ht = opts.heights || [];
+  const sheetRows = rows.map((r, ri) => `<row r="${ri + 1}"${ht[ri] ? ` ht="${ht[ri]}" customHeight="1"` : ''}>${r.map((c, ci) => xlsxCell(xlsxColName(ci) + (ri + 1), c)).join('')}</row>`).join('');
   const cols = (widths || []).map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('');
-  const sheet = head + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols ? '<cols>' + cols + '</cols>' : ''}<sheetData>${sheetRows}</sheetData></worksheet>`;
+  const sheet = head + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols ? '<cols>' + cols + '</cols>' : ''}<sheetData>${sheetRows}</sheetData>${(opts.merges || []).length ? `<mergeCells count="${opts.merges.length}">${opts.merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : ''}</worksheet>`;
   const styles = head + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
-    + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8E2D0"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    + '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8E2D0"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF4F1EA"/><bgColor indexed="64"/></patternFill></fill></fills>'
     + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBBBBBB"/></left><right style="thin"><color rgb="FFBBBBBB"/></right><top style="thin"><color rgb="FFBBBBBB"/></top><bottom style="thin"><color rgb="FFBBBBBB"/></bottom><diagonal/></border></borders>'
     + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-    + '<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    + '<cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
     + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
     + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
-    + '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf></cellXfs></styleSheet>';
+    + '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+    + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top" wrapText="1" readingOrder="2"/></xf>'
+    + '<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top" wrapText="1" readingOrder="2"/></xf>'
+    + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf></cellXfs></styleSheet>';
   return zipStore([
     { name:'[Content_Types].xml', data:head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
     { name:'_rels/.rels', data:head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
@@ -5517,18 +5527,53 @@ function scheduleOthersOf(ctx){
   Object.values(out).forEach(d => ['service', 'teacher'].forEach(k => d[k].sort((a, b) => a.hours.localeCompare(b.hours) || a.name.localeCompare(b.name))));
   return any ? out : null;
 }
-const OTHERS_COLS = [['service', 'בנות שירות'], ['teacher', 'מורות וגננות']];
+// The export looks like the paper schedule the staff knows (Guy, 2026-10-24): a monthly calendar, the days of the week across (Sunday on the
+// right), a row per week; in every day the morning, the noon and the night, one line each. In a line the ahmash comes first, marked (אחמ"ש);
+// in the morning a teacher comes first, marked (מורה); the service girls come last (not marked: Guy); hours that are not the shift's
+// usual ones are in brackets ("עד 10", "מ-10"). The same in the Excel file and in the print / PDF.
+const CAL_ROLE = { teacher:'מורה', service:'' };          // (a kindergarten teacher will be added when there is one, Guy 2026-10-24)
+function calHours(note, s){
+  const m = String(note || '').match(/^(\d{1,2})[–-](\d{1,2})$/); if(!m) return note || '';
+  const a = +m[1], b = +m[2], st = parseInt(s.start, 10), en = parseInt(s.end, 10);
+  return a === st && b !== en ? `עד ${b}` : b === en && a !== st ? `מ-${a}` : `${a}–${b}`;
+}
+function scheduleCalendarDays(ctx, assignments){
+  const table = scheduleTable(ctx, assignments), others = typeof othersByShift === 'function' ? othersByShift(ctx) : {};
+  const rank = (typeof srv !== 'undefined' && srv.ahmash) || {}, picks = typeof ahmashPicks === 'function' ? ahmashPicks(table, ctx, rank) : {};
+  return table.map(r => ({ date:r.date, lines:ctx.shiftTypes.map((s, i) => {
+    const c = r.cells[i], oth = others[`${r.date}|${s.id}`] || [], items = [];
+    const nm = (name, tag, note) => { const extra = [tag, note].filter(Boolean).join(', '); return extra ? `${name} (${extra})` : name; };
+    oth.filter(x => x.role === 'teacher').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.teacher, calHours(x.note, s)), kind:'teacher' }));
+    if(c.slot){
+      const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
+      lead.forEach(p => items.push({ text:nm(p.name, 'אחמ"ש', calHours(p.note, s)), ahm:true, kind:'instructor' }));
+      rest.forEach(p => items.push({ text:nm(p.name, '', calHours(p.note, s)), kind:'instructor' }));
+    }
+    oth.filter(x => x.role === 'service').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.service, calHours(x.note, s)), kind:'service' }));
+    return { label:s.label, items, missing:c.slot ? c.missing : 0 };
+  }).filter(l => l.items.length || l.missing) }));
+}
 function buildScheduleXlsx(ctx, assignments){
-  const table = scheduleTable(ctx, assignments), others = scheduleOthersOf(ctx);
-  const rows = [[{ text:'תאריך', s:1 }, ...ctx.shiftTypes.map(st => ({ text:`${st.label} (${st.start}–${st.end})`, s:1 })), ...(others ? OTHERS_COLS.map(c => ({ text:c[1], s:1 })) : [])]];
-  table.forEach(r => rows.push([{ text:dayLabel(r.date), s:3 }, ...r.cells.map(c => {
-    const runs = [];
-    c.people.forEach((p, i) => { if(i) runs.push({ text:'\n' }); runs.push({ text:p.name, color:XLSX_COLORS[p.level], bold:true }); if(p.note) runs.push({ text:` (${p.note})` }); });
-    if(c.missing){ if(runs.length) runs.push({ text:'\n' }); runs.push({ text:`חסר/ים ${c.missing}`, color:XLSX_COLORS.no, bold:true }); }
-    return runs.length ? { runs, s:2 } : { text:'', s:2 };
-  }), ...(others ? OTHERS_COLS.map(([k]) => { const list = (others[r.date] || {})[k] || []; return list.length ? { runs:list.flatMap((x, i) => [...(i ? [{ text:'\n' }] : []), { text:x.name, bold:true }, ...(x.hours ? [{ text:` ${x.hours}` }] : [])]), s:2 } : { text:'', s:2 }; }) : [])]));
-  rows.push([{ text:'מקרא', s:3 }, { runs:[{ text:'ירוק = קיבל/ה מה שרצה  ', color:XLSX_COLORS.yes, bold:true }, { text:'כחול = יכול/ה  ', color:XLSX_COLORS.avoid, bold:true }, { text:'אדום = לא / חסר  ', color:XLSX_COLORS.no, bold:true }, { text:'כתום = לא סומן', color:XLSX_COLORS.neutral, bold:true }], s:0 }]);
-  return buildXlsx('סידור ' + monthLabel(ctx.month), rows, [16, ...ctx.shiftTypes.map(() => 26), ...(others ? OTHERS_COLS.map(() => 24) : [])]);
+  const days = scheduleCalendarDays(ctx, assignments), lead = dowOf(days[0].date);
+  const flat = Array(lead).fill(null).concat(days); while(flat.length % 7) flat.push(null);
+  const rows = [[{ text:`סידור עבודה · ${monthLabel(ctx.month)}`, s:6 }, ...Array(6).fill({ text:'' })], DOW_NAMES.map(d => ({ text:'יום ' + d, s:1 }))], heights = [24, 20];
+  for(let w = 0; w < flat.length; w += 7){
+    let most = 1;
+    rows.push(flat.slice(w, w + 7).map(d => {
+      if(!d) return { text:'', s:4 };
+      const runs = [{ text:String(parseIso(d.date).getDate()), bold:true }];
+      d.lines.forEach(l => {
+        runs.push({ text:'\n' }, { text:`${l.label} - `, bold:true });
+        l.items.forEach((it, k) => runs.push({ text:(k ? ', ' : '') + it.text, bold:!!it.ahm }));
+        if(l.missing) runs.push({ text:`${l.items.length ? ' · ' : ''}חסר ${l.missing}`, color:XLSX_COLORS.no, bold:true });
+      });
+      most = Math.max(most, 1 + d.lines.reduce((a, l) => a + Math.ceil((l.label.length + l.items.reduce((x, it) => x + it.text.length + 2, 0)) / 34), 0));
+      return { runs, s:[5, 6].includes(dowOf(d.date)) ? 5 : 4 };
+    }));
+    heights.push(Math.max(60, most * 15 + 6));
+  }
+  rows.push([{ text:'הערות', s:3 }, ...Array(6).fill({ text:'', s:4 })]); heights.push(40);
+  return buildXlsx('סידור ' + monthLabel(ctx.month), rows, Array(7).fill(30), { heights, merges:['A1:G1', `B${rows.length}:G${rows.length}`] });
 }
 function downloadBytes(bytes, filename, mime){
   const url = URL.createObjectURL(new Blob([bytes], { type:mime }));
@@ -5541,10 +5586,12 @@ function downloadScheduleXlsx(ctx, assignments){
 
 // print / "save as PDF": only the schedule table is printed
 function scheduleHtmlTable(ctx, assignments){
-  const rows = scheduleTable(ctx, assignments), others = scheduleOthersOf(ctx);
-  const head = `<tr><th>תאריך</th>${ctx.shiftTypes.map(st => `<th>${escapeHtml(st.label)}<br><span>${st.start}–${st.end}</span></th>`).join('')}${others ? OTHERS_COLS.map(c => `<th>${c[1]}</th>`).join('') : ''}</tr>`;
-  const body = rows.map(r => `<tr><th>${dayLabel(r.date)}</th>${r.cells.map(c => `<td>${c.people.map(p => `<b class="lv-${p.level}">${escapeHtml(p.name)}</b>${p.note ? ` <small>(${escapeHtml(p.note)})</small>` : ''}`).join('<br>')}${c.missing ? `<br><b class="lv-no">חסר/ים ${c.missing}</b>` : ''}</td>`).join('')}${others ? OTHERS_COLS.map(([k]) => `<td>${((others[r.date] || {})[k] || []).map(x => `<b>${escapeHtml(x.name)}</b>${x.hours ? ` <small>${x.hours}</small>` : ''}`).join('<br>')}</td>`).join('') : ''}</tr>`).join('');
-  return `<table class="print-table"><caption>סידור עבודה — ${monthLabel(ctx.month)}</caption>${head}${body}</table>`;
+  const days = scheduleCalendarDays(ctx, assignments), lead = dowOf(days[0].date);
+  const flat = Array(lead).fill(null).concat(days); while(flat.length % 7) flat.push(null);
+  const cell = d => !d ? '<td class="pc-empty"></td>' : `<td class="${[5, 6].includes(dowOf(d.date)) ? 'pc-weekend' : ''}"><div class="pc-num">${parseIso(d.date).getDate()}</div>${d.lines.map(l =>
+    `<div class="pc-line"><b>${escapeHtml(l.label)} -</b> ${l.items.map(it => it.ahm ? `<b>${escapeHtml(it.text)}</b>` : escapeHtml(it.text)).join(', ')}${l.missing ? ` <b class="lv-no">חסר ${l.missing}</b>` : ''}</div>`).join('')}</td>`;
+  let body = ''; for(let w = 0; w < flat.length; w += 7) body += `<tr>${flat.slice(w, w + 7).map(cell).join('')}</tr>`;
+  return `<table class="print-table print-cal"><caption>סידור עבודה — ${monthLabel(ctx.month)}</caption><tr>${DOW_NAMES.map(d => `<th>יום ${d}</th>`).join('')}</tr>${body}<tr><th>הערות</th><td colspan="6"></td></tr></table>`;
 }
 function printSchedule(ctx, assignments){
   const box = document.createElement('div');
@@ -5911,7 +5958,7 @@ function monthCalHtml(ctx, assignments, opts){
   const shiftCell = (r, i) => {
     const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1 && !weekOthers;
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
-    const oth = inCells[`${r.date}|${s.id}`] || [], othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(x.note)}</small>` : ''}</span>`;
+    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(x.note)}</small>` : ''}</span>`;
     const teachers = oth.filter(x => x.role === 'teacher').map(othName).join(''), service = oth.filter(x => x.role === 'service').map(othName).join('');
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
@@ -6647,6 +6694,15 @@ function srvPrefsDeadlinePassed(mk){
   const n = israelNow(), end = addMonths(mk, -1) + '-24';
   return n.date > end || (n.date === end && n.minutes >= 22 * 60 + 30);
 }
+// Two windows of the same browser share one sign-in: signing in as somebody else in another window silently changed who this window is
+// (Guy saw "not allowed" in the coordinator's window after signing in as an instructor in a second one). Now this window notices and reloads.
+if(PORTAL_ENABLED) window.addEventListener('storage', e => {
+  if(e.key !== 'ramzor-personal-auth' || !srv.authUid) return;
+  let uid = null; try { const v = e.newValue && JSON.parse(e.newValue); uid = v && (v.user || (v.currentSession || {}).user || {}).id || null; } catch(err){}
+  if(uid === srv.authUid) return;          // (only the token was renewed)
+  srv.authUid = null; toast(uid ? 'נכנסת בחלון אחר עם משתמש אחר. הדף מתרענן כדי להמשיך עם המשתמש החדש' : 'יצאת מהמערכת בחלון אחר. הדף מתרענן', 4000);
+  setTimeout(() => location.reload(), 2500);
+});
 async function srvLoadPrefsOpen(){
   srv.prefsOpenSrv = srv.prefsOpenSrv || {};
   const nm = prefsMonthNow();
@@ -6669,6 +6725,7 @@ async function srvLoad(){
   const epoch = srv.epoch = (srv.epoch || 0) + 1, fresh = () => epoch === srv.epoch;
   const meId = (await sbPersonal.rpc('my_staff_id')).data;
   if(!meId) return false;
+  try { const { data:{ session } } = await sbPersonal.auth.getSession(); srv.authUid = session && session.user ? session.user.id : null; } catch(e){}          // (who this window signed in as: see the watcher below)
   const staff = await srvAll(() => sbPersonal.from('staff').select('id,display_name,kind,active,sort_order').order('sort_order').order('display_name'));
   const today = monthKeyOf(israelNow().date), months = [-1, 0, 1, 2].map(n => addMonths(today, n));
   const from = firstOf(months[0]), to = daysOfMonth(months[3]).slice(-1)[0];
@@ -7389,7 +7446,10 @@ function srvDefaultCoordMonth(){
   return st.months[next] && st.months[next].status ? next : (st.months[cur] && st.months[cur].status ? cur : next);
 }
 // the coordinator may hide the line of the service girls and the teachers in her calendar (remembered on this device)
-function csHideOthers(){ try { return localStorage.getItem('ramzor-cs-hide-others') === '1'; } catch(e){ return false; } }
+// what the coordinator hides of her calendar (Guy, 2026-10-24): nothing, the teachers, the service girls, or both ('1' = both, as before)
+function csHiddenMode(){ try { const v = localStorage.getItem('ramzor-cs-hide-others'); return v === '1' ? 'both' : ['teacher', 'service', 'both'].includes(v) ? v : ''; } catch(e){ return ''; } }
+const csHideOthers = () => csHiddenMode() === 'both';
+const CS_HIDE_CHOICES = [['', 'להציג את כולן'], ['teacher', 'להסתיר מורות'], ['service', 'להסתיר בנות שירות'], ['both', 'להסתיר את שתיהן']];
 function srvRenderCoordSchedule(body){
   if(srvDragWho){ srvRenderAfterDrag = body; return; }          // (never redraw the calendar in the middle of a drag: the name being dragged would vanish and the drop would be lost; it redraws when the drag ends)
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
@@ -7412,14 +7472,17 @@ function srvRenderCoordSchedule(body){
     ${lookCount ? `<details class="pissues"><summary>${lookCount} דברים שדורשים תשומת לב</summary>${odAlerts.map(a => `<div class="pflag"><span><b>יום פתוח לשיבוץ</b> · ${pEsc(a)}</span></div>`).join('')}${needLook.map(f => `<div class="pflag"><span><b>${SRV_FLAG_KIND[f.kind] || f.kind}</b> · ${pEsc(f.text)}</span><button type="button" class="btn ghost small" data-flag-done="${f.id}">טופל</button></div>`).join('')}${svcLine}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
-    <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">${csHideOthers() ? 'הצגת בנות שירות ומורות' : 'הסתרת בנות שירות ומורות'}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:!csHideOthers() })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
+    <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">הסתר מורות/בנות שירות${csHiddenMode() ? ` · <small>${({ teacher:'המורות מוסתרות', service:'בנות השירות מוסתרות', both:'שתיהן מוסתרות' })[csHiddenMode()]}</small>` : ''}</button></div>
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   wireMonthNav(body);
   srvBuildWire(body, mk);
   if(!has) return;
   { const cf = body.querySelector('#cs-count'); if(cf) cf.addEventListener('toggle', () => { portalUi.csCount = cf.open; }); }
-  { const ob = body.querySelector('#cs-others'); if(ob) ob.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-hide-others', csHideOthers() ? '0' : '1'); } catch(e){} srvRenderCoordSchedule(body); }); }
+  { const ob = body.querySelector('#cs-others'); if(ob) ob.addEventListener('click', () => {
+      const now = csHiddenMode(), sh = portalSheet(`<h2>הסתר מורות/בנות שירות</h2><div class="pchoice wrap cs-hide-choices">${CS_HIDE_CHOICES.map(([k, w]) => `<button type="button" class="${k === now ? 'on' : ''}" data-cs-hide="${k}">${w}</button>`).join('')}</div>`);
+      sh.querySelectorAll('[data-cs-hide]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-hide-others', b.dataset.csHide || '0'); } catch(e){} sh.close(); srvRenderCoordSchedule(body); }));
+    }); }
   if(m.published) srvOdWire(body, mk);
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });
@@ -7435,6 +7498,7 @@ function srvRenderCoordSchedule(body){
     c.addEventListener('dragleave', () => srvDropClear(c));
     c.addEventListener('drop', e => { e.preventDefault(); srvDropClear(c); const who = e.dataTransfer.getData('text/plain') || srvDragWho; if(who) srvAddToSlot(mk, c.dataset.key, who, body); });
   });
+  body.querySelectorAll('[data-cs-sort]').forEach(b => b.addEventListener('click', () => { portalUi.csSort = b.dataset.csSort; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
     const open = () => srvOpenSlot(mk, td.dataset.key, body);
@@ -7495,11 +7559,16 @@ function srvBuildWire(body, mk){
   });
 }
 // ---- how many shifts each instructor got this month (folded: one short line; opened: everybody, with the kinds of shifts)
-function srvCountFoldHtml(mk){
-  const st = portalLoad(), people = st.instructors.filter(p => p.role === 'instructor'), c = {};
-  (st.rows || []).forEach(r => { if(monthKeyOf(r.day) !== mk || !people.some(p => p.id === r.staff)) return;
+// how many shifts each instructor has in the month, by kind (the fold above the calendar and the instructors' panel): { staff id: { all, M, A, N, W, L } }
+function srvShiftCounts(mk){
+  const st = portalLoad(), ids = new Set(st.instructors.filter(p => p.role === 'instructor').map(p => p.id)), c = {};
+  (st.rows || []).forEach(r => { if(monthKeyOf(r.day) !== mk || !ids.has(r.staff)) return;
     const x = c[r.staff] = c[r.staff] || { all:0, M:0, A:0, N:0, L:0, W:0 }; x.all++; x[r.shift === 'S' ? 'M' : r.shift] = (x[r.shift === 'S' ? 'M' : r.shift] || 0) + 1;
     if(r.shift !== 'L' && [5, 6].includes(dowOf(r.day))) x.W++; });          // (the weekend: from Friday morning to Saturday night, both included; the long weekend has its own column)
+  return c;
+}
+function srvCountFoldHtml(mk){
+  const st = portalLoad(), people = st.instructors.filter(p => p.role === 'instructor'), c = srvShiftCounts(mk);
   const list = people.filter(p => p.active || c[p.id]).map(p => ({ p, x:c[p.id] || { all:0, M:0, A:0, N:0, L:0, W:0 } })).sort((a, b) => b.x.all - a.x.all || String(a.p.first).localeCompare(String(b.p.first), 'he'));
   if(!list.length) return '';
   const nums = list.map(r => r.x.all), lo = Math.min(...nums), hi = Math.max(...nums), total = nums.reduce((a, b) => a + b, 0);
@@ -7541,7 +7610,7 @@ function srvOpenSlot(mk, key, body){
         <select id="add-who" hidden aria-label="מי">${'<option value="">בחרו מדריך/ה</option>' + ranked.map(({ p, lv }) => `<option value="${p.id}" class="opt-${LV[lv][0]}">${pEsc(instrName(p, portalLoad().instructors))}</option>`).join('')}</select>
         <button type="button" class="cs-pick-btn" id="cs-pick-btn" aria-haspopup="listbox" aria-expanded="false"><span>בחרו מדריך/ה</span><i aria-hidden="true">⌄</i></button>
         <div class="cs-pick-list" id="cs-pick-list" role="listbox" hidden>
-          <div class="cs-pick-head"><span class="cs-pick-title">בחרו מדריך/ה</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>
+          <div class="cs-pick-head"><span class="cs-pick-key">${mcalKeyChips()}</span></div>
           ${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-val="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('')}
         </div></div></div>
       <div class="phours-row"><select id="add-from" aria-label="משעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.start ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select><span>עד</span><select id="add-to" aria-label="עד שעה">${Array.from({ length:24 }, (_, h) => `<option value="${String(h).padStart(2, '0')}:00"${String(h).padStart(2, '0') + ':00' === sh.end ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></div>
@@ -7551,7 +7620,7 @@ function srvOpenSlot(mk, key, body){
     const upd = () => { const w = who.value ? srvWarnings(who.value, date, code, from.value, to.value) : []; aw.innerHTML = w.map(x => `<div>⚠ ${pEsc(x)}</div>`).join(''); };
     const pickBtn = wrap.querySelector('#cs-pick-btn'), pickList = wrap.querySelector('#cs-pick-list');
     const tint = () => { const o = who.selectedOptions[0]; pickBtn.className = 'cs-pick-btn' + (o && o.className ? ' sel-' + o.className.replace('opt-', '') : ''); pickBtn.firstElementChild.textContent = o ? o.textContent : 'בחרו מדריך/ה'; };          // (the closed button shows the chosen name in the same colour)
-    pickBtn.addEventListener('click', e => { e.stopPropagation(); pickList.hidden = !pickList.hidden; pickBtn.setAttribute('aria-expanded', String(!pickList.hidden)); });
+    pickBtn.addEventListener('click', e => { e.stopPropagation(); pickList.hidden = !pickList.hidden; pickBtn.setAttribute('aria-expanded', String(!pickList.hidden)); if(!pickList.hidden) pickBtn.scrollIntoView({ block:'start', behavior:'smooth' }); });          // (the list opens inside the window; the window scrolls so that it starts at the top)
     pickList.querySelectorAll('.cs-pick-item').forEach(it => it.addEventListener('click', e => { e.stopPropagation(); who.value = it.dataset.val; pickList.hidden = true; pickBtn.setAttribute('aria-expanded', 'false'); who.dispatchEvent(new Event('change')); }));
     wrap.addEventListener('click', e => { if(!e.target.closest('.cs-pick')){ pickList.hidden = true; pickBtn.setAttribute('aria-expanded', 'false'); } });
     who.addEventListener('change', () => { tint(); upd(); }); from.addEventListener('change', upd); to.addEventListener('change', upd);
@@ -7626,7 +7695,7 @@ function srvPersonRequestsHtml(p, mk){
   const by = { no:[], avoid:[], yes:[] };
   Object.keys(pr.slots || {}).sort().forEach(k => { const [d, id] = k.split('|'); if(by[pr.slots[k]] && daysOfMonth(mk).includes(d)) by[pr.slots[k]].push(`${shortDate(d)} ${shiftWord(id)}`); });
   const mine = st.rows.filter(r => r.staff === p.id && monthKeyOf(r.day) === mk);
-  const counts = { yes:0, avoid:0, no:0, none:0 };
+  const counts = { yes:0, avoid:0, no:0, none:0 }, got = srvShiftCounts(mk)[p.id] || { all:0, M:0, A:0, N:0, W:0, L:0 };
   mine.forEach(r => { const id = SRV_SHIFT_UI[r.shift === 'S' ? 'M' : r.shift]; if(!id) return; const lv = (pr.slots || {})[`${r.day}|${id}`]; counts[lv === 'avoid' ? 'avoid' : lv === 'no' ? 'no' : lv === 'yes' ? 'yes' : 'none']++; });
   const line = (cls, title, list) => `<div class="cs-req ${cls}"><b>${title}${list.length ? ` (${list.length})` : ''}</b><span>${list.length ? list.map(pEsc).join(' · ') : 'אין'}</span></div>`;
   const note = m.notes && m.notes[p.id], goal = (m.goals || {})[p.id], cons = pr.consent || {};
@@ -7635,6 +7704,7 @@ function srvPersonRequestsHtml(p, mk){
   return `<div class="cs-person">
     <div class="cs-person-head"><img src="${p.photo}" alt=""><div><b>${pEsc(instrName(p, st.instructors))}</b><small>${m.submitted[p.id] ? 'הגיש/ה ✓' : 'עוד לא הגיש/ה'} · ${monthLabel(mk)}</small></div></div>
     ${mine.length ? `<div class="cs-req"><b>שובצו ${mine.length} משמרות</b><span><span class="mcal-name wish-yes">כן ${counts.yes}</span> <span class="mcal-name wish-can">יכול ${counts.avoid}</span> <span class="mcal-name wish-no">לא ${counts.no}</span> <span class="mcal-name wish-none">לא סומן ${counts.none}</span></span></div>` : ''}
+    <div class="cs-req"><b>קיבל/ה ${got.all} משמרות</b><span>בוקר ${got.M} · צהריים ${got.A} · לילה ${got.N} · סופ"ש ${got.W}${got.L ? ` · סופ"ש ארוך ${got.L}` : ''}</span></div>
     ${line('no', 'לא', by.no)}${line('can', 'יכול', by.avoid)}${line('yes', 'כן', by.yes)}
     ${fixed.length ? `<div class="cs-req"><b>היעדרות</b><span>${[...new Set(fixed.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ') + ': ' + dayRanges(fixed.map(f => f.day))}</span></div>` : ''}
     ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
@@ -7648,9 +7718,12 @@ function srvPersonRequestsHtml(p, mk){
 function srvSidePanelHtml(mk){
   const st = portalLoad(), m = portalMonth(mk), people = st.instructors.filter(p => p.active && p.role === 'instructor'), sel = people.find(p => p.id === portalUi.csPerson);
   if(!portalUi.csOpen) return `<button type="button" class="cs-tab" id="cs-open" aria-expanded="false"><span class="cs-tab-text">בקשות המדריכים</span>${mcalKeyHtml('tab')}</button>`;          // (folded: a slim tab, with the colour key as plain coloured words under the text)          // (folded: a slim tab at the left of the schedule)
+  const cnt = srvShiftCounts(mk), byCount = portalUi.csSort === 'count';          // (by name; one button shows by every name how many shifts so far and sorts by it, the fewest first — Guy 2026-10-24)
+  const list = people.slice().sort((a, b) => (byCount ? ((cnt[a.id] || {}).all || 0) - ((cnt[b.id] || {}).all || 0) : 0) || String(instrName(a, st.instructors)).localeCompare(String(instrName(b, st.instructors)), 'he'));
   return `<aside class="cs-side" aria-label="בקשות המדריכים">
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3>${sel ? '' : mcalKeyHtml(true)}<button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
-    <div class="cs-names">${people.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>
+    <button type="button" class="btn ghost small cs-sort-btn${byCount ? ' on' : ''}" data-cs-sort="${byCount ? 'name' : 'count'}" aria-pressed="${byCount}">${byCount ? 'הסתר את מספר המשמרות' : 'הצג את מספר המשמרות'}</button>
+    <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${byCount ? `<b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b>` : ''}</button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
   </aside>`;
 }
@@ -9395,7 +9468,7 @@ const AR = {
   'הסידור':'الجدول', 'העדפות':'التفضيلات', 'החלפות':'الاستبدالات', 'חופשה':'إجازة', 'הודעות':'الرسائل', 'זמינות':'التوفّر', 'שעות':'الساعات', 'משמרות חסרות':'مناوبات ناقصة',
   'פורטל המדריך':'بوابة المرشد', 'פורטל בנות השירות':'بوابة متطوعات الخدمة', 'מרכז חירום':'مركز الطوارئ', 'מה תרצו לפתוח?':'ماذا تريدون أن تفتحوا؟',
   'הרמזור':'الإشارة الضوئية', 'תפעול יומיומי ומסך הילדים':'التشغيل اليومي وشاشة الأطفال', 'משמרות, העדפות והודעות':'مناوبات، تفضيلات ورسائل',
-  'יציאה':'خروج', '→ מסך ראשי':'→ الشاشة الرئيسية', 'בית':'الرئيسية', 'חזור':'رجوع', 'העדפות מערכת':'إعدادات النظام', 'סיום':'إنهاء',
+  'יציאה':'خروج', '→ מסך ראשי':'→ الشاشة الرئيسية', 'בית':'الرئيسية', 'חזור':'رجوع', 'נכנסת בחלון אחר עם משתמש אחר. הדף מתרענן כדי להמשיך עם המשתמש החדש':'دخلت في نافذة أخرى بمستخدم آخر. الصفحة تتحدّث للمتابعة مع المستخدم الجديد', 'יצאת מהמערכת בחלון אחר. הדף מתרענן':'خرجت من النظام في نافذة أخرى. الصفحة تتحدّث', 'העדפות מערכת':'إعدادات النظام', 'סיום':'إنهاء',
   'המשמרות שלי':'مناوباتي', 'הצוות כולו':'الطاقم كله', 'איך הלכו הבקשות שלך':'كيف سارت طلباتك', 'משמרות פתוחות':'مناوبات مفتوحة', 'הודעות חדשות':'رسائل جديدة',
   'המשמרת הבאה שלך':'مناوبتك القادمة', 'בקשת החלפה':'طلب استبدال', 'הבנתי, תודה':'فهمت، شكرًا', 'סימון של כולן כנקראו':'تعليم الكل كمقروء',
   'העדכונים שלך':'تحديثاتك', 'הודעות מהרכזת':'رسائل من المركّزة', 'הבקשות שלי':'طلباتي', 'בקשות החלפה פתוחות':'طلبات استبدال مفتوحة',
@@ -9493,6 +9566,7 @@ const AR_RX = [
   [/^מה עושים:$/, () => 'ماذا نفعل:'],
   [/^עוד אין תוכנית טיפולית ל(.+?)\. כשאיש\/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע\.$/, (m, n) => `لا توجد بعد خطة علاجية لـ${n}. عندما ينشرها المعالج ستظهر هنا: ما في التركيز، ماذا نفعل وممّا نمتنع.`],
   [/^שלום (.+)$/, (m, n) => `مرحبًا ${n}`],
+  [/^יום (ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת) (\d{1,2}\/\d{1,2}), (כל היום|בוקר|צהריים|לילה|בשעות) ?\(?([\d:]+)–([\d:]+)\)?$/, (m, d, date, w, a, b) => `يوم ${AR_DAY[d]} ${date}، ${({ 'כל היום':'كل اليوم', 'בוקר':'صباح', 'צהריים':'ما بعد الظهر', 'לילה':'ليل', 'בשעות':'في الساعات' })[w]} (${a}–${b})`],          // (the words of an open day, from the database: open_day_text)
   [/^👁️ ההעדפות שהגשת ל(.+?) · לצפייה בלבד$/, (m, mo) => `👁️ التفضيلات التي قدّمتها لـ${arWords(mo)} · للمشاهدة فقط`],
   [/^👁️ ההעדפות שהגשת ל(.+)$/, (m, mo) => `👁️ التفضيلات التي قدّمتها لـ${arWords(mo)}`],
   [/^חזרה להעדפות של (.+)$/, (m, mo) => `العودة إلى تفضيلات ${arWords(mo)}`],
