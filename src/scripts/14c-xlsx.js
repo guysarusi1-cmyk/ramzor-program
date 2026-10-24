@@ -98,7 +98,7 @@ function scheduleOthersOf(ctx){
 // right), a row per week; in every day the morning, the noon and the night, one line each. In a line the ahmash comes first, marked (אחמ"ש);
 // in the morning a teacher / kindergarten teacher comes first, marked; the service girls come last, marked; hours that are not the shift's
 // usual ones are in brackets ("עד 10", "מ-10"). The same in the Excel file and in the print / PDF.
-const CAL_ROLE = { teacher:'מורה/גננת', service:'בת שירות' };
+const CAL_ROLE = { teacher:'מורה', service:'בת שירות' };          // (a kindergarten teacher will be added when there is one, Guy 2026-10-24)
 function calHours(note, s){
   const m = String(note || '').match(/^(\d{1,2})[–-](\d{1,2})$/); if(!m) return note || '';
   const a = +m[1], b = +m[2], st = parseInt(s.start, 10), en = parseInt(s.end, 10);

@@ -1993,11 +1993,11 @@
       else {
         const ctx = portalCtx(mk), others = st.rows.filter(r => monthKeyOf(r.day) === mk && isOther(r));
         const xl = new TextDecoder().decode(buildScheduleXlsx(ctx, portalMonth(mk).assignments)), cal = scheduleCalendarDays(ctx, portalMonth(mk).assignments);
-        const lines = cal.flatMap(d => d.lines), withOthers = lines.filter(l => l.items.some(it => /\((מורה\/גננת|בת שירות)/.test(it.text)));
-        const order = withOthers.every(l => { const kind = it => /\(מורה\/גננת/.test(it.text) ? 0 : /\(בת שירות/.test(it.text) ? 2 : 1, ks = l.items.map(kind); return ks.every((k, i) => i === 0 || ks[i - 1] <= k); });
+        const lines = cal.flatMap(d => d.lines), withOthers = lines.filter(l => l.items.some(it => /\((מורה|גננת|בת שירות)/.test(it.text)));
+        const order = withOthers.every(l => { const kind = it => /\((מורה|גננת)/.test(it.text) ? 0 : /\(בת שירות/.test(it.text) ? 2 : 1, ks = l.items.map(kind); return ks.every((k, i) => i === 0 || ks[i - 1] <= k); });
         check('excel others: in every line the teacher comes first and the service girls last, each marked, in the Excel file too', withOthers.length > 0 && order && /בת שירות/.test(xl), withOthers.length + ' / ' + order);
         const ahmLines = lines.filter(l => l.items.some(it => it.ahm));
-        check('excel others: the ahmash comes first among the instructors, marked (אחמ"ש)', ahmLines.every(l => { const i = l.items.findIndex(it => it.ahm); return /\(אחמ"ש/.test(l.items[i].text) && l.items.slice(0, i).every(it => /\(מורה\/גננת/.test(it.text)); }), ahmLines.length);
+        check('excel others: the ahmash comes first among the instructors, marked (אחמ"ש)', ahmLines.every(l => { const i = l.items.findIndex(it => it.ahm); return /\(אחמ"ש/.test(l.items[i].text) && l.items.slice(0, i).every(it => /\((מורה|גננת)/.test(it.text)); }), ahmLines.length);
       }
       // the calendars: a slim line of the service girls and the teachers under every day (all the calendars); the coordinator can hide it
       if(mk){
