@@ -7468,7 +7468,7 @@ function csRowCover(r){
   if(r.shift === 'L'){ const sat = addDays(r.day, 1); add(r.day, 'A', 17, 22); add(sat, 'M', 7, 15); add(sat, 'A', 14, r.to ? csHourOf(r.to, true) || 20 : 20); return out; }
   const std = SRV_STD[r.shift] || ['07:00', '15:00'], a = csHourOf(r.from || std[0]), b0 = csHourOf(r.to || std[1], true), b = b0 <= a ? b0 + 24 : b0;
   if(r.shift === 'M' || r.shift === 'S'){ add(r.day, 'M', a, Math.min(b, 15)); if(b > 15) add(r.day, 'A', Math.max(a, 14), b); }
-  else { if(a < 14) add(r.day, 'M', a, 14); add(r.day, 'A', Math.max(a, 14), b); }
+  else { if(a < 14) add(r.day, 'M', a, 14); add(r.day, 'A', Math.max(a, 14) - (a === 15 && (r.flags || []).includes('double') ? 1 : 0), b); }          // (the afternoon half of a double, written 15-22, counts from 14:00 as in the engine)
   return out;
 }
 // the service girls of a day as the engine counts them: [in the morning 07-15, in the afternoon 14-22 (Sunday: 11-19)], or null on other days
@@ -7544,7 +7544,7 @@ function csLiveIssues(mk){
   Object.entries(byPerson).forEach(([pid, list]) => {
     list.sort((a, b) => rowParts(a)[0][0] - rowParts(b)[0][0]);
     const byDay = {}; list.forEach(r => { (byDay[r.day] = byDay[r.day] || []).push(r); });
-    Object.entries(byDay).forEach(([day, same]) => { if(same.length > 1 && days.includes(day)) add(day, 'double', `${nm(pid)}: ${same.map(r => SRV_SHIFT_WORD[r.shift]).join(' וגם ')} באותו יום`, sidOf(same[1])); });
+    // (two shifts on one day are not listed: the engine never places them any more, and placing one by hand asks first: Guy 2026-10-25)
     for(let i = 0; i < list.length; i++) for(let j = i + 1; j < list.length && j <= i + 2; j++){
       const a = list[i], b = list[j]; if(a.day === b.day || !days.includes(b.day)) continue;
       const c = partsConflict(rowParts(a), rowParts(b));
@@ -7638,6 +7638,8 @@ function srvWarnings(pid, day, shift, from, to, ignoreId){
   if(p.manual_only) out.push('משובץ/ת ידנית בלבד');
   if(p.only_long_weekend && shift !== 'L') out.push('משובץ/ת רק לסופ"ש ארוך');
   if(p.latest_end_hour && parseInt(to || '22', 10) > p.latest_end_hour && shift !== 'N') out.push(`עובדת לכל המאוחר עד ${p.latest_end_hour}:00`);
+  const sameDay = st.rows.filter(r => r.staff === pid && r.id !== ignoreId && r.day === day && (st.instructors.find(x => x.id === pid) || {}).role === 'instructor');
+  if(sameDay.length) out.push(`כבר משובץ/ת באותו יום (${sameDay.map(r => SRV_SHIFT_WORD[r.shift]).join(', ')}): זו תהיה משמרת שנייה ביום`);          // (one shift a day: Guy 2026-10-25)
   st.rows.filter(r => r.staff === pid && r.id !== ignoreId && Math.abs(dayNum(r.day) - dayNum(day)) <= 3).forEach(r => {
     const c = partsConflict(rowParts(r), rowParts(cand));
     if(c) out.push(`${c}: ${dayLabel(r.day)} ${SRV_SHIFT_WORD[r.shift]}`);
@@ -8114,10 +8116,11 @@ async function srvAddToSlot(mk, key, staffId, body){
   const w = srvWarnings(staffId, date, code, sh.start, sh.end);
   // no question for "yes" or "can"; for "no" and for a shift she did not mark: ask her first on WhatsApp, or place anyway
   if(!(await srvAskBeforePlacing(staffId, key))) return;
+  if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;          // (a window, not only a note afterwards: Guy 2026-10-25)
   const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
   if(ins.error){ toast('השיבוץ נכשל'); return; }
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
-  toast(w.length ? `${nm} שובץ/ה. שימי לב: ${w.join('. ')}.` : `${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`, w.length ? 6000 : 0);          // (the warnings that are left, such as rest, do not stop her; she sees them)
+  toast(`${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`);
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 
