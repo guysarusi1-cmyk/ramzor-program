@@ -141,12 +141,14 @@ function srvRenderCoordSettings(body){
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
-      ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${p.admin ? 'מנהל' : KIND_WORD[p.role]}</small></span>
+      ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${p.admin ? 'מנהל' : p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : KIND_WORD[p.role]}</small></span>
+        ${p.role === 'teacher' && p.active ? `<button type="button" class="btn ghost small" data-fixed-hours="${p.id}">שעות קבועות</button>` : ''}
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
       <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${mercuryOn() && srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
+        box.querySelectorAll('[data-fixed-hours]').forEach(b => b.addEventListener('click', () => teacherHoursSheet(b.dataset.fixedHours)));
         box.querySelectorAll('[data-left], [data-back]').forEach(b => b.addEventListener('click', async () => {
           const id = b.dataset.left || b.dataset.back, on = !!b.dataset.back, p = st.instructors.find(x => x.id === id), nm = p ? instrName(p, st.instructors) : '';
           if(!on && !(await confirmSheet({ title:`${nm} עזב/ה?`, text:'לא יופיע/תופיע יותר ברשימות ובסידורים הבאים. משמרות שכבר שובצו נשארות בסידור, ואפשר להעביר אותן ידנית. אפשר להחזיר בכל עת.', okLabel:'כן, עזב/ה', cancelLabel:'חזרה', danger:true }))) return;
@@ -326,6 +328,46 @@ function srvRenderCoordSettings(body){
 }
 
 // a photo from the phone or computer -> a small square JPEG (centre cut), so that it stays light for everybody
+// ---- the fixed hours of a teacher / kindergarten teacher (Guy 2026-10-25): Sunday to Friday, from / to or "לא עובדת" (staff_constraints "fixed_hours",
+// what every automatic build places her in). When saved: also her shifts from today on in the schedules already built? (published: she is told)
+const TH_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+async function teacherHoursSheet(staffId){
+  const st = portalLoad(), p = st.instructors.find(x => x.id === staffId), nm = p ? instrName(p, st.instructors) : '';
+  const r = await sbPersonal.from('staff_constraints').select('id,params').eq('staff_id', staffId).eq('kind', 'fixed_hours').limit(1);
+  if(r.error){ toast('לא הצלחנו לקרוא את השעות'); return; }
+  const cur = (r.data && r.data[0] && r.data[0].params) || {}, rowId = r.data && r.data[0] ? r.data[0].id : null;
+  const opts = sel => { let o = ''; for(let h = 6; h <= 22; h++) for(const mm of ['00', '30']){ const v = String(h).padStart(2, '0') + ':' + mm; o += `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`; } return o; };
+  const sh = portalSheet(`<h2>שעות קבועות · ${pEsc(nm)}</h2><div class="pnote">לפי השעות האלה המערכת משבצת אותה בכל סידור אוטומטי.</div>
+    <div class="th-days">${TH_DAYS.map((w, d) => { const span = cur[String(d)]; return `<div class="th-day" data-d="${d}"><b>${w}</b><label class="th-off"><input type="checkbox" data-off${span ? '' : ' checked'}> לא עובדת</label>
+      <span class="th-hours"${span ? '' : ' hidden'}><select data-from aria-label="משעה">${opts(span ? String(span[0]).slice(0, 5) : '08:00')}</select><span>עד</span><select data-to aria-label="עד שעה">${opts(span ? String(span[1]).slice(0, 5) : '14:00')}</select></span></div>`; }).join('')}</div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="th-save">שמירה</button></div>`);
+  sh.querySelectorAll('[data-off]').forEach(c => c.addEventListener('change', () => { c.closest('.th-day').querySelector('.th-hours').hidden = c.checked; }));
+  sh.querySelector('#th-save').addEventListener('click', async () => {
+    const params = {};
+    for(const row of sh.querySelectorAll('.th-day')){
+      if(row.querySelector('[data-off]').checked) continue;
+      const a = row.querySelector('[data-from]').value, b = row.querySelector('[data-to]').value;
+      if(b <= a){ toast(`ביום ${TH_DAYS[+row.dataset.d]}: שעת הסיום צריכה להיות אחרי שעת ההתחלה`); return; }
+      params[row.dataset.d] = [a, b];
+    }
+    const u = rowId ? await sbPersonal.from('staff_constraints').update({ params }).eq('id', rowId) : await sbPersonal.from('staff_constraints').insert({ staff_id:staffId, kind:'fixed_hours', strength:'hard', params });
+    if(u.error){ toast('השמירה נכשלה'); return; }
+    sh.close(); toast('השעות הקבועות נשמרו');
+    const today = srvToday(), months = Object.keys(st.months || {}).filter(mk => portalMonth(mk).status && mk >= monthKeyOf(today)).sort();
+    if(!months.length) return;
+    if(!(await confirmSheet({ title:'לעדכן גם את הסידור?', text:`לעדכן גם את המשמרות של ${nm} מהיום והלאה ב${months.map(monthLabel).join(' וב')} לפי השעות החדשות?${months.some(mk => portalMonth(mk).published) ? ' בסידור שפורסם היא תקבל הודעה על השינוי.' : ''}`, okLabel:'כן, לעדכן', cancelLabel:'לא, רק לסידורים הבאים' }))) return;
+    const del = await sbPersonal.from('assignment').delete().eq('staff_id', staffId).gte('day', today).lte('day', daysOfMonth(months[months.length - 1]).slice(-1)[0]);
+    if(del.error){ toast('העדכון נכשל'); return; }
+    const rows = [];
+    months.forEach(mk => daysOfMonth(mk).filter(d => d >= today).forEach(d => {
+      const span = params[String(dowOf(d))], dtp = csDayType(d, csSpecial(d));
+      if(span && ['sun', 'mid', 'thu', 'fri'].includes(dtp)) rows.push({ month:firstOf(mk), staff_id:staffId, day:d, shift:'M', from_time:span[0], to_time:span[1], flags:['teacher'] });
+    }));
+    const ins = rows.length ? await sbPersonal.from('assignment').insert(rows) : { error:null };
+    if(ins.error){ toast('העדכון נכשל'); return; }
+    await srvReloadSafe(); await srvLoadCoord(); toast(`הסידור עודכן: ${rows.length} משמרות של ${nm}`);
+  });
+}
 function resizePhoto(file, size){
   return new Promise((resolve, reject) => {
     const img = new Image(), url = URL.createObjectURL(file);

@@ -468,3 +468,4 @@
   .confirm-actions.stack{ flex-direction:column; align-items:stretch; }
   .wa-group{ display:inline-flex; align-items:center; gap:6px; }
   .cs-issues-nav{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .cs-issues-nav .btn{ margin-top:0; }
+  .th-days{ display:flex; flex-direction:column; gap:8px; margin:10px 0; } .th-day{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; } .th-day b{ min-width:56px; } .th-hours{ display:inline-flex; align-items:center; gap:6px; } .th-off{ display:inline-flex; align-items:center; gap:4px; }          /* a teacher's fixed hours (14k) */
