@@ -79,7 +79,7 @@ function csLiveIssues(mk){
   days.forEach(date => {
     const sc = csServiceOf(date, rows, role), dtp = csDayType(date, csSpecial(date));
     [['M', 'm', 'בוקר', 7, 15], ['A', 'e', 'צהריים', 14, 22]].forEach(([chan, sid, word, h0, h1]) => {
-      let run = null; const flush = () => { if(run){ add(date, 'staffing', `${word}: ${run.miss === 1 ? 'חסר מדריך' : `חסרים ${run.miss} מדריכים`} בין ${String(run.a).padStart(2, '0')}:00 ל-${String(run.b).padStart(2, '0')}:00`, sid); run = null; } };
+      const runs = []; let run = null; const flush = () => { if(run){ runs.push(run); run = null; } };          // (one line for the whole shift: Guy 2026-10-25)
       for(let h = h0; h < h1; h++){
         let have = (cov[`${date}|${chan}|${h}`] || []).length;
         if(chan === 'A' && h === 21) have += (cov[`${date}|A|20`] || []).filter(r => priv(r.staff).latest_end_hour === 21 && !(cov[`${date}|A|21`] || []).includes(r)).length;          // (whoever leaves at 21:00 by her own limit)
@@ -89,6 +89,7 @@ function csLiveIssues(mk){
         else { flush(); if(miss) run = { a:h, b:h + 1, miss }; }
       }
       flush();
+      if(runs.length) add(date, 'staffing', `${word}: ${runs.map(x => `${x.miss === 1 ? 'חסר מדריך' : `חסרים ${x.miss}`} ${x.a}–${x.b}`).join(', ')}`, sid);
     });
     // the night: exactly two (a special day may have its own number), at least one woman, never two men
     const ns = instr.filter(r => r.shift === 'N' && r.day === date), sp = csSpecial(date);
