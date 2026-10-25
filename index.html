@@ -7274,14 +7274,16 @@ async function srvRenderVacation(body){
 // ---------------------------------------------------------------- service girls: availability for every day (Sunday-Thursday)
 // the hours of the service girls (Guy 2026-10-17): Sunday 11:00-19:00; Monday-Wednesday the morning (07:00-15:00), the afternoon (14:00-22:00) or both; Thursday only the morning
 const SVC_OPTS = [['early', '07:00–15:00'], ['late', '14:00–22:00'], ['both', 'שתיהן'], ['none', 'לא זמינה']];
-const svcOptsFor = d => dowOf(d) === 0 ? [['late', '11:00–19:00'], ['none', 'לא זמינה']] : dowOf(d) === 4 ? SVC_OPTS.filter(o => o[0] === 'early' || o[0] === 'none') : SVC_OPTS;
+const SVC_HOURS = ['hours', 'שעות אחרות'];          // (hours of her own that day, like the instructors: Guy 2026-10-25; scheduling-v37.sql)
+const svcOptsFor = d => (dowOf(d) === 0 ? [['late', '11:00–19:00'], ['none', 'לא זמינה']] : dowOf(d) === 4 ? SVC_OPTS.filter(o => o[0] === 'early' || o[0] === 'none') : SVC_OPTS).concat([SVC_HOURS]);
 async function srvRenderAvailability(body){          // (also the admin or the coordinator filling it for a service girl: srvWho())
   const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
   body.innerHTML = '<div class="pnote">רק רגע...</div>';
   const days = daysOfMonth(mk).filter(d => dowOf(d) <= 4);
-  const r = await sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1]);
+  const [r, rh] = await Promise.all([sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1]),
+    sbPersonal.from('prefs_hours').select('day,from_time,to_time').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1])]);
   if(!body.isConnected) return;
-  const have = {}; (r.data || []).forEach(x => { have[x.day] = x.opt; });
+  const have = {}, hrs = {}; (r.data || []).forEach(x => { have[x.day] = x.opt; }); (rh.data || []).forEach(x => { hrs[x.day] = `${String(x.from_time).slice(0, 5)}–${String(x.to_time).slice(0, 5)}`; });
   const fixed = srvPrefsOf(m, srvWho()).fixed.map(f => f.day);
   const submitted = !!m.submitted[srvWho()], left = days.filter(d => !have[d] && !fixed.includes(d)).length;
   body.innerHTML = `
@@ -7289,11 +7291,13 @@ async function srvRenderAvailability(body){          // (also the admin or the c
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'הזמינות שלכן אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.' : 'נשמח לדעת מתי אתן זמינות, ככה נוכל לסדר לכן את החודש.'} · אפשר להגיש עד 24/${addMonths(mk, -1).slice(5)} בשעה 22:30</div>
     ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע. לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.</div>' : ''}
     <div class="pnote">לכל יום נשמח שתבחרו מתי נוח לכן. ביום ראשון 11:00–19:00; בשני עד רביעי בוקר (07:00–15:00), צהריים (14:00–22:00) או שתיהן; ביום חמישי רק בוקר (07:00–15:00).</div>
-    <div class="psvc">${days.map(d => { const fx = fixed.includes(d); return `<div class="psvc-row${have[d] || fx ? '' : ' empty'}"><b>${dayLabel(d)}</b>${fx ? '<em>היעדרות שאושרה</em>' : `<div class="pchoice wrap">${svcOptsFor(d).map(o => `<button type="button" class="${have[d] === o[0] || (have[d] === 'both' && svcOptsFor(d).length === 2 && o[0] !== 'none') ? 'on' : ''}" data-svc="${d}|${o[0]}"${locked ? ' disabled' : ''}>${o[1]}</button>`).join('')}</div>`}</div>`; }).join('')}</div>
+    <div class="psvc">${days.map(d => { const fx = fixed.includes(d); return `<div class="psvc-row${have[d] || fx ? '' : ' empty'}"><b>${dayLabel(d)}</b>${fx ? '<em>היעדרות שאושרה</em>' : `<div class="pchoice wrap">${svcOptsFor(d).map(o => `<button type="button" class="${have[d] === o[0] || (have[d] === 'both' && svcOptsFor(d).length === 2 && o[0] !== 'none') ? 'on' : ''}" data-svc="${d}|${o[0]}"${locked ? ' disabled' : ''}>${o[0] === 'hours' && have[d] === 'hours' && hrs[d] ? hrs[d] : o[1]}</button>`).join('')}</div>`}</div>`; }).join('')}</div>
     <div class="pprefs-actions"><button type="button" class="btn" id="svc-submit"${locked ? ' disabled' : ''}>${submitted ? 'עדכון והגשה מחדש' : 'הגשה'}</button><span class="pnote">${left ? `נשארו ${left} ימים לבחירה` : 'כל הימים נבחרו, תודה!'}</span></div>`;
   wireMonthNav(body, 'pmonth');
   body.querySelectorAll('[data-svc]').forEach(b => b.addEventListener('click', async () => {
     const [d, opt] = b.dataset.svc.split('|');
+    if(opt === 'hours'){ svcHoursSheet(d, hrs[d], body); return; }
+    await sbPersonal.from('prefs_hours').delete().eq('staff_id', srvWho()).eq('day', d);          // (another choice: her own hours of that day are gone)
     const u = await sbPersonal.from('prefs_service').upsert({ staff_id:srvWho(), day:d, opt });
     if(u.error) toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב'); srvRenderAvailability(body);
   }));
@@ -7302,6 +7306,24 @@ async function srvRenderAvailability(body){          // (also the admin or the c
     const u = await sbPersonal.from('prefs_submission').upsert({ staff_id:srvWho(), month:firstOf(mk), submitted_at:new Date().toISOString() });
     if(u.error){ toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
     m.submitted[srvWho()] = true; toast(tx('avail_ok')); srvRenderAvailability(body);
+  });
+}
+
+// hours of her own on one day (whole hours, 07:00-22:00): saved in prefs_hours, the day's choice becomes 'hours'
+function svcHoursSheet(d, cur, body){
+  const [a0, b0] = (cur || '09:00–17:00').split('–').map(x => parseInt(x, 10));
+  const opts = sel => { let o = ''; for(let h = 7; h <= 22; h++) o += `<option value="${h}"${h === sel ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`; return o; };
+  const sh = portalSheet(`<h2>שעות אחרות · ${pEsc(dayLabel(d))}</h2><div class="adm-mins"><label class="pfield">משעה<select id="svh-from">${opts(a0)}</select></label><label class="pfield">עד שעה<select id="svh-to">${opts(b0)}</select></label></div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="svh-go">שמירה</button></div>`);
+  sh.querySelector('#svh-go').addEventListener('click', async () => {
+    const a = +sh.querySelector('#svh-from').value, b = +sh.querySelector('#svh-to').value;
+    if(b - a < 2){ toast('צריך לפחות שעתיים'); return; }
+    const who = srvWho(), pad = h => String(h).padStart(2, '0') + ':00';
+    await sbPersonal.from('prefs_hours').delete().eq('staff_id', who).eq('day', d);
+    const h = await sbPersonal.from('prefs_hours').insert({ staff_id:who, day:d, from_time:pad(a), to_time:pad(b) });
+    const u = h.error ? h : await sbPersonal.from('prefs_service').upsert({ staff_id:who, day:d, opt:'hours' });
+    if(u.error){ toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב'); return; }
+    sh.close(); srvRenderAvailability(body);
   });
 }
 
