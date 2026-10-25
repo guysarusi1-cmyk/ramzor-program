@@ -1537,6 +1537,7 @@
           check('fill for a service girl: in the submissions tab a service girl has "מילוי זמינות"', !!fb, 'no button');
           if(fb){ const sid = fb.dataset.fillFor; fb.click(); await sleep(700);
             check('fill for a service girl: ... it opens her availability screen, for her', portalUi.tab === 'avail' && srvWho() === sid && !!document.querySelector('.adm-viewas.edit') && !!document.querySelector('#portal-body .psvc'), portalUi.tab + ' / ' + srvWho());
+            check('service girls: every weekday also has "שעות אחרות"', !!document.querySelector('#portal-body [data-svc$="|hours"]') && /שעות אחרות/.test(document.getElementById('portal-body').textContent), 'no choice');
             const w = await sbPersonal.from('prefs_service').upsert({ staff_id:sid, day:'2099-01-05', opt:'early' });
             if(w.error && /policy|permission|row-level/i.test(w.error.message)) check('(info) fill for a service girl: the coordinator saves it after scheduling-v36.sql', true, '');
             else { check('fill for a service girl: the database keeps what the coordinator chose for her', !w.error, (w.error || {}).message); await sbPersonal.from('prefs_service').delete().eq('staff_id', sid).eq('day', '2099-01-05'); }
