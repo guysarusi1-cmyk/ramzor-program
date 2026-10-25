@@ -142,7 +142,7 @@ function csIssuesPanelHtml(mk, all){
   if(!all.length) return `<div class="cs-issues-panel"><h4>דורש תשומת לב</h4><div class="pnote">אין דברים שדורשים תשומת לב ✓</div></div>`;
   const off = (portalUi.csIssueOff || 0) % all.length, three = all.slice(off, off + 3);
   return `<div class="cs-issues-panel"><h4>דורש תשומת לב <small>${off + 1}–${off + three.length} מתוך ${all.length}</small></h4>${three.map(csIssueHtml).join('')}
-    ${all.length > 3 ? `<button type="button" class="btn ghost small" id="cs-issues-next">${off + 3 >= all.length ? 'חזרה להתחלה' : 'שלושת הבאים ›'}</button>` : ''}</div>`;
+    ${all.length > 3 ? `<div class="cs-issues-nav"><button type="button" class="btn ghost small" id="cs-issues-prev" data-off="${Math.max(0, off - 3)}"${off ? '' : ' disabled'}>‹ שלושת הקודמים</button><button type="button" class="btn ghost small" id="cs-issues-next" data-off="${off + 3 >= all.length ? 0 : off + 3}">${off + 3 >= all.length ? 'חזרה להתחלה' : 'שלושת הבאים ›'}</button></div>` : ''}</div>`;
 }
 // a tap on the kind of a note: the calendar scrolls to that day (that shift when it is known) and it lights up for a moment
 function csGotoDay(body, goto){
@@ -156,7 +156,7 @@ function csGotoDay(body, goto){
 }
 function csIssuesWire(body, mk){
   body.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); csGotoDay(body, b.dataset.goto); }));
-  const nx = body.querySelector('#cs-issues-next'); if(nx) nx.addEventListener('click', () => { portalUi.csIssueOff = (portalUi.csIssueOff || 0) + 3; srvRenderCoordSchedule(body); });
+  body.querySelectorAll('#cs-issues-next, #cs-issues-prev').forEach(b => b.addEventListener('click', () => { portalUi.csIssueOff = +b.dataset.off || 0; srvRenderCoordSchedule(body); }));          // (three on, three back)
   body.querySelectorAll('[data-live-done]').forEach(b => b.addEventListener('click', async () => {          // (a live note she handled another way: kept as handled, also on her other devices)
     b.disabled = true; const st = portalLoad();
     const r = await sbPersonal.from('coordinator_flags').insert({ month:firstOf(mk), day:b.dataset.liveDone.split('|')[1] || null, kind:'handled', text:b.dataset.liveDone, resolved:true }).select('month,text').single();

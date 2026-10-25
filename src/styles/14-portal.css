@@ -467,3 +467,4 @@
   .cs-pick-main .cs-pick-btn{ border:2px solid var(--p-accent, #f2c14e); font-weight:700; font-size:16px; min-height:46px; }
   .confirm-actions.stack{ flex-direction:column; align-items:stretch; }
   .wa-group{ display:inline-flex; align-items:center; gap:6px; }
+  .cs-issues-nav{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .cs-issues-nav .btn{ margin-top:0; }
