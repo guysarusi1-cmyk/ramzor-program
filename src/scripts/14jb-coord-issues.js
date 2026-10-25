@@ -71,6 +71,37 @@ function csNeed(date, chan, h, sc, sv){
   return 5;          // (Thursday afternoon)
 }
 
+// the staffing of some days, hour by hour (the same rules as the engine): { 'date|m' / 'date|e': [{ a, b, miss }] runs of missing hours, 'date|n': missing at night }
+function csStaffing(mk, days){
+  const st = portalLoad(), rows = (st.rows || []).filter(r => monthKeyOf(r.day) === mk || monthKeyOf(addDays(r.day, 1)) === mk);
+  const role = id => (st.instructors.find(p => p.id === id) || {}).role, priv = id => (st.priv || {})[id] || {};
+  const instr = rows.filter(r => role(r.staff) === 'instructor'), out = {};
+  const cov = {}; instr.forEach(r => csRowCover(r).forEach(k => { (cov[k] = cov[k] || []).push(r); }));
+  days.forEach(date => {
+    const sc = csServiceOf(date, rows, role), svh = csServiceHours(date, rows, role);
+    [['M', 'm', 7, 15], ['A', 'e', 14, 22]].forEach(([chan, sid, h0, h1]) => {
+      const runs = []; let run = null; const flush = () => { if(run){ runs.push(run); run = null; } };
+      for(let h = h0; h < h1; h++){
+        let have = (cov[`${date}|${chan}|${h}`] || []).length;
+        if(chan === 'A' && h === 21) have += (cov[`${date}|A|20`] || []).filter(r => priv(r.staff).latest_end_hour === 21 && !(cov[`${date}|A|21`] || []).includes(r)).length;          // (whoever leaves at 21:00 by her own limit)
+        const miss = Math.max(0, csNeed(date, chan, h, sc, svh[h]) - have);          // (a long-weekend instructor counts from 17:00, when she comes)
+        if(miss && run && run.miss === miss) run.b = h + 1;
+        else { flush(); if(miss) run = { a:h, b:h + 1, miss }; }
+      }
+      flush(); out[`${date}|${sid}`] = runs;
+    });
+    const sp = csSpecial(date), need = sp && sp.kind === 'special' && sp.min != null && sp.scope === 'night' ? sp.min : 2;
+    out[`${date}|n`] = Math.max(0, need - instr.filter(r => r.shift === 'N' && r.day === date).length);
+  });
+  return out;
+}
+// the "חסר N" of every shift of the calendar, by the same rules (the most that are missing in any hour of it)
+function csShiftMissing(mk){
+  if(typeof portalServerOn === 'undefined' || !portalServerOn || !portalState || !portalState.rows) return null;
+  const s = csStaffing(mk, daysOfMonth(mk)), out = {};
+  Object.entries(s).forEach(([k, v]) => { out[k] = Array.isArray(v) ? v.reduce((m, x) => Math.max(m, x.miss), 0) : v; });
+  return out;
+}
 // -> [{ day, kind, text, goto:'date|m/e/n', id }] for the month (in the current month: from today on)
 function csLiveIssues(mk){
   const st = portalLoad(), today = srvToday(), rows = (st.rows || []).filter(r => monthKeyOf(r.day) === mk || monthKeyOf(addDays(r.day, 1)) === mk);
@@ -79,20 +110,12 @@ function csLiveIssues(mk){
   const instr = rows.filter(r => role(r.staff) === 'instructor'), out = [];
   const days = daysOfMonth(mk).filter(d => d >= today);
   const add = (day, kind, text, sid) => out.push({ day, kind, text, goto:sid ? `${day}|${sid}` : null, id:`${kind}|${day}|${text}` });
-  // staffing, hour by hour
-  const cov = {}; instr.forEach(r => csRowCover(r).forEach(k => { (cov[k] = cov[k] || []).push(r); }));
+  // staffing, hour by hour (one line for the whole shift: Guy 2026-10-25)
+  const staffing = csStaffing(mk, days);
   days.forEach(date => {
-    const sc = csServiceOf(date, rows, role), svh = csServiceHours(date, rows, role), dtp = csDayType(date, csSpecial(date));
-    [['M', 'm', 'בוקר', 7, 15], ['A', 'e', 'צהריים', 14, 22]].forEach(([chan, sid, word, h0, h1]) => {
-      const runs = []; let run = null; const flush = () => { if(run){ runs.push(run); run = null; } };          // (one line for the whole shift: Guy 2026-10-25)
-      for(let h = h0; h < h1; h++){
-        let have = (cov[`${date}|${chan}|${h}`] || []).length;
-        if(chan === 'A' && h === 21) have += (cov[`${date}|A|20`] || []).filter(r => priv(r.staff).latest_end_hour === 21 && !(cov[`${date}|A|21`] || []).includes(r)).length;          // (whoever leaves at 21:00 by her own limit)
-        const miss = Math.max(0, csNeed(date, chan, h, sc, svh[h]) - have);          // (a long-weekend instructor counts from 17:00, when she comes)
-        if(miss && run && run.miss === miss) run.b = h + 1;
-        else { flush(); if(miss) run = { a:h, b:h + 1, miss }; }
-      }
-      flush();
+    const dtp = csDayType(date, csSpecial(date));
+    [['m', 'בוקר'], ['e', 'צהריים']].forEach(([sid, word]) => {
+      const runs = staffing[`${date}|${sid}`] || [];
       if(runs.length) add(date, 'staffing', `${word}: ${runs.map(x => `${x.miss === 1 ? 'חסר מדריך' : `חסרים ${x.miss}`} ${x.a}–${x.b}`).join(', ')}`, sid);
     });
     // the night: exactly two (a special day may have its own number), at least one woman, never two men
@@ -116,7 +139,8 @@ function csLiveIssues(mk){
     for(let i = 0; i < list.length; i++) for(let j = i + 1; j < list.length && j <= i + 2; j++){
       const a = list[i], b = list[j]; if(a.day === b.day || !days.includes(b.day)) continue;
       const c = partsConflict(rowParts(a), rowParts(b));
-      if(c) add(b.day, 'rest', `${nm(pid)}: ${c}, בין ${SRV_SHIFT_WORD[a.shift]} ${shortDate(a.day)} ל${SRV_SHIFT_WORD[b.shift]} ${shortDate(b.day)}`, sidOf(b));
+      const hrs = r => r.shift === 'L' ? '' : ` ${(r.from || (SRV_STD[r.shift] || [])[0] || '').slice(0, 5)}–${(r.to || (SRV_STD[r.shift] || [])[1] || '').slice(0, 5)}`;
+      if(c) add(b.day, 'rest', `${nm(pid)}: ${c === 'חפיפה' ? 'המשמרות חופפות' : c}: ${SRV_SHIFT_WORD[a.shift]} ${shortDate(a.day)}${hrs(a)} ואחריו ${SRV_SHIFT_WORD[b.shift]} ${shortDate(b.day)}${hrs(b)}`, sidOf(b));
     }
     list.forEach(r => {
       if(!days.includes(r.day) || (r.flags || []).includes('ok')) return;
@@ -146,8 +170,8 @@ const csIssueHtml = x => `<div class="pflag cs-issue">${x.day ? `<span class="cs
 function csIssuesPanelHtml(mk, all){
   if(!all.length) return `<div class="cs-issues-panel"><h4>דורש תשומת לב</h4><div class="pnote">אין דברים שדורשים תשומת לב ✓</div></div>`;
   const off = (portalUi.csIssueOff || 0) % all.length, three = all.slice(off, off + 3);
-  return `<div class="cs-issues-panel"><h4>דורש תשומת לב <small>${off + 1}–${off + three.length} מתוך ${all.length}</small></h4>${three.map(csIssueHtml).join('')}
-    ${all.length > 3 ? `<div class="cs-issues-nav"><button type="button" class="btn ghost small" id="cs-issues-prev" data-off="${Math.max(0, off - 3)}"${off ? '' : ' disabled'}>‹ שלושת הקודמים</button><button type="button" class="btn ghost small" id="cs-issues-next" data-off="${off + 3 >= all.length ? 0 : off + 3}">${off + 3 >= all.length ? 'חזרה להתחלה' : 'שלושת הבאים ›'}</button></div>` : ''}</div>`;
+  return `<div class="cs-issues-panel"><h4>דורש תשומת לב <small>${off + 1}–${off + three.length} מתוך ${all.length}</small></h4>
+    ${all.length > 3 ? `<div class="cs-issues-nav"><button type="button" class="btn ghost small" id="cs-issues-prev" data-off="${Math.max(0, off - 3)}"${off ? '' : ' disabled'}>‹ שלושת הקודמים</button><button type="button" class="btn ghost small" id="cs-issues-next" data-off="${off + 3 >= all.length ? 0 : off + 3}">${off + 3 >= all.length ? 'חזרה להתחלה' : 'שלושת הבאים ›'}</button></div>` : ''}${three.map(csIssueHtml).join('')}</div>`;          // (the buttons above the three: Guy)
 }
 // a tap on the kind of a note: the calendar scrolls to that day (that shift when it is known) and it lights up for a moment
 function csGotoDay(body, goto){

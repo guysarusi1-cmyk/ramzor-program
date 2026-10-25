@@ -269,6 +269,7 @@ function monthCalHtml(ctx, assignments, opts){
   const hh = x => String(parseInt(x, 10)), hours = s => hh(s.start) + '-' + hh(s.end);
   const blank = '<div class="mcal-blank"></div>', lead = dowOf(table[0].date);
   const others = opts.others === false || opts.othersInCells || typeof scheduleOthersOf !== 'function' ? null : scheduleOthersOf(ctx);          // (the service girls and the teachers: one slim line under every day in the coordinator's calendar; she can hide it)
+  const liveMiss = typeof csShiftMissing === 'function' ? csShiftMissing(ctx.month) : null;          // ("חסר N" by the staffing rules, as "דורש תשומת לב": Guy 2026-10-25)
   const inCells = opts.othersInCells ? othersByShift(ctx) : {}, extras = opts.othersInCells || opts.edit ? overlapExtras(ctx) : {};          // (instructors whose hours reach this shift too)          // (the calendar of the staff: they are in the shifts like the instructors; a teacher first, the service girls last — Guy 2026-10-18)
   let weekOthers = false;
   const flat = Array(lead).fill(null).concat(table); while(flat.length % 7) flat.push(null);
@@ -292,7 +293,7 @@ function monthCalHtml(ctx, assignments, opts){
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}"${opts.drag ? ` data-iid="${p.iid}"` : ''}>${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
     };
-    return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${c.missing ? `<span class="mcal-missing">חסר ${c.missing}</span>` : ''}</div>`;
+    return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${(liveMiss ? liveMiss[c.slot.key] || 0 : c.missing) ? `<span class="mcal-missing">חסר ${liveMiss ? liveMiss[c.slot.key] : c.missing}</span>` : ''}</div>`;
   };
   let out = `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head">${d}</div>`).join('')}`;
   for(let w = 0; w < flat.length; w += 7){
