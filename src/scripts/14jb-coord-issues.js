@@ -166,12 +166,16 @@ function csAllIssues(mk){
   return out.sort((a, b) => (a.day ? 0 : 1) - (b.day ? 0 : 1) || String(a.day || '').localeCompare(String(b.day || '')) || String(a.goto || '').localeCompare(String(b.goto || '')));
 }
 const csIssueHtml = x => `<div class="pflag cs-issue">${x.day ? `<span class="cs-issue-date">${pEsc(dayLabel(x.day))}</span>` : ''}<span class="cs-issue-body">${x.goto ? `<button type="button" class="cs-issue-kind" data-goto="${x.goto}" title="מעבר ליום בלוח">${pEsc(x.word)}</button>` : `<b class="cs-issue-kind">${pEsc(x.word)}</b>`} · ${pEsc(x.text)}</span>${x.flagId ? `<button type="button" class="btn ghost small" data-flag-done="${x.flagId}">טופל</button>` : x.liveId ? `<button type="button" class="btn ghost small" data-live-done="${pEsc(x.liveId)}">טופל</button>` : ''}</div>`;
-// the short list in the panel at the side: the next three, from the start of the month shown (in the current month: from today); "הבאים" moves on by three
+// the short list in the panel at the side: one note at a time, or three (a small switch by the title, kept on this device: Guy 2026-10-25),
+// from the start of the month shown (in the current month: from today); the buttons move on / back by as many
+const csIssuesPer = () => { try { return localStorage.getItem('ramzor-cs-issues-per') === '3' ? 3 : 1; } catch(e){ return 1; } };
 function csIssuesPanelHtml(mk, all){
   if(!all.length) return `<div class="cs-issues-panel"><h4>דורש תשומת לב</h4><div class="pnote">אין דברים שדורשים תשומת לב ✓</div></div>`;
-  const off = (portalUi.csIssueOff || 0) % all.length, three = all.slice(off, off + 3);
-  return `<div class="cs-issues-panel"><h4>דורש תשומת לב <small>${off + 1}–${off + three.length} מתוך ${all.length}</small></h4>
-    ${all.length > 3 ? `<div class="cs-issues-nav"><button type="button" class="btn ghost small" id="cs-issues-prev" data-off="${Math.max(0, off - 3)}"${off ? '' : ' disabled'}>‹ שלושת הקודמים</button><button type="button" class="btn ghost small" id="cs-issues-next" data-off="${off + 3 >= all.length ? 0 : off + 3}">${off + 3 >= all.length ? 'חזרה להתחלה' : 'שלושת הבאים ›'}</button></div>` : ''}${three.map(csIssueHtml).join('')}</div>`;          // (the buttons above the three: Guy)
+  const per = csIssuesPer(), off = (portalUi.csIssueOff || 0) % all.length, shown = all.slice(off, off + per);
+  const seg = `<span class="cs-seg" role="group" aria-label="כמה להציג">${[1, 3].map(n => `<button type="button" class="${n === per ? 'on' : ''}" data-issues-per="${n}" aria-pressed="${n === per}">${n}</button>`).join('')}</span>`;
+  const [pw, nw] = per === 1 ? ['הקודמת', 'הבאה'] : ['שלושת הקודמים', 'שלושת הבאים'];
+  return `<div class="cs-issues-panel"><h4>דורש תשומת לב <small>${shown.length > 1 ? `${off + 1}–${off + shown.length}` : off + 1} מתוך ${all.length}</small>${seg}</h4>
+    ${all.length > per ? `<div class="cs-issues-nav"><button type="button" class="btn ghost small" id="cs-issues-prev" data-off="${Math.max(0, off - per)}"${off ? '' : ' disabled'}>‹ ${pw}</button><button type="button" class="btn ghost small" id="cs-issues-next" data-off="${off + per >= all.length ? 0 : off + per}">${off + per >= all.length ? 'חזרה להתחלה' : nw + ' ›'}</button></div>` : ''}${shown.map(csIssueHtml).join('')}</div>`;          // (the buttons above the notes: Guy)
 }
 // a tap on the kind of a note: the calendar scrolls to that day (that shift when it is known) and it lights up for a moment
 function csGotoDay(body, goto){
@@ -185,6 +189,7 @@ function csGotoDay(body, goto){
 }
 function csIssuesWire(body, mk){
   body.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); csGotoDay(body, b.dataset.goto); }));
+  body.querySelectorAll('[data-issues-per]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-issues-per', b.dataset.issuesPer); } catch(e){} portalUi.csIssueOff = 0; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('#cs-issues-next, #cs-issues-prev').forEach(b => b.addEventListener('click', () => { portalUi.csIssueOff = +b.dataset.off || 0; srvRenderCoordSchedule(body); }));          // (three on, three back)
   body.querySelectorAll('[data-live-done]').forEach(b => b.addEventListener('click', async () => {          // (a live note she handled another way: kept as handled, also on her other devices)
     b.disabled = true; const st = portalLoad();
