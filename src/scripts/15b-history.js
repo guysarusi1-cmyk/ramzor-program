@@ -128,7 +128,7 @@
     syncGuard(); updateBack();
   });
 
-  // the "→ חזור" button: in the bottom bar on a phone, floating on a wide screen; hidden on the first page (nothing to go back to)
+  // the "→ חזור" button: in the bottom bar on a phone; hidden on the first page (nothing to go back to)
   const backBtns = [];
   function makeBack(){
     const nav = el('bottom-nav');
@@ -137,10 +137,7 @@
       b.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><span>חזור</span>';
       nav.insertBefore(b, nav.firstChild); backBtns.push(b);
     }
-    if(!el('nav-back-float')){
-      const f = document.createElement('button'); f.type = 'button'; f.id = 'nav-back-float'; f.className = 'nav-back-float'; f.textContent = '→ חזור';
-      el('protected-app').appendChild(f); backBtns.push(f);
-    }
+    // (no floating button on a wide screen any more: it covered things and the browser's back does the same: Guy 2026-10-26)
     backBtns.forEach(b => b.addEventListener('click', () => { if(stack.length > 1) history.back(); }));
   }
   function updateBack(){
