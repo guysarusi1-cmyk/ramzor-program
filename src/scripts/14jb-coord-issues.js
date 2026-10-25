@@ -4,6 +4,7 @@
 // disappears at once, and a new one shows at once. The same rules as the engine (model.py: morn_cov / aft_cov, the nights, the ahmash).
 // The engine's own notes of these kinds are not shown any more (they were true only when the schedule was built); its other notes stay as they were.
 const CS_LIVE_KINDS = ['staffing', 'night', 'ahmash', 'rest', 'double'];
+const csLtr = s => '⁦' + s + '⁩';          // (hours and ranges kept left-to-right inside the Hebrew line: "22:00–08:00", not reversed)
 const CS_ISSUE_KIND = { staffing:'איוש', night:'לילה', ahmash:'אחמ"ש', rest:'מנוחה', double:'שתי משמרות ביום', no:'שובץ/ה ב"לא"' };
 
 // the usual holidays (the engine's calendar_il.py): Tishrei / Nisan / Sivan by the browser's Hebrew calendar; the coordinator's special days come first
@@ -116,7 +117,7 @@ function csLiveIssues(mk){
     const dtp = csDayType(date, csSpecial(date));
     [['m', 'בוקר'], ['e', 'צהריים']].forEach(([sid, word]) => {
       const runs = staffing[`${date}|${sid}`] || [];
-      if(runs.length) add(date, 'staffing', `${word}: ${runs.map(x => `${x.miss === 1 ? 'חסר מדריך' : `חסרים ${x.miss}`} ${x.a}–${x.b}`).join(', ')}`, sid);
+      if(runs.length) add(date, 'staffing', `${word}: ${runs.map(x => `${x.miss === 1 ? 'חסר מדריך' : `חסרים ${x.miss}`} ${csLtr(x.a + '–' + x.b)}`).join(', ')}`, sid);
     });
     // the night: exactly two (a special day may have its own number), at least one woman, never two men
     const ns = instr.filter(r => r.shift === 'N' && r.day === date), sp = csSpecial(date);
@@ -139,7 +140,7 @@ function csLiveIssues(mk){
     for(let i = 0; i < list.length; i++) for(let j = i + 1; j < list.length && j <= i + 2; j++){
       const a = list[i], b = list[j]; if(a.day === b.day || !days.includes(b.day)) continue;
       const c = partsConflict(rowParts(a), rowParts(b));
-      const hrs = r => r.shift === 'L' ? '' : ` ${(r.from || (SRV_STD[r.shift] || [])[0] || '').slice(0, 5)}–${(r.to || (SRV_STD[r.shift] || [])[1] || '').slice(0, 5)}`;
+      const hrs = r => r.shift === 'L' ? '' : ' ' + csLtr(`${(r.from || (SRV_STD[r.shift] || [])[0] || '').slice(0, 5)}–${(r.to || (SRV_STD[r.shift] || [])[1] || '').slice(0, 5)}`);
       if(c) add(b.day, 'rest', `${nm(pid)}: ${c === 'חפיפה' ? 'המשמרות חופפות' : c}: ${SRV_SHIFT_WORD[a.shift]} ${shortDate(a.day)}${hrs(a)} ואחריו ${SRV_SHIFT_WORD[b.shift]} ${shortDate(b.day)}${hrs(b)}`, sidOf(b));
     }
     list.forEach(r => {
