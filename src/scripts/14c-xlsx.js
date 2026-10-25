@@ -98,7 +98,9 @@ function scheduleOthersOf(ctx){
 // right), a row per week; in every day the morning, the noon and the night, one line each. In a line the ahmash comes first, marked (אחמ"ש);
 // in the morning a teacher comes first, marked (מורה); the service girls come last (not marked: Guy); hours that are not the shift's
 // usual ones are in brackets ("עד 10", "מ-10"). The same in the Excel file and in the print / PDF.
-const CAL_ROLE = { teacher:'מורה', service:'' };          // (a kindergarten teacher will be added when there is one, Guy 2026-10-24)
+const CAL_ROLE = { teacher:'מורה', service:'' };
+// a teacher may be written by her own word instead, "גננת" (Guy 2026-10-25): staff_constraints kind "title", params { word }; read with the coordinator's data
+const calRoleWord = (id, role) => { const st = typeof portalLoad === 'function' ? portalLoad() : null; return (st && st.titles && st.titles[id]) || CAL_ROLE[role]; };
 function calHours(note, s){
   const m = String(note || '').match(/^(\d{1,2})[–-](\d{1,2})$/); if(!m) return note || '';
   const a = +m[1], b = +m[2], st = parseInt(s.start, 10), en = parseInt(s.end, 10);
@@ -116,7 +118,7 @@ function scheduleCalendarDays(ctx, assignments){
   return table.map(r => ({ date:r.date, lines:ctx.shiftTypes.map((s, i) => {
     const c = r.cells[i], oth = others[`${r.date}|${s.id}`] || [], items = [];
     const nm = (name, tag, note) => { const extra = [tag, note].filter(Boolean).join(', '); return extra ? `${name} (${extra})` : name; };
-    oth.filter(x => x.role === 'teacher').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.teacher, calHours(x.note, s)), kind:'teacher' }));
+    oth.filter(x => x.role === 'teacher').forEach(x => items.push({ text:nm(x.name, calRoleWord(x.id, 'teacher'), calHours(x.note, s)), kind:'teacher' }));
     if(c.slot){
       const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
       lead.forEach(p => items.push({ text:nm(p.name, 'אחמ"ש', calHours(calClip(p.note, s), s)), ahm:true, kind:'instructor' }));
