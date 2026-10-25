@@ -1554,6 +1554,12 @@
               check('instructor requests: "כן" first, then "יכול", then "לא"; what she opened is folded', reqs.join() === 'yes,can,no' && !!pb.querySelector('.cs-person details.cs-opened'), reqs.join());
               portalUi.csPerson = null; }
             check('WhatsApp: every chat opens in the same tab, not a new one each time', /target="ramzor-wa"/.test(waButtonHtml(who ? who.id : '', `${daysOfMonth(mkS)[0]}|m`) || 'target="ramzor-wa"'), '');
+            { portalUi.csOpen = true; portalUi.csOthersOpen = true; portalUi.csOthersRm = false; srvRenderCoordSchedule(pb); await sleep(40);
+              const noX = !pb.querySelector('.mcal-x'), hasBtn = !!pb.querySelector('#cs-others-rm');
+              portalUi.csOthersRm = true; srvRenderCoordSchedule(pb); await sleep(40);
+              const others = st.rows.some(r => monthKeyOf(r.day) === mkS && ['service', 'teacher'].includes((st.instructors.find(x => x.id === r.staff) || {}).role));
+              check('service girls and teachers: the × to take one off a shift shows only after "הורדה מהסידור"', noX && hasBtn && (!others || !!pb.querySelector('.mcal-x[data-other-rm]')), JSON.stringify([noX, hasBtn, others]));
+              portalUi.csOthersRm = false; portalUi.csOthersOpen = false; }
             const tch = st.instructors.find(x => x.active && x.role === 'teacher');
             if(tch){ await teacherHoursSheet(tch.id); await sleep(60); const sh = document.querySelector('.psheet');
               check('teacher fixed hours: the coordinator opens them, Sunday to Friday, each with hours or "לא עובדת"', !!sh && sh.querySelectorAll('.th-day').length === 6 && !!sh.querySelector('#th-save'), '');
