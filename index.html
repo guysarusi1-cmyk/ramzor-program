@@ -1615,6 +1615,8 @@
   .th-days{ display:flex; flex-direction:column; gap:8px; margin:10px 0; } .th-day{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; } .th-day b{ min-width:56px; } .th-hours{ display:inline-flex; align-items:center; gap:6px; } .th-off{ display:inline-flex; align-items:center; gap:4px; }          /* a teacher's fixed hours (14k) */
   .cs-issues-panel h4{ display:flex; align-items:center; gap:8px; } .cs-seg{ margin-inline-start:auto; display:inline-flex; border:1px solid var(--p-line); border-radius:999px; overflow:hidden; } .cs-seg button{ background:none; border:0; color:var(--p-text); padding:1px 9px; font:inherit; font-size:12px; line-height:18px; min-height:0; cursor:pointer; } .cs-seg button.on{ background:#f2c14e; color:#1c2340; font-weight:700; }          /* one note or three (14jb) */
   .cs-side{ padding-bottom:90px; } .cs-issue > .btn{ padding:2px 9px; font-size:12px; min-height:0; line-height:20px; }          /* the last note can be scrolled above the floating back button; a small "טופל" */
+  .mcal-x{ background:none; border:0; padding:0 3px; margin-inline-start:2px; font:inherit; font-size:12px; line-height:1; color:var(--p-muted); cursor:pointer; opacity:.7; } .mcal-x:hover, .mcal-x:focus-visible{ color:var(--p-no); opacity:1; }          /* the × by a service girl or a teacher in the coordinator's calendar */
+  .cs-others-rm{ margin:0 0 8px; } .cs-others-rm.on{ border-color:var(--p-no); color:var(--p-no); }
 
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
@@ -6004,7 +6006,8 @@ function othersByShift(ctx){
     if(monthKeyOf(r.day) !== ctx.month) return;
     const p = st.instructors.find(x => x.id === r.staff); if(!p || !['service', 'teacher'].includes(p.role)) return;
     const sid = (typeof SRV_SHIFT_UI !== 'undefined' && SRV_SHIFT_UI[r.shift]) || 'm';
-    rowShiftParts(r, sid).forEach(x => (out[x.key] = out[x.key] || []).push({ id:p.id, role:p.role, name:instrName(p, st.instructors), note:x.note, from:r.from || '' }));          // (in every shift she covers, with the hours of it)
+    const parts = rowShiftParts(r, sid);
+    parts.forEach(x => (out[x.key] = out[x.key] || []).push({ id:p.id, role:p.role, name:instrName(p, st.instructors), note:x.note, from:r.from || '', rowId:r.id, parts:parts.length }));          // (in every shift she covers, with the hours of it)
   });
   Object.values(out).forEach(l => l.sort((a, b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name)));
   return out;
@@ -6030,7 +6033,7 @@ function monthCalHtml(ctx, assignments, opts){
     const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1 && !weekOthers;
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
     const hrs = n => n && typeof calHours === 'function' ? calHours(n, s) : n;
-    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}</span>`;
+    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}${opts.otherRm && x.rowId ? `<button type="button" class="mcal-x" data-other-rm="${x.rowId}" data-sid="${s.id}" aria-label="הסרה מהמשמרת" title="הסרה מהמשמרת">×</button>` : ''}</span>`;          // (the × takes a service girl or a teacher off this shift: Guy 2026-10-26)
     const extra = (extras[`${r.date}|${s.id}`] || []).map(x => `<span class="mcal-name extra${opts.me && x.id === opts.me ? ' me' : ''}" title="משובץ/ת במשמרת הסמוכה, ונמצא/ת גם כאן">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}</span>`).join('');
     const teachers = oth.filter(x => x.role === 'teacher').map(othName).join(''), service = oth.filter(x => x.role === 'service').map(othName).join('');
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
@@ -7777,7 +7780,7 @@ function srvRenderCoordSchedule(body){
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
     <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">הסתר מורות/בנות שירות${csHiddenMode() ? ` · <small>${({ teacher:'המורות מוסתרות', service:'בנות השירות מוסתרות', both:'שתיהן מוסתרות' })[csHiddenMode()]}</small>` : ''}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   keep();
   wireMonthNav(body);
@@ -7814,12 +7817,15 @@ function srvRenderCoordSchedule(body){
       if(who.startsWith('row:')) srvMoveToSlot(mk, c.dataset.key, who.slice(4), body); else if(who.startsWith('other:')) srvAddOtherToSlot(mk, c.dataset.key, who.slice(6), body); else srvAddToSlot(mk, c.dataset.key, who, body); });
   });
   srvDragScrollWire();
+  body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); srvRemoveOther(b.dataset.otherRm, b.dataset.sid, body); }));
+  body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('keydown', e => e.stopPropagation()));
   body.querySelectorAll('[data-cs-other]').forEach(b => {          // (a service girl or a teacher from the fold at the bottom of the panel)
     b.setAttribute('draggable', 'true');
     b.addEventListener('dragstart', e => { srvDragWho = 'other:' + b.dataset.csOther; e.dataTransfer.setData('text/plain', srvDragWho); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
     b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   { const of = body.querySelector('#cs-others-fold'); if(of) of.addEventListener('toggle', () => { portalUi.csOthersOpen = of.open; }); }
+  { const rb = body.querySelector('#cs-others-rm'); if(rb) rb.addEventListener('click', () => { portalUi.csOthersRm = !portalUi.csOthersRm; srvRenderCoordSchedule(body); }); }          // (the × by the service girls and the teachers in the calendar only after "הורדה מהסידור": Guy 2026-10-26)
   body.querySelectorAll('[data-cs-sort]').forEach(b => b.addEventListener('click', () => { portalUi.csSort = b.dataset.csSort; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
@@ -8061,6 +8067,29 @@ async function srvMoveToSlot(mk, key, rowId, body){
   srvRenderCoordSchedule(body); toast(`${nm} הועבר/ה ל${sh.label} ${dayLabel(date)}. מי שנוגע בעניין קיבל עדכון.`);
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
+// a service girl or a teacher taken off one shift (the × by her name, with a question first: Guy 2026-10-26). When her hours reach two shifts
+// (a Sunday 11-19: the morning and the afternoon) she may leave only this one: her hours are cut at 15:00; or the whole day
+async function srvRemoveOther(rowId, sid, body){
+  const st = portalLoad(), r = st.rows.find(x => x.id === rowId); if(!r) return;
+  const p = st.instructors.find(x => x.id === r.staff), nm = p ? instrName(p, st.instructors) : '', sh = st.shiftTypes.find(x => x.id === sid) || {};
+  const own = SRV_SHIFT_UI[r.shift] || 'm', parts = rowShiftParts(r, own), from = (r.from || '').slice(0, 5), to = (r.to || '').slice(0, 5);
+  const two = parts.length === 2 && parts.every(x => /\|[me]$/.test(x.key));
+  const keep = two ? (sid === 'm' ? { shift:'A', from_time:'15:00', to_time:to } : { shift:'M', from_time:from, to_time:'15:00' }) : null;
+  const choice = await new Promise(resolve => {
+    let done = false; const finish = v => { if(done) return; done = true; s2.close(); resolve(v); };
+    const s2 = portalSheet(`<h2>להסיר את ${pEsc(nm)}?</h2><div class="pnote">${pEsc(dayLabel(r.day))} · ${pEsc(sh.label || '')}${from && to ? ` · ${csLtr(from + '–' + to)}` : ''}</div>
+      <div class="confirm-actions stack">${keep ? `<button type="button" class="btn ghost" data-c="part">רק מ${pEsc(sh.label || 'המשמרת')} (תישאר ${csLtr(keep.from_time + '–' + keep.to_time)})</button><button type="button" class="btn ghost" data-c="all">מכל היום</button>` : '<button type="button" class="btn ghost" data-c="all">כן, להסיר</button>'}<button type="button" class="btn ghost" data-c="back">חזרה</button></div>`);
+    s2.querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => finish(b.dataset.c)));
+    s2.addEventListener('click', e => { if(e.target === s2) finish('back'); });
+  });
+  if(choice !== 'part' && choice !== 'all') return;
+  const u = choice === 'part' ? await sbPersonal.from('assignment').update(keep).eq('id', r.id) : await sbPersonal.from('assignment').delete().eq('id', r.id);
+  if(u.error){ toast('ההסרה נכשלה'); return; }
+  srvDropRow(st, r.id);
+  if(choice === 'part') srvAddRow(st, { id:r.id, staff_id:r.staff, day:r.day, shift:keep.shift, from_time:keep.from_time, to_time:keep.to_time, flags:r.flags || [] });
+  srvRenderCoordSchedule(body); toast(choice === 'part' ? `${nm} הוסרה מ${sh.label || 'המשמרת'}` : `${nm} הוסרה מהסידור ביום הזה`);
+  srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
+}
 // while a name is dragged the page can still be scrolled (Guy): with the mouse wheel, and by holding the name near the top or the bottom of the screen
 let srvDragScrollOn = false;
 function srvDragScrollWire(){
@@ -8125,6 +8154,7 @@ function srvSidePanelHtml(mk, issues){
     <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${byCount ? `<b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b>` : ''}</button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
     ${others.length ? `<details class="pfold cs-others-fold" id="cs-others-fold"${portalUi.csOthersOpen ? ' open' : ''}><summary><span>בנות שירות ומורות</span></summary><div class="pfold-body">
+      <button type="button" class="btn ghost small cs-others-rm${portalUi.csOthersRm ? ' on' : ''}" id="cs-others-rm" aria-pressed="${!!portalUi.csOthersRm}">${portalUi.csOthersRm ? 'סיום ההורדה' : 'הורדה מהסידור'}</button>${portalUi.csOthersRm ? '<div class="pnote">לוחצים על ה-× ליד השם בלוח.</div>' : ''}
       <div class="cs-names">${others.map(p => `<button type="button" class="cs-name cs-other-name" data-cs-other="${p.id}" title="גרירה אל משמרת בלוח"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><small>${p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : 'בת שירות'}</small></button>`).join('')}</div></div></details>` : ''}
     ${csIssuesPanelHtml(mk, (issues || []).filter(x => !x.day || x.day >= (mk === monthKeyOf(srvToday()) ? srvToday() : firstOf(mk))))}
   </aside>`;
@@ -11099,7 +11129,7 @@ updateBottomNav();
     syncGuard(); updateBack();
   });
 
-  // the "→ חזור" button: in the bottom bar on a phone, floating on a wide screen; hidden on the first page (nothing to go back to)
+  // the "→ חזור" button: in the bottom bar on a phone; hidden on the first page (nothing to go back to)
   const backBtns = [];
   function makeBack(){
     const nav = el('bottom-nav');
@@ -11108,10 +11138,7 @@ updateBottomNav();
       b.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><span>חזור</span>';
       nav.insertBefore(b, nav.firstChild); backBtns.push(b);
     }
-    if(!el('nav-back-float')){
-      const f = document.createElement('button'); f.type = 'button'; f.id = 'nav-back-float'; f.className = 'nav-back-float'; f.textContent = '→ חזור';
-      el('protected-app').appendChild(f); backBtns.push(f);
-    }
+    // (no floating button on a wide screen any more: it covered things and the browser's back does the same: Guy 2026-10-26)
     backBtns.forEach(b => b.addEventListener('click', () => { if(stack.length > 1) history.back(); }));
   }
   function updateBack(){

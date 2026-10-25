@@ -251,7 +251,8 @@ function othersByShift(ctx){
     if(monthKeyOf(r.day) !== ctx.month) return;
     const p = st.instructors.find(x => x.id === r.staff); if(!p || !['service', 'teacher'].includes(p.role)) return;
     const sid = (typeof SRV_SHIFT_UI !== 'undefined' && SRV_SHIFT_UI[r.shift]) || 'm';
-    rowShiftParts(r, sid).forEach(x => (out[x.key] = out[x.key] || []).push({ id:p.id, role:p.role, name:instrName(p, st.instructors), note:x.note, from:r.from || '' }));          // (in every shift she covers, with the hours of it)
+    const parts = rowShiftParts(r, sid);
+    parts.forEach(x => (out[x.key] = out[x.key] || []).push({ id:p.id, role:p.role, name:instrName(p, st.instructors), note:x.note, from:r.from || '', rowId:r.id, parts:parts.length }));          // (in every shift she covers, with the hours of it)
   });
   Object.values(out).forEach(l => l.sort((a, b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name)));
   return out;
@@ -277,7 +278,7 @@ function monthCalHtml(ctx, assignments, opts){
     const c = r.cells[i], s = ctx.shiftTypes[i], wk = [5, 6].includes(dowOf(r.date)), last = i === ctx.shiftTypes.length - 1 && !weekOthers;
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
     const hrs = n => n && typeof calHours === 'function' ? calHours(n, s) : n;
-    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}</span>`;
+    const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}${opts.otherRm && x.rowId ? `<button type="button" class="mcal-x" data-other-rm="${x.rowId}" data-sid="${s.id}" aria-label="הסרה מהמשמרת" title="הסרה מהמשמרת">×</button>` : ''}</span>`;          // (the × takes a service girl or a teacher off this shift: Guy 2026-10-26)
     const extra = (extras[`${r.date}|${s.id}`] || []).map(x => `<span class="mcal-name extra${opts.me && x.id === opts.me ? ' me' : ''}" title="משובץ/ת במשמרת הסמוכה, ונמצא/ת גם כאן">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}</span>`).join('');
     const teachers = oth.filter(x => x.role === 'teacher').map(othName).join(''), service = oth.filter(x => x.role === 'service').map(othName).join('');
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;

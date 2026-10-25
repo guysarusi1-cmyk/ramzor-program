@@ -135,7 +135,7 @@ function srvRenderCoordSchedule(body){
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
     <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">הסתר מורות/בנות שירות${csHiddenMode() ? ` · <small>${({ teacher:'המורות מוסתרות', service:'בנות השירות מוסתרות', both:'שתיהן מוסתרות' })[csHiddenMode()]}</small>` : ''}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   keep();
   wireMonthNav(body);
@@ -172,12 +172,15 @@ function srvRenderCoordSchedule(body){
       if(who.startsWith('row:')) srvMoveToSlot(mk, c.dataset.key, who.slice(4), body); else if(who.startsWith('other:')) srvAddOtherToSlot(mk, c.dataset.key, who.slice(6), body); else srvAddToSlot(mk, c.dataset.key, who, body); });
   });
   srvDragScrollWire();
+  body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); srvRemoveOther(b.dataset.otherRm, b.dataset.sid, body); }));
+  body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('keydown', e => e.stopPropagation()));
   body.querySelectorAll('[data-cs-other]').forEach(b => {          // (a service girl or a teacher from the fold at the bottom of the panel)
     b.setAttribute('draggable', 'true');
     b.addEventListener('dragstart', e => { srvDragWho = 'other:' + b.dataset.csOther; e.dataTransfer.setData('text/plain', srvDragWho); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
     b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   { const of = body.querySelector('#cs-others-fold'); if(of) of.addEventListener('toggle', () => { portalUi.csOthersOpen = of.open; }); }
+  { const rb = body.querySelector('#cs-others-rm'); if(rb) rb.addEventListener('click', () => { portalUi.csOthersRm = !portalUi.csOthersRm; srvRenderCoordSchedule(body); }); }          // (the × by the service girls and the teachers in the calendar only after "הורדה מהסידור": Guy 2026-10-26)
   body.querySelectorAll('[data-cs-sort]').forEach(b => b.addEventListener('click', () => { portalUi.csSort = b.dataset.csSort; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
@@ -419,6 +422,29 @@ async function srvMoveToSlot(mk, key, rowId, body){
   srvRenderCoordSchedule(body); toast(`${nm} הועבר/ה ל${sh.label} ${dayLabel(date)}. מי שנוגע בעניין קיבל עדכון.`);
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
+// a service girl or a teacher taken off one shift (the × by her name, with a question first: Guy 2026-10-26). When her hours reach two shifts
+// (a Sunday 11-19: the morning and the afternoon) she may leave only this one: her hours are cut at 15:00; or the whole day
+async function srvRemoveOther(rowId, sid, body){
+  const st = portalLoad(), r = st.rows.find(x => x.id === rowId); if(!r) return;
+  const p = st.instructors.find(x => x.id === r.staff), nm = p ? instrName(p, st.instructors) : '', sh = st.shiftTypes.find(x => x.id === sid) || {};
+  const own = SRV_SHIFT_UI[r.shift] || 'm', parts = rowShiftParts(r, own), from = (r.from || '').slice(0, 5), to = (r.to || '').slice(0, 5);
+  const two = parts.length === 2 && parts.every(x => /\|[me]$/.test(x.key));
+  const keep = two ? (sid === 'm' ? { shift:'A', from_time:'15:00', to_time:to } : { shift:'M', from_time:from, to_time:'15:00' }) : null;
+  const choice = await new Promise(resolve => {
+    let done = false; const finish = v => { if(done) return; done = true; s2.close(); resolve(v); };
+    const s2 = portalSheet(`<h2>להסיר את ${pEsc(nm)}?</h2><div class="pnote">${pEsc(dayLabel(r.day))} · ${pEsc(sh.label || '')}${from && to ? ` · ${csLtr(from + '–' + to)}` : ''}</div>
+      <div class="confirm-actions stack">${keep ? `<button type="button" class="btn ghost" data-c="part">רק מ${pEsc(sh.label || 'המשמרת')} (תישאר ${csLtr(keep.from_time + '–' + keep.to_time)})</button><button type="button" class="btn ghost" data-c="all">מכל היום</button>` : '<button type="button" class="btn ghost" data-c="all">כן, להסיר</button>'}<button type="button" class="btn ghost" data-c="back">חזרה</button></div>`);
+    s2.querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => finish(b.dataset.c)));
+    s2.addEventListener('click', e => { if(e.target === s2) finish('back'); });
+  });
+  if(choice !== 'part' && choice !== 'all') return;
+  const u = choice === 'part' ? await sbPersonal.from('assignment').update(keep).eq('id', r.id) : await sbPersonal.from('assignment').delete().eq('id', r.id);
+  if(u.error){ toast('ההסרה נכשלה'); return; }
+  srvDropRow(st, r.id);
+  if(choice === 'part') srvAddRow(st, { id:r.id, staff_id:r.staff, day:r.day, shift:keep.shift, from_time:keep.from_time, to_time:keep.to_time, flags:r.flags || [] });
+  srvRenderCoordSchedule(body); toast(choice === 'part' ? `${nm} הוסרה מ${sh.label || 'המשמרת'}` : `${nm} הוסרה מהסידור ביום הזה`);
+  srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
+}
 // while a name is dragged the page can still be scrolled (Guy): with the mouse wheel, and by holding the name near the top or the bottom of the screen
 let srvDragScrollOn = false;
 function srvDragScrollWire(){
@@ -483,6 +509,7 @@ function srvSidePanelHtml(mk, issues){
     <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${byCount ? `<b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b>` : ''}</button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
     ${others.length ? `<details class="pfold cs-others-fold" id="cs-others-fold"${portalUi.csOthersOpen ? ' open' : ''}><summary><span>בנות שירות ומורות</span></summary><div class="pfold-body">
+      <button type="button" class="btn ghost small cs-others-rm${portalUi.csOthersRm ? ' on' : ''}" id="cs-others-rm" aria-pressed="${!!portalUi.csOthersRm}">${portalUi.csOthersRm ? 'סיום ההורדה' : 'הורדה מהסידור'}</button>${portalUi.csOthersRm ? '<div class="pnote">לוחצים על ה-× ליד השם בלוח.</div>' : ''}
       <div class="cs-names">${others.map(p => `<button type="button" class="cs-name cs-other-name" data-cs-other="${p.id}" title="גרירה אל משמרת בלוח"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><small>${p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : 'בת שירות'}</small></button>`).join('')}</div></div></details>` : ''}
     ${csIssuesPanelHtml(mk, (issues || []).filter(x => !x.day || x.day >= (mk === monthKeyOf(srvToday()) ? srvToday() : firstOf(mk))))}
   </aside>`;
