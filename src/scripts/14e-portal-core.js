@@ -256,6 +256,12 @@ function othersByShift(ctx){
   Object.values(out).forEach(l => l.sort((a, b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name)));
   return out;
 }
+// a shift the coordinator confirmed by hand ("✓ אישר/ה" in the shift's window: the flag "ok" of the row)
+function csConfirmed(key, pid){
+  if(typeof portalServerOn === 'undefined' || !portalServerOn || !portalState) return false;
+  const st = portalLoad(), id = (st.assignmentIds || {})[`${key}|${pid}`], r = id && (st.rows || []).find(x => x.id === id);
+  return !!(r && (r.flags || []).includes('ok'));
+}
 function monthCalHtml(ctx, assignments, opts){
   opts = opts || {};
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date()), picks = ahmashPicks(table, ctx, opts.ahmash || {});
@@ -276,6 +282,7 @@ function monthCalHtml(ctx, assignments, opts){
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
       if(!opts.colour) return '';
+      if(csConfirmed(c.slot.key, p.iid)) return ' wish-yes ok';          // (the coordinator marked "✓ אישר/ה": Guy 2026-10-25)
       const pr = (ctx.prefs && ctx.prefs[p.iid]) || { slots:{} }, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       const key = ann === 'סופ"ש ארוך' ? `${dowOf(c.slot.date) === 5 ? c.slot.date : addDays(c.slot.date, -1)}|l` : c.slot.key, lv = (pr.slots || {})[key];
       return lv === 'avoid' ? ' wish-can' : lv === 'no' ? ' wish-no' : lv === 'yes' ? ' wish-yes' : ' wish-none';
@@ -283,7 +290,7 @@ function monthCalHtml(ctx, assignments, opts){
     const lead = c.people.filter(p => picks[c.slot.key] === p.iid), rest = c.people.filter(p => !lead.includes(p));
     const name = (p, isLead) => {
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
-      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}">${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
+      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}"${opts.drag ? ` data-iid="${p.iid}"` : ''}>${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
     };
     return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${c.missing ? `<span class="mcal-missing">חסר ${c.missing}</span>` : ''}</div>`;
   };

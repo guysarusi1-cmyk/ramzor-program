@@ -450,3 +450,20 @@
   .cs-others-fold{ margin-top:10px; } .cs-other-name{ cursor:grab; } .cs-other-name small{ color:var(--p-muted); font-size:11px; }          /* service girls and teachers to drag into the calendar (14j) */
   .mcal-name.extra{ opacity:.8; border-style:dashed; }          /* somebody from the shift next to it whose hours reach this one (14e) */
   @media (min-width:701px){ .cs-side{ padding-bottom:70px; } }          /* (the last names scroll above the floating "→ חזור") */
+  /* what needs the coordinator's attention: the date first, the kind takes her to the day (14jb) */
+  .cs-issue{ display:flex; align-items:flex-start; gap:8px; } .cs-issue .cs-issue-date{ flex:none; min-width:72px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--p-text); }
+  .cs-issue .cs-issue-body{ flex:1; min-width:0; } .cs-issue > .btn{ flex:none; margin-top:0; }
+  button.cs-issue-kind{ background:none; border:0; padding:0; font:inherit; font-weight:700; color:var(--p-accent, #f2c14e); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+  .cs-issues-panel{ margin-top:12px; padding-top:10px; border-top:1px solid var(--p-line); } .cs-issues-panel h4{ margin:0 0 6px; font-size:15px; } .cs-issues-panel h4 small{ color:var(--p-muted); font-weight:400; font-size:12px; }
+  .cs-issues-panel .cs-issue{ flex-wrap:wrap; font-size:13px; } .cs-issues-panel .cs-issue .cs-issue-date{ min-width:0; }
+  .mcal-cell.cs-flash{ animation:cs-flash 2.4s ease-out; } @keyframes cs-flash{ 0%, 40%{ box-shadow:inset 0 0 0 3px var(--p-accent, #f2c14e); background:rgba(242,193,78,.18); } 100%{ box-shadow:none; } }
+  /* the requests of one instructor: a line for every date; what she opened, folded */
+  .cs-req-days{ display:flex; flex-direction:column; gap:3px; margin-top:4px; } .cs-req-day{ display:flex; gap:8px; align-items:baseline; } .cs-req-date{ flex:none; min-width:76px; font-weight:600; font-variant-numeric:tabular-nums; }
+  details.cs-opened summary{ cursor:pointer; list-style:revert; } details.cs-opened > span{ display:block; margin-top:4px; }
+  .cs-person-head{ display:flex; align-items:center; gap:10px; } .cs-person-head .cs-person-wa{ margin-inline-start:auto; }
+  /* a name confirmed by hand; a name being dragged from the calendar */
+  .mcal-name.ok::after{ content:' ✓'; font-weight:700; } .mcal-cell.editable .mcal-name[draggable="true"]{ cursor:grab; } .mcal-name.dragging{ opacity:.45; }
+  /* the shift's window: choosing who to add stands out */
+  .cs-pick-main .cs-pick-btn{ border:2px solid var(--p-accent, #f2c14e); font-weight:700; font-size:16px; min-height:46px; }
+  .confirm-actions.stack{ flex-direction:column; align-items:stretch; }
+  .wa-group{ display:inline-flex; align-items:center; gap:6px; }

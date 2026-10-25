@@ -139,14 +139,21 @@ function srvRenderCoordSettings(body){
       ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
-        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
+        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
       ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${p.admin ? 'מנהל' : KIND_WORD[p.role]}</small></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
-        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}</div>`).join('')}
+        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
       <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${mercuryOn() && srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
+        box.querySelectorAll('[data-left], [data-back]').forEach(b => b.addEventListener('click', async () => {
+          const id = b.dataset.left || b.dataset.back, on = !!b.dataset.back, p = st.instructors.find(x => x.id === id), nm = p ? instrName(p, st.instructors) : '';
+          if(!on && !(await confirmSheet({ title:`${nm} עזב/ה?`, text:'לא יופיע/תופיע יותר ברשימות ובסידורים הבאים. משמרות שכבר שובצו נשארות בסידור, ואפשר להעביר אותן ידנית. אפשר להחזיר בכל עת.', okLabel:'כן, עזב/ה', cancelLabel:'חזרה', danger:true }))) return;
+          const u = await sbPersonal.from('staff').update({ active:on }).eq('id', id);
+          if(u.error){ toast('השינוי נכשל'); return; }
+          if(p) p.active = on; toast(on ? `${nm} חזר/ה לצוות` : `${nm} הוסר/ה מהרשימות`); again();
+        }));
         box.querySelectorAll('[data-phone]').forEach(inp => inp.addEventListener('change', async () => {          // (for a WhatsApp chat from the schedule; scheduling-v21.sql)
           const phone = inp.value.trim() || null;
           const u = await sbPersonal.from('staff_private').update({ phone }).eq('staff_id', inp.dataset.phone);
@@ -251,11 +258,16 @@ function srvRenderCoordSettings(body){
       const box1 = (kind, title) => `<h3 class="psec">${title}</h3>${['f', 'm'].map(g => `<label class="pfield">${g === 'f' ? 'למדריכה' : 'למדריך'}<textarea rows="3" maxlength="500" data-wa="${kind}|${g}">${pEsc(waTemplate(kind, g === 'f'))}</textarea></label>`).join('')}`;
       const html = `
       <div class="pnote">כשמשבצים מישהו שסימן "לא" או שלא סימן את המשמרת, אפשר לפתוח איתו שיחה בוואטסאפ עם ההודעה הזו (ואפשר לשנות אותה גם שם, לפני השליחה). במקום המילים בסוגריים נכנסים הפרטים: <b>{שם}</b>, <b>{משמרת}</b>, <b>{יום}</b>, <b>{שעות}</b>.</div>
+      <h3 class="psec">קבוצת הוואטסאפ של המדריכים</h3>
+      <label class="pfield">קישור ההצטרפות לקבוצה (בוואטסאפ: פרטי הקבוצה ← הזמנה לקבוצה באמצעות קישור ← העתקה)<input type="url" dir="ltr" id="wa-group" placeholder="https://chat.whatsapp.com/..." value="${pEsc((st.waMsg || {}).group || '')}"></label>
       ${box1('no', 'למי שסימן/ה "לא"')}${box1('none', 'למי שלא סימן/ה את המשמרת')}
       <div class="an-actions"><button type="button" class="btn ghost small" id="wa-reset">חזרה לנוסח המקורי</button><button type="button" class="btn" id="wa-save">שמירה</button></div>`;
       const wire = box => {
         box.querySelector('#wa-save').addEventListener('click', async () => {
           const val = { no:{}, none:{} }; box.querySelectorAll('[data-wa]').forEach(t => { const [k, g] = t.dataset.wa.split('|'); val[k][g] = t.value.trim(); });
+          const gl = box.querySelector('#wa-group').value.trim();
+          if(gl && !/^https:\/\/(chat\.whatsapp\.com|wa\.me)\//.test(gl)){ toast('הקישור לקבוצה צריך להתחיל ב-https://chat.whatsapp.com/'); return; }
+          if(gl) val.group = gl;
           const u = await sbPersonal.from('sched_settings').upsert({ key:'wa_messages', value:val });
           toast(u.error ? 'השמירה נכשלה' : 'ההודעות נשמרו'); if(!u.error) st.waMsg = val;
         });

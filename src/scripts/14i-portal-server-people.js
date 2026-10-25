@@ -2,7 +2,7 @@
 // ---------- THE PORTAL ON THE SERVER: what instructors, service girls and teachers see (my shifts, vacation requests, availability) ----------
 // The voice: warm, respectful, "the system is here for you". Plural forms ("אתם", "תוכלו") fit everybody; the personal messages follow the person's gender.
 const SRV_SHIFT_WORD = { M:'בוקר', S:'בוקר קצר', A:'צהריים', N:'לילה', L:'סופ"ש ארוך' };
-const SRV_FLAG_WORD = { extension:'הארכה עד 16:00', pull:'המשך עד 11:00 ביום ראשון', double:'כפולה', from16:'מ-16:00', partial:'שעות מותאמות', long22:'עד 22:00' };
+const SRV_FLAG_WORD = { ok:'אישר/ה ✓', extension:'הארכה עד 16:00', pull:'המשך עד 11:00 ביום ראשון', double:'כפולה', from16:'מ-16:00', partial:'שעות מותאמות', long22:'עד 22:00' };
 const SRV_VAC_STATUS = { pending:'מחכה לתשובה', approved:'אושרה', rejected:'הפעם לא אושרה', cancelled:'בוטלה' };
 const srvToday = () => israelNow().date;
 

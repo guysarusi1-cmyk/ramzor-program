@@ -1528,7 +1528,33 @@
           const txt = (document.querySelector('#portal-body .pissues') || {}).textContent || '';
           check('coordinator notes: composition, personal minimums, the day colleague and a service girl\'s day off are not shown; the service days are one line', !/בדיקה (composition|min|pair|service_absent)/.test(txt) && (txt.match(/פחות משתי בנות שירות/g) || []).length === 1 && txt.includes('ב-2 ימים') && !/הודעות על בנות שירות/.test(document.getElementById('portal-body').textContent), txt.slice(0, 160));
           check('coordinator notes: the explanations are folded away in one place', !!document.querySelector('#portal-body details.cs-help') && !document.querySelector('#portal-body details.cs-help').open && !/לחיצה על משמרת בלוח/.test([...document.querySelectorAll('#portal-body > .pnote')].map(e => e.textContent).join(' ')), 'not folded');
-          st.flags = was; srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(50); } }
+          st.flags = was; srvRenderCoordSchedule(document.getElementById('portal-body')); await sleep(50);
+          // what needs her attention, worked out live (Guy 2026-10-25): by date, the date first; a shift emptied by hand shows at once and goes when it is back
+          { const pb = document.getElementById('portal-body'), keepRows = st.rows, dayX = daysOfMonth(mkS).filter(d => d >= srvToday() && [1, 2, 3].includes(dowOf(d)))[0];
+            let ok1 = true, before = [], gone = [], back = [];
+            try { before = csLiveIssues(mkS); } catch(e){ ok1 = false; }
+            check('coordinator live notes: worked out without an error', ok1, '');
+            if(dayX){
+              st.rows = keepRows.filter(r => !(r.day === dayX && r.shift === 'A')); gone = csLiveIssues(mkS); st.rows = keepRows; back = csLiveIssues(mkS);
+              check('coordinator live notes: an afternoon emptied by hand shows at once (staffing and ahmash), and goes away when it is back', gone.some(x => x.day === dayX && x.kind === 'staffing' && /צהריים/.test(x.text)) && gone.some(x => x.day === dayX && x.kind === 'ahmash') && back.filter(x => x.day === dayX).length === before.filter(x => x.day === dayX).length, JSON.stringify(gone.filter(x => x.day === dayX)).slice(0, 300));
+            }
+            const all = csAllIssues(mkS), dated = all.filter(x => x.day).map(x => x.day), firstNo = all.findIndex(x => !x.day);
+            check('coordinator notes: in the order of the dates, the ones with no date at the end', dated.every((d, i) => !i || dated[i - 1] <= d) && (firstNo < 0 || all.slice(firstNo).every(x => !x.day)), '');
+            portalUi.csOpen = true; portalUi.csIssuesOpen = true; srvRenderCoordSchedule(pb); await sleep(60);
+            check('coordinator notes: three of them in the panel at the side, under the service girls', !!pb.querySelector('.cs-side .cs-issues-panel') && pb.querySelectorAll('.cs-side .cs-issues-panel .cs-issue').length <= 3, '');
+            const iss = pb.querySelector('#cs-issues');
+            check('coordinator notes: the list stays open after a redraw (as after "טופל")', !iss || iss.open, '');
+            const firstDated = pb.querySelector('#cs-issues .cs-issue .cs-issue-date');
+            check('coordinator notes: the date comes first in every line', !pb.querySelector('#cs-issues .cs-issue') || !!firstDated || !all.some(x => x.day), '');
+            const sc = document.scrollingElement; sc.scrollTop = 400; const y0 = sc.scrollTop; srvRenderCoordSchedule(pb); await sleep(30);
+            check('coordinator schedule: after a redraw the screen stays where it was', Math.abs(sc.scrollTop - y0) < 4, sc.scrollTop + ' / ' + y0);
+            const who = st.instructors.find(x => x.active && x.role === 'instructor');
+            if(who){ portalUi.csPerson = who.id; srvRenderCoordSchedule(pb); await sleep(30);
+              const reqs = [...pb.querySelectorAll('.cs-person > .cs-req.yes, .cs-person > .cs-req.can, .cs-person > .cs-req.no')].map(x => x.classList.contains('yes') ? 'yes' : x.classList.contains('can') ? 'can' : 'no');
+              check('instructor requests: "כן" first, then "יכול", then "לא"; what she opened is folded', reqs.join() === 'yes,can,no' && !!pb.querySelector('.cs-person details.cs-opened'), reqs.join());
+              portalUi.csPerson = null; }
+            check('WhatsApp: every chat opens in the same tab, not a new one each time', /target="ramzor-wa"/.test(waButtonHtml(who ? who.id : '', `${daysOfMonth(mkS)[0]}|m`) || 'target="ramzor-wa"'), '');
+            portalUi.csOpen = false; portalUi.csIssuesOpen = false; sc.scrollTop = 0; srvRenderCoordSchedule(pb); await sleep(30); } } }
         const priv2 = await sbPersonal.from('staff_private').select('staff_id');
         check('portal server: the coordinator sees the private staff data', !priv2.error && priv2.data.length >= 20, priv2.error ? priv2.error.message : priv2.data.length);
         portalUi.persona = srv.me; portalUi.tab = 'submissions'; portalUi.smonth = next; showPortal('submissions'); await sleep(100);
