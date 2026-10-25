@@ -49,21 +49,26 @@ function csSpecialHit(sp, chan, h){
   const scope = sp.scope || 'all';
   return scope === 'all' || (scope === 'morning' && chan === 'M') || (scope === 'afternoon' && chan === 'A') || (scope === 'hours' && sp.from != null && sp.to != null && sp.from <= h && h < sp.to);
 }
-// the fewest instructors an hour needs (model.py morn_cov / aft_cov)
-function csNeed(date, chan, h, sc){
+// how many service girls are there in every hour of a day (the instructors' numbers depend on it): { 7:n, ..., 21:n }
+function csServiceHours(date, rows, role){
+  const out = {}; for(let h = 7; h < 22; h++) out[h] = 0;
+  rows.filter(r => r.day === date && role(r.staff) === 'service').forEach(r => { const a = csHourOf(r.from || '07:00'), b = csHourOf(r.to || '15:00', true); for(let h = a; h < b; h++) if(h in out) out[h]++; });
+  return out;
+}
+// the fewest instructors an hour needs (model.py morn_cov / aft_cov, Guy 2026-10-25): sv = the service girls there in that hour
+function csNeed(date, chan, h, sc, sv){
   const sp = csSpecial(date), dtp = csDayType(date, sp);
   if(csSpecialHit(sp, chan, h)) return sp.min;
+  if(dtp === 'fri' || dtp === 'sat') return 4;
   if(chan === 'M'){
-    if(dtp === 'fri' || dtp === 'sat') return 5;
-    const [early, late] = sc || [2, 2];
-    let lo = dtp === 'sun' ? (h < 11 ? 2 : 1) : (early < 2 ? 2 : 1);
-    const here = dtp === 'sun' ? late : early;
-    if(h >= 11 && h <= 13 && here < 2) lo = Math.max(lo, here === 1 ? 2 : 3);
+    if(dtp === 'mid') return sv >= 2 ? 1 : 2;
+    if(dtp === 'thu') return sv >= 2 ? 0 : sv === 1 ? 1 : 2;
+    const late = (sc || [2, 2])[1]; let lo = h < 11 ? 2 : 1;          // (Sunday as before)
+    if(h >= 11 && h <= 13 && late < 2) lo = Math.max(lo, late === 1 ? 2 : 3);
     return lo;
   }
-  if(dtp === 'sun' || dtp === 'mid') return sc && sc[1] < 2 ? (h < 19 ? 5 : 4) : 4;
-  if(dtp === 'thu' || dtp === 'fri') return 5;
-  return h >= 20 ? 4 : 5;
+  if(dtp === 'sun' || dtp === 'mid') return sv >= 2 ? 3 : 4;
+  return 5;          // (Thursday afternoon)
 }
 
 // -> [{ day, kind, text, goto:'date|m/e/n', id }] for the month (in the current month: from today on)
@@ -77,14 +82,13 @@ function csLiveIssues(mk){
   // staffing, hour by hour
   const cov = {}; instr.forEach(r => csRowCover(r).forEach(k => { (cov[k] = cov[k] || []).push(r); }));
   days.forEach(date => {
-    const sc = csServiceOf(date, rows, role), dtp = csDayType(date, csSpecial(date));
+    const sc = csServiceOf(date, rows, role), svh = csServiceHours(date, rows, role), dtp = csDayType(date, csSpecial(date));
     [['M', 'm', 'בוקר', 7, 15], ['A', 'e', 'צהריים', 14, 22]].forEach(([chan, sid, word, h0, h1]) => {
       const runs = []; let run = null; const flush = () => { if(run){ runs.push(run); run = null; } };          // (one line for the whole shift: Guy 2026-10-25)
       for(let h = h0; h < h1; h++){
         let have = (cov[`${date}|${chan}|${h}`] || []).length;
         if(chan === 'A' && h === 21) have += (cov[`${date}|A|20`] || []).filter(r => priv(r.staff).latest_end_hour === 21 && !(cov[`${date}|A|21`] || []).includes(r)).length;          // (whoever leaves at 21:00 by her own limit)
-        if(chan === 'A' && dtp === 'fri' && h < 17) have += instr.filter(r => r.shift === 'L' && r.day === date).length;          // (a long-weekend instructor counts as the fifth from 14:00)
-        const miss = Math.max(0, csNeed(date, chan, h, sc) - have);
+        const miss = Math.max(0, csNeed(date, chan, h, sc, svh[h]) - have);          // (a long-weekend instructor counts from 17:00, when she comes)
         if(miss && run && run.miss === miss) run.b = h + 1;
         else { flush(); if(miss) run = { a:h, b:h + 1, miss }; }
       }
