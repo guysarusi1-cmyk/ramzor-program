@@ -1613,6 +1613,8 @@
   .wa-group{ display:inline-flex; align-items:center; gap:6px; }
   .cs-issues-nav{ display:flex; gap:6px; flex-wrap:wrap; margin:2px 0 8px; } .cs-issues-nav .btn{ margin-top:0; }
   .th-days{ display:flex; flex-direction:column; gap:8px; margin:10px 0; } .th-day{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; } .th-day b{ min-width:56px; } .th-hours{ display:inline-flex; align-items:center; gap:6px; } .th-off{ display:inline-flex; align-items:center; gap:4px; }          /* a teacher's fixed hours (14k) */
+  .cs-issues-panel h4{ display:flex; align-items:center; gap:8px; } .cs-seg{ margin-inline-start:auto; display:inline-flex; border:1px solid var(--p-line); border-radius:999px; overflow:hidden; } .cs-seg button{ background:none; border:0; color:var(--p-text); padding:1px 9px; font:inherit; font-size:12px; line-height:18px; min-height:0; cursor:pointer; } .cs-seg button.on{ background:#f2c14e; color:#1c2340; font-weight:700; }          /* one note or three (14jb) */
+  .cs-side{ padding-bottom:90px; } .cs-issue > .btn{ padding:2px 9px; font-size:12px; min-height:0; line-height:20px; }          /* the last note can be scrolled above the floating back button; a small "טופל" */
 
 /* ---- the children's characters ---- */
   .avatar-initials.avatar-has-char{ background:#fff; overflow:hidden; padding:0; }
@@ -7443,6 +7445,7 @@ function srvAskReason(dayText, shiftText, candText, fem){
 // disappears at once, and a new one shows at once. The same rules as the engine (model.py: morn_cov / aft_cov, the nights, the ahmash).
 // The engine's own notes of these kinds are not shown any more (they were true only when the schedule was built); its other notes stay as they were.
 const CS_LIVE_KINDS = ['staffing', 'night', 'ahmash', 'rest', 'double'];
+const csLtr = s => '⁦' + s + '⁩';          // (hours and ranges kept left-to-right inside the Hebrew line: "22:00–08:00", not reversed)
 const CS_ISSUE_KIND = { staffing:'איוש', night:'לילה', ahmash:'אחמ"ש', rest:'מנוחה', double:'שתי משמרות ביום', no:'שובץ/ה ב"לא"' };
 
 // the usual holidays (the engine's calendar_il.py): Tishrei / Nisan / Sivan by the browser's Hebrew calendar; the coordinator's special days come first
@@ -7555,7 +7558,7 @@ function csLiveIssues(mk){
     const dtp = csDayType(date, csSpecial(date));
     [['m', 'בוקר'], ['e', 'צהריים']].forEach(([sid, word]) => {
       const runs = staffing[`${date}|${sid}`] || [];
-      if(runs.length) add(date, 'staffing', `${word}: ${runs.map(x => `${x.miss === 1 ? 'חסר מדריך' : `חסרים ${x.miss}`} ${x.a}–${x.b}`).join(', ')}`, sid);
+      if(runs.length) add(date, 'staffing', `${word}: ${runs.map(x => `${x.miss === 1 ? 'חסר מדריך' : `חסרים ${x.miss}`} ${csLtr(x.a + '–' + x.b)}`).join(', ')}`, sid);
     });
     // the night: exactly two (a special day may have its own number), at least one woman, never two men
     const ns = instr.filter(r => r.shift === 'N' && r.day === date), sp = csSpecial(date);
@@ -7578,7 +7581,7 @@ function csLiveIssues(mk){
     for(let i = 0; i < list.length; i++) for(let j = i + 1; j < list.length && j <= i + 2; j++){
       const a = list[i], b = list[j]; if(a.day === b.day || !days.includes(b.day)) continue;
       const c = partsConflict(rowParts(a), rowParts(b));
-      const hrs = r => r.shift === 'L' ? '' : ` ${(r.from || (SRV_STD[r.shift] || [])[0] || '').slice(0, 5)}–${(r.to || (SRV_STD[r.shift] || [])[1] || '').slice(0, 5)}`;
+      const hrs = r => r.shift === 'L' ? '' : ' ' + csLtr(`${(r.from || (SRV_STD[r.shift] || [])[0] || '').slice(0, 5)}–${(r.to || (SRV_STD[r.shift] || [])[1] || '').slice(0, 5)}`);
       if(c) add(b.day, 'rest', `${nm(pid)}: ${c === 'חפיפה' ? 'המשמרות חופפות' : c}: ${SRV_SHIFT_WORD[a.shift]} ${shortDate(a.day)}${hrs(a)} ואחריו ${SRV_SHIFT_WORD[b.shift]} ${shortDate(b.day)}${hrs(b)}`, sidOf(b));
     }
     list.forEach(r => {
@@ -7605,12 +7608,16 @@ function csAllIssues(mk){
   return out.sort((a, b) => (a.day ? 0 : 1) - (b.day ? 0 : 1) || String(a.day || '').localeCompare(String(b.day || '')) || String(a.goto || '').localeCompare(String(b.goto || '')));
 }
 const csIssueHtml = x => `<div class="pflag cs-issue">${x.day ? `<span class="cs-issue-date">${pEsc(dayLabel(x.day))}</span>` : ''}<span class="cs-issue-body">${x.goto ? `<button type="button" class="cs-issue-kind" data-goto="${x.goto}" title="מעבר ליום בלוח">${pEsc(x.word)}</button>` : `<b class="cs-issue-kind">${pEsc(x.word)}</b>`} · ${pEsc(x.text)}</span>${x.flagId ? `<button type="button" class="btn ghost small" data-flag-done="${x.flagId}">טופל</button>` : x.liveId ? `<button type="button" class="btn ghost small" data-live-done="${pEsc(x.liveId)}">טופל</button>` : ''}</div>`;
-// the short list in the panel at the side: the next three, from the start of the month shown (in the current month: from today); "הבאים" moves on by three
+// the short list in the panel at the side: one note at a time, or three (a small switch by the title, kept on this device: Guy 2026-10-25),
+// from the start of the month shown (in the current month: from today); the buttons move on / back by as many
+const csIssuesPer = () => { try { return localStorage.getItem('ramzor-cs-issues-per') === '3' ? 3 : 1; } catch(e){ return 1; } };
 function csIssuesPanelHtml(mk, all){
   if(!all.length) return `<div class="cs-issues-panel"><h4>דורש תשומת לב</h4><div class="pnote">אין דברים שדורשים תשומת לב ✓</div></div>`;
-  const off = (portalUi.csIssueOff || 0) % all.length, three = all.slice(off, off + 3);
-  return `<div class="cs-issues-panel"><h4>דורש תשומת לב <small>${off + 1}–${off + three.length} מתוך ${all.length}</small></h4>
-    ${all.length > 3 ? `<div class="cs-issues-nav"><button type="button" class="btn ghost small" id="cs-issues-prev" data-off="${Math.max(0, off - 3)}"${off ? '' : ' disabled'}>‹ שלושת הקודמים</button><button type="button" class="btn ghost small" id="cs-issues-next" data-off="${off + 3 >= all.length ? 0 : off + 3}">${off + 3 >= all.length ? 'חזרה להתחלה' : 'שלושת הבאים ›'}</button></div>` : ''}${three.map(csIssueHtml).join('')}</div>`;          // (the buttons above the three: Guy)
+  const per = csIssuesPer(), off = (portalUi.csIssueOff || 0) % all.length, shown = all.slice(off, off + per);
+  const seg = `<span class="cs-seg" role="group" aria-label="כמה להציג">${[1, 3].map(n => `<button type="button" class="${n === per ? 'on' : ''}" data-issues-per="${n}" aria-pressed="${n === per}">${n}</button>`).join('')}</span>`;
+  const [pw, nw] = per === 1 ? ['הקודמת', 'הבאה'] : ['שלושת הקודמים', 'שלושת הבאים'];
+  return `<div class="cs-issues-panel"><h4>דורש תשומת לב <small>${shown.length > 1 ? `${off + 1}–${off + shown.length}` : off + 1} מתוך ${all.length}</small>${seg}</h4>
+    ${all.length > per ? `<div class="cs-issues-nav"><button type="button" class="btn ghost small" id="cs-issues-prev" data-off="${Math.max(0, off - per)}"${off ? '' : ' disabled'}>‹ ${pw}</button><button type="button" class="btn ghost small" id="cs-issues-next" data-off="${off + per >= all.length ? 0 : off + per}">${off + per >= all.length ? 'חזרה להתחלה' : nw + ' ›'}</button></div>` : ''}${shown.map(csIssueHtml).join('')}</div>`;          // (the buttons above the notes: Guy)
 }
 // a tap on the kind of a note: the calendar scrolls to that day (that shift when it is known) and it lights up for a moment
 function csGotoDay(body, goto){
@@ -7624,6 +7631,7 @@ function csGotoDay(body, goto){
 }
 function csIssuesWire(body, mk){
   body.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); csGotoDay(body, b.dataset.goto); }));
+  body.querySelectorAll('[data-issues-per]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-issues-per', b.dataset.issuesPer); } catch(e){} portalUi.csIssueOff = 0; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('#cs-issues-next, #cs-issues-prev').forEach(b => b.addEventListener('click', () => { portalUi.csIssueOff = +b.dataset.off || 0; srvRenderCoordSchedule(body); }));          // (three on, three back)
   body.querySelectorAll('[data-live-done]').forEach(b => b.addEventListener('click', async () => {          // (a live note she handled another way: kept as handled, also on her other devices)
     b.disabled = true; const st = portalLoad();
