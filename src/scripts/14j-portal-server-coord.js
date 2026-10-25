@@ -35,6 +35,8 @@ function srvWarnings(pid, day, shift, from, to, ignoreId){
   if(p.manual_only) out.push('משובץ/ת ידנית בלבד');
   if(p.only_long_weekend && shift !== 'L') out.push('משובץ/ת רק לסופ"ש ארוך');
   if(p.latest_end_hour && parseInt(to || '22', 10) > p.latest_end_hour && shift !== 'N') out.push(`עובדת לכל המאוחר עד ${p.latest_end_hour}:00`);
+  const sameDay = st.rows.filter(r => r.staff === pid && r.id !== ignoreId && r.day === day && (st.instructors.find(x => x.id === pid) || {}).role === 'instructor');
+  if(sameDay.length) out.push(`כבר משובץ/ת באותו יום (${sameDay.map(r => SRV_SHIFT_WORD[r.shift]).join(', ')}): זו תהיה משמרת שנייה ביום`);          // (one shift a day: Guy 2026-10-25)
   st.rows.filter(r => r.staff === pid && r.id !== ignoreId && Math.abs(dayNum(r.day) - dayNum(day)) <= 3).forEach(r => {
     const c = partsConflict(rowParts(r), rowParts(cand));
     if(c) out.push(`${c}: ${dayLabel(r.day)} ${SRV_SHIFT_WORD[r.shift]}`);
@@ -511,10 +513,11 @@ async function srvAddToSlot(mk, key, staffId, body){
   const w = srvWarnings(staffId, date, code, sh.start, sh.end);
   // no question for "yes" or "can"; for "no" and for a shift she did not mark: ask her first on WhatsApp, or place anyway
   if(!(await srvAskBeforePlacing(staffId, key))) return;
+  if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;          // (a window, not only a note afterwards: Guy 2026-10-25)
   const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
   if(ins.error){ toast('השיבוץ נכשל'); return; }
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
-  toast(w.length ? `${nm} שובץ/ה. שימי לב: ${w.join('. ')}.` : `${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`, w.length ? 6000 : 0);          // (the warnings that are left, such as rest, do not stop her; she sees them)
+  toast(`${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`);
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 

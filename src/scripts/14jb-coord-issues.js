@@ -31,7 +31,7 @@ function csRowCover(r){
   if(r.shift === 'L'){ const sat = addDays(r.day, 1); add(r.day, 'A', 17, 22); add(sat, 'M', 7, 15); add(sat, 'A', 14, r.to ? csHourOf(r.to, true) || 20 : 20); return out; }
   const std = SRV_STD[r.shift] || ['07:00', '15:00'], a = csHourOf(r.from || std[0]), b0 = csHourOf(r.to || std[1], true), b = b0 <= a ? b0 + 24 : b0;
   if(r.shift === 'M' || r.shift === 'S'){ add(r.day, 'M', a, Math.min(b, 15)); if(b > 15) add(r.day, 'A', Math.max(a, 14), b); }
-  else { if(a < 14) add(r.day, 'M', a, 14); add(r.day, 'A', Math.max(a, 14), b); }
+  else { if(a < 14) add(r.day, 'M', a, 14); add(r.day, 'A', Math.max(a, 14) - (a === 15 && (r.flags || []).includes('double') ? 1 : 0), b); }          // (the afternoon half of a double, written 15-22, counts from 14:00 as in the engine)
   return out;
 }
 // the service girls of a day as the engine counts them: [in the morning 07-15, in the afternoon 14-22 (Sunday: 11-19)], or null on other days
@@ -107,7 +107,7 @@ function csLiveIssues(mk){
   Object.entries(byPerson).forEach(([pid, list]) => {
     list.sort((a, b) => rowParts(a)[0][0] - rowParts(b)[0][0]);
     const byDay = {}; list.forEach(r => { (byDay[r.day] = byDay[r.day] || []).push(r); });
-    Object.entries(byDay).forEach(([day, same]) => { if(same.length > 1 && days.includes(day)) add(day, 'double', `${nm(pid)}: ${same.map(r => SRV_SHIFT_WORD[r.shift]).join(' וגם ')} באותו יום`, sidOf(same[1])); });
+    // (two shifts on one day are not listed: the engine never places them any more, and placing one by hand asks first: Guy 2026-10-25)
     for(let i = 0; i < list.length; i++) for(let j = i + 1; j < list.length && j <= i + 2; j++){
       const a = list[i], b = list[j]; if(a.day === b.day || !days.includes(b.day)) continue;
       const c = partsConflict(rowParts(a), rowParts(b));
