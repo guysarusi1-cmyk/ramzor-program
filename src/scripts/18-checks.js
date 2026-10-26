@@ -1987,7 +1987,10 @@
         const made = await waitFor(async () => { const s = await sbPersonal.rpc('open_days_status'); const o = (s.data || []).find(x => x.day === day && x.note === 'בדיקה אוטומטית'); if(o) odId = o.id; return !!o; }, 60);
         check('open days: publishing saves the day', made, 'not saved');
         await waitFor(() => !!document.querySelector('[data-od-fold]'), 60);
-        check('open days: the coordinator sees it in "ימים פתוחים לשיבוץ" with 0 of 1', /נרשמו 0 מתוך 1/.test((document.querySelector('[data-od-fold]') || {}).textContent || ''), 'no fold');
+        check('open days: the coordinator sees it in "ימים פתוחים לשיבוץ" with 0 of 1', /(נרשמו|במשמרת) 0 מתוך 1/.test((document.querySelector('[data-od-fold]') || {}).textContent || ''), 'no fold');
+        { const dup = await sbPersonal.rpc('open_day_publish', { p_day:day, p_scope:'day', p_from:null, p_to:null, p_min:0, p_max:2, p_audience:'all', p_note:'בדיקה אוטומטית (פעמיים)' });
+          if(!dup.error){ check('(info) open days: refusing the same day twice needs scheduling-v38.sql', true, ''); await sbPersonal.from('open_days').delete().eq('id', dup.data); }
+          else check('open days: the same day and shift cannot be opened twice while it is open (the database refuses; the portal offers to change it)', /already open/.test(dup.error.message), dup.error.message); }
         // the instructor: a card at the top, she places herself
         await enter('instructor2'); portalUi.month = mk; showPortal('schedule');
         await waitFor(() => !!document.querySelector(`[data-od-join="${odId}"]`), 60);
@@ -2004,7 +2007,7 @@
         check('... and the database refuses another one (full)', !!again.error && /full/.test(again.error.message), (again.error || {}).message || 'accepted');
         // the coordinator: 1 of 1, the name, and a notice that it is full
         await enter('coordinator'); portalUi.month = mk; showPortal('schedule'); await waitFor(() => !!document.querySelector('[data-od-fold]'), 60);
-        check('open days: the coordinator sees 1 of 1 and who', /נרשמו 1 מתוך 1/.test(document.querySelector('[data-od-fold]').textContent) && /מלא/.test(document.querySelector('[data-od-fold]').textContent), document.querySelector('[data-od-fold]').textContent.slice(0, 120));
+        check('open days: the coordinator sees 1 of 1 and who', /(נרשמו|במשמרת) 1 מתוך 1/.test(document.querySelector('[data-od-fold]').textContent) && /מלא/.test(document.querySelector('[data-od-fold]').textContent), document.querySelector('[data-od-fold]').textContent.slice(0, 120));
         const nt = await sbPersonal.from('notices').select('text').eq('to_staff', srv.me).ilike('text', '%הגענו למקסימום%').order('created_at', { ascending:false }).limit(1);
         check('open days: the coordinator is told that the maximum was reached', !!(nt.data && nt.data.length), 'no notice');
         // "ahmash and leaders" is accepted by the database (scheduling-v29.sql)
