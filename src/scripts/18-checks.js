@@ -2127,7 +2127,7 @@
         check('therapy portal: every assignment is written in the audit log', !au.error && (au.data || []).some(r => r.detail && r.detail.child === 'c1'), (au.error || {}).message || JSON.stringify(au.data));
         await showTherapyPortal();
         const tabs = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
-        check('therapy portal: the coordinator has the children, her observations and "assign therapists"', tabs.join(',') === (thp.v32 ? 'kids,myobs,assign' : 'kids,assign') && document.querySelectorAll('#view-therapy [data-th-card]').length === roster.length, tabs.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-card]').length);
+        check('therapy portal: the coordinator has the children, her observations, "assign therapists" and who watched the videos (Mercury 86)', tabs.join(',') === (thp.v32 ? 'kids,myobs,assign,videos' : 'kids,assign') && document.querySelectorAll('#view-therapy [data-th-card]').length === roster.length, tabs.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-card]').length);
         document.querySelector('#view-therapy [data-th-tab="assign"]').click(); await sleep(150);
         const sel = document.querySelector('#view-therapy [data-th-assign="c1"]');
         check('therapy portal: the assign tab has a choice for every child, with the therapist already chosen', document.querySelectorAll('#view-therapy [data-th-assign]').length === roster.length && !!sel && sel.value === th, sel ? sel.value : 'none');
@@ -2271,6 +2271,17 @@
             const pk = planUpdateKind(); await sleep(60); const sh = document.querySelector('.psheet [data-uk="small"]');
             check('therapy portal: publishing asks "עדכון מלא" or "עדכון קטן" (Mercury 84)', !!sh && !!document.querySelector('.psheet [data-uk="full"]'), '');
             const bk = document.querySelector('.psheet [data-uk="back"]'); if(bk) bk.click(); await pk; }
+          { const kid = (typeof roster !== 'undefined' && roster[0]) || null;          // the plan videos (14zc; Mercury 66-76): the scenes from a plan, the window, the therapist's panel
+            if(kid){ const content = { summary:'בדיקה', avoid:'רעש', calm:'מוזיקה', signs:'מסתגר', goals:[{ title:'לבקש הפסקה', focus:true, targets:'אומר "אני צריך רגע"', interventions:'מציעים את פינת השקט', strengths:['סקרן'] }] };
+              const sc = planVideoScenes(kid.id, content);
+              check('plan videos: the video is built from the plan: strengths, the goals in focus, what to do, signs and calm, what to avoid (Mercury 71)', ['intro', 'str', 'goals', 'todo', 'calm', 'avoid', 'end'].every(k => sc.some(s => s.k === k)), sc.map(s => s.k).join());
+              const was = thp.guidance[kid.id]; thp.guidance[kid.id] = { version:1, content }; const sh = planVideoPlay(kid.id, {}); await sleep(80);
+              check('plan videos: it opens as a window with captions and a progress bar', !!sh && !!sh.querySelector('#pv-sub') && !!sh.querySelector('#pv-bar') && sh.querySelectorAll('.pv-scene').length === sc.length, '');
+              if(sh) sh.close(); if(was) thp.guidance[kid.id] = was; else delete thp.guidance[kid.id];
+              const wv = thp.videos, wok = thp.vOk; thp.videos = { [kid.id]:{ child_id:kid.id, video_id:'00000000-0000-0000-0000-000000000000', version:2, status:'draft' } }; thp.vOk = true;
+              const panel = thpVideoPanelHtml(kid.id);
+              check('plan videos: a draft waits for the therapist: watch, approve, reject (Mercury 69); the staff does not see it (Mercury 70)', /data-pv-ok/.test(panel) && /data-pv-no/.test(panel) && !thpVideoOf(kid.id), '');
+              thp.videos = wv; thp.vOk = wok; } }
           me.role = was; }
       } finally {
         if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5', 'c15']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }

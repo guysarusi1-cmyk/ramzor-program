@@ -65,6 +65,7 @@ async function thpLoad(){
       thp.risen = s.data || [];
     }
   } catch(e){}
+  if(thp.v32) await thpVideosLoad();          // (the plan videos: scheduling-v41.sql; 14zc)
   thp.loaded = true;
 }
 
@@ -78,10 +79,13 @@ function thpTabs(){
     if(thp.v32) t.push(['library', 'ספרייה']);
     if(thp.v32 && isTherapistMe()) t.push(['settings', 'הגדרות']);
     if(canAssignTherapist()) t.push(['assign', 'שיוך אנשי טיפול']);
+    if(thp.v32 && canAssignTherapist()) t.push(['videos', 'צפייה בסרטונים']);
+    if(thp.v32 && srv.profile && srv.profile.admin) t.push(['overview', 'תמונת מצב']);
   } else {
     t.push(['kids', 'הילדים']);
     if(thp.v32) t.push(['myobs', 'התצפיות שלי']);
     if(canAssignTherapist()) t.push(['assign', 'שיוך אנשי טיפול']);
+    if(thp.v32 && canAssignTherapist()) t.push(['videos', 'צפייה בסרטונים']);
   }
   return t;
 }
@@ -108,6 +112,7 @@ function thpTodo(){
   scope.forEach(c => {
     const n = thp.unseen[c.id] || 0; if(n) add(c.id, 'obs', '📝', n === 1 ? 'תצפית חדשה מהצוות' : `${n} תצפיות חדשות מהצוות`, 1);
     const qn = (thp.questions || {})[c.id] || 0; if(qn) add(c.id, 'obs', '❓', qn === 1 ? 'שאלה מהצוות שמחכה לתשובה' : `${qn} שאלות מהצוות שמחכות לתשובה`, 1);
+    const vd = (thp.videos || {})[c.id]; if(vd && vd.status === 'draft') add(c.id, 'plan', '🎬', 'סרטון חדש מחכה לאישור שלך', 1);
     const j = thp.journeys[c.id]; if(j && j.stage === 'extra' && !j.next_approved) add(c.id, 'journey', '🚀', 'סיים/ה את ההרפתקה. מחכה לאישור שלך למעבר לכוכב הבא', 2);
     const row = thp.plans[c.id];
     if(row && row.published_version && row.review_date){ const d = thpDaysTo(row.review_date); if(d <= 14) add(c.id, 'plan', '🗓️', d < 0 ? `עבר מועד הבדיקה מחדש של התוכנית (${dayLabel(row.review_date)})` : d === 0 ? 'היום מועד הבדיקה מחדש של התוכנית' : `בדיקה מחדש של התוכנית בעוד ${d} ימים`, 3); }
@@ -136,6 +141,7 @@ function thpStaffCard(c){
   const g = thp.guidance[c.id], ct = g && g.content, focus = ct ? (ct.goals || []).filter(x => x.focus && x.title) : [], strengths = ct ? [...new Set((ct.goals || []).flatMap(x => x.strengths || []))] : [];
   return `<article class="th-kcard${g ? ' has-plan' : ''}" data-th-card="${pEsc(c.id)}">
     <div class="th-kcard-head">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b>${g ? `<button type="button" class="btn ghost small" data-th-kid="${pEsc(c.id)}">עוד</button>` : ''}</div>
+    ${thpVideoBtnHtml(c.id)}
     ${g ? `${strengths.length ? `<div class="th-chips ar-keep">${strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}
       ${focus.map(x => `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}</div>`).join('')}
       ${ct.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(ct.avoid)}</div></div>` : ''}
@@ -148,12 +154,13 @@ function thpStaffKidsHtml(){
   const kids = thpKids(), week = Date.now() - 7 * 864e5;
   const fresh = kids.filter(c => { const g = thp.guidance[c.id]; return g && g.published_at && new Date(g.published_at).getTime() >= week; });
   return `${fresh.length ? `<div class="th-fresh"><span>עודכן לאחרונה:</span>${fresh.map(c => `<button type="button" class="th-chip" data-th-kid="${pEsc(c.id)}"><span class="ar-keep">${pEsc(displayName(c))}</span></button>`).join('')}</div>` : ''}
+    ${thpVideoBannerHtml()}
     <input type="search" class="th-search" id="th-q" placeholder="חיפוש ילד/ה" aria-label="חיפוש ילד/ה" value="${pEsc(thp.q)}">
     <div class="th-kcards" id="th-kcards">${thpStaffOrder(kids).map(thpStaffCard).join('')}</div>`;
 }
 // the staff's list of children: the ones whose plan was published in the last week first, then by name
 function thpStaffOrder(kids){
-  const week = Date.now() - 7 * 864e5, fresh = c => { const g = thp.guidance[c.id]; return g && g.published_at && new Date(g.published_at).getTime() >= week ? 0 : 1; };
+  const week = Date.now() - 7 * 864e5, fresh = c => { if(thpVideoNew(c.id)) return 0; const g = thp.guidance[c.id]; return g && g.published_at && new Date(g.published_at).getTime() >= week ? 0 : 1; };          // (a new video, or a plan updated lately, first)
   return kids.slice().sort((a, b) => fresh(a) - fresh(b) || displayName(a).localeCompare(displayName(b), 'he'));
 }
 // ---- the staff: "התצפיות שלי" and what the therapist answered
@@ -179,6 +186,8 @@ function thpRender(){
   else if(thp.tab === 'kids') inner = thpStaffKidsHtml();
   else if(thp.tab === 'myobs') inner = thpMyObsHtml();
   else if(thp.tab === 'library') inner = planLibraryHtml();
+  else if(thp.tab === 'videos') inner = thpVideosHtml();
+  else if(thp.tab === 'overview') inner = thpOverviewHtml();
   else if(thp.tab === 'assign'){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
@@ -200,7 +209,8 @@ function thpRender(){
   wireKids(body);
   body.querySelectorAll('[data-todo-kid]').forEach(b => b.addEventListener('click', () => { if(planCanEdit(b.dataset.todoKid)) planOpenEditor(b.dataset.todoKid, b.dataset.todoTab); else thpOpenChild(b.dataset.todoKid); }));
   const wireObs = box => { box.querySelectorAll('[data-th-obs]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thObs)));
-    box.querySelectorAll('[data-th-ask]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thAsk, 'question'))); };
+    box.querySelectorAll('[data-th-ask]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thAsk, 'question')));
+    box.querySelectorAll('[data-th-video]').forEach(b => b.addEventListener('click', () => { thpVideoOpen(b.dataset.thVideo); setTimeout(() => { if(thp.tab === 'kids') thpRender(); }, 400); })); };
   wireObs(body);
   const q = body.querySelector('#th-q');
   if(q) q.addEventListener('input', () => {          // (only the cards change, so the keyboard stays open)
@@ -243,6 +253,7 @@ function thpOpenChild(id){
   const c = roster.find(x => x.id === id); if(!c) return;
   const g = thp.guidance && thp.guidance[id];
   const sh = portalSheet(`<div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div>
+    ${thpVideoBtnHtml(id)}
     ${g ? planGuidanceHtml(g) : `<div class="pnote">עוד אין תוכנית טיפולית ל${pEsc(displayName(c))}. כשאיש/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע.</div>`}
     ${thp.v32 ? '<button type="button" class="btn ghost" id="th-observe" style="width:100%;margin-top:8px">📝 תצפית לאיש/אשת הטיפול</button><button type="button" class="btn ghost" id="th-ask" style="width:100%;margin-top:8px">❓ שאלה לאיש/אשת הטיפול</button>' : ''}
     ${thp.v32 && srv.profile && srv.profile.admin ? '<button type="button" class="btn ghost" id="th-place" style="width:100%;margin-top:8px">מיקום במסע בחלל (מנהל)</button>' : ''}
@@ -250,4 +261,5 @@ function thpOpenChild(id){
   const pl = sh.querySelector('#th-place'); if(pl) pl.addEventListener('click', () => { sh.close(); journeyPlaceSheet(id); });
   const ob = sh.querySelector('#th-observe'); if(ob) ob.addEventListener('click', () => { sh.close(); obsOpen(id); });
   const ak = sh.querySelector('#th-ask'); if(ak) ak.addEventListener('click', () => { sh.close(); obsOpen(id, 'question'); });
+  const vb = sh.querySelector('[data-th-video]'); if(vb) vb.addEventListener('click', () => { sh.close(); thpVideoOpen(id); });
 }

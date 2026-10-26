@@ -106,7 +106,8 @@ function planOpenEditor(id, tab){
   body.querySelector('#pe-back').addEventListener('click', () => { thp.editing = null; thp.wtab = null; thpRender(); });
   body.querySelectorAll('[data-ws-tab]').forEach(b => b.addEventListener('click', () => planOpenEditor(id, b.dataset.wsTab)));
   const wb = body.querySelector('#th-ws-body');
-  if(thp.wtab === 'plan'){ wb.innerHTML = planEditorHtml(id); planWireEditor(id, wb.querySelector('.th-editor')); }
+  if(thp.wtab === 'plan'){ wb.innerHTML = `<div id="pe-video">${typeof thpVideoPanelHtml === 'function' ? thpVideoPanelHtml(id) : ''}</div>${planEditorHtml(id)}`; planWireEditor(id, wb.querySelector('.th-editor'));
+    if(typeof thpVideoWire === 'function') thpVideoWire(wb.querySelector('#pe-video'), id, () => planOpenEditor(id, 'plan')); }
   else if(thp.wtab === 'obs'){ wb.innerHTML = '<div id="pe-obs"></div>'; obsSection(id, wb.querySelector('#pe-obs')).then(() => { if(thp.unseen) thp.unseen[id] = 0; }); }
   else if(thp.wtab === 'track'){ wb.innerHTML = '<div id="pe-track"></div>'; trackSection(id, wb.querySelector('#pe-track')); }
   else if(thp.wtab === 'journey'){ wb.innerHTML = '<div id="pe-journey"></div>'; const jb = wb.querySelector('#pe-journey'), draw = async () => { jb.innerHTML = await journeyAdminHtml(id); journeyWireAdmin(jb, id, draw); }; draw(); }
@@ -135,13 +136,13 @@ function planWireEditor(id, root){
     const d = planRead(root); if(!d.goals.length && !d.summary){ toast('צריך לפחות מטרה אחת או תקציר'); return; }
     const imp = root.querySelector('#pe-important').checked, first = !((thp.plans[id] || {}).published_version);
     const full = first ? true : await planUpdateKind(); if(full === null) return;
-    if(!(await confirmSheet({ title:'לפרסם את התוכנית?', text:full ? `היא נכנסת לתוקף מיד, והצוות מקבל הודעה בפורטל${imp ? ' וגם מייל' : ''}. הגרסה הקודמת נשמרת.` : 'עדכון קטן: נכנס לתוקף מיד, בלי הודעה לצוות. הגרסה הקודמת נשמרת.', okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    if(!(await confirmSheet({ title:'לפרסם את התוכנית?', text:full ? `היא נכנסת לתוקף מיד, ונוצר ממנה סרטון. אחרי שתאשרו את הסרטון, הצוות מקבל הודעה בפורטל${imp ? ' וגם מייל' : ''}. הגרסה הקודמת נשמרת.` : 'עדכון קטן: נכנס לתוקף מיד, בלי הודעה לצוות. הגרסה הקודמת נשמרת.', okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
     e.target.disabled = true;
     if(!(await save())){ e.target.disabled = false; return; }
     let r = await sbPersonal.rpc('plan_publish', { p_child:id, p_important:imp, p_full:full });
     if(r.error && /p_full|function/i.test(r.error.message || '')) r = await sbPersonal.rpc('plan_publish', { p_child:id, p_important:imp });          // (a project without v40)
     if(r.error){ e.target.disabled = false; toast('הפרסום נכשל. אפשר לנסות שוב בעוד רגע'); return; }
-    toast(full ? `התוכנית פורסמה (גרסה ${r.data}). הצוות קיבל הודעה.` : `העדכון הקטן פורסם (גרסה ${r.data}), בלי הודעה לצוות.`);
+    toast(full ? `התוכנית פורסמה (גרסה ${r.data}). נוצר סרטון: הצוות יקבל הודעה כשתאשרו אותו.` : `העדכון הקטן פורסם (גרסה ${r.data}), בלי הודעה לצוות.`, 6000);
     await thpLoad(); thp.editing = id; planOpenEditor(id);
   });
   root.querySelector('#pe-versions').addEventListener('click', () => planVersions(id));

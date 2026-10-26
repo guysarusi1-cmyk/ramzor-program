@@ -140,3 +140,21 @@
 .th-lib-cat{ display:inline-block; margin-inline-start:6px; font-style:normal; font-size:11px; padding:1px 7px; border-radius:999px; background:rgba(255,255,255,.1); }
 .th-tpl-list{ display:flex; flex-direction:column; gap:6px; max-height:55vh; overflow:auto; } .th-tpl-item{ text-align:start; display:flex; flex-direction:column; gap:3px; padding:9px 11px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:none; color:inherit; font:inherit; cursor:pointer; } .th-tpl-item small{ opacity:.8; }
 .th-kcard-acts{ display:flex; gap:6px; flex-wrap:wrap; } .obs-item.question{ border-inline-start:3px solid #f2c14e; } .obs-q{ margin-inline-end:6px; }
+
+/* the plan videos (14zc): a temporary style until the design session */
+.pv-sheet .sheet-card{ max-width:860px; }
+.pv-stage{ position:relative; aspect-ratio:16/9; width:100%; border-radius:16px; overflow:hidden; background:radial-gradient(120% 90% at 80% 10%, #2a3a8a 0%, #121a3d 55%, #0b1027 100%); color:#eef1fb; }
+.pv-scene{ position:absolute; inset:0 0 14%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:4% 7%; opacity:0; transform:translateY(12px); transition:opacity .6s, transform .6s; }
+.pv-scene.on{ opacity:1; transform:none; } .pv-kicker{ color:#f2c14e; font-weight:700; font-size:clamp(11px, 1.8vw, 16px); margin-bottom:1%; }
+.pv-big{ font-size:clamp(18px, 4vw, 40px); font-weight:800; line-height:1.15; margin-bottom:2%; text-wrap:balance; } .pv-body{ width:100%; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.pv-body .th-av{ transform:scale(1.8); margin:14px 0; } .tv-mid{ font-size:clamp(13px, 2.2vw, 22px); max-width:88%; line-height:1.4; }
+.tv-chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; } .tv-chips span{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:999px; padding:4px 12px; font-weight:700; font-size:clamp(12px, 2vw, 20px); }
+.tv-goal{ width:92%; text-align:start; background:rgba(255,255,255,.06); border-inline-start:5px solid #5fd3c4; border-radius:12px; padding:6px 12px; } .tv-goal b{ display:block; font-size:clamp(13px, 2.2vw, 22px); } .tv-goal span{ font-size:clamp(11px, 1.7vw, 17px); opacity:.85; }
+.tv-step{ width:92%; display:flex; gap:10px; align-items:flex-start; text-align:start; background:rgba(255,255,255,.06); border-radius:12px; padding:6px 12px; } .tv-step b{ color:#f2c14e; font-size:clamp(14px, 2.4vw, 24px); } .tv-step span{ font-size:clamp(12px, 1.9vw, 19px); }
+.pv-sub{ position:absolute; bottom:4%; inset-inline:5%; text-align:center; font-size:clamp(11px, 1.6vw, 16px); background:rgba(0,0,0,.45); border-radius:10px; padding:.5em 1em; }
+.pv-bar{ position:absolute; bottom:0; inset-inline:0; height:5px; background:rgba(255,255,255,.08); } .pv-bar i{ display:block; height:100%; width:0; background:#f2c14e; transition:width .4s; }
+.pv-panel{ border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:10px 12px; margin-bottom:12px; display:flex; flex-direction:column; gap:6px; } .pv-panel.draft{ border-color:#f2c14e; } .pv-panel.ok{ border-color:#5fd3c4; }
+.pv-acts{ display:flex; gap:6px; flex-wrap:wrap; } .pv-btn{ margin:6px 0; } .pv-new{ background:#ff6b6b; color:#fff; border-radius:999px; padding:0 7px; font-size:11px; margin-inline-start:4px; }
+.pv-banner{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px 10px; border-radius:12px; background:rgba(242,193,78,.12); border:1px solid rgba(242,193,78,.4); margin-bottom:10px; }
+.pv-row{ padding:8px 0; border-bottom:1px solid rgba(255,255,255,.1); display:flex; flex-direction:column; gap:3px; } .pv-row-head{ display:flex; align-items:center; gap:8px; } .pv-row-head .pcount{ margin-inline-start:auto; }
+.pv-stats{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:10px; } .pv-stat{ border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:4px; } .pv-stat b{ font-size:24px; } .pv-stat span{ font-size:13px; opacity:.8; }
