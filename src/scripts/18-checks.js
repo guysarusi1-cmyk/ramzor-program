@@ -1538,13 +1538,13 @@
               st.rows = keepRows.filter(r => !(r.day === dayX && r.shift === 'A')); gone = csLiveIssues(mkS); st.rows = keepRows; back = csLiveIssues(mkS);
               check('coordinator live notes: an afternoon emptied by hand shows at once (staffing and ahmash), and goes away when it is back', gone.some(x => x.day === dayX && x.kind === 'staffing' && /צהריים/.test(x.text)) && gone.some(x => x.day === dayX && x.kind === 'ahmash') && back.filter(x => x.day === dayX).length === before.filter(x => x.day === dayX).length, JSON.stringify(gone.filter(x => x.day === dayX)).slice(0, 300));
             }
-            { const who = st.instructors.find(x => x.active && x.role === 'instructor'), fr = daysOfMonth(mkS).filter(d => dowOf(d) === 5 && d >= srvToday()).slice(0, 2);
+            { const who = st.instructors.find(x => x.active && x.role === 'instructor'), mkW = addMonths(monthKeyOf(srvToday()), 1), fr = daysOfMonth(mkW).filter(d => dowOf(d) === 5).slice(0, 2);
               if(who && fr.length === 2){
-                const pr = srvPrefsOf(portalMonth(mkS), who.id), keepPick = pr.pick, keepRows2 = st.rows;
+                const pr = srvPrefsOf(portalMonth(mkW), who.id), keepPick = pr.pick, keepRows2 = st.rows;
                 pr.pick = fr.slice(); st.rows = keepRows2.concat([{ id:'fake-w1', staff:who.id, day:fr[0], shift:'M', from:'07:00', to:'15:00', flags:[] }]);
                 const w = srvWarnings(who.id, addDays(fr[1], 1), 'A', '14:00', '22:00');
                 st.rows = st.rows.concat([{ id:'fake-w2', staff:who.id, day:addDays(fr[1], 1), shift:'A', from:'14:00', to:'22:00', flags:[] }]);
-                const li = csLiveIssues(mkS).filter(x => x.kind === 'pick');
+                const li = csLiveIssues(mkW).filter(x => x.kind === 'pick');
                 pr.pick = keepPick; st.rows = keepRows2;
                 check('"only one of these weekends": placing her in a second one warns first, and it shows in "דורש תשומת לב"', w.some(x => /רק אחד מאלה/.test(x)) && li.length === 1, JSON.stringify([w, li.length]));
               } }
