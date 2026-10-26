@@ -475,3 +475,6 @@
   .cs-others-rm{ margin:0 0 8px; } .cs-others-rm.on{ border-color:var(--p-no); color:var(--p-no); }
   .cs-rebuild-opts{ display:flex; flex-direction:column; gap:10px; margin:12px 0; } .cs-rebuild-opts .btn{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:start; padding:12px 14px; white-space:normal; height:auto; } .cs-rebuild-opts .btn small{ font-weight:400; color:var(--p-muted); }          /* the two ways to build again (14j) */
   .cs-req.cs-long{ border-inline-start:3px solid #f2c14e; padding-inline-start:8px; }          /* the long weekend and "only one of these" stand out in her requests */
+  .mcal.lbl-center .mcal-label{ justify-content:center; padding-top:0; gap:2px; } .mcal.lbl-center .mcal-label b{ font-size:11px; } .mcal.lbl-center .mcal-label small{ font-size:10.5px; color:var(--p-text); }
+  @media (min-width:700px){ .mcal.lbl-center .mcal-label b{ font-size:15px; } .mcal.lbl-center .mcal-label small{ font-size:13.5px; } }
+  .cs-ask{ color:#f2c14e; }          /* "תבדקו איתי" in an instructor's requests (14j) */

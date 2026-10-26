@@ -114,7 +114,6 @@ function calClip(note, s){
 }
 function scheduleCalendarDays(ctx, assignments){
   const table = scheduleTable(ctx, assignments), others = typeof othersByShift === 'function' ? othersByShift(ctx) : {}, extras = typeof overlapExtras === 'function' ? overlapExtras(ctx) : {};
-  const liveMiss = typeof csShiftMissing === 'function' ? csShiftMissing(ctx.month) : null;          // (the same "חסר" as the calendar)
   const rank = (typeof srv !== 'undefined' && srv.ahmash) || {}, picks = typeof ahmashPicks === 'function' ? ahmashPicks(table, ctx, rank) : {};
   return table.map(r => ({ date:r.date, lines:ctx.shiftTypes.map((s, i) => {
     const c = r.cells[i], oth = others[`${r.date}|${s.id}`] || [], items = [];
@@ -127,8 +126,8 @@ function scheduleCalendarDays(ctx, assignments){
     }
     (extras[`${r.date}|${s.id}`] || []).forEach(x => items.push({ text:nm(x.name, '', calHours(x.note, s)), kind:'instructor', extra:true }));          // (from the shift next to it: she is here too)
     oth.filter(x => x.role === 'service').forEach(x => items.push({ text:nm(x.name, CAL_ROLE.service, calHours(x.note, s)), kind:'service' }));
-    return { label:s.label, items, missing:c.slot ? (liveMiss ? liveMiss[c.slot.key] || 0 : c.missing) : 0 };
-  }).filter(l => l.items.length || l.missing) }));
+    return { label:s.label, items, missing:0 };          // (the Excel file and the print never show what is missing: they are for the staff, Guy 2026-10-26)
+  }).filter(l => l.items.length) }));
 }
 function buildScheduleXlsx(ctx, assignments){
   const days = scheduleCalendarDays(ctx, assignments), lead = dowOf(days[0].date);

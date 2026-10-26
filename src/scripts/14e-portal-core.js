@@ -257,6 +257,7 @@ function othersByShift(ctx){
   Object.values(out).forEach(l => l.sort((a, b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name)));
   return out;
 }
+const csShowOk = () => { try { return localStorage.getItem('ramzor-show-ok') === '1'; } catch(e){ return false; } };
 // a shift the coordinator confirmed by hand ("✓ אישר/ה" in the shift's window: the flag "ok" of the row)
 function csConfirmed(key, pid){
   if(typeof portalServerOn === 'undefined' || !portalServerOn || !portalState) return false;
@@ -284,7 +285,7 @@ function monthCalHtml(ctx, assignments, opts){
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
       if(!opts.colour) return '';
-      if(csConfirmed(c.slot.key, p.iid)) return ' wish-yes ok';          // (the coordinator marked "✓ אישר/ה": Guy 2026-10-25)
+      if(csConfirmed(c.slot.key, p.iid)) return ' wish-yes' + (csShowOk() ? ' ok' : '');          // (the coordinator marked "✓ אישר/ה": green; the ✓ only by the advanced choice, Guy 2026-10-26)
       const pr = (ctx.prefs && ctx.prefs[p.iid]) || { slots:{} }, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       const key = ann === 'סופ"ש ארוך' ? `${dowOf(c.slot.date) === 5 ? c.slot.date : addDays(c.slot.date, -1)}|l` : c.slot.key, lv = (pr.slots || {})[key];
       return lv === 'avoid' ? ' wish-can' : lv === 'no' ? ' wish-no' : lv === 'yes' ? ' wish-yes' : ' wish-none';
@@ -315,5 +316,5 @@ function monthCalHtml(ctx, assignments, opts){
       });
     }
   }
-  return `<div class="mcal">${out}</div>`;
+  return `<div class="mcal${opts.labelsCenter ? ' lbl-center' : ''}">${out}</div>`;          // (a service girl: the morning and the afternoon only, their names and hours in the middle and larger: Guy 2026-10-26)
 }

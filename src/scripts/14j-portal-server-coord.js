@@ -137,7 +137,7 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn ghost" id="cs-xlsx">ייצוא לאקסל</button>
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
-      ${group ? `<a class="btn ghost wa-group" href="${pEsc(group)}" target="ramzor-wa" rel="noopener">${WA_SVG}<span>קבוצת המדריכים</span></a>` : ''}
+      ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת המדריכים</span></a>` : ''}
     </div>
     ${issues.length ? `<details class="pissues" id="cs-issues"${portalUi.csIssuesOpen ? ' open' : ''}><summary>${issues.length} דברים שדורשים תשומת לב</summary>${issues.map(csIssueHtml).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
@@ -522,7 +522,7 @@ function srvPersonRequestsHtml(p, mk){
   const GOAL = { min:'רק את המינימום', max:'כמה שיותר', weekly45:'4-5 משמרות בשבוע' };
   const fixed = (pr.fixed || []).filter(f => daysOfMonth(mk).includes(f.day));
   return `<div class="cs-person">
-    <div class="cs-person-head"><img src="${p.photo}" alt=""><div><b>${pEsc(instrName(p, st.instructors))}</b><small>${m.submitted[p.id] ? 'הגיש/ה ✓' : 'עוד לא הגיש/ה'} · ${monthLabel(mk)}</small></div>${wa ? `<a class="wa-btn cs-person-wa" href="https://wa.me/${wa}" target="ramzor-wa" rel="noopener" title="שיחה בוואטסאפ" aria-label="שיחה בוואטסאפ">${WA_SVG}</a>` : ''}</div>
+    <div class="cs-person-head"><img src="${p.photo}" alt=""><div><b>${pEsc(instrName(p, st.instructors))}</b><small>${m.submitted[p.id] ? 'הגיש/ה ✓' : 'עוד לא הגיש/ה'} · ${monthLabel(mk)}</small></div>${wa ? `<a class="wa-btn cs-person-wa" href="${pEsc(waUrl(wa))}"${waTarget()} title="שיחה בוואטסאפ" aria-label="שיחה בוואטסאפ">${WA_SVG}</a>` : ''}</div>
     ${mine.length ? `<div class="cs-req"><b>שובצו ${mine.length} משמרות</b><span><span class="mcal-name wish-yes">כן ${counts.yes}</span> <span class="mcal-name wish-can">יכול ${counts.avoid}</span> <span class="mcal-name wish-no">לא ${counts.no}</span> <span class="mcal-name wish-none">לא סומן ${counts.none}</span></span></div>` : ''}
     <div class="cs-req"><b>קיבל/ה ${got.all} משמרות</b><span>בוקר ${got.M} · צהריים ${got.A} · לילה ${got.N} · סופ"ש ${got.W}${got.L ? ` · סופ"ש ארוך ${got.L}` : ''}</span></div>
     <details class="cs-req cs-opened"><summary><b>פתח/ה ${openedAll} משמרות</b> <small>(כן ויכול)</small></summary><span>בוקר ${opened.M} · צהריים ${opened.A} · לילה ${opened.N} · סופ"ש ${opened.W} · סופ"ש ארוך ${opened.L}</span></details>
@@ -531,8 +531,8 @@ function srvPersonRequestsHtml(p, mk){
     ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
     ${longs.length ? `<div class="cs-req cs-long"><b>סופ"ש ארוך</b><div class="cs-req-days">${longs.map(([d, lv]) => `<div class="cs-req-day"><span class="cs-req-date">${pEsc(dayLabel(d))}</span><span class="mcal-name wish-${lv === 'avoid' ? 'can' : lv}">${lv === 'yes' ? 'כן' : lv === 'avoid' ? 'יכול' : 'לא'}</span></div>`).join('')}</div></div>` : ''}
     ${(pr.pick || []).length ? `<div class="cs-req cs-long"><b>רק אחד מסופי השבוע</b><span>${pr.pick.slice().sort().map(f => pEsc(dayLabel(f))).join(' · ')}</span></div>` : ''}
-    <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
-    <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
     ${goal ? `<div class="cs-req"><b>יעד</b><span>${GOAL[goal] || goal}</span></div>` : ''}
     ${note ? `<div class="cs-req"><b>הערה</b><span>${pEsc(note)}</span></div>` : ''}
   </div>`;
@@ -637,8 +637,13 @@ function waText(staffId, key){
   return waTemplate(kind, female).replace(/\{שם\}/g, String(p.first || '').split(' ')[0]).replace(/\{משמרת\}/g, `משמרת ה${sh.label || ''}`)
     .replace(/\{יום\}/g, `יום ${dayLabel(date)}`).replace(/\{שעות\}/g, `${sh.start || ''}–${sh.end || ''}`);
 }
-function waLink(staffId, key){ const num = waNumber(staffId); return num ? `https://wa.me/${num}?text=${encodeURIComponent(waText(staffId, key))}` : null; }
-const waButtonHtml = (staffId, key) => { const url = waLink(staffId, key); return url ? `<a class="wa-btn" href="${url}" target="ramzor-wa" rel="noopener" title="שאלה בוואטסאפ" aria-label="שאלה בוואטסאפ">${WA_SVG}</a>` : ''; };
+// WhatsApp opens in the computer's app (whatsapp://, no browser tab: Guy 2026-10-26) or in the browser, by the choice in the gear ("מתקדם")
+const waMode = () => { try { return localStorage.getItem('ramzor-wa-mode') === 'web' ? 'web' : 'app'; } catch(e){ return 'app'; } };
+function waUrl(num, text){ return waMode() === 'app' ? `whatsapp://send?phone=${num}${text ? '&text=' + encodeURIComponent(text) : ''}` : `https://wa.me/${num}${text ? '?text=' + encodeURIComponent(text) : ''}`; }
+function waGroupUrl(link){ const code = (String(link).match(/chat\.whatsapp\.com\/(?:invite\/)?([A-Za-z0-9]+)/) || [])[1]; return waMode() === 'app' && code ? `whatsapp://chat?code=${code}` : link; }
+const waTarget = () => waMode() === 'app' ? '' : ' target="ramzor-wa" rel="noopener"';
+function waLink(staffId, key){ const num = waNumber(staffId); return num ? waUrl(num, waText(staffId, key)) : null; }
+const waButtonHtml = (staffId, key) => { const url = waLink(staffId, key); return url ? `<a class="wa-btn" href="${pEsc(url)}"${waTarget()} title="שאלה בוואטסאפ" aria-label="שאלה בוואטסאפ">${WA_SVG}</a>` : ''; };
 // before placing somebody who marked "no" or did not mark this shift: WhatsApp first, place anyway, or back. -> true = place
 function srvAskBeforePlacing(staffId, key){
   const lv = srvWishFor(staffId, key);
@@ -649,7 +654,7 @@ function srvAskBeforePlacing(staffId, key){
     let done = false; const finish = v => { if(done) return; done = true; sh2.close(); resolve(v); };
     const sh2 = portalSheet(`<h2>${pEsc(nm)} ${lv === 'no' ? 'סימן/ה "לא" למשמרת הזו' : 'לא סימן/ה את המשמרת הזו'}</h2>
       <div class="pnote">${dayLabel(date)} · ${pEsc(sh.label || '')} ${sh.start || ''}–${sh.end || ''}. כדאי לשאול לפני שמשבצים.</div>
-      <div class="wa-ask">${url ? `<a class="btn wa-go" id="wa-go" href="${url}" target="ramzor-wa" rel="noopener">${WA_SVG}<span>לשאול בוואטסאפ</span></a>` : '<div class="pnote">אין מספר טלפון. אפשר להוסיף אותו בהגדרות, ליד המייל.</div>'}
+      <div class="wa-ask">${url ? `<a class="btn wa-go" id="wa-go" href="${pEsc(url)}"${waTarget()}>${WA_SVG}<span>לשאול בוואטסאפ</span></a>` : '<div class="pnote">אין מספר טלפון. אפשר להוסיף אותו בהגדרות, ליד המייל.</div>'}
         <button type="button" class="btn ghost" id="wa-place">לשבץ בכל זאת</button>
         <button type="button" class="btn ghost" id="wa-back">חזרה</button></div>`);
     const go = sh2.querySelector('#wa-go'); if(go) go.addEventListener('click', () => { toast('נפתחה שיחה בוואטסאפ. אחרי התשובה אפשר לשבץ.'); finish(false); });

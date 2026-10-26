@@ -174,6 +174,11 @@ function openPortalSettings(){
     <div class="pnote">${tx('long_setting')}</div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${srv.pickOne ? 'on' : ''}" data-set-pick="1">להציג "רק אחד מאלה": כן</button><button type="button" class="${srv.pickOne ? '' : 'on'}" data-set-pick="0">לא</button></div>
     <div class="pnote">${tx('pick_setting')}</div>`) : ''}
+    ${portalAsCoord(portalMe()) ? fold('adv', 'מתקדם', [csShowOk() ? W('✓ מוצג', '✓') : '', waMode() === 'app' ? W('וואטסאפ באפליקציה', 'واتساب في التطبيق') : W('וואטסאפ בדפדפן', 'واتساب في المتصفح')].filter(Boolean).join(' · '), `<h3 class="psec">סימון ✓ ליד מי שאישר/ה ידנית</h3>
+    <div class="pchoice wrap"><button type="button" class="${csShowOk() ? '' : 'on'}" data-set-ok="0">רק ירוק, בלי ✓</button><button type="button" class="${csShowOk() ? 'on' : ''}" data-set-ok="1">ירוק עם ✓</button></div>
+    <h3 class="psec">שיחות וואטסאפ נפתחות</h3>
+    <div class="pchoice wrap"><button type="button" class="${waMode() === 'app' ? 'on' : ''}" data-set-wa="app">באפליקציית וואטסאפ במחשב</button><button type="button" class="${waMode() === 'app' ? '' : 'on'}" data-set-wa="web">בדפדפן</button></div>
+    <div class="pnote">באפליקציה לא נפתחות לשוניות בדפדפן. צריך שאפליקציית וואטסאפ תהיה מותקנת במחשב הזה. הבחירות כאן נשמרות במכשיר הזה.</div>`) : ''}
     <button type="button" class="btn ghost" id="gear-problem" style="margin-top:14px;width:100%">משהו לא עובד? דיווח על תקלה</button>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
   sh.querySelectorAll('[data-gfold]').forEach(d => d.addEventListener('toggle', () => { gf[d.dataset.gfold] = d.open; }));
@@ -193,6 +198,14 @@ function openPortalSettings(){
     if(n && portalUi.tab === 'prefs'){ const pb = document.getElementById('portal-body'); if(pb) renderInstructorPrefs(pb); }
   }));
   sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
+  sh.querySelectorAll('[data-set-ok]').forEach(b => b.addEventListener('click', () => {          // ("✓ אישר/ה": by default only green; the ✓ is an advanced choice, Guy 2026-10-26)
+    try { localStorage.setItem('ramzor-show-ok', b.dataset.setOk); } catch(e){}
+    sh.querySelectorAll('[data-set-ok]').forEach(x => x.classList.toggle('on', x === b)); portalRefresh();
+  }));
+  sh.querySelectorAll('[data-set-wa]').forEach(b => b.addEventListener('click', () => {          // (WhatsApp in the computer's app: no browser tab each time, Guy 2026-10-26)
+    try { localStorage.setItem('ramzor-wa-mode', b.dataset.setWa); } catch(e){}
+    sh.querySelectorAll('[data-set-wa]').forEach(x => x.classList.toggle('on', x === b)); portalRefresh();
+  }));
   sh.querySelectorAll('[data-fixed-no]').forEach(b => b.addEventListener('click', async () => {
     const k = b.dataset.fixedNo, cur = new Set(srv.fixedNo || []); if(cur.has(k)) cur.delete(k); else cur.add(k);
     const next = ['m', 'e', 'n'].filter(x => cur.has(x)), was = srv.fixedNo; srv.fixedNo = next; b.classList.toggle('on', cur.has(k));

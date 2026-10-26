@@ -1563,7 +1563,8 @@
               const reqs = [...pb.querySelectorAll('.cs-person > .cs-req.yes, .cs-person > .cs-req.can, .cs-person > .cs-req.no')].map(x => x.classList.contains('yes') ? 'yes' : x.classList.contains('can') ? 'can' : 'no');
               check('instructor requests: "כן" first, then "יכול", then "לא"; what she opened is folded', reqs.join() === 'yes,can,no' && !!pb.querySelector('.cs-person details.cs-opened'), reqs.join());
               portalUi.csPerson = null; }
-            check('WhatsApp: every chat opens in the same tab, not a new one each time', /target="ramzor-wa"/.test(waButtonHtml(who ? who.id : '', `${daysOfMonth(mkS)[0]}|m`) || 'target="ramzor-wa"'), '');
+            { const html = waButtonHtml(who ? who.id : '', `${daysOfMonth(mkS)[0]}|m`) || '';
+              check('WhatsApp: in the computer\'s app by default (whatsapp://, no browser tab), or in one browser tab by the choice in the gear', !html || (waMode() === 'app' ? /href="whatsapp:\/\/send/.test(html) && !/target=/.test(html) : /target="ramzor-wa"/.test(html)), html.slice(0, 120)); }
             { portalUi.csOpen = true; portalUi.csOthersOpen = true; portalUi.csOthersRm = false; srvRenderCoordSchedule(pb); await sleep(40);
               const noX = !pb.querySelector('.mcal-x'), hasBtn = !!pb.querySelector('#cs-others-rm');
               portalUi.csOthersRm = true; srvRenderCoordSchedule(pb); await sleep(40);
@@ -2391,7 +2392,9 @@
             check('settings: the start chosen applies at once to the shifts not marked yet, and leaves the marked ones', n > 0 && pr.slots[free] === 'no' && pr.slots[marked] === 'avoid', JSON.stringify([n, pr.slots[free], pr.slots[marked]]));
             pr.slots = JSON.parse(saved); portalSave = wasSave;
           } else check('(info) settings: next month is closed now, the immediate start was not exercised', true, ''); }
-        const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k)) || portalUi.pmonth;
+        const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k));
+        if(!mk) check('(info) fixed preferences: no month is open for preferences on the test server now, the board was not exercised', true, '');
+        else {
         portalUi.pmonth = mk; showPortal('prefs'); await sleep(400);
         const day = daysOfMonth(mk).find(d => !srvPrefsOf(portalMonth(mk), srv.me).slots[`${d}|m`] && !srvPrefsOf(portalMonth(mk), srv.me).absent.includes(d) && document.querySelector(`[data-pslot="${d}|m"]`));
         const ms = day && document.querySelector(`[data-pslot="${day}|m"]`);
@@ -2404,6 +2407,7 @@
           document.querySelector(`[data-pslot="${day}|m"]`).click(); await sleep(150);
           check('... and pressing the morning itself does', srvPrefsOf(portalMonth(mk), srv.me).slots[`${day}|m`] === 'yes', String(srvPrefsOf(portalMonth(mk), srv.me).slots[`${day}|m`]));
           delete pr.slots[`${day}|m`]; delete pr.slots[`${day}|e`]; delete pr.slots[`${day}|n`]; portalSave(); await srvFlush();
+        }
         }
       } finally {
         await sbPersonal.from('staff_settings').update({ fixed_no:[] }).eq('staff_id', srv.me); srv.fixedNo = []; portalUi.level = 'avoid';
