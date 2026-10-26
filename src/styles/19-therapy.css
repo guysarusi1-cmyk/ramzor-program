@@ -131,3 +131,12 @@
   .th-kcard-obs{ align-self:flex-start; min-height:40px; }
   .obs-wait{ font-size:13px; color:var(--p-muted, var(--muted)); margin-top:6px; }
   @media (max-width:480px){ .th-kcards{ grid-template-columns:1fr; } }
+
+/* the plan's new parts, the templates, the questions (Mercury decisions 77-95; 14x / 14w / 14z) */
+.th-part{ margin:8px 0; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.05); } .th-part b{ display:block; margin-bottom:3px; }
+.th-part-signs{ border-inline-start:3px solid #ffb35c; } .th-part-calm{ border-inline-start:3px solid #5fd3c4; } .th-part-routine{ border-inline-start:3px solid #8fa8ff; }
+.th-tpl-top{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; } .th-tpl-btn{ margin-inline-start:6px; padding:2px 8px; font-size:12px; min-height:0; }
+.th-lib-filter{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; } .th-lib-filter input{ flex:1; min-width:160px; }
+.th-lib-cat{ display:inline-block; margin-inline-start:6px; font-style:normal; font-size:11px; padding:1px 7px; border-radius:999px; background:rgba(255,255,255,.1); }
+.th-tpl-list{ display:flex; flex-direction:column; gap:6px; max-height:55vh; overflow:auto; } .th-tpl-item{ text-align:start; display:flex; flex-direction:column; gap:3px; padding:9px 11px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:none; color:inherit; font:inherit; cursor:pointer; } .th-tpl-item small{ opacity:.8; }
+.th-kcard-acts{ display:flex; gap:6px; flex-wrap:wrap; } .obs-item.question{ border-inline-start:3px solid #f2c14e; } .obs-q{ margin-inline-end:6px; }

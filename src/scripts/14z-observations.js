@@ -11,14 +11,15 @@ async function obsFocusGoals(childId){
     const r = await obsClient().rpc('plan_guidance'); const g = (r.data || []).find(x => x.child_id === childId); return g ? (g.content.goals || []).filter(x => x.focus) : []; } catch(e){ return []; }
 }
 // the observation sheet (from the therapy portal and from the Ramzor)
-async function obsOpen(childId){
+async function obsOpen(childId, kind){          // (kind 'question': "שאלה למטפלת", Mercury decision 82; scheduling-v40.sql)
+  const q = kind === 'question';
   const c = roster.find(x => x.id === childId); if(!c) return;
   const client = obsClient(), me = (await client.rpc('is_staff_person')).data;
   if(!me){ toast('תצפית נשלחת רק בכניסה אישית (מייל וסיסמה)'); return; }
   const goals = await obsFocusGoals(childId);
-  const sh = portalSheet(`<h2>תצפית על ${escapeHtml(displayName(c))}</h2>
-    <div class="pnote">מה ראית? כמה מילים מספיקות. מגיע רק לאיש/אשת הטיפול האחראי/ת (ולמנהל המערכת).</div>
-    <textarea id="obs-text" class="obs-text" rows="4" maxlength="2000" placeholder="למשל: ביקש עזרה כשנתקע בפאזל, בלי לצעוק"></textarea>
+  const sh = portalSheet(`<h2>${q ? 'שאלה למטפל/ת על' : 'תצפית על'} ${escapeHtml(displayName(c))}</h2>
+    <div class="pnote">${q ? 'מה תרצו לשאול? התשובה תגיע אליכם בהודעה.' : 'מה ראית? כמה מילים מספיקות.'} מגיע רק לאיש/אשת הטיפול האחראי/ת (ולמנהל המערכת).</div>
+    <textarea id="obs-text" class="obs-text" rows="4" maxlength="2000" placeholder="${q ? 'למשל: מה עושים כשהוא מסרב להיכנס למקלחת?' : 'למשל: ביקש עזרה כשנתקע בפאזל, בלי לצעוק'}"></textarea>
     <div class="obs-rec"><button type="button" class="btn ghost" id="obs-rec">🎙️ הקלטה</button><span id="obs-rec-state" class="obs-rec-state"></span><audio id="obs-audio" controls hidden></audio><button type="button" class="btn ghost small" id="obs-rec-x" hidden>מחיקת ההקלטה</button></div>
     ${goals.length ? `<div class="pfield"><span>קשור למטרה? (רשות)</span><div class="pchoice wrap obs-goals">${goals.map(g => `<button type="button" data-obs-goal="${escapeHtml(g.id)}">${escapeHtml(g.title)}</button>`).join('')}</div></div>` : ''}
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="obs-send">שליחה</button></div>`);
@@ -47,9 +48,10 @@ async function obsOpen(childId){
       const up = await client.storage.from('mercury').upload(audio_path, blob, { contentType:blob.type || 'audio/webm' });
       if(up.error){ e.target.disabled = false; toast('ההקלטה לא נשמרה. אפשר לנסות שוב'); return; }
     }
-    const r = await client.from('observations').insert({ child_id:childId, text:text || null, audio_path, goal_id:goal });
-    if(r.error){ e.target.disabled = false; toast('התצפית לא נשלחה. אפשר לנסות שוב'); return; }
-    stopRec(); sh.close(); toast('התצפית נשלחה לאיש/אשת הטיפול. תודה!');
+    let r = await client.from('observations').insert(Object.assign({ child_id:childId, text:text || null, audio_path, goal_id:goal }, q ? { kind:'question' } : {}));
+    if(r.error && q && /kind/.test(r.error.message || '')) r = await client.from('observations').insert({ child_id:childId, text:'❓ ' + (text || ''), audio_path, goal_id:goal });          // (a project without v40)
+    if(r.error){ e.target.disabled = false; toast(q ? 'השאלה לא נשלחה. אפשר לנסות שוב' : 'התצפית לא נשלחה. אפשר לנסות שוב'); return; }
+    stopRec(); sh.close(); toast(q ? 'השאלה נשלחה לאיש/אשת הטיפול. התשובה תגיע אליך בהודעה' : 'התצפית נשלחה לאיש/אשת הטיפול. תודה!');
   });
   sh.querySelector('[data-close]').addEventListener('click', stopRec);
 }
@@ -62,10 +64,10 @@ async function obsSection(childId, box){
   const names = {}; (portalLoad().instructors || []).forEach(p => { names[p.id] = p.first; });
   const goals = {}; ((thp.plans[childId] && (thp.plans[childId].published || thp.plans[childId].draft)) || { goals:[] }).goals.forEach(g => { goals[g.id] = g.title; });
   const list = r.data || [];
-  box.innerHTML = list.length ? list.map(o => `<div class="obs-item${o.seen_at ? '' : ' new'}" data-obs="${o.id}">
-      <div class="obs-head"><b>${pEsc(names[o.author] || 'צוות')}</b><small>${pEsc(dayLabel(String(o.created_at).slice(0, 10)))} ${String(o.created_at).slice(11, 16)}</small>${o.goal_id && goals[o.goal_id] ? `<span class="th-chip">${pEsc(goals[o.goal_id])}</span>` : ''}</div>
+  box.innerHTML = list.length ? list.map(o => `<div class="obs-item${o.seen_at ? '' : ' new'}${o.kind === 'question' ? ' question' : ''}" data-obs="${o.id}">
+      <div class="obs-head">${o.kind === 'question' ? '<span class="th-chip obs-q">❓ שאלה</span>' : ''}<b>${pEsc(names[o.author] || 'צוות')}</b><small>${pEsc(dayLabel(String(o.created_at).slice(0, 10)))} ${String(o.created_at).slice(11, 16)}</small>${o.goal_id && goals[o.goal_id] ? `<span class="th-chip">${pEsc(goals[o.goal_id])}</span>` : ''}</div>
       ${o.text ? `<div class="obs-body">${pEsc(o.text)}</div>` : ''}${o.audio_path ? `<button type="button" class="btn ghost small" data-obs-play="${pEsc(o.audio_path)}">▶ להאזנה</button>` : ''}
-      ${o.reply != null ? `<div class="obs-reply">התשובה שלך: ${pEsc(o.reply || 'ראיתי, תודה')}</div>` : `<div class="th-add-row"><input type="text" maxlength="200" placeholder="משפט קצר (רשות)" data-obs-msg aria-label="תשובה"><button type="button" class="btn small" data-obs-ok>ראיתי, תודה</button></div>`}
+      ${o.reply != null ? `<div class="obs-reply">התשובה שלך: ${pEsc(o.reply || 'ראיתי, תודה')}</div>` : `<div class="th-add-row"><input type="text" maxlength="${o.kind === 'question' ? 600 : 200}" placeholder="${o.kind === 'question' ? 'התשובה שלך' : 'משפט קצר (רשות)'}" data-obs-msg aria-label="תשובה"><button type="button" class="btn small" data-obs-ok${o.kind === 'question' ? ' data-q' : ''}>${o.kind === 'question' ? 'שליחת תשובה' : 'ראיתי, תודה'}</button></div>`}
     </div>`).join('') : '<div class="pnote">עוד אין תצפיות על הילד/ה.</div>';
   box.querySelectorAll('[data-obs-play]').forEach(b => b.addEventListener('click', async () => {
     const s = await sbPersonal.storage.from('mercury').createSignedUrl(b.dataset.obsPlay, 300); if(s.error){ toast('לא הצלחנו לפתוח את ההקלטה'); return; }
@@ -73,6 +75,7 @@ async function obsSection(childId, box){
   }));
   box.querySelectorAll('[data-obs-ok]').forEach(b => b.addEventListener('click', async () => {
     const item = b.closest('[data-obs]'), msg = item.querySelector('[data-obs-msg]').value.trim();
+    if('q' in b.dataset && !msg){ toast('כתבו תשובה קצרה'); return; }
     const u = await sbPersonal.from('observations').update({ reply:msg, seen_at:new Date().toISOString() }).eq('id', item.dataset.obs);
     if(u.error){ toast('לא נשמר'); return; }
     toast('נשלח לכותב/ת התצפית'); obsSection(childId, box);

@@ -32,6 +32,7 @@ async function thpLoad(){
       (a.data || []).forEach(r => { thp.assign[r.child_id] = r.staff_id; });
       const flag = {}; (p.data || []).forEach(r => { flag[r.staff_id] = !!r.is_therapist; });
       thp.therapists = (s.data || []).filter(x => x.active && (x.kind === 'therapist' || flag[x.id])).sort((x, y) => String(x.display_name).localeCompare(String(y.display_name), 'he'));
+      try { const sb2 = await sbPersonal.from('therapist_subs').select('*').order('until'); thp.subs = sb2.error ? null : (sb2.data || []); } catch(e){ thp.subs = null; }          // (scheduling-v40.sql)
     }
     thp.ok = true;
   } catch(e){ thp.ok = false; }
@@ -46,7 +47,7 @@ async function thpLoad(){
     if(isTherapistMe()) await obsLoadNotify();
   } catch(e){ thp.v32 = false; }
   // what each portal needs on top: the therapist — what waits for them; the staff — their own observations
-  thp.unseen = {}; thp.journeys = {}; thp.risen = []; thp.myObs = [];
+  thp.unseen = {}; thp.journeys = {}; thp.risen = []; thp.myObs = []; thp.questions = {};
   if(thp.v32) try {
     if(canStaffPortal()){
       const r = await sbPersonal.from('observations').select('id,child_id,text,audio_path,created_at,seen_at,reply,replied_at').eq('author', srv.me).order('created_at', { ascending:false }).limit(40);
@@ -59,6 +60,7 @@ async function thpLoad(){
         sbPersonal.from('child_journeys').select('child_id,route,planet_idx,stage,step,next_approved'),
         sbPersonal.from('child_strengths').select('child_id,strength,updated_at').eq('status', 'main').gte('updated_at', since)]);
       (o.data || []).forEach(r => { thp.unseen[r.child_id] = (thp.unseen[r.child_id] || 0) + 1; });
+      try { const qa = await sbPersonal.from('observations').select('child_id').eq('kind', 'question').is('reply', null); (qa.data || []).forEach(r => { thp.questions[r.child_id] = (thp.questions[r.child_id] || 0) + 1; }); } catch(e){}          // (the questions not answered yet: v40)
       (j.data || []).forEach(r => { thp.journeys[r.child_id] = r; });
       thp.risen = s.data || [];
     }
@@ -71,7 +73,8 @@ function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
     t.push(['todo', 'מה דורש אותי'], ['mine', 'הילדים שלי']);
-    if(canStaffPortal()){ t.push(['kids', 'כל הילדים']); if(thp.v32) t.push(['myobs', 'התצפיות שלי']); }          // (also on the staff: what the staff sees)
+    t.push(['kids', 'כל הילדים']);          // (every child as the staff sees it, read only: Mercury decision 87)
+    if(canStaffPortal() && thp.v32) t.push(['myobs', 'התצפיות שלי']);
     if(thp.v32) t.push(['library', 'ספרייה']);
     if(thp.v32 && isTherapistMe()) t.push(['settings', 'הגדרות']);
     if(canAssignTherapist()) t.push(['assign', 'שיוך אנשי טיפול']);
@@ -104,6 +107,7 @@ function thpTodo(){
   const add = (id, tab, emoji, text, order) => items.push({ id, tab, emoji, text, order, name:name(id) });
   scope.forEach(c => {
     const n = thp.unseen[c.id] || 0; if(n) add(c.id, 'obs', '📝', n === 1 ? 'תצפית חדשה מהצוות' : `${n} תצפיות חדשות מהצוות`, 1);
+    const qn = (thp.questions || {})[c.id] || 0; if(qn) add(c.id, 'obs', '❓', qn === 1 ? 'שאלה מהצוות שמחכה לתשובה' : `${qn} שאלות מהצוות שמחכות לתשובה`, 1);
     const j = thp.journeys[c.id]; if(j && j.stage === 'extra' && !j.next_approved) add(c.id, 'journey', '🚀', 'סיים/ה את ההרפתקה. מחכה לאישור שלך למעבר לכוכב הבא', 2);
     const row = thp.plans[c.id];
     if(row && row.published_version && row.review_date){ const d = thpDaysTo(row.review_date); if(d <= 14) add(c.id, 'plan', '🗓️', d < 0 ? `עבר מועד הבדיקה מחדש של התוכנית (${dayLabel(row.review_date)})` : d === 0 ? 'היום מועד הבדיקה מחדש של התוכנית' : `בדיקה מחדש של התוכנית בעוד ${d} ימים`, 3); }
@@ -129,14 +133,15 @@ function thpStatusCard(c){
 }
 // ---- the staff: one child's card, what matters without a tap
 function thpStaffCard(c){
-  const g = thp.guidance[c.id], ct = g && g.content, focus = ct ? (ct.goals || []).filter(x => x.focus && x.title) : [];
+  const g = thp.guidance[c.id], ct = g && g.content, focus = ct ? (ct.goals || []).filter(x => x.focus && x.title) : [], strengths = ct ? [...new Set((ct.goals || []).flatMap(x => x.strengths || []))] : [];
   return `<article class="th-kcard${g ? ' has-plan' : ''}" data-th-card="${pEsc(c.id)}">
     <div class="th-kcard-head">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b>${g ? `<button type="button" class="btn ghost small" data-th-kid="${pEsc(c.id)}">עוד</button>` : ''}</div>
-    ${g ? `${ct.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(ct.avoid)}</div></div>` : ''}
+    ${g ? `${strengths.length ? `<div class="th-chips ar-keep">${strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}
       ${focus.map(x => `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}</div>`).join('')}
+      ${ct.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(ct.avoid)}</div></div>` : ''}
       ${!ct.avoid && !focus.length ? '<div class="pnote">אין כרגע מטרות במוקד. "עוד" פותח את כל התוכנית.</div>' : ''}`
       : '<div class="th-kcard-none">עוד אין תוכנית טיפולית</div>'}
-    ${thp.v32 ? `<button type="button" class="btn ghost small th-kcard-obs" data-th-obs="${pEsc(c.id)}">📝 תצפית</button>` : ''}
+    ${thp.v32 ? `<div class="th-kcard-acts"><button type="button" class="btn ghost small th-kcard-obs" data-th-obs="${pEsc(c.id)}">📝 תצפית</button><button type="button" class="btn ghost small th-kcard-obs" data-th-ask="${pEsc(c.id)}">❓ שאלה למטפל/ת</button></div>` : ''}
   </article>`;
 }
 function thpStaffKidsHtml(){
@@ -144,7 +149,12 @@ function thpStaffKidsHtml(){
   const fresh = kids.filter(c => { const g = thp.guidance[c.id]; return g && g.published_at && new Date(g.published_at).getTime() >= week; });
   return `${fresh.length ? `<div class="th-fresh"><span>עודכן לאחרונה:</span>${fresh.map(c => `<button type="button" class="th-chip" data-th-kid="${pEsc(c.id)}"><span class="ar-keep">${pEsc(displayName(c))}</span></button>`).join('')}</div>` : ''}
     <input type="search" class="th-search" id="th-q" placeholder="חיפוש ילד/ה" aria-label="חיפוש ילד/ה" value="${pEsc(thp.q)}">
-    <div class="th-kcards" id="th-kcards">${kids.map(thpStaffCard).join('')}</div>`;
+    <div class="th-kcards" id="th-kcards">${thpStaffOrder(kids).map(thpStaffCard).join('')}</div>`;
+}
+// the staff's list of children: the ones whose plan was published in the last week first, then by name
+function thpStaffOrder(kids){
+  const week = Date.now() - 7 * 864e5, fresh = c => { const g = thp.guidance[c.id]; return g && g.published_at && new Date(g.published_at).getTime() >= week ? 0 : 1; };
+  return kids.slice().sort((a, b) => fresh(a) - fresh(b) || displayName(a).localeCompare(displayName(b), 'he'));
 }
 // ---- the staff: "התצפיות שלי" and what the therapist answered
 function thpMyObsHtml(){
@@ -173,7 +183,8 @@ function thpRender(){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
       ${thp.therapists.length ? '' : '<div class="pnote">עוד אין אנשי טיפול במערכת. מוסיפים בהגדרות (תפקיד "איש/אשת טיפול"), או מסמנים "גם איש/אשת טיפול" בפורטל הניהול.</div>'}
-      <div class="th-assign">${kids.map(c => `<div class="th-assign-row">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b><select data-th-assign="${pEsc(c.id)}" aria-label="איש/אשת הטיפול של ${pEsc(displayName(c))}">${opts(thp.assign[c.id] || '')}</select></div>`).join('')}</div>`;
+      <div class="th-assign">${kids.map(c => `<div class="th-assign-row">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b><select data-th-assign="${pEsc(c.id)}" aria-label="איש/אשת הטיפול של ${pEsc(displayName(c))}">${opts(thp.assign[c.id] || '')}</select></div>`).join('')}</div>
+      ${thp.subs ? thpSubsHtml() : ''}`;
   }
   const todoN = ther && thp.v32 ? thpTodo().length : 0;
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}" data-thmode="${thp.mode}">
@@ -188,17 +199,27 @@ function thpRender(){
   const wireKids = box => box.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(ther && thp.tab !== 'kids' && thp.v32 && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid, 'plan'); else thpOpenChild(b.dataset.thKid); }));          // (in "כל הילדים": the staff's view of the child)
   wireKids(body);
   body.querySelectorAll('[data-todo-kid]').forEach(b => b.addEventListener('click', () => { if(planCanEdit(b.dataset.todoKid)) planOpenEditor(b.dataset.todoKid, b.dataset.todoTab); else thpOpenChild(b.dataset.todoKid); }));
-  const wireObs = box => box.querySelectorAll('[data-th-obs]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thObs)));
+  const wireObs = box => { box.querySelectorAll('[data-th-obs]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thObs)));
+    box.querySelectorAll('[data-th-ask]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thAsk, 'question'))); };
   wireObs(body);
   const q = body.querySelector('#th-q');
   if(q) q.addEventListener('input', () => {          // (only the cards change, so the keyboard stays open)
     thp.q = q.value.trim(); const box = body.querySelector('#th-kcards');
-    box.innerHTML = thpKids().filter(c => !thp.q || displayName(c).includes(thp.q)).map(thpStaffCard).join('') || '<div class="pnote">לא נמצא ילד בשם הזה.</div>';
+    box.innerHTML = thpStaffOrder(thpKids().filter(c => !thp.q || displayName(c).includes(thp.q))).map(thpStaffCard).join('') || '<div class="pnote">לא נמצא ילד בשם הזה.</div>';
     wireKids(box); wireObs(box);
   });
   if(thp.tab === 'library') planWireLibrary(body);
   if(thp.tab === 'settings') obsWireNotify(body);
   if(thp.editing && ther && thp.v32 && planCanEdit(thp.editing)) planOpenEditor(thp.editing);
+  { const add = view.querySelector('#sub-add'); if(add) add.addEventListener('click', async () => {
+      const therapist = view.querySelector('#sub-away').value, substitute = view.querySelector('#sub-by').value, until = view.querySelector('#sub-until').value;
+      if(!until || therapist === substitute){ toast(therapist === substitute ? 'בחרו שני אנשים שונים' : 'בחרו עד איזה תאריך'); return; }
+      const r = await sbPersonal.from('therapist_subs').insert({ therapist, substitute, until });
+      if(r.error){ toast('ההחלפה לא נשמרה'); return; }
+      toast('ההחלפה נשמרה'); await thpLoad(); thpRender(); });
+    view.querySelectorAll('[data-sub-rm]').forEach(b => b.addEventListener('click', async () => {
+      const r = await sbPersonal.from('therapist_subs').delete().eq('id', b.dataset.subRm);
+      if(r.error){ toast('הביטול נכשל'); return; } await thpLoad(); thpRender(); })); }
   view.querySelectorAll('[data-th-assign]').forEach(s => s.addEventListener('change', async () => {
     const child = s.dataset.thAssign, to = s.value || null, was = thp.assign[child] || null; s.disabled = true;
     const r = to ? await sbPersonal.from('child_therapist').upsert({ child_id:child, staff_id:to }) : await sbPersonal.from('child_therapist').delete().eq('child_id', child);
@@ -209,15 +230,24 @@ function thpRender(){
     toast(to ? `${t ? t.display_name : ''} אחראי/ת עכשיו על ${c ? displayName(c) : ''}` : 'השיוך הוסר');
   }));
 }
+// a substitute therapist until a date (the responsible one is away): sees and approves like her, and it ends by itself (scheduling-v40.sql)
+function thpSubsHtml(){
+  const nm = id => (thp.therapists.find(t => t.id === id) || {}).display_name || '', today = isoDate(new Date());
+  const live = (thp.subs || []).filter(s => s.until >= today), opts = `${thp.therapists.map(t => `<option value="${t.id}">${pEsc(t.display_name)}</option>`).join('')}`;
+  return `<h3 class="psec">מחליף/ה בזמן היעדרות</h3>
+    ${live.map(s => `<div class="th-assign-row"><span>${pEsc(nm(s.substitute))} מחליף/ה את ${pEsc(nm(s.therapist))} עד ${pEsc(dayLabel(s.until))}</span><button type="button" class="btn ghost small" data-sub-rm="${s.id}">ביטול</button></div>`).join('') || '<div class="pnote">אין כרגע החלפות.</div>'}
+    ${thp.therapists.length >= 2 ? `<div class="th-lib-add"><label class="pfield">מי נעדר/ת<select id="sub-away">${opts}</select></label><label class="pfield">מי מחליף/ה<select id="sub-by">${opts}</select></label><label class="pfield">עד תאריך<input type="date" id="sub-until" min="${today}"></label><button type="button" class="btn" id="sub-add">הוספה</button></div>` : '<div class="pnote">צריך לפחות שני אנשי טיפול כדי להגדיר החלפה.</div>'}`;
+}
 // one child, as the staff sees it: the whole published plan
 function thpOpenChild(id){
   const c = roster.find(x => x.id === id); if(!c) return;
   const g = thp.guidance && thp.guidance[id];
   const sh = portalSheet(`<div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div>
     ${g ? planGuidanceHtml(g) : `<div class="pnote">עוד אין תוכנית טיפולית ל${pEsc(displayName(c))}. כשאיש/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע.</div>`}
-    ${thp.v32 ? '<button type="button" class="btn ghost" id="th-observe" style="width:100%;margin-top:8px">📝 תצפית לאיש/אשת הטיפול</button>' : ''}
+    ${thp.v32 ? '<button type="button" class="btn ghost" id="th-observe" style="width:100%;margin-top:8px">📝 תצפית לאיש/אשת הטיפול</button><button type="button" class="btn ghost" id="th-ask" style="width:100%;margin-top:8px">❓ שאלה לאיש/אשת הטיפול</button>' : ''}
     ${thp.v32 && srv.profile && srv.profile.admin ? '<button type="button" class="btn ghost" id="th-place" style="width:100%;margin-top:8px">מיקום במסע בחלל (מנהל)</button>' : ''}
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סגירה</button></div>`);
   const pl = sh.querySelector('#th-place'); if(pl) pl.addEventListener('click', () => { sh.close(); journeyPlaceSheet(id); });
   const ob = sh.querySelector('#th-observe'); if(ob) ob.addEventListener('click', () => { sh.close(); obsOpen(id); });
+  const ak = sh.querySelector('#th-ask'); if(ak) ak.addEventListener('click', () => { sh.close(); obsOpen(id, 'question'); });
 }

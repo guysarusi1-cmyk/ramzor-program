@@ -2265,7 +2265,12 @@
           showAppHome(); await sleep(100);
           check('therapy portal: somebody who is only a therapist gets no "instructor portal" card, only the therapy portal (and the Ramzor)', !document.getElementById('apphome-portal') && !!document.getElementById('apphome-therapy') && !!document.getElementById('apphome-ramzor'), 'cards wrong');
           await showTherapyPortal();
-          check('therapy portal: ... inside it her own tabs, without the staff ones', thp.mode === 'therapist' && thpTabs()[0][0] === 'todo' && !thpTabs().some(x => ['kids', 'myobs'].includes(x[0])), thpTabs().map(x => x[0]).join(','));
+          check('therapy portal: ... inside it her own tabs, and every child read only ("כל הילדים", Mercury 87), without "התצפיות שלי"', thp.mode === 'therapist' && thpTabs()[0][0] === 'todo' && thpTabs().some(x => x[0] === 'kids') && !thpTabs().some(x => x[0] === 'myobs'), thpTabs().map(x => x[0]).join(','));
+          { const ed = typeof PLAN_PARTS !== 'undefined' && PLAN_PARTS.map(x => x[0]).join();
+            check('therapy portal: the plan has the parts "ממה להימנע", "אותות מוקדמים", "מה עוזר להירגע", "שגרה יומית מיוחדת" (Mercury 80)', ed === 'avoid,signs,calm,routine', ed);
+            const pk = planUpdateKind(); await sleep(60); const sh = document.querySelector('.psheet [data-uk="small"]');
+            check('therapy portal: publishing asks "עדכון מלא" or "עדכון קטן" (Mercury 84)', !!sh && !!document.querySelector('.psheet [data-uk="full"]'), '');
+            const bk = document.querySelector('.psheet [data-uk="back"]'); if(bk) bk.click(); await pk; }
           me.role = was; }
       } finally {
         if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5', 'c15']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }
