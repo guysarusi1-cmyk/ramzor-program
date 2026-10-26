@@ -1560,6 +1560,9 @@
               const others = st.rows.some(r => monthKeyOf(r.day) === mkS && ['service', 'teacher'].includes((st.instructors.find(x => x.id === r.staff) || {}).role));
               check('service girls and teachers: the × to take one off a shift shows only after "הורדה מהסידור"', noX && hasBtn && (!others || !!pb.querySelector('.mcal-x[data-other-rm]')), JSON.stringify([noX, hasBtn, others]));
               portalUi.csOthersRm = false; portalUi.csOthersOpen = false; }
+            { const pr = srvRebuildChoice(mkS); await sleep(40); const sh = document.querySelector('.psheet');
+              check('build again: two choices (keep the changes / everything anew), neither marked as the better one', !!sh && sh.querySelectorAll('[data-rb="keep"], [data-rb="all"]').length === 2 && !sh.querySelector('.cs-rebuild-opts .btn:not(.ghost)'), '');
+              if(sh) sh.querySelector('[data-rb="back"]').click(); check('build again: "חזרה" sends nothing', (await pr) === null, ''); }
             const tch = st.instructors.find(x => x.active && x.role === 'teacher');
             if(tch){ await teacherHoursSheet(tch.id); await sleep(60); const sh = document.querySelector('.psheet');
               check('teacher fixed hours: the coordinator opens them, Sunday to Friday, each with hours or "לא עובדת"', !!sh && sh.querySelectorAll('.th-day').length === 6 && !!sh.querySelector('#th-save'), '');

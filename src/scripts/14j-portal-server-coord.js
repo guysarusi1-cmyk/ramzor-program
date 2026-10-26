@@ -227,20 +227,47 @@ function srvBuildBoxHtml(mk){
   }
   const missing = portalLoad().instructors.filter(p => p.active && p.role === 'instructor' && !m.submitted[p.id]).length;
   return `<div class="cs-build" id="cs-build"><button type="button" class="btn${m.status ? ' ghost' : ''}" id="cs-build-go">${m.status ? 'בנייה מחדש של הסידור' : 'צור סידור אוטומטי'}</button>
-    <small>${failed ? `הבנייה הקודמת לא הצליחה (${pEsc(req.result.replace(/^נכשל:\s*/, '').slice(0, 80))}). אפשר לנסות שוב.` : m.status ? 'בונה סידור חדש במקום הנוכחי, כולל השינויים הידניים שנעשו בו.' : `הלחיצה סוגרת את ההגשה לכולם. בדרך כלל מוכן תוך כרבע שעה.${missing ? ` ${missing} מדריכים עוד לא הגישו העדפות.` : ''}`}</small></div>`;
+    <small>${failed ? `הבנייה הקודמת לא הצליחה (${pEsc(req.result.replace(/^נכשל:\s*/, '').slice(0, 80))}). אפשר לנסות שוב.` : m.status ? 'אפשר לשמור את השינויים הידניים שעשית, או לבנות הכל מחדש.' : `הלחיצה סוגרת את ההגשה לכולם. בדרך כלל מוכן תוך כרבע שעה.${missing ? ` ${missing} מדריכים עוד לא הגישו העדפות.` : ''}`}</small></div>`;
 }
 function srvBuildWire(body, mk){
   const go = body.querySelector('#cs-build-go'); if(!go) return;
   go.addEventListener('click', async () => {
-    const m = portalMonth(mk);
-    if(m.status && !(await confirmSheet({ title:`לבנות מחדש את ${monthLabel(mk)}?`, text:'הסידור הנוכחי יוחלף בסידור חדש, כולל שינויים ידניים שנעשו בו.', okLabel:'כן, לבנות מחדש', cancelLabel:'חזרה', danger:true }))) return;
+    const m = portalMonth(mk); let mode = null;
+    if(m.status){          // (a build again: keep her changes by hand, or everything anew; then asked once more: Guy 2026-10-26)
+      mode = await srvRebuildChoice(mk); if(!mode) return;
+      const text = mode === 'keep'
+        ? 'מה שהוספת, העברת, שינית לו שעות או סימנת ✓ נשאר כמו שהוא. מי שהורדת ממשמרת לא יוחזר אליה. בנות השירות והמורות נשארות כמו שהן. שאר הסידור ייבנה מחדש.'
+        : 'כל הסידור ייבנה מחדש לפי ההעדפות והכללים, כולל בנות השירות והמורות. רק מי שסימנת ✓ יישאר במשמרת שלו. השינויים הידניים האחרים וההערות שסימנת "טופל" יימחקו.';
+      if(!(await confirmSheet({ title:mode === 'keep' ? 'לבנות מחדש ולשמור את השינויים?' : 'לבנות את הכל מחדש?', text, okLabel:'כן, לבנות', cancelLabel:'חזרה', danger:mode === 'all' }))) return;
+    }
     if(!m.status && !(await confirmSheet({ title:`לבנות את הסידור של ${monthLabel(mk)}?`, text:'ההגשה תיסגר לכולם עכשיו: מי שעוד לא הגיש/ה לא יוכל/תוכל להגיש. הסידור יהיה מוכן בדרך כלל תוך כרבע שעה.', okLabel:'כן, לבנות', cancelLabel:'חזרה' }))) return;
     go.disabled = true;
-    const r = await sbPersonal.from('sched_requests').insert({ month:firstOf(mk), requested_by:srv.me }).select('id,month,at,done_at,result').single();
+    const r = await sbPersonal.from('sched_requests').insert(Object.assign({ month:firstOf(mk), requested_by:srv.me }, mode ? { mode } : {})).select('id,month,at,done_at,result').single();          // (never sent without the choice: "everything anew" is the engine's default for a build again)
     if(r.error){ go.disabled = false; toast('הבקשה לא נשלחה. אפשר לנסות שוב בעוד רגע'); return; }
     const st = portalLoad(); st.buildReqs = [r.data].concat(st.buildReqs || []); if(srv.prefsOpenSrv) srv.prefsOpenSrv[mk] = false;
     toast('הסידור בבנייה. בדרך כלל מוכן תוך כרבע שעה, ותקבלי הודעה.', 5000); srvRenderCoordSchedule(body);
   });
+}
+// the two ways to build a month again (Guy 2026-10-26) -> 'keep' / 'all' / null (back); no way is marked as the better one
+function srvRebuildChoice(mk){
+  return new Promise(resolve => {
+    let done = false; const finish = v => { if(done) return; done = true; s2.close(); resolve(v); };
+    const s2 = portalSheet(`<h2>בנייה מחדש של ${pEsc(monthLabel(mk))}</h2>
+      <div class="cs-rebuild-opts"><button type="button" class="btn ghost" data-rb="keep"><b>לבנות מחדש ולשמור את השינויים הידניים</b><small>מה שהוספת, העברת, שינית או סימנת ✓ נשאר. מי שהורדת לא יוחזר.</small></button>
+      <button type="button" class="btn ghost" data-rb="all"><b>לבנות הכל מחדש</b><small>סידור חדש לגמרי. רק מי שסימנת ✓ נשאר.</small></button></div>
+      <div class="confirm-actions"><button type="button" class="btn ghost" data-rb="back">חזרה</button></div>`);
+    s2.querySelectorAll('[data-rb]').forEach(b => b.addEventListener('click', () => finish(b.dataset.rb === 'back' ? null : b.dataset.rb)));
+    s2.addEventListener('click', e => { if(e.target === s2) finish(null); });
+  });
+}
+// who the coordinator took off which shift by hand (scheduling-v38.sql): a build that keeps her changes never puts them back; placing her there again forgets it
+function srvNoteRemoved(r){
+  if(!r || ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role) !== 'instructor') return;
+  Promise.resolve(sbPersonal.from('sched_removed').insert({ month:firstOf(monthKeyOf(r.day)), staff_id:r.staff, day:r.day, shift:r.shift })).catch(() => {});          // (a project without v38: nothing happens)
+}
+function srvForgetRemoved(staffId, day, code){
+  const fam = code === 'S' ? ['M', 'S'] : code === 'M' ? ['M', 'S'] : [code];
+  Promise.resolve(sbPersonal.from('sched_removed').delete().eq('staff_id', staffId).eq('day', day).in('shift', fam)).catch(() => {});
 }
 // ---- how many shifts each instructor got this month (folded: one short line; opened: everybody, with the kinds of shifts)
 // how many shifts each instructor has in the month, by kind (the fold above the calendar and the instructors' panel): { staff id: { all, M, A, N, W, L } }
@@ -325,6 +352,7 @@ function srvOpenSlot(mk, key, body){
       const std = SRV_STD[code]; const flags = ['manual'];
       const ins = await sbPersonal.from('assignment').insert({ month:firstOf(mk), staff_id:who.value, day:date, shift:code, from_time:from.value, to_time:to.value, flags });
       if(ins.error){ toast('השיבוץ נכשל'); return; }
+      srvForgetRemoved(who.value, date, code);
       await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body);
     });
     wrap.querySelectorAll('[data-hrs]').forEach(b => b.addEventListener('click', () => { editing = b.dataset.hrs; draw(); }));
@@ -355,6 +383,7 @@ function srvOpenSlot(mk, key, body){
       b.disabled = true;
       const d = await sbPersonal.from('assignment').delete().eq('id', r.id);
       if(d.error){ b.disabled = false; toast('ההסרה נכשלה'); return; }
+      srvNoteRemoved(r);
       srvDropRow(portalLoad(), r.id); draw(); srvRenderCoordSchedule(body); toast(`${nm(r.staff)} הוסר/ה מהמשמרת. מי שנוגע בעניין קיבל עדכון.`);
       srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
     }));
@@ -374,6 +403,7 @@ function srvOpenSlot(mk, key, body){
       const flags = Array.from(new Set((r.flags || []).concat('manual')));
       const u = await sbPersonal.from('assignment').update({ staff_id:nw, flags:flags.filter(f => f !== 'ok'), from_time:from, to_time:to }).eq('id', r.id);
       if(u.error){ toast('ההחלפה נכשלה'); return; }
+      srvNoteRemoved(r); srvForgetRemoved(nw, r.day, r.shift);
       const st2 = portalLoad(), was = nm(r.staff);
       srvDropRow(st2, r.id); srvAddRow(st2, { id:r.id, staff_id:nw, day:r.day, shift:r.shift, from_time:from, to_time:to, flags:flags.filter(f => f !== 'ok') });
       replacing = null; draw(); srvRenderCoordSchedule(body); toast(`${nm(nw)} במקום ${was}. מי שנוגע בעניין קיבל עדכון.`);
@@ -418,6 +448,7 @@ async function srvMoveToSlot(mk, key, rowId, body){
   const flags = Array.from(new Set((r.flags || []).filter(f => f !== 'ok').concat('manual')));
   const u = await sbPersonal.from('assignment').update({ month:firstOf(monthKeyOf(date)), day:date, shift:code, from_time:sh.start, to_time:sh.end, flags }).eq('id', r.id);
   if(u.error){ toast('ההעברה נכשלה'); return; }
+  srvNoteRemoved(r); srvForgetRemoved(r.staff, date, code);
   srvDropRow(st, r.id); srvAddRow(st, { id:r.id, staff_id:r.staff, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags });
   srvRenderCoordSchedule(body); toast(`${nm} הועבר/ה ל${sh.label} ${dayLabel(date)}. מי שנוגע בעניין קיבל עדכון.`);
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
@@ -543,6 +574,7 @@ async function srvAddToSlot(mk, key, staffId, body){
   if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;          // (a window, not only a note afterwards: Guy 2026-10-25)
   const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
   if(ins.error){ toast('השיבוץ נכשל'); return; }
+  srvForgetRemoved(staffId, date, code);
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
   toast(`${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`);
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
