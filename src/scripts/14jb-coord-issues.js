@@ -5,7 +5,7 @@
 // The engine's own notes of these kinds are not shown any more (they were true only when the schedule was built); its other notes stay as they were.
 const CS_LIVE_KINDS = ['staffing', 'night', 'ahmash', 'rest', 'double'];
 const csLtr = s => '⁦' + s + '⁩';          // (hours and ranges kept left-to-right inside the Hebrew line: "22:00–08:00", not reversed)
-const CS_ISSUE_KIND = { staffing:'איוש', night:'לילה', ahmash:'אחמ"ש', rest:'מנוחה', double:'שתי משמרות ביום', no:'שובץ/ה ב"לא"' };
+const CS_ISSUE_KIND = { staffing:'איוש', night:'לילה', ahmash:'אחמ"ש', rest:'מנוחה', double:'שתי משמרות ביום', no:'שובץ/ה ב"לא"', pick:'רק אחד מאלה' };
 
 // the usual holidays (the engine's calendar_il.py): Tishrei / Nisan / Sivan by the browser's Hebrew calendar; the coordinator's special days come first
 const CS_HEB_HOLIDAY = { 'Tishri|1':'holiday', 'Tishri|2':'holiday', 'Tishri|10':'holiday', 'Tishri|15':'holiday', 'Tishri|22':'holiday', 'Nisan|15':'holiday', 'Nisan|21':'holiday', 'Sivan|6':'holiday',
@@ -142,6 +142,10 @@ function csLiveIssues(mk){
       const c = partsConflict(rowParts(a), rowParts(b));
       const hrs = r => r.shift === 'L' ? '' : ' ' + csLtr(`${(r.from || (SRV_STD[r.shift] || [])[0] || '').slice(0, 5)}–${(r.to || (SRV_STD[r.shift] || [])[1] || '').slice(0, 5)}`);
       if(c) add(b.day, 'rest', `${nm(pid)}: ${c === 'חפיפה' ? 'המשמרות חופפות' : c}: ${SRV_SHIFT_WORD[a.shift]} ${shortDate(a.day)}${hrs(a)} ואחריו ${SRV_SHIFT_WORD[b.shift]} ${shortDate(b.day)}${hrs(b)}`, sidOf(b));
+    }
+    { const picks = csPicksOf(pid, mk), wk = r => r.shift === 'L' ? r.day : csWeekendOf(r.day);          // ("only one of these weekends" and placed in two or more of them: Guy 2026-10-26)
+      const got = [...new Set(list.map(wk).filter(f => f && picks.includes(f)))].sort();
+      if(picks.length >= 2 && got.length >= 2 && got.some(f => days.includes(f) || days.includes(addDays(f, 1)))) add(got[1], 'pick', `${nm(pid)} ביקש/ה רק אחד מסופי השבוע, ושובץ/ה ב-${got.length}: ${got.map(shortDate).join(', ')}`, 'e');
     }
     list.forEach(r => {
       if(!days.includes(r.day) || (r.flags || []).includes('ok')) return;

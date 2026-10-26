@@ -21,6 +21,9 @@ function partsConflict(u, v){
   }
   return null;
 }
+// "only one of these weekends" (Guy 2026-10-26): the Fridays she marked, and the weekend (its Friday) of a day / of a row of the schedule
+const csWeekendOf = day => dowOf(day) === 5 ? day : dowOf(day) === 6 ? addDays(day, -1) : null;
+const csPicksOf = (pid, mk) => ((portalMonth(mk).prefs || {})[pid] || {}).pick || [];
 // what would be wrong if this person worked this row? -> list of texts (the coordinator may still go ahead)
 function srvWarnings(pid, day, shift, from, to, ignoreId){
   const st = portalLoad(), p = (st.priv || {})[pid] || {}, m = portalMonth(monthKeyOf(day)), pr = m.prefs[pid] || { slots:{}, absent:[], fixed:[] };
@@ -33,6 +36,11 @@ function srvWarnings(pid, day, shift, from, to, ignoreId){
   else if((pr.absent || []).includes(day)) out.push('סימן/ה היעדרות ביום הזה');
   if(shift === 'N' && p.no_nights) out.push('לא עושה לילות');
   if(p.manual_only) out.push('משובץ/ת ידנית בלבד');
+  { const picks = csPicksOf(pid, monthKeyOf(day)), f = shift === 'L' ? day : csWeekendOf(day);
+    if(picks.length >= 2 && f && picks.includes(f)){
+      const other = [...new Set(st.rows.filter(r => r.staff === pid && r.id !== ignoreId && (r.shift === 'L' ? r.day : csWeekendOf(r.day)) && picks.includes(r.shift === 'L' ? r.day : csWeekendOf(r.day)) && (r.shift === 'L' ? r.day : csWeekendOf(r.day)) !== f).map(r => r.shift === 'L' ? r.day : csWeekendOf(r.day)))];
+      if(other.length) out.push(`ביקש/ה "רק אחד מאלה" מסופי השבוע, וכבר משובץ/ת בסופ"ש ${other.map(shortDate).join(', ')}`);
+    } }
   if(p.only_long_weekend && shift !== 'L') out.push('משובץ/ת רק לסופ"ש ארוך');
   if(p.latest_end_hour && parseInt(to || '22', 10) > p.latest_end_hour && shift !== 'N') out.push(`עובדת לכל המאוחר עד ${p.latest_end_hour}:00`);
   const sameDay = st.rows.filter(r => r.staff === pid && r.id !== ignoreId && r.day === day && (st.instructors.find(x => x.id === pid) || {}).role === 'instructor');
@@ -499,9 +507,9 @@ function srvPersonRequestsHtml(p, mk){
   const st = portalLoad(), m = portalMonth(mk), pr = (m.prefs[p.id] || { slots:{}, absent:[], hours:{}, fixed:[], pick:[], consent:{ extend:null, pull:null } });
   const shiftWord = id => ({ m:'בוקר', e:'צהריים', n:'לילה', l:'סופ"ש ארוך' })[id] || id;
   // what she wrote, by kind ("כן" first, then "יכול", then "לא": Guy) and in each kind one line for every date, with that day's shifts
-  const by = { yes:{}, avoid:{}, no:{} }, opened = { M:0, A:0, N:0, W:0, L:0 };
+  const by = { yes:{}, avoid:{}, no:{} }, opened = { M:0, A:0, N:0, W:0, L:0 }, longs = [];
   Object.keys(pr.slots || {}).sort().forEach(k => { const [d, id] = k.split('|'), lv = pr.slots[k]; if(!by[lv] || !daysOfMonth(mk).includes(d)) return;
-    (by[lv][d] = by[lv][d] || []).push(shiftWord(id));
+    if(id === 'l'){ longs.push([d, lv]); } else (by[lv][d] = by[lv][d] || []).push(shiftWord(id));          // (the long weekend on a line of its own: Guy 2026-10-26)
     if(lv === 'yes' || lv === 'avoid'){ const c = ({ m:'M', e:'A', n:'N', l:'L' })[id]; if(c) opened[c]++; if(id !== 'l' && [5, 6].includes(dowOf(d))) opened.W++; } });          // (what she opened: "כן" and "יכול" together)
   const openedAll = opened.M + opened.A + opened.N + opened.L;
   const mine = st.rows.filter(r => r.staff === p.id && monthKeyOf(r.day) === mk);
@@ -521,7 +529,8 @@ function srvPersonRequestsHtml(p, mk){
     ${line('yes', 'כן', by.yes)}${line('can', 'יכול', by.avoid)}${line('no', 'לא', by.no)}
     ${fixed.length ? `<div class="cs-req"><b>היעדרות</b><span>${[...new Set(fixed.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ') + ': ' + dayRanges(fixed.map(f => f.day))}</span></div>` : ''}
     ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
-    ${(pr.pick || []).length ? `<div class="cs-req"><b>רק אחד מסופי השבוע</b><span>${pr.pick.map(shortDate).join(' · ')}</span></div>` : ''}
+    ${longs.length ? `<div class="cs-req cs-long"><b>סופ"ש ארוך</b><div class="cs-req-days">${longs.map(([d, lv]) => `<div class="cs-req-day"><span class="cs-req-date">${pEsc(dayLabel(d))}</span><span class="mcal-name wish-${lv === 'avoid' ? 'can' : lv}">${lv === 'yes' ? 'כן' : lv === 'avoid' ? 'יכול' : 'לא'}</span></div>`).join('')}</div></div>` : ''}
+    ${(pr.pick || []).length ? `<div class="cs-req cs-long"><b>רק אחד מסופי השבוע</b><span>${pr.pick.slice().sort().map(f => pEsc(dayLabel(f))).join(' · ')}</span></div>` : ''}
     <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
     <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
     ${goal ? `<div class="cs-req"><b>יעד</b><span>${GOAL[goal] || goal}</span></div>` : ''}
