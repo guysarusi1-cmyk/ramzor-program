@@ -627,14 +627,20 @@ const WA_DEFAULT = {
   no:   { f:'היי, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכלי להגיע?',
           m:'היי, ראיתי שסימנת "לא" ל{משמרת} ב{יום} ({שעות}). יש לנו חוסר, יש מצב שבכל זאת תוכל להגיע?' },
   none: { f:'היי, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכלי להגיע?',
-          m:'היי, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכל להגיע?' }
+          m:'היי, יש לנו חוסר ב{משמרת} ב{יום} ({שעות}), ולא סימנת את המשמרת הזו. יש מצב שתוכל להגיע?' },
+  // (somebody who can work another shift that same day, asked about this one: Guy 2026-10-26)
+  other:{ f:'היי, ראיתי שב{יום} נוח לך {משמרת אחרת}. יש לנו חוסר ב{משמרת} ({שעות}) באותו יום. יש מצב שתוכלי להגיע אליה במקום?',
+          m:'היי, ראיתי שב{יום} נוח לך {משמרת אחרת}. יש לנו חוסר ב{משמרת} ({שעות}) באותו יום. יש מצב שתוכל להגיע אליה במקום?' }
 };
 const waTemplate = (kind, female) => { const own = ((portalLoad().waMsg || {})[kind] || {})[female ? 'f' : 'm']; return (own && String(own).trim()) || WA_DEFAULT[kind][female ? 'f' : 'm']; };
 // a ready message about this very shift (she can still change it in WhatsApp before sending)
 function waText(staffId, key){
   const st = portalLoad(), { date, shiftId } = splitKey(key), sh = st.shiftTypes.find(x => x.id === shiftId) || {}, p = st.instructors.find(x => x.id === staffId) || {};
-  const female = ((st.priv || {})[staffId] || {}).female !== false, kind = srvWishFor(staffId, key) === 'no' ? 'no' : 'none';
-  return waTemplate(kind, female).replace(/\{שם\}/g, String(p.first || '').split(' ')[0]).replace(/\{משמרת\}/g, `משמרת ה${sh.label || ''}`)
+  const female = ((st.priv || {})[staffId] || {}).female !== false, lv = srvWishFor(staffId, key);
+  const other = lv === 'no' && (((portalMonth(monthKeyOf(date)).prefs || {})[staffId] || {}).absent || []).includes(date) ? null          // (a day away: never "another shift")
+    : st.shiftTypes.find(s => s.id !== shiftId && ['yes', 'can'].includes(srvWishFor(staffId, `${date}|${s.id}`)));
+  const kind = other ? 'other' : lv === 'no' ? 'no' : 'none';
+  return waTemplate(kind, female).replace(/\{שם\}/g, String(p.first || '').split(' ')[0]).replace(/\{משמרת אחרת\}/g, other ? `משמרת ה${other.label}` : '').replace(/\{משמרת\}/g, `משמרת ה${sh.label || ''}`)
     .replace(/\{יום\}/g, `יום ${dayLabel(date)}`).replace(/\{שעות\}/g, `${sh.start || ''}–${sh.end || ''}`);
 }
 // WhatsApp opens in the computer's app (whatsapp://, no browser tab: Guy 2026-10-26) or in the browser, by the choice in the gear ("מתקדם")

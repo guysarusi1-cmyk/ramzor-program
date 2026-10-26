@@ -1330,7 +1330,7 @@
       showHub();
       check('ahmash control: the Ramzor home shows a small "בקרת אחמ״ש" button to the coordinator', !document.getElementById('hub-control-btn').hidden, 'hidden');
       document.getElementById('hub-control-btn').click(); await sleep(1500);
-      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 4 && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
+      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 5 && !!document.querySelector('#view-control details[data-cfold="duties"]') && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
       // the timetable of today: a change, read back as the kids TV reads it, then back to the fixed one
       const today = isoDate(new Date()), items = [{ t:'08:00', n:'ארוחת בוקר בדיקה', i:'breakfast' }, { t:'09:00', n:'גן', i:'school' }];
       let w = await sb.from('timetable_day').upsert({ day:today, items });
@@ -1444,7 +1444,7 @@
         { const fr = firstLong.getBoundingClientRect(), fc = document.querySelector(`[data-pday="${fri}"]`).getBoundingClientRect(), sc = document.querySelector(`[data-pday="${sat}"]`).getBoundingClientRect();
           check('portal server: the long-weekend button spreads across the Friday and the Saturday columns', fr.left <= Math.min(fc.left, sc.left) + 3 && fr.right >= Math.max(fc.right, sc.right) - 3, JSON.stringify([fr.left, fr.right, fc.left, sc.left])); }
         check('portal server: the long weekend starts neutral and is not touched by marking the Friday', firstLong.classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], '');
-        check('portal server: the shift of noon is called צהריים and marked צ', st.shiftTypes[1].label === 'צהריים' && document.querySelector(`[data-pslot="${sun}|e"]`).textContent === 'צ', st.shiftTypes[1].label);
+        check('portal server: the shift of noon is called צהריים and marked צ', st.shiftTypes[1].label === 'צהריים' && document.querySelector(`[data-pslot="${sun}|e"] .ps-l`).textContent === 'צ' && !!document.querySelector('.pshift-key'), st.shiftTypes[1].label);
         check('portal server: the explanation is folded away until it is asked for', document.querySelector('details[data-fold="prefhelp"]') && document.querySelector('details[data-fold="prefhelp"]').open === false, 'open');
         check('portal server: the bottom buttons are כן / יכול / לא / שעות אחרות / נקה הכל (no absence, no all-month button)', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|') === 'כן|יכול|לא|שעות אחרות|נקה הכל', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|'));
         document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-pday="${fri}"]`).click(); await sleep(50);
@@ -1587,8 +1587,8 @@
         { const fb = document.querySelector('#portal-body [data-fill-for]');
           check('fill for a service girl: in the submissions tab a service girl has "מילוי זמינות"', !!fb, 'no button');
           if(fb){ const sid = fb.dataset.fillFor; fb.click(); await sleep(700);
-            check('fill for a service girl: ... it opens her availability screen, for her', portalUi.tab === 'avail' && srvWho() === sid && !!document.querySelector('.adm-viewas.edit') && !!document.querySelector('#portal-body .psvc'), portalUi.tab + ' / ' + srvWho());
-            check('service girls: every weekday also has "שעות אחרות"', !!document.querySelector('#portal-body [data-svc$="|hours"]') && /שעות אחרות/.test(document.getElementById('portal-body').textContent), 'no choice');
+            check('fill for a service girl: ... it opens her availability screen, for her', portalUi.tab === 'avail' && srvWho() === sid && !!document.querySelector('.adm-viewas.edit') && !!document.querySelector('#portal-body .svcal'), portalUi.tab + ' / ' + srvWho());
+            check('service girls: the availability is a monthly calendar: yes / no / other hours; Friday and Saturday in grey', !!document.querySelector('#portal-body [data-svtool="hours"]') && !!document.querySelector('#portal-body [data-svtool="no"]') && document.querySelectorAll('#portal-body .svcal-day.off').length >= 8, 'no calendar');
             const w = await sbPersonal.from('prefs_service').upsert({ staff_id:sid, day:'2099-01-05', opt:'early' });
             if(w.error && /policy|permission|row-level/i.test(w.error.message)) check('(info) fill for a service girl: the coordinator saves it after scheduling-v36.sql', true, '');
             else { check('fill for a service girl: the database keeps what the coordinator chose for her', !w.error, (w.error || {}).message); await sbPersonal.from('prefs_service').delete().eq('staff_id', sid).eq('day', '2099-01-05'); }
@@ -1845,16 +1845,14 @@
         // ---- the service girl: availability for every day, then submit
         if(srvPrefsOpen(next) && await sign('service')){
           portalUi.pmonth = next; showPortal('avail'); await sleep(700);
-          const firstOpt = sel => [...document.querySelectorAll(sel)].map(r => r.querySelector('[data-svc]:not([data-svc$="|none"])')).filter(Boolean);          // (one choice per day: Sunday has only 11-19, Thursday only 07-16)
-          const opts = firstOpt('.psvc-row');
-          check('portal people: the service girl is asked about every Sunday-Thursday of the open month', opts.length >= 18 && opts.length <= 23, opts.length);
-          for(let pass = 0; pass < 5; pass++){          // (each tap saves to the server and redraws; on a slow moment a tap can land on a screen that is being redrawn, so what is still empty is tapped again)
-            const todo = firstOpt('.psvc-row.empty'); if(!todo.length && pass > 0) break;
-            for(const o of (pass === 0 ? opts : todo)){ const b = document.querySelector(`[data-svc="${o.dataset.svc}"]`); if(b) b.click(); await sleep(450); }
-            await sleep(700);
-          }
-          const left = document.body.textContent.match(/נשארו (\d+) ימים/);
-          check('portal people: after choosing every day nothing is left to choose', !left, left && left[0]);
+          // the availability calendar (Guy 2026-10-26): every shift of hers starts "yes"; Sunday one shift, Monday-Wednesday two, Thursday one
+          const slots = [...document.querySelectorAll('[data-svslot]')], mon = slots.filter(b => dowOf(b.dataset.svslot.split('|')[0]) === 1);
+          check('portal people: the calendar of the service girl starts all "yes", two shifts on a Monday, one on a Sunday and on a Thursday', slots.length >= 25 && slots.every(b => b.classList.contains('lv-yes')) && mon.length >= 2 && mon.length % 2 === 0
+            && slots.filter(b => dowOf(b.dataset.svslot.split('|')[0]) === 0).length === new Set(slots.filter(b => dowOf(b.dataset.svslot.split('|')[0]) === 0).map(b => b.dataset.svslot.split('|')[0])).size, slots.length);
+          { const tNo = document.querySelector('[data-svtool="no"]'); if(tNo){ tNo.click(); await sleep(300); }
+            const m1 = document.querySelector(`[data-svslot="${mon[0].dataset.svslot}"]`); if(m1){ m1.click(); }
+            const d1 = mon[0].dataset.svslot.split('|')[0];
+            check('portal people: "לא" on the Monday morning is saved as "the afternoon only"', await waitFor(async () => { const s = await sbPersonal.from('prefs_service').select('opt').eq('staff_id', srv.me).eq('day', d1); return s.data && s.data[0] && s.data[0].opt === 'late'; }, 60), 'not saved'); }
           const sub = document.querySelector('#svc-submit'); if(sub) sub.click();
           check('portal people: the availability is submitted', await waitFor(async () => { const s = await sbPersonal.from('prefs_submission').select('submitted_at').eq('staff_id', srv.me).eq('month', firstOf(next)); return s.data && s.data.length === 1 && Date.now() - new Date(s.data[0].submitted_at).getTime() < 60000; }), 'not submitted');
           await sbPersonal.from('prefs_service').delete().eq('staff_id', srv.me).gte('day', firstOf(next));

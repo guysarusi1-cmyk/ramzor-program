@@ -64,6 +64,7 @@ function renderControl(){
     ${fold('shifts', 'מי מוצג היום במסך הילדים', 'רק במסך הילדים, ורק להיום')}
     ${fold('tt', 'הלו"ז של היום')}
     ${fold('bonus', 'בונוסים היום')}
+    ${fold('duties', 'לוח התורנויות')}
     ${fold('log', 'יומן שינויים')}
   </div>`;
   document.getElementById('ctl-back').addEventListener('click', showHub);
@@ -76,6 +77,7 @@ async function ctlFill(id){
     if(id === 'shifts') await ctlShifts(box);
     if(id === 'tt') await ctlTimetable(box);
     if(id === 'bonus') await ctlBonuses(box);
+    if(id === 'duties') await ctlDuties(box);
     if(id === 'log') await ctlLog(box);
   } catch(e){ box.innerHTML = '<div class="pnote">הטעינה נכשלה. נסו לפתוח שוב.</div>'; }
 }

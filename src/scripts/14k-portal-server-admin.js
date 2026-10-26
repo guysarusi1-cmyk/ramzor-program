@@ -262,11 +262,11 @@ function srvRenderCoordSettings(body){
       <div class="pnote">כשמשבצים מישהו שסימן "לא" או שלא סימן את המשמרת, אפשר לפתוח איתו שיחה בוואטסאפ עם ההודעה הזו (ואפשר לשנות אותה גם שם, לפני השליחה). במקום המילים בסוגריים נכנסים הפרטים: <b>{שם}</b>, <b>{משמרת}</b>, <b>{יום}</b>, <b>{שעות}</b>.</div>
       <h3 class="psec">קבוצת הוואטסאפ של המדריכים</h3>
       <label class="pfield">קישור ההצטרפות לקבוצה (בוואטסאפ: פרטי הקבוצה ← הזמנה לקבוצה באמצעות קישור ← העתקה)<input type="url" dir="ltr" id="wa-group" placeholder="https://chat.whatsapp.com/..." value="${pEsc((st.waMsg || {}).group || '')}"></label>
-      ${box1('no', 'למי שסימן/ה "לא"')}${box1('none', 'למי שלא סימן/ה את המשמרת')}
+      ${box1('no', 'למי שסימן/ה "לא"')}${box1('none', 'למי שלא סימן/ה את המשמרת')}${box1('other', 'למי שיכול/ה במשמרת אחרת באותו יום')}<div class="pnote">בהודעה הזו נכנסת גם <b>{משמרת אחרת}</b>: המשמרת שהמדריך/ה סימן/ה שנוח לו/ה באותו יום.</div>
       <div class="an-actions"><button type="button" class="btn ghost small" id="wa-reset">חזרה לנוסח המקורי</button><button type="button" class="btn" id="wa-save">שמירה</button></div>`;
       const wire = box => {
         box.querySelector('#wa-save').addEventListener('click', async () => {
-          const val = { no:{}, none:{} }; box.querySelectorAll('[data-wa]').forEach(t => { const [k, g] = t.dataset.wa.split('|'); val[k][g] = t.value.trim(); });
+          const val = { no:{}, none:{}, other:{} }; box.querySelectorAll('[data-wa]').forEach(t => { const [k, g] = t.dataset.wa.split('|'); val[k][g] = t.value.trim(); });
           const gl = box.querySelector('#wa-group').value.trim();
           if(gl && !/^https:\/\/(chat\.whatsapp\.com|wa\.me)\//.test(gl)){ toast('הקישור לקבוצה צריך להתחיל ב-https://chat.whatsapp.com/'); return; }
           if(gl) val.group = gl;

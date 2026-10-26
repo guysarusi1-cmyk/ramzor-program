@@ -280,7 +280,8 @@ function renderYellowScreen(ids){
   drawBonusChips();
   loadBonusDay().then(changed => { if(changed && selectedStaffChild === child.id) drawBonusChips(); });          // (a bonus hidden or added today in the ahmash control)
   const dutyEl = document.getElementById(ids.dutyList);
-  if(!dutyRoster.length){ dutyEl.innerHTML = '<div class="empty">אין תורנויות מוגדרות (הוסיפו במסך הניהול)</div>'; }
+  if(typeof renderDutyForChild === 'function' && typeof PORTAL_ENABLED !== 'undefined' && PORTAL_ENABLED){ renderDutyForChild(dutyEl, child.id); }          // (the duty board of the week: 14zb-duties.js)
+  else if(!dutyRoster.length){ dutyEl.innerHTML = '<div class="empty">אין תורנויות מוגדרות (הוסיפו במסך הניהול)</div>'; }
   else{
     dutyEl.innerHTML = dutyRoster.map(d => `
       <div class="duty-item" data-id="${d.id}"><span>${d.text}</span><button class="revoke-duty">גריעה</button></div>

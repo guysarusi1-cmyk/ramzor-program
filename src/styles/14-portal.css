@@ -478,3 +478,27 @@
   .mcal.lbl-center .mcal-label{ justify-content:center; padding-top:0; gap:2px; } .mcal.lbl-center .mcal-label b{ font-size:11px; } .mcal.lbl-center .mcal-label small{ font-size:10.5px; color:var(--p-text); }
   @media (min-width:700px){ .mcal.lbl-center .mcal-label b{ font-size:15px; } .mcal.lbl-center .mcal-label small{ font-size:13.5px; } }
   .cs-ask{ color:#f2c14e; }          /* "תבדקו איתי" in an instructor's requests (14j) */
+  /* the service girls' availability as a monthly calendar (14i) */
+  .svcal{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:4px; margin:10px 0; }
+  .svcal-head{ text-align:center; font-weight:700; color:var(--p-muted); font-size:13px; }
+  .svcal-day{ min-height:64px; border:1px solid var(--p-line); border-radius:10px; padding:4px; display:flex; flex-direction:column; gap:3px; background:var(--p-panel); }
+  .svcal-day.blank{ border:0; background:none; } .svcal-day.off{ opacity:.35; background:var(--p-panel2); } .svcal-day.away em{ font-size:11px; color:var(--p-muted); font-style:normal; }
+  .svcal-num{ font-size:12px; font-weight:700; color:var(--p-muted); }
+  .svcal-slot{ border:1px solid var(--p-line); border-radius:8px; padding:3px 2px; font:inherit; font-size:12px; font-weight:700; line-height:1.15; display:flex; flex-direction:column; align-items:center; cursor:pointer; color:var(--p-text); background:none; }
+  .svcal-slot small{ font-size:10px; font-weight:400; opacity:.85; direction:ltr; }
+  .svcal-slot.lv-yes{ background:var(--p-yes-bg); border-color:var(--p-yes); } .svcal-slot.lv-no{ background:var(--p-no-bg); border-color:var(--p-no); } .svcal-slot.lv-hours{ background:var(--p-can-bg); border-color:var(--p-can); flex:1; justify-content:center; }
+  .svcal-tools button.lv-yes.on{ background:var(--p-yes-bg); border-color:var(--p-yes); } .svcal-tools button.lv-no.on{ background:var(--p-no-bg); border-color:var(--p-no); } .svcal-tools button.lv-hours.on{ background:var(--p-can-bg); border-color:var(--p-can); }
+  @media (max-width:520px){ .svcal{ gap:2px; } .svcal-day{ padding:2px; min-height:56px; } .svcal-slot{ font-size:10.5px; } .svcal-slot small{ font-size:8.5px; } }
+  /* the preferences: the hours of every shift above the calendar; on a wide screen the shift's name instead of its letter (Guy 2026-10-26) */
+  .pshift-key{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 14px; margin:6px 0 8px; font-size:14px; color:var(--p-muted); } .pshift-key b{ color:var(--p-text); }
+  .pshift .ps-w{ display:none; } @media (min-width:900px){ .pshift .ps-l{ display:none; } .pshift .ps-w{ display:inline; font-size:12px; } }
+  /* the kids' duty board (14zb): on the TV, in the yellow Ramzor, in the ahmash control */
+  .duty-board{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
+  .duty-card{ border:2px solid rgba(255,255,255,.15); border-radius:16px; padding:10px 12px; background:rgba(255,255,255,.05); } .duty-card.mine{ border-color:#f2c14e; }
+  .duty-name{ font-weight:800; font-size:18px; margin-bottom:8px; } .duty-kids{ display:flex; flex-wrap:wrap; gap:8px; }
+  .duty-kid{ display:inline-flex; align-items:center; gap:6px; font-weight:700; } .duty-kid.me{ color:#f2c14e; } .duty-kid .duty-av, .duty-kid img{ width:34px; height:34px; border-radius:50%; }
+  .duty-mine{ margin-bottom:10px; font-size:17px; }
+  .tv-duties{ padding:2vh 3vw; } .tvd-title{ font-size:5vh; font-weight:800; text-align:center; margin-bottom:2vh; }
+  .tv-duties .duty-board{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:2vh; } .tv-duties .duty-name{ font-size:3.4vh; } .tv-duties .duty-kid{ font-size:3vh; } .tv-duties .duty-kid .duty-av, .tv-duties .duty-kid img{ width:6vh; height:6vh; }
+  .ctl-duty{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; padding:6px 0; border-bottom:1px solid var(--p-line, rgba(255,255,255,.1)); } .ctl-duty-kids{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+  .duty-move{ display:flex; flex-direction:column; gap:6px; }
