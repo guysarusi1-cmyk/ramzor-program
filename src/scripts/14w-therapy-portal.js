@@ -75,7 +75,8 @@ async function thpLoad(){
 function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
-    t.push(['todo', 'מה דורש אותי'], ['mine', 'הילדים שלי']);
+    t.push(['todo', 'משימות'], ['mine', 'הילדים שלי']);
+    if(thp.v32) t.push(['plans', 'תכניות טיפוליות']);          // (the plans, one goal at a time: 14zf)
     t.push(['kids', 'כל הילדים']);          // (every child as the staff sees it, read only: Mercury decision 87)
     if(canStaffPortal() && thp.v32) t.push(['myobs', 'התצפיות שלי']);
     if(thp.v32) t.push(['library', 'ספרייה']);
@@ -97,8 +98,9 @@ async function showTherapyPortal(){
   thp.mode = canTherapistPortal() ? 'therapist' : 'staff';
   portalActivateView('view-therapy');
   const view = document.getElementById('view-therapy');
-  thp.tab = null; thp.editing = null; thp.wtab = null; thp.q = '';          // (every entry starts on the first tab of this portal)
+  thp.tab = null; thp.editing = null; thp.wtab = null; thp.q = ''; thp.planChild = null;          // (every entry starts on the first tab of this portal)
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}"><div class="pnote">טוען...</div></div>`;
+  if(typeof roster !== 'undefined' && !roster.length && typeof initRoster === 'function'){ try { await initRoster(); } catch(e){} }          // (a therapist who came in by a refresh: the children were not loaded yet)
   await thpLoad();
   thpRender();
 }
@@ -129,8 +131,11 @@ function thpTodo(){
 function thpTodoHtml(){
   const items = thpTodo();
   if(!items.length) return '<div class="th-empty"><span aria-hidden="true">🌿</span><b>הכול מעודכן</b><small>אין כרגע משהו שמחכה לך.</small></div>';
-  return `<div class="th-todo-list">${items.map(x => { const c = roster.find(k => k.id === x.id);
-    return `<button type="button" class="th-todo" data-todo-kid="${pEsc(x.id)}" data-todo-tab="${x.tab}">${c ? thpAvatar(c) : ''}<span class="th-kid-text"><b class="ar-keep">${pEsc(x.name)}</b><small><span aria-hidden="true">${x.emoji}</span> ${pEsc(x.text)}</small></span><span class="th-todo-go" aria-hidden="true">‹</span></button>`; }).join('')}</div>`;
+  const card = l => { const x = l[0], c = roster.find(k => k.id === x.id);          // (one card per child, a line per item: the checker, principle 5)
+    return `<div class="th-todo th-todo-card">${c ? thpAvatar(c) : ''}<span class="th-kid-text"><b class="ar-keep">${pEsc(x.name)}</b>${l.map(y => `<button type="button" class="th-todo-line" data-todo-kid="${pEsc(y.id)}" data-todo-tab="${y.tab}"><span aria-hidden="true">${y.emoji}</span> ${pEsc(y.text)}<span class="th-todo-go" aria-hidden="true">‹</span></button>`).join('')}</span></div>`; };
+  const byKid = l => { const m = new Map(); l.forEach(x => { if(!m.has(x.id)) m.set(x.id, []); m.get(x.id).push(x); }); return [...m.values()]; };
+  const groups = [['דחוף', items.filter(x => x.order <= 1), true], ['השבוע', items.filter(x => x.order >= 2 && x.order <= 3), true], ['לידיעה', items.filter(x => x.order >= 4), false]];          // (by urgency, in groups: Q44)
+  return groups.filter(g => g[1].length).map(([w, l, open]) => `<details class="pfold th-todo-group"${open ? ' open' : ''}><summary><span>${w}</span><span class="pcount">${l.length}</span></summary><div class="pfold-body th-todo-list">${byKid(l).map(card).join('')}</div></details>`).join('');
 }
 // ---- "הילדים שלי": the status of every child, at a glance
 function thpStatusCard(c){
@@ -147,7 +152,7 @@ function thpStaffCard(c){
     <div class="th-kcard-head">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b>${g ? `<button type="button" class="btn ghost small" data-th-kid="${pEsc(c.id)}">עוד</button>` : ''}</div>
     ${thpVideoBtnHtml(c.id)}${careCardHtml(c)}
     ${g ? `${strengths.length ? `<div class="th-chips ar-keep">${strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}
-      ${focus.map(x => `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}${x.sentences ? `<div class="th-ksent ar-keep"><span aria-hidden="true">💬</span> ${pEsc(x.sentences)}</div>` : ''}${careWeekLine(c.id, x.id)}</div>`).join('')}
+      ${focus.map(x => tpIsV2(x) ? `<div class="th-kfocus">${tpStaffGoalHtml(c.id, x, true)}</div>` : `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}${x.sentences ? `<div class="th-ksent ar-keep"><span aria-hidden="true">💬</span> ${pEsc(x.sentences)}</div>` : ''}${careWeekLine(c.id, x.id)}</div>`).join('')}
       ${ct.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(ct.avoid)}</div></div>` : ''}
       ${!ct.avoid && !focus.length ? '<div class="pnote">אין כרגע מטרות במוקד. "עוד" פותח את כל התוכנית.</div>' : ''}`
       : '<div class="th-kcard-none">עוד אין תוכנית טיפולית</div>'}
@@ -190,6 +195,7 @@ function thpRender(){
   else if(thp.tab === 'kids') inner = thpStaffKidsHtml();
   else if(thp.tab === 'myobs') inner = thpMyObsHtml();
   else if(thp.tab === 'library') inner = planLibraryHtml();
+  else if(thp.tab === 'plans') inner = tpListHtml();
   else if(thp.tab === 'videos') inner = thpVideosHtml();
   else if(thp.tab === 'overview') inner = thpOverviewHtml() + bankOverviewHtml();
   else if(thp.tab === 'archive') inner = '<div id="cr-archive"><div class="pnote">טוען...</div></div>';
@@ -208,15 +214,16 @@ function thpRender(){
       <div id="therapy-body">${inner}</div>
     </div>`;
   view.querySelector('#therapy-home').addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); });
-  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thpRender(); }));
+  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thp.planChild = null; thpRender(); }));
   const body = view.querySelector('#therapy-body');
   const wireKids = box => box.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(ther && thp.tab !== 'kids' && thp.v32 && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid, 'plan'); else thpOpenChild(b.dataset.thKid); }));          // (in "כל הילדים": the staff's view of the child)
   wireKids(body);
-  body.querySelectorAll('[data-todo-kid]').forEach(b => b.addEventListener('click', () => { if(planCanEdit(b.dataset.todoKid)) planOpenEditor(b.dataset.todoKid, b.dataset.todoTab); else thpOpenChild(b.dataset.todoKid); }));
+  body.querySelectorAll('[data-todo-kid]').forEach(b => b.addEventListener('click', () => { if(!planCanEdit(b.dataset.todoKid)) thpOpenChild(b.dataset.todoKid); else if(b.dataset.todoTab === 'plan' && thp.v32) tpOpenPlan(b.dataset.todoKid); else planOpenEditor(b.dataset.todoKid, b.dataset.todoTab); }));
+  if(thp.tab === 'plans') tpWireList(body);
   const wireObs = box => { box.querySelectorAll('[data-th-obs]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thObs)));
     box.querySelectorAll('[data-th-ask]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thAsk, 'question')));
     box.querySelectorAll('[data-th-video]').forEach(b => b.addEventListener('click', () => { thpVideoOpen(b.dataset.thVideo); setTimeout(() => { if(thp.tab === 'kids') thpRender(); }, 400); }));
-    careWireCard(box); };
+    careWireCard(box); tpWireFeedback(box); };
   wireObs(body);
   const q = body.querySelector('#th-q');
   if(q) q.addEventListener('input', () => {          // (only the cards change, so the keyboard stays open)
@@ -270,5 +277,5 @@ function thpOpenChild(id){
   const ob = sh.querySelector('#th-observe'); if(ob) ob.addEventListener('click', () => { sh.close(); obsOpen(id); });
   const ak = sh.querySelector('#th-ask'); if(ak) ak.addEventListener('click', () => { sh.close(); obsOpen(id, 'question'); });
   const vb = sh.querySelector('[data-th-video]'); if(vb) vb.addEventListener('click', () => { sh.close(); thpVideoOpen(id); });
-  careChildSheetWire(sh, id);
+  careChildSheetWire(sh, id); tpWireFeedback(sh);
 }

@@ -21,7 +21,9 @@ async function obsOpen(childId, kind){          // (kind 'question': "שאלה �
     <div class="pnote">${q ? 'מה תרצו לשאול? התשובה תגיע אליכם בהודעה.' : 'מה ראית? כמה מילים מספיקות.'} מגיע רק לאיש/אשת הטיפול האחראי/ת (ולמנהל המערכת).</div>
     <textarea id="obs-text" class="obs-text" rows="4" maxlength="2000" placeholder="${q ? 'למשל: מה עושים כשהוא מסרב להיכנס למקלחת?' : 'למשל: ביקש עזרה כשנתקע בפאזל, בלי לצעוק'}"></textarea>
     <div class="obs-rec"><button type="button" class="btn ghost" id="obs-rec">🎙️ הקלטה</button><span id="obs-rec-state" class="obs-rec-state"></span><audio id="obs-audio" controls hidden></audio><button type="button" class="btn ghost small" id="obs-rec-x" hidden>מחיקת ההקלטה</button></div>
-    ${goals.length ? `<div class="pfield"><span>קשור למטרה? (רשות)</span><div class="pchoice wrap obs-goals">${goals.map(g => `<button type="button" data-obs-goal="${escapeHtml(g.id)}">${escapeHtml(g.title)}</button>`).join('')}</div></div>
+    ${goals.length ? `<div class="pfield"><span>${goals.some(g => (g.targets_list || []).length) ? 'קשור ליעד? (רשות)' : 'קשור למטרה? (רשות)'}</span><div class="pchoice wrap obs-goals">${goals.map(g => (g.targets_list || []).length
+        ? g.targets_list.map(t => `<button type="button" data-obs-goal="${escapeHtml(g.id + '|' + t.id)}">🎯 ${escapeHtml(t.staff || t.text || '')}</button>`).join('')
+        : `<button type="button" data-obs-goal="${escapeHtml(g.id)}">${escapeHtml(g.title)}</button>`).join('')}</div></div>
       ${q ? '' : '<div class="pfield obs-val" hidden><span>זו הצלחה או קושי?</span><div class="pchoice"><button type="button" data-obs-val="success">🌱 הצלחה</button><button type="button" data-obs-val="difficulty">🌧️ קושי</button></div></div>'}` : ''}
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="obs-send">שליחה</button></div>`);
   let goal = null, valence = null, blob = null, rec = null, chunks = [], timer = null;          // (an observation marked to a goal: a success or a difficulty, Mercury decision 121)
@@ -51,8 +53,10 @@ async function obsOpen(childId, kind){          // (kind 'question': "שאלה �
       const up = await client.storage.from('mercury').upload(audio_path, blob, { contentType:blob.type || 'audio/webm' });
       if(up.error){ e.target.disabled = false; toast('ההקלטה לא נשמרה. אפשר לנסות שוב'); return; }
     }
-    let r = await client.from('observations').insert(Object.assign({ child_id:childId, text:text || null, audio_path, goal_id:goal }, q ? { kind:'question' } : {}, valence ? { valence } : {}));
-    if(r.error && valence && /valence/.test(r.error.message || '')) r = await client.from('observations').insert({ child_id:childId, text:(valence === 'success' ? '🌱 ' : '🌧️ ') + (text || ''), audio_path, goal_id:goal });          // (a project without v43)
+    const [goalId, targetId] = String(goal || '').split('|');          // (an observation marked to a target: the walkthrough Q28)
+    let r = await client.from('observations').insert(Object.assign({ child_id:childId, text:text || null, audio_path, goal_id:goalId || null }, targetId ? { target_id:targetId } : {}, q ? { kind:'question' } : {}, valence ? { valence } : {}));
+    if(r.error && targetId && /target_id/.test(r.error.message || '')) r = await client.from('observations').insert(Object.assign({ child_id:childId, text:text || null, audio_path, goal_id:goalId || null }, valence ? { valence } : {}));          // (a project without v44)
+    if(r.error && valence && /valence/.test(r.error.message || '')) r = await client.from('observations').insert({ child_id:childId, text:(valence === 'success' ? '🌱 ' : '🌧️ ') + (text || ''), audio_path, goal_id:goalId || null });          // (a project without v43)
     if(r.error && q && /kind/.test(r.error.message || '')) r = await client.from('observations').insert({ child_id:childId, text:'❓ ' + (text || ''), audio_path, goal_id:goal });          // (a project without v40)
     if(r.error){ e.target.disabled = false; toast(q ? 'השאלה לא נשלחה. אפשר לנסות שוב' : 'התצפית לא נשלחה. אפשר לנסות שוב'); return; }
     stopRec(); sh.close(); toast(q ? 'השאלה נשלחה לאיש/אשת הטיפול. התשובה תגיע אליך בהודעה' : 'התצפית נשלחה לאיש/אשת הטיפול. תודה!');

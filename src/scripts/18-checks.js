@@ -2172,11 +2172,20 @@
           check('plans: publishing makes a new version, and every version is kept', !pb.error && pb.data >= 1 && vs.data && vs.data[0] && vs.data[0].version === pb.data, (pb.error || {}).message || JSON.stringify(vs.data));
           await showTherapyPortal(); planOpenEditor('c1', 'plan'); await sleep(150);
           check('plans: the child opens as a workspace in tabs (plan, observations, tracking, [incidents, family, stay, documents: v43], journey, temple)', [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(',') === (thp.v43 ? 'plan,obs,track,events,family,stay,docs,journey,temple' : 'plan,obs,track,journey,temple') && document.querySelector('[data-ws-tab="plan"]').classList.contains('active'), [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(','));
-          check('plans: the editor shows the plan (summary, what to avoid, the goals, focus, planet, strengths)', document.querySelector('#pe-summary').value === draft.summary && document.querySelectorAll('.th-goal').length === 2 && document.querySelector('.th-goal .pe-g-focus').checked && document.querySelector('.th-goal .pe-g-planet').value === 'moon' && /סבלנות/.test(document.querySelector('.th-goal .pe-g-strengths').textContent), document.querySelectorAll('.th-goal').length);
-          check('goal bank: the editor has "+ מטרה מהבנק", a "נוסח מהבנק" in every goal, and the child\'s gender for the wordings (Mercury 101, 110)', !!document.querySelector('#pe-add-bank') && document.querySelectorAll('.th-goal .pe-g-bank').length === document.querySelectorAll('.th-goal').length && !!document.querySelector('#pe-gender'), '');
-          { document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); await sleep(80);
-            const boxes = [...document.querySelectorAll('.th-goal .pe-g-focus')]; boxes.forEach(b => { if(!b.checked){ b.checked = true; b.dispatchEvent(new Event('change')); } });
-            check('plans: at most 3 goals in focus', document.querySelectorAll('.th-goal .pe-g-focus:checked').length === 3, document.querySelectorAll('.th-goal .pe-g-focus:checked').length); }
+          check('plans: inside the child, "התוכנית" is a summary (the goal in focus) and a button to the whole plan (walkthrough 6)', !!document.querySelector('#th-ws-body .tp-child-sum') && /ויסות רגשי/.test(document.querySelector('#th-ws-body .tp-child-sum').textContent) && !!document.querySelector('#pe-full'), '');
+          document.querySelector('#pe-full').click(); await sleep(250);
+          { const page = document.querySelector('#view-therapy .tp-page');
+            check('plans: "תכניות טיפוליות" opens the whole plan: the goal in focus open, the others folded, ONE main button (walkthrough 9, 22)', thp.tab === 'plans' && !!page && page.querySelectorAll('.tp-goal.st-focus').length === 1 && page.querySelectorAll('.tp-main').length === 1 && /מטרה 1 – ויסות רגשי/.test(page.textContent), page ? page.textContent.slice(0, 120) : 'no page');
+            const nb = document.querySelector('#tp-new') || document.querySelector('#tp-new2'); if(nb){ nb.click(); await sleep(250); }
+            check('plans: "+ מטרה חדשה" opens the builder on a full page, asking how to start: theme / method / search (Q1, Q3)', !!document.querySelector('#view-therapy .tp-builder') && document.querySelectorAll('#view-therapy [data-entry]').length === 3 && document.querySelectorAll('#view-therapy .tp-steps li').length === 7, '');
+            const out = document.querySelector('#tb-out'); if(out){ out.click(); await sleep(300); } }
+          { const g = tpSync({ id:'gx', title:'בדיקה', status:'focus', targets_list:[{ id:'t1', text:'מקצועי', staff:'פשוט', scale:['1', '2', '3', '4', '5'], now:2, target:4 }],
+              interventions_list:[{ id:'i1', name:'נשימה', what:'נושמים יחד', approach:'ARC', sentences:['אחת', 'שתיים', 'שלוש'] }] });
+            check('plans: a goal of the new kind keeps the old fields in sync for the older screens', g.focus === true && g.targets === 'פשוט' && /נשימה: נושמים יחד/.test(g.interventions) && g.sentences === 'אחת\nשתיים\nשלוש', JSON.stringify(g).slice(0, 160));
+            const h = tpStaffGoalHtml('c1', g, true);
+            check('plans: the staff sees the plain target, the intervention with its approach (faint), 2 sentences and "עוד", and 👍/👎 (Q21, Q25-27)', /פשוט/.test(h) && !/מקצועי/.test(h) && /tp-appr/.test(h) && (h.match(/💬/g) || []).length === 3 && /<details><summary>עוד/.test(h) && /data-fb=/.test(h), '');
+            const since = new Date(2026, 0, 1), lv = tpSpiralLevels(g, g.targets_list[0], { steps:[], obs:[{ target_id:'t1', valence:'success', created_at:'2026-01-02T10:00:00' }], inc:[], fb:[], scale:[{ goal_id:'gx:t1', rated_on:'2026-01-04', value:4 }] }, since, 5);
+            check('plans: the spiral: a success moves the target forward, the therapist\'s rating sets it (Q23)', lv[0].lv === 2 && lv[1].lv > 2 && lv[3].lv === 4 && lv.length === 5, JSON.stringify(lv)); }
           // a plain instructor: the guidance, without the thinking of the therapist
           if(!(await enter('instructor'))){ check('plans: the instructor signs in', false, 'no'); return; }
           const gd = await sbPersonal.rpc('plan_guidance'), g1 = (gd.data || []).find(r => r.child_id === 'c1'), rawI = await sbPersonal.from('child_plans').select('child_id');
@@ -2258,7 +2267,7 @@
         await showTherapyPortal();
         const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         { const mt = document.querySelector('#view-therapy [data-th-tab="mine"]'); if(mt){ mt.click(); await sleep(80); } }
-        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.join(',') === (v32 ? 'todo,mine,kids,myobs,library,settings' : 'todo,mine,kids') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
         showAppHome(); await sleep(80);
         check('therapy portal: somebody with both roles still gets one card', !document.getElementById('apphome-therapist') && document.querySelectorAll('#apphome-therapy').length === 1, 'cards wrong');
         // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)
@@ -2279,10 +2288,10 @@
               const was = thp.guidance[kid.id]; thp.guidance[kid.id] = { version:1, content }; const sh = planVideoPlay(kid.id, {}); await sleep(80);
               check('plan videos: it opens as a window with captions and a progress bar', !!sh && !!sh.querySelector('#pv-sub') && !!sh.querySelector('#pv-bar') && sh.querySelectorAll('.pv-scene').length === sc.length, '');
               if(sh) sh.close(); if(was) thp.guidance[kid.id] = was; else delete thp.guidance[kid.id];
-              const wv = thp.videos, wok = thp.vOk; thp.videos = { [kid.id]:{ child_id:kid.id, video_id:'00000000-0000-0000-0000-000000000000', version:2, status:'draft' } }; thp.vOk = true;
+              const wv = thp.videos, wok = thp.vOk, wva = thp.vApproved; thp.vApproved = {}; thp.videos = { [kid.id]:{ child_id:kid.id, video_id:'00000000-0000-0000-0000-000000000000', version:2, status:'draft' } }; thp.vOk = true;
               const panel = thpVideoPanelHtml(kid.id);
               check('plan videos: a draft waits for the therapist: watch, approve, reject (Mercury 69); the staff does not see it (Mercury 70)', /data-pv-ok/.test(panel) && /data-pv-no/.test(panel) && !thpVideoOf(kid.id), '');
-              thp.videos = wv; thp.vOk = wok; } }
+              thp.videos = wv; thp.vOk = wok; thp.vApproved = wva; } }
           // the goal bank (14zd; Mercury 97-118): the child's gender and age band, a goal filled from a wording, the picker, the editor's buttons
           { const w = 'מצליח/ה עם שלו/ה, עשה/תה, הוא/היא צריך/ה. אני שומר/ת. המטפל/ת';
             check('goal bank: the wording follows the child: בת', bankGender(w, 'f') === 'מצליחה עם שלה, עשתה, היא צריכה. אני שומר/ת. המטפל/ת', bankGender(w, 'f'));
@@ -2311,7 +2320,7 @@
             const ds = careDocSheet('בדיקה', '<h1>כותרת</h1><p>[להשלמה]</p>', 'בדיקה'); await sleep(60);
             check('care: a document opens to edit, with Word and print / PDF (Mercury 125)', !!ds && ds.querySelector('#cr-doc').isContentEditable && !!ds.querySelector('#cr-doc-word') && !!ds.querySelector('#cr-doc-print'), '');
             if(ds) ds.close();
-            if(thp.v43) check('care: the staff\'s kids tab has the end-of-shift marks (Mercury 121)', /data-cr-marks/.test(careMarksBannerHtml()), '');
+            if(thp.v43) check('care: no end-of-shift marks for now (walkthrough Q22)', !/data-cr-marks/.test(careMarksBannerHtml()), '');
             else check('(info) care: needs scheduling-v43.sql on this server', true, ''); }
           me.role = was; }
       } finally {

@@ -1,6 +1,7 @@
 // ---------- INIT ----------
 (async function init(){
   if(location.hash === '#diag'){ showDiagnostics(); return; }   // device / TV check page, no login needed
+  if(typeof simplicityOn === 'function' && simplicityOn()){ simplicityStart(); return; }      // the simplicity checker's screens (test build only, made-up data, no sign-in)
   if(location.hash === '#portal' && PORTAL_ENABLED){ portalServerBoot(); return; }      // the personal sign-in of the portal (its own login, not the staff password)
   if(PORTAL_ENABLED && location.hash !== '#tv'){                                          // somebody signed in personally on this device: straight in (the portal and the Ramzor), no password
     try {

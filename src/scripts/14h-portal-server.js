@@ -383,10 +383,12 @@ async function srvLoadFirst(){
 async function srvStart(){
   portalServerOn = true;
   if(!(await srvLoadFirst())) return false;
+  if(personalIsTherapistOnly()) return personalEnter();          // (a therapist with no shifts: never the shifts portal, also after a refresh)
   portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null;
   showPortal();
   return true;
 }
+const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' || !!(srv.profile && srv.profile.kind === 'therapist');
 // ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
 let ramzorPersonal = false;
@@ -400,6 +402,7 @@ async function personalEnter(){
   if(!personalRamzorKind()){ srvOpenPortal(); return true; }          // (service girls and teachers: only the portal)
   sb = sbPersonal; ramzorPersonal = true;
   try { await initRoster(); await initMiniLists(); renderManageRoster(); } catch(e){ /* the Ramzor data loads again on the next screen */ }
+  if(personalIsTherapistOnly() && typeof therapyAvailable === 'function' && therapyAvailable()){ await showTherapyPortal(); return true; }          // (straight to the therapy portal)
   showAppHome();
   return true;
 }

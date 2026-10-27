@@ -9,7 +9,9 @@ async function thpVideosLoad(){
   thp.videos = {}; thp.myViews = {}; thp.allViews = null; thp.vOk = false;
   try {
     const r = await sbPersonal.rpc('plan_videos_current'); if(r.error) return;
-    (r.data || []).forEach(v => { thp.videos[v.child_id] = v; });
+    thp.vApproved = {};          // (v44: the newest of every state. The therapist's panel: a draft first; the staff: the newest approved one)
+    const rank = s => s === 'draft' ? 3 : s === 'approved' ? 2 : 1;
+    (r.data || []).forEach(v => { if(v.status === 'approved') thp.vApproved[v.child_id] = v; const was = thp.videos[v.child_id]; if(!was || rank(v.status) > rank(was.status)) thp.videos[v.child_id] = v; });
     const mv = await sbPersonal.from('video_views').select('video_id,pct').eq('staff_id', srv.me);
     (mv.data || []).forEach(v => { thp.myViews[v.video_id] = v.pct; });
     if(canAssignTherapist() || (srv.profile && srv.profile.admin) || isTherapistMe()){
@@ -18,7 +20,7 @@ async function thpVideosLoad(){
     thp.vOk = true;
   } catch(e){}
 }
-const thpVideoOf = id => { const v = (thp.videos || {})[id]; return v && v.status === 'approved' ? v : null; };          // (the staff: only the approved one of the last full update)
+const thpVideoOf = id => { const a = (thp.vApproved || {})[id]; if(a) return a; const v = (thp.videos || {})[id]; return v && v.status === 'approved' ? v : null; };          // (the staff: the newest approved one)
 const thpVideoNew = id => { const v = thpVideoOf(id); return !!v && (thp.myViews[v.video_id] || 0) < 80; };
 // who must watch (decision 74): instructors, service girls and teachers who are active
 const thpWatchers = () => (portalLoad().instructors || []).filter(p => p.active !== false && ['instructor', 'service', 'teacher'].includes(p.role));

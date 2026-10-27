@@ -89,6 +89,12 @@ const bankThemeChips = x => bankThemesOf(x).map(t => `<span class="bk-theme">${p
 // the full wording of one template, for one age (the preview before choosing, the review screen)
 function bankPreviewHtml(x, age){
   const c = x.content || {};
+  if(c.v === 2){          // (the bank of the walkthrough: targets and interventions per age)
+    const w = c.ages[age] || c.ages['5-8'] || {};
+    return `<div class="bk-pv-row"><b>יעדים</b><span>${(w.targets || []).map(t => `<span class="bk-line">• ${pEsc(t.text)} <small>(לצוות: ${pEsc(t.staff)})</small></span>`).join('')}</span></div>
+      <div class="bk-pv-row"><b>דרכי התערבות</b><span>${(w.interventions || []).map(i => `<span class="bk-line"><b>${pEsc(i.name)}</b> ${pEsc(i.what)} <em class="tp-appr">${pEsc(i.approach)}</em><br><small>${pEsc(i.freq || '')} · ${(i.sentences || []).map(s => '💬 ' + pEsc(s)).join(' ')}</small></span>`).join('')}</span></div>
+      ${(c.strengths || []).length ? `<div class="bk-pv-row"><b>חוזקות</b><span>${c.strengths.map(pEsc).join(' · ')}</span></div>` : ''}`;
+  }
   if(x.kind !== 'goal' && x.kind !== 'plan') return `<div class="bk-pv-text">${pEsc(bankHasAges(x) ? (bankWording(x, age) || '') : (x.description || ''))}</div>`;
   if(x.kind === 'plan') return `${c.summary ? `<div class="bk-pv-row"><b>תקציר (שלד)</b><span>${pEsc(c.summary)}</span></div>` : ''}${(c.goal_titles || []).length ? `<div class="bk-pv-row"><b>המטרות</b><span>${c.goal_titles.map(pEsc).join(' · ')}</span></div>` : ''}${x.description && !c.summary ? `<div class="bk-pv-text">${pEsc(x.description)}</div>` : ''}`;
   const w = bankWording(x, age); if(!w) return `<div class="bk-pv-text">${pEsc(x.description || '')}</div>`;
@@ -203,7 +209,38 @@ function bankReview(start){
 }
 
 // ---- editing a template: the admin edits it in place; a therapist who edits a Mercury one gets a copy in the center's library (decision 109)
+// a goal of the new bank: per age, every target (professional, plain, 5 stations) and every intervention (name, what, why, frequency, approach, sentences)
+function bankEditV2(x, after){
+  const c = JSON.parse(JSON.stringify(x.content)), copy = x.scope === 'mercury' && !bankIsAdmin();
+  let age = c.ages['5-8'] ? '5-8' : Object.keys(c.ages)[0];
+  const fields = () => { const w = c.ages[age] || { targets:[], interventions:[] };
+    return `${w.targets.map((t, k) => `<div class="tp-ed-block"><b>יעד ${k + 1}</b><textarea data-bt="${k}" data-f="text" rows="2">${pEsc(t.text)}</textarea><input type="text" data-bt="${k}" data-f="staff" value="${pEsc(t.staff)}" aria-label="לצוות">
+      <details><summary>5 התחנות</summary>${(t.scale || []).map((s, j) => `<input type="text" data-bts="${k}" data-j="${j}" value="${pEsc(s)}">`).join('')}</details></div>`).join('')}
+      ${w.interventions.map((i, k) => `<div class="tp-ed-block"><b>${pEsc(i.name)}</b><input type="text" data-bi="${k}" data-f="name" value="${pEsc(i.name)}" aria-label="שם"><textarea data-bi="${k}" data-f="what" rows="2">${pEsc(i.what)}</textarea><input type="text" data-bi="${k}" data-f="why" value="${pEsc(i.why || '')}" aria-label="למה">
+        <input type="text" data-bi="${k}" data-f="freq" value="${pEsc(i.freq || '')}" aria-label="תדירות"><select data-bi="${k}" data-f="approach">${bankMethods().map(m => `<option${m === i.approach ? ' selected' : ''}>${pEsc(m)}</option>`).join('')}</select>
+        <textarea data-bi="${k}" data-f="sentences" rows="2" aria-label="משפטים">${pEsc((i.sentences || []).join('\n'))}</textarea></div>`).join('')}`; };
+  const read = () => { const w = c.ages[age]; if(!w) return;
+    sh.querySelectorAll('[data-bt]').forEach(el => { w.targets[+el.dataset.bt][el.dataset.f] = el.value.trim(); });
+    sh.querySelectorAll('[data-bts]').forEach(el => { w.targets[+el.dataset.bts].scale[+el.dataset.j] = el.value.trim(); });
+    sh.querySelectorAll('[data-bi]').forEach(el => { w.interventions[+el.dataset.bi][el.dataset.f] = el.dataset.f === 'sentences' ? el.value.split('\n').map(s => s.trim()).filter(Boolean) : el.value.trim(); }); };
+  const sh = portalSheet(`<h2>עריכה: ${pEsc(x.title)}</h2>${copy ? '<div class="pnote">נשמר כעותק בספריית המרכז; המקור של מרקורי לא משתנה.</div>' : ''}
+    <label class="pfield">שם<input type="text" id="b2-title" value="${pEsc(x.title)}"></label><label class="pfield">שורה קצרה (למה זה חשוב, לצוות)<input type="text" id="b2-line" value="${pEsc(x.description || '')}"></label>
+    <div class="bk-ages">${Object.keys(c.ages).map(a => `<button type="button" class="bk-age${a === age ? ' on' : ''}" data-b2-age="${a}">גילאי ${a.replace('-', '–')}</button>`).join('')}</div><div id="b2-f">${fields()}</div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="b2-save">${copy ? 'שמירה כעותק במרכז' : 'שמירה'}</button></div>`);
+  sh.classList.add('bk-sheet');
+  sh.querySelectorAll('[data-b2-age]').forEach(b => b.addEventListener('click', () => { read(); age = b.dataset.b2Age; sh.querySelectorAll('[data-b2-age]').forEach(y => y.classList.toggle('on', y === b)); sh.querySelector('#b2-f').innerHTML = fields(); }));
+  sh.querySelector('#b2-save').addEventListener('click', async () => {
+    read(); const row = { title:sh.querySelector('#b2-title').value.trim() || x.title, description:sh.querySelector('#b2-line').value.trim() || null, content:c,
+      methods:[...new Set(Object.values(c.ages).flatMap(w => (w.interventions || []).map(i => i.approach)))] };
+    const r = copy ? await sbPersonal.from('mercury_library').insert(Object.assign({ kind:'goal', scope:'center', source_id:x.id, draft:false, themes:x.themes || [], category:x.category }, row))
+      : await sbPersonal.from('mercury_library').update(row).eq('id', x.id);
+    if(r.error){ toast(/duplicate|unique/i.test(r.error.message || '') ? 'כבר יש מטרה בשם הזה' : 'השמירה נכשלה'); return; }
+    sh.close(); toast(copy ? 'נשמר עותק בספריית המרכז' : 'נשמר'); await thpLoad(); if(after) after();
+  });
+  return sh;
+}
 function bankEdit(x, after){
+  if(x.content && x.content.v === 2) return bankEditV2(x, after);
   const c = JSON.parse(JSON.stringify(x.content || {})), isGoal = x.kind === 'goal', aged = bankHasAges(x) || isGoal || BANK_PART_KINDS.includes(x.kind);
   if(aged && !c.ages) c.ages = { '5-8':isGoal ? {} : (x.description || '') };
   let age = c.ages ? (c.ages['5-8'] ? '5-8' : Object.keys(c.ages)[0]) : '';
@@ -282,6 +319,7 @@ function bankLibraryTopHtml(){
   return `${bankNote()}
     ${bankIsAdmin() ? `<div class="bk-admin"><button type="button" class="btn${drafts ? '' : ' ghost'}" id="bk-review">🔎 בדיקת טיוטות${drafts ? ` (${drafts})` : ''}</button>
       <label class="th-important"><input type="checkbox" id="bk-devage"${thp.mopts && thp.mopts.dev_age ? ' checked' : ''}> גיל התפתחותי: שדה בתוכנית (למטפלים בלבד), והבנק מסנן לפיו</label>
+      <label class="th-important">מטרות במוקד בבת אחת: <select id="bk-focusmax">${[1, 2, 3].map(n => `<option${(+((thp.mopts || {}).focus_max) || 1) === n ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="th-important">תכנית ראשונה תוך <input type="number" id="bk-firstdays" min="3" max="60" value="${+((thp.mopts || {}).first_plan_days) || 14}" style="width:4.5em"> ימים מההגעה</label></div>` : ''}
     <button type="button" class="btn ghost" id="bk-open" style="width:100%">📚 בנק המטרות</button>
     ${ms.length ? `<details class="pfold"><summary><span>שיטות הטיפול</span><span class="pcount">${ms.length}</span></summary><div class="pfold-body">${ms.map(m => `<details class="bk-mcard"><summary><b>${pEsc(m.title)}</b>${m.scope === 'center' ? '<span class="bk-center">המרכז</span>' : ''}${bankDraftTag(m)}</summary><div>${pEsc(m.description || '')}</div></details>`).join('')}</div></details>` : ''}`;
@@ -294,6 +332,11 @@ function bankWireLibrary(body){
     const r = await sbPersonal.from('sched_settings').upsert({ key:'mercury_options', value });
     if(r.error){ dv.checked = !dv.checked; toast('לא נשמר'); return; }
     thp.mopts = value; toast(dv.checked ? 'גיל התפתחותי הופעל' : 'גיל התפתחותי כובה');
+  });
+  const fm = body.querySelector('#bk-focusmax'); if(fm) fm.addEventListener('change', async () => {
+    const value = Object.assign({}, thp.mopts || {}, { focus_max:+fm.value });
+    const r = await sbPersonal.from('sched_settings').upsert({ key:'mercury_options', value });
+    if(r.error){ toast('לא נשמר'); return; } thp.mopts = value; toast(`עד ${fm.value} ${+fm.value === 1 ? 'מטרה' : 'מטרות'} במוקד`);
   });
   const fd = body.querySelector('#bk-firstdays'); if(fd) fd.addEventListener('change', async () => {
     const n = Math.max(3, Math.min(60, +fd.value || 14)), value = Object.assign({}, thp.mopts || {}, { first_plan_days:n });

@@ -36,6 +36,7 @@ async function careLoad(){
       (i.data || []).forEach(r => { if(mine.has(r.child_id)) thp.newInc[r.child_id] = (thp.newInc[r.child_id] || 0) + 1; });
       (l.data || []).forEach(r => { thp.lettersWait[r.child_id] = (thp.lettersWait[r.child_id] || 0) + 1; });
       (st.data || []).forEach(r => { thp.stays[r.child_id] = Object.assign({}, thp.stays[r.child_id] || {}, r); });
+      thp.scaleRates = {}; try { const sr = await sbPersonal.from('goal_scale').select('child_id,goal_id,value,rated_on').order('rated_on'); (sr.data || []).forEach(r => { (thp.scaleRates[r.child_id] = thp.scaleRates[r.child_id] || []).push(r); }); } catch(e){}
     }
   } catch(e){}
 }
@@ -48,6 +49,7 @@ function careTodo(c, add){
   if(st.admitted && !row.published_version){ const left = thpDaysTo(st.admitted) + careFirstDays();
     if(left <= 3) add(c.id, 'plan', '⏳', left < 0 ? 'עבר מועד התכנית הראשונה' : 'מועד התכנית הראשונה מתקרב', 2); }
   if(thp.newInc[c.id]) add(c.id, 'events', '⚠️', 'אירועים חדשים מהצוות', 1);
+  if(typeof tpAchievedSuggest === 'function' && tpAchievedSuggest(c.id).length) add(c.id, 'plan', '🎉', 'מטרה נראית מושגת: לסמן?', 2);
   if(thp.lettersWait[c.id]) add(c.id, 'docs', '✉️', 'משפטים לספר מחכים לאישור', 3);
   if(st.exit_date && thpDaysTo(st.exit_date) >= 0 && thpDaysTo(st.exit_date) <= 14) add(c.id, 'stay', '🧳', 'היציאה מתקרבת: כדאי לעבור על ההכנות', 2);
 }
@@ -74,6 +76,7 @@ function careWireCard(box){
 
 // ---- the end of a shift: one screen, every child's focus goals, yes / no / not seen (decision 121)
 function careMarksBannerHtml(){
+  return '';          // (not for now: Guy, the walkthrough Q22. The screen stays, without the way in.)
   if(!thp.v43) return '';
   const h = new Date().getHours(), m = new Date().getMinutes(), end = (h === 14 && m >= 0) || (h === 21 || h === 22) || h === 6;          // (near the end of a shift: a stronger look)
   return `<button type="button" class="btn${end && !thp.markedToday ? '' : ' ghost'} cr-marks-btn" data-cr-marks>✔ סימון סוף משמרת</button>`;
@@ -101,12 +104,13 @@ async function careMarksOpen(){
 function careIncidentOpen(childId){
   const c = roster.find(x => x.id === childId); if(!c) return;
   const goals = ((thp.guidance[childId] || {}).content || { goals:[] }).goals.filter(g => g.focus && g.title);
+  const helpedList = [...goals.flatMap(g => (g.interventions_list || []).map(i => i.name)), ...INC_HELPED];          // (the child's interventions first: Q30)
   const chips = (name, list) => `<div class="pchoice wrap cr-chips" data-grp="${name}">${list.map(x => { const [k, w, e] = Array.isArray(x) ? x : [x, x, '']; return `<button type="button" data-k="${pEsc(k)}">${e ? e + ' ' : ''}${pEsc(w)}</button>`; }).join('')}</div>`;
   const sh = portalSheet(`<h2>אירוע: <span class="ar-keep">${pEsc(displayName(c))}</span></h2><div class="pnote">כמה לחיצות. השעה והמשמרת נרשמות לבד. עוצמה 3 או פגיעה עצמית: המטפל/ת מקבל/ת הודעה מיד.</div>
     <div class="pfield"><span>מה קרה?</span>${chips('kind', INC_KINDS)}</div>
     <div class="pfield"><span>עוצמה</span><div class="pchoice cr-chips" data-grp="intensity"><button type="button" data-k="1">1 קל</button><button type="button" data-k="2">2 בינוני</button><button type="button" data-k="3">3 חמור</button></div></div>
     <div class="pfield"><span>מה היה לפני? (אפשר כמה)</span>${chips('before', INC_BEFORE)}</div>
-    <div class="pfield"><span>מה עזר? (אפשר כמה)</span>${chips('helped', INC_HELPED)}</div>
+    <div class="pfield"><span>מה עזר? (אפשר כמה)</span>${chips('helped', [...new Set(helpedList)])}</div>
     ${goals.length ? `<div class="pfield"><span>קשור למטרה? (רשות)</span>${chips('goal', goals.map(g => [g.id, g.title, '']))}</div>` : ''}
     <label class="pfield">משפט (רשות)<input type="text" id="inc-note" maxlength="300"></label>
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="inc-send">שליחה</button></div>`);
@@ -279,6 +283,7 @@ async function careArchiveHtml(box){
 // ---- the progress graph per goal (decision 122): steps, bricks of the goal's strengths, "yes" marks, the monthly scale; the therapist rates here
 async function careGraphs(id, box){
   if(!box || !thp.v43) return;
+  if(typeof tpSpiralSection === 'function' && await tpSpiralSection(id, box)) return;          // (a plan of the new kind: the spiral of every target, Q23)
   const plan = (thp.plans[id] && (thp.plans[id].published || thp.plans[id].draft)) || { goals:[] }, goals = (plan.goals || []).filter(g => g.title);
   if(!goals.length) return;
   const since = obsWeekStart(Date.now() - 7 * 7 * 864e5), wk = t => Math.min(7, Math.max(0, Math.floor((new Date(t) - since) / (7 * 864e5))));

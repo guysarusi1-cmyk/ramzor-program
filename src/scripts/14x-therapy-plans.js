@@ -20,7 +20,7 @@ const thpLib = kind => (thp.library || []).filter(x => x.kind === kind && x.acti
 function planGuidanceHtml(g){
   if(!g || !g.content) return '';
   const c = g.content, goals = c.goals || [], focus = goals.filter(x => x.focus), rest = goals.filter(x => !x.focus);
-  const goalHtml = x => `<div class="th-g"><b class="ar-keep">${pEsc(x.title || '')}</b>${(x.themes || []).length ? `<span class="bk-tags ar-keep">${x.themes.map(t => `<span class="bk-theme">${pEsc(t)}</span>`).join('')}</span>` : ''}
+  const goalHtml = x => typeof tpIsV2 === 'function' && tpIsV2(x) ? `<div class="th-g">${tpStaffGoalHtml(g.child_id, x, true)}</div>` : `<div class="th-g"><b class="ar-keep">${pEsc(x.title || '')}</b>${(x.themes || []).length ? `<span class="bk-tags ar-keep">${x.themes.map(t => `<span class="bk-theme">${pEsc(t)}</span>`).join('')}</span>` : ''}
       ${x.interventions ? `<div class="th-g-row"><span>מה עושים:</span> <em class="ar-keep">${pEsc(x.interventions)}</em></div>` : ''}
       ${x.sentences ? `<div class="th-g-row"><span>מה אומרים:</span> <em class="ar-keep">${pEsc(x.sentences)}</em></div>` : ''}
       ${x.why_staff ? `<div class="th-g-row"><span>למה זה חשוב:</span> <em class="ar-keep">${pEsc(x.why_staff)}</em></div>` : ''}
@@ -131,14 +131,22 @@ function planOpenEditor(id, tab){
   body.querySelector('#pe-back').addEventListener('click', () => { thp.editing = null; thp.wtab = null; thpRender(); });
   body.querySelectorAll('[data-ws-tab]').forEach(b => b.addEventListener('click', () => planOpenEditor(id, b.dataset.wsTab)));
   const wb = body.querySelector('#th-ws-body');
-  if(thp.wtab === 'plan'){ wb.innerHTML = `<div id="pe-video">${typeof thpVideoPanelHtml === 'function' ? thpVideoPanelHtml(id) : ''}</div>${planEditorHtml(id)}`; planWireEditor(id, wb.querySelector('.th-editor'));
-    if(typeof thpVideoWire === 'function') thpVideoWire(wb.querySelector('#pe-video'), id, () => planOpenEditor(id, 'plan')); }
+  if(thp.wtab === 'plan'){ wb.innerHTML = planChildSummaryHtml(id); const fb = wb.querySelector('#pe-full'); if(fb) fb.addEventListener('click', () => tpOpenPlan(id)); }          // (only a summary here; the whole plan in "תכניות טיפוליות": the walkthrough, note 6)
   else if(thp.wtab === 'obs'){ wb.innerHTML = '<div id="pe-obs"></div>'; obsSection(id, wb.querySelector('#pe-obs')).then(() => { if(thp.unseen) thp.unseen[id] = 0; }); }
-  else if(thp.wtab === 'track'){ wb.innerHTML = '<div id="pe-track"></div>'; const tb = wb.querySelector('#pe-track'); trackSection(id, tb).then(() => careGraphs(id, tb)); }
+  else if(thp.wtab === 'track'){ wb.innerHTML = '<div id="pe-track"><div class="pnote">טוען...</div></div>'; const tb = wb.querySelector('#pe-track'); trackSection(id, tb).then(() => careGraphs(id, tb)); }
   else if(['events', 'family', 'stay', 'docs'].includes(thp.wtab)){ wb.innerHTML = '<div id="pe-care"><div class="pnote">טוען...</div></div>'; const cb = wb.querySelector('#pe-care');
     ({ events:careEventsSection, family:careFamilySection, stay:careStaySection, docs:careDocsSection })[thp.wtab](id, cb); }
   else if(thp.wtab === 'journey'){ wb.innerHTML = '<div id="pe-journey"></div>'; const jb = wb.querySelector('#pe-journey'), draw = async () => { jb.innerHTML = await journeyAdminHtml(id); journeyWireAdmin(jb, id, draw); }; draw(); }
   else { wb.innerHTML = '<div id="pe-temple" class="th-temple"></div>'; planTemple(id, wb.querySelector('#pe-temple')); }
+}
+// the child's workspace, tab "התוכנית": the goal in focus and its targets and interventions, and a button to the whole plan
+function planChildSummaryHtml(id){
+  const row = thp.plans[id] || {}, d = row.draft || row.published || {}, focus = (d.goals || []).filter(g => g.title && (g.status ? g.status === 'focus' : g.focus));
+  return `<div class="tp-child-sum">${focus.length ? focus.map(g => `<div class="tp-cs-goal"><span class="tp-lbl">במוקד</span><b>${pEsc(g.title)}</b>
+      ${(g.targets_list || []).length ? g.targets_list.map(t => `<div>🎯 ${pEsc(t.text)}${t.now ? ` <em class="tp-now">${t.now}${t.target ? ' ← ' + t.target : ''}</em>` : ''}</div>`).join('') : (g.targets ? `<div>🎯 ${pEsc(g.targets)}</div>` : '')}
+      ${(g.interventions_list || []).length ? `<div class="tp-cs-ints">${g.interventions_list.map(i => `<span class="th-chip">${pEsc(i.name)}</span>`).join('')}</div>` : ''}</div>`).join('')
+    : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>${row.published_version || row.draft ? 'אין כרגע מטרה במוקד' : 'עוד אין תכנית'}</b></div>`}
+    <button type="button" class="btn" id="pe-full">לתכנית המלאה</button></div>`;
 }
 function planWireEditor(id, root){
   const goalsBox = root.querySelector('#pe-goals');
