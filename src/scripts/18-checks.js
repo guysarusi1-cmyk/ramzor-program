@@ -2177,7 +2177,7 @@
           { const page = document.querySelector('#view-therapy .tp-page');
             check('plans: "תכניות טיפוליות" opens the whole plan: the goal in focus open, the others folded, ONE main button (walkthrough 9, 22)', thp.tab === 'plans' && !!page && page.querySelectorAll('.tp-goal.st-focus').length === 1 && page.querySelectorAll('.tp-main').length === 1 && /מטרה 1 – ויסות רגשי/.test(page.textContent), page ? page.textContent.slice(0, 120) : 'no page');
             const nb = document.querySelector('#tp-new') || document.querySelector('#tp-new2'); if(nb){ nb.click(); await sleep(250); }
-            check('plans: "+ מטרה חדשה" opens the builder on a full page, asking how to start: theme / method / search (Q1, Q3)', !!document.querySelector('#view-therapy .tp-builder') && document.querySelectorAll('#view-therapy [data-entry]').length === 3 && document.querySelectorAll('#view-therapy .tp-steps li').length === 7, '');
+            check('plans: "+ מטרה חדשה" opens the builder on a full page, asking how to start: theme / method / search (Q1, Q3)', !!document.querySelector('#view-therapy .tp-builder') && document.querySelectorAll('#view-therapy [data-entry]').length === 3 && document.querySelectorAll('#view-therapy .tp-steps li').length === 8, '');
             const out = document.querySelector('#tb-out'); if(out){ out.click(); await sleep(300); } }
           { const g = tpSync({ id:'gx', title:'בדיקה', status:'focus', targets_list:[{ id:'t1', text:'מקצועי', staff:'פשוט', scale:['1', '2', '3', '4', '5'], now:2, target:4 }],
               interventions_list:[{ id:'i1', name:'נשימה', what:'נושמים יחד', approach:'ARC', sentences:['אחת', 'שתיים', 'שלוש'] }] });
@@ -2189,7 +2189,7 @@
           // a plain instructor: the guidance, without the thinking of the therapist
           if(!(await enter('instructor'))){ check('plans: the instructor signs in', false, 'no'); return; }
           const gd = await sbPersonal.rpc('plan_guidance'), g1 = (gd.data || []).find(r => r.child_id === 'c1'), rawI = await sbPersonal.from('child_plans').select('child_id');
-          check('plans: the staff gets the published plan as guidance, without the thinking of the therapist', !gd.error && !!g1 && g1.content.goals.length === 2 && !g1.content.goals.some(x => 'seen' in x || 'why' in x || 'needs' in x) && !JSON.stringify(g1.content).includes('סוד'), JSON.stringify(g1 && g1.content).slice(0, 160));
+          check('plans: the staff gets the published plan as guidance, only the goals in focus (walkthrough 21), without the thinking of the therapist', !gd.error && !!g1 && g1.content.goals.length === 1 && g1.content.goals[0].id === 'gA' && !g1.content.goals.some(x => 'seen' in x || 'why' in x || 'needs' in x) && !JSON.stringify(g1.content).includes('סוד'), JSON.stringify(g1 && g1.content).slice(0, 160));
           check('plans: an instructor cannot read the plans themselves', !rawI.error && !(rawI.data || []).length, JSON.stringify(rawI.data));
           const nt = await sbPersonal.from('notices').select('text,kind').eq('to_staff', srv.me).eq('kind', 'plan').order('created_at', { ascending:false }).limit(1);
           check('plans: the staff is told that a plan was published', !!(nt.data && nt.data[0] && /תוכנית/.test(nt.data[0].text)), JSON.stringify(nt.data));

@@ -189,7 +189,7 @@ function tpEditGoal(id, gi, after){
 }
 
 // ---- the builder: one goal, step by step (Q1-20). The state is saved in the draft ("builder") after every step.
-const TP_STEPS = [['start', 'התחלה'], ['pick', 'בחירה'], ['goal', 'מטרה'], ['targets', 'יעדים'], ['ints', 'התערבות'], ['sents', 'משפטים'], ['sum', 'סיכום'], ['preview', 'לצוות']];
+const TP_STEPS = [['start', 'התחלה'], ['pick', 'בחירה'], ['goal', 'מטרה'], ['targets', 'יעדים'], ['ints', 'התערבות'], ['sents', 'משפטים'], ['journey', 'מסע ומקדש'], ['sum', 'סיכום'], ['preview', 'לצוות']];
 function tpStateFromGoal(id, g){
   const x = (thp.library || []).find(y => y.id === g.library_id), age = (g.bank && g.bank.age) || tpBankAge(id);
   return { step:'targets', editIndex:(tpDraftOf(id).goals || []).findIndex(y => y.id === g.id), goalId:g.id, libId:g.library_id || null, title:g.title, theme:g.theme || '', age,
@@ -220,7 +220,8 @@ async function tpBuilder(id, state){
     }
     else if(s.step === 'goal'){
       const l = tpGoalsV2().filter(x => s.entry === 'theme' ? bankThemesOf(x).includes(s.theme) : s.entry === 'method' ? (x.methods || []).includes(s.method) : `${x.title} ${x.description || ''} ${JSON.stringify(x.content)}`.includes(s.q || ''));
-      inner = `<h2>איזו מטרה?</h2><div class="tp-names">${l.map(x => `<button type="button" class="tp-name${s.libId === x.id ? ' on' : ''}" data-goal="${x.id}">${pEsc(G(x.title))}${x.draft ? ' <small class="bk-draft">טיוטה</small>' : ''}</button>`).join('') || '<div class="pnote">אין מטרות כאן עדיין.</div>'}</div>
+      inner = `<h2>איזו מטרה?</h2><div class="tp-names">${l.map(x => `<button type="button" class="tp-name${s.libId === x.id ? ' on' : ''}" data-goal="${x.id}">${pEsc(G(x.title))}${x.draft ? ' <small class="bk-draft" title="נוסח שמנהל המערכת עוד לא בדק">טיוטה</small>' : ''}</button>`).join('') || '<div class="pnote">אין מטרות כאן עדיין.</div>'}</div>
+        ${l.some(x => x.draft) ? '<div class="pnote">"טיוטה" = נוסח שעוד לא נבדק ואושר. אפשר להשתמש בו ולערוך.</div>' : ''}
         <details class="pfold"><summary><span>משהו משלי</span></summary><div class="pfold-body"><input type="text" id="tb-own-title" maxlength="80" placeholder="שם המטרה" value="${s.libId ? '' : pEsc(s.title || '')}"><button type="button" class="btn small" id="tb-own-go">המשך עם המטרה שלי</button></div></details>${nav(false)}`;
     }
     else if(s.step === 'targets'){
@@ -252,18 +253,23 @@ async function tpBuilder(id, state){
           ${(x.sentences || []).filter(t => !(x.sentencesAll || []).map(G).includes(t)).map(t => `<span class="th-chip on">💬 ${pEsc(t)}</span>`).join('')}
           <div class="th-add-row"><input type="text" data-own-sent="${pEsc(x.id)}" placeholder="משפט משלי"><button type="button" class="btn ghost small" data-own-sent-add="${pEsc(x.id)}">הוספה</button></div></div>`).join('')}${nav(true)}`;
     }
-    else if(s.step === 'sum'){
-      const x = lib(), sug = ((x && x.content.strengths) || []).slice(0, 5), focusN = tpDraftOf(id).goals.filter(g => tpStatusOf(g) === 'focus' && g.id !== s.goalId).length, planets = (thp.planets || []).filter(p => p.active);
-      if(!s.status) s.status = focusN < tpFocusMax() ? 'focus' : 'waiting';
+    else if(s.step === 'journey'){          // (its own step: Guy, after the simplicity checker)
+      const x = lib(), sug = ((x && x.content.strengths) || []).slice(0, 5), planets = (thp.planets || []).filter(p => p.active);
       if(s.planet === '' && s.planet !== null){ const p = bankPlanetFor({ title:s.title, skills:(x && x.content.skills) || [] }); if(p) s.planet = p; }
-      inner = `<h2>סיכום</h2><div class="tp-sum"><div><span class="tp-lbl">מטרה</span><b>${pEsc(G(s.title))}</b></div>
-        <div><span class="tp-lbl">יעדים</span>${s.targets.map(t => `<div>• ${pEsc(G(t.text))}${t.now ? ` <em class="tp-now">${t.now}${t.target ? ' ← ' + t.target : ''}</em>` : ''}</div>`).join('')}</div>
-        <div><span class="tp-lbl">דרכי התערבות</span>${s.ints.map(x2 => `<div>• ${pEsc(x2.name)} <em class="tp-appr">${pEsc(x2.approach || '')}</em></div>`).join('')}</div>
-        <div><span class="tp-lbl">משפטים</span>${s.ints.flatMap(x2 => x2.sentences || []).map(t => `<div>💬 ${pEsc(t)}</div>`).join('') || '<div class="pnote">לא נבחרו משפטים.</div>'}</div></div>
+      inner = `<h2>המסע בחלל והמקדש</h2>
         <div class="pfield"><span>חוזקות למקדש (עד 3) <small>המדריכים יציעו אותן לילד/ה כשבונים לבנה במקדש</small></span><div class="tp-chips">${[...new Set([...sug, ...s.strengths])].map(t => `<button type="button" class="th-chip${s.strengths.includes(t) ? ' on' : ''}" data-str="${pEsc(t)}">${pEsc(t)}</button>`).join('')}</div>
           <div class="th-add-row"><input type="text" id="tb-str" maxlength="20" placeholder="חוזקה משלי"><button type="button" class="btn ghost small" id="tb-str-add">הוספה</button></div></div>
         <label class="pfield">כוכב במסע <small>הכוכב שהילד/ה טס/ה אליו במסע בחלל, לפי המיומנות שמתרגלים</small><select id="tb-planet"><option value="">בלי כוכב בינתיים</option>${planets.map(p => `<option value="${pEsc(p.id)}"${s.planet === p.id ? ' selected' : ''}>${pEsc(p.name)} · ${pEsc(p.skill)}</option>`).join('')}</select></label>
-        <div class="pfield"><span>מצב המטרה</span><div class="pchoice">${[['focus', 'במוקד'], ['waiting', 'בהמתנה']].map(([k, w]) => `<button type="button" class="${s.status === k ? 'on' : ''}" data-status="${k}">${w}</button>`).join('')}</div>${s.status === 'focus' && focusN >= tpFocusMax() ? '<div class="pnote">יש כבר מטרה במוקד: היא תעבור להמתנה.</div>' : ''}</div>
+        ${nav(true)}`;
+    }
+    else if(s.step === 'sum'){
+      const focusN = tpDraftOf(id).goals.filter(g => tpStatusOf(g) === 'focus' && g.id !== s.goalId).length;
+      if(!s.status) s.status = focusN < tpFocusMax() ? 'focus' : 'waiting';          // (decided by itself; changed on the plan page)
+      inner = `<h2>סיכום</h2><div class="tp-sum"><div><span class="tp-lbl">מטרה</span><b>${pEsc(G(s.title))}</b> <em class="tp-now">${s.status === 'focus' ? 'תיכנס למוקד' : 'תחכה בהמתנה'}</em></div>
+        <div><span class="tp-lbl">יעדים</span>${s.targets.map(t => `<div>• ${pEsc(G(t.text))}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · יעד ' + t.target : ''}</em>` : ''}</div>`).join('')}</div>
+        <div><span class="tp-lbl">דרכי התערבות</span>${s.ints.map(x2 => `<div>• ${pEsc(x2.name)} <em class="tp-appr">${pEsc(x2.approach || '')}</em></div>`).join('')}</div>
+        <div><span class="tp-lbl">משפטים</span>${s.ints.flatMap(x2 => x2.sentences || []).map(t => `<div>💬 ${pEsc(t)}</div>`).join('') || '<div class="pnote">לא נבחרו משפטים.</div>'}</div>
+        <div><span class="tp-lbl">מסע ומקדש</span>${s.strengths.map(t => `<span class="th-chip">${pEsc(t)}</span>`).join(' ') || '<span class="pnote">בלי חוזקות</span>'}${s.planet ? ` · 🪐 ${pEsc(((thp.planets || []).find(p => p.id === s.planet) || {}).name || '')}` : ''}</div></div>
         ${nav(true, 'לתצוגה של הצוות ←')}`;
     }
     else {          // preview: exactly what the staff sees
@@ -271,7 +277,7 @@ async function tpBuilder(id, state){
       inner = `<h2>כך הצוות יראה את זה</h2><div class="tp-preview th-kcard">${tpStaffGoalHtml(id, g, false)}</div>${nav(true, s.editIndex >= 0 ? 'שמירת השינויים' : 'הוספה לתכנית')}`;
     }
     body.innerHTML = `<div class="tp-builder"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tb-out">שמירה ויציאה</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : '')}</h2></div><span></span></div>
-      ${i0 > 0 ? `<div class="tp-stepno">שלב ${i0} מתוך ${TP_STEPS.length - 1}: ${TP_STEPS[i0][1]}</div>` : ''}<ol class="tp-steps">${TP_STEPS.slice(1).map(([k, w], j) => `<li class="${j + 1 < i0 ? 'done' : j + 1 === i0 ? 'now' : ''}">${w}</li>`).join('')}</ol>${inner}</div>`;
+      <div class="tp-stepno">${i0 > 0 ? `שלב ${i0} מתוך ${TP_STEPS.length - 1}: ${TP_STEPS[i0][1]}` : `${TP_STEPS.length - 1} שלבים קצרים, ואפשר לעצור ולחזור בכל רגע`}</div><ol class="tp-steps">${TP_STEPS.slice(1).map(([k, w], j) => `<li class="${j + 1 < i0 ? 'done' : j + 1 === i0 ? 'now' : ''}">${w}</li>`).join('')}</ol>${inner}</div>`;
     wire();
   }
   function wire(){
@@ -403,9 +409,9 @@ async function tpSpiralSection(id, box){
   const D = await tpSpiralData(id, since), last = {};
   D.scale.forEach(x => { last[x.goal_id] = x; });
   const sec = document.createElement('div'); sec.className = 'cr-graphs';
-  sec.innerHTML = `<h3 class="psec">איפה ${pEsc(careName(id))} עכשיו</h3><div class="pnote">ההתקדמות לא בקו ישר. כל נקודה היא יום; הנקודה הגדולה היא היום. הספירלה נבנית מצעדים במסע, מתצפיות, מאירועים, מ👍/👎 של הצוות ומהדירוג שלך. נתונים, לא מסקנה.</div>
+  sec.innerHTML = `<h3 class="psec">איפה ${pEsc(careName(id))} עכשיו</h3><details class="pfold"><summary><span>מה זו הספירלה?</span></summary><div class="pfold-body pnote">ההתקדמות לא בקו ישר. כל נקודה היא יום; הנקודה הגדולה היא היום. הספירלה נבנית מצעדים במסע, מתצפיות, מאירועים, מ👍/👎 של הצוות ומהדירוג שלך. נתונים, לא מסקנה.</div></details>
     ${goals.map(g => `<details class="tp-goal" open><summary><b>${pEsc(g.title)}</b> <small>${pEsc(TP_STATUS[tpStatusOf(g)])}</small></summary><div class="tp-goal-body">${g.targets_list.map(t => { const lv = tpSpiralLevels(g, t, D, since, days), r = last[g.id + ':' + t.id];
-      return `<details class="tp-target"><summary><span>${pEsc(t.text)}</span><em class="tp-now">היום: ${lv[lv.length - 1].lv.toFixed(1)}${t.target ? ' · יעד ' + t.target : ''}</em></summary><div class="tp-t-body tp-sp-row">${tpSpiralSvg(t, lv)}
+      return `<details class="tp-target"><summary><span>${pEsc(t.text)}</span><em class="tp-now">עכשיו ${Math.round(lv[lv.length - 1].lv)}${t.target ? ' · יעד ' + t.target : ''}</em></summary><div class="tp-t-body tp-sp-row">${tpSpiralSvg(t, lv)}
         <div class="tp-sp-side"><ol class="tp-stations">${(t.scale || []).map((s2, j) => `<li class="${t.target === j + 1 ? 'goal' : ''}">${pEsc(s2)}</li>`).join('')}</ol>
           <label>הדירוג של החודש <select data-sp-rate="${pEsc(g.id + ':' + t.id)}"><option value="">—</option>${[1, 2, 3, 4, 5].map(k => `<option${r && r.rated_on.slice(0, 7) === careToday().slice(0, 7) && r.value === k ? ' selected' : ''}>${k}</option>`).join('')}</select></label></div></div></details>`; }).join('')}</div></details>`).join('')}`;
   box.appendChild(sec);

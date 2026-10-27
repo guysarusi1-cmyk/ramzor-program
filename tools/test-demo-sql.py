@@ -28,7 +28,8 @@ out = ["-- TEST project only (Guy, the walkthrough Q40, Q48): the made-up plans 
        "  perform set_config('mercury.publishing', 'on', true);"]
 for cid, plan in [('c6', p6), ('c7', p7)]:
     j = q(json.dumps(plan, ensure_ascii=False))
-    out.append("  insert into public.child_plans (child_id, draft, published, published_version, published_at, published_by, review_date) values (%s, %s::jsonb, %s::jsonb, 1, now() - interval '30 days', th, current_date + 60);" % (q(cid), j, j))
+    out.append("  insert into public.child_plans (child_id, draft, review_date) values (%s, %s::jsonb, current_date + 60);" % (q(cid), j))          # (an insert is never published: plan_draft_stamp)
+    out.append("  update public.child_plans set published = draft, published_version = 1, published_at = now() - interval '30 days', published_by = th where child_id = %s;" % q(cid))
     out.append("  insert into public.child_plan_versions (child_id, version, content, published_by, full_update) values (%s, 1, %s::jsonb, th, true);" % (q(cid), j))
     out.append("  insert into public.plan_videos (child_id, version, status, decided_at, decided_by) values (%s, 1, 'approved', now() - interval '29 days', th);" % q(cid))
     g = plan['goals'][0]

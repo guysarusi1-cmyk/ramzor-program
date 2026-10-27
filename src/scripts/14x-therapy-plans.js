@@ -125,8 +125,7 @@ function planOpenEditor(id, tab){
   const c = roster.find(x => x.id === id), unseen = (thp.unseen && thp.unseen[id]) || 0;
   body.innerHTML = `<div class="th-ws" data-ws="${pEsc(id)}">
     <div class="th-ed-head"><button type="button" class="btn ghost small" id="pe-back">→ חזרה</button><div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div><span class="th-status">${pEsc(planStatus(id))}</span></div>
-    <nav class="portal-tabs th-ws-tabs" role="tablist">${PLAN_WS_TABS.filter(([k]) => thp.v43 || !['events', 'family', 'stay', 'docs'].includes(k)).map(([k, w]) => { const n = k === 'obs' ? unseen : k === 'events' ? ((thp.newInc || {})[id] || 0) : 0;
-      return `<button type="button" role="tab" data-ws-tab="${k}" class="${k === thp.wtab ? 'active' : ''}">${w}${n ? ` <span class="pcount">${n}</span>` : ''}</button>`; }).join('')}</nav>
+    ${thpTabsRow(PLAN_WS_TABS.filter(([k]) => thp.v43 || !['events', 'family', 'stay', 'docs'].includes(k)).map(([k, w]) => [k, w, k === 'obs' ? unseen : k === 'events' ? ((thp.newInc || {})[id] || 0) : 0]), thp.wtab, 'data-ws-tab', 'th-ws-tabs')}
     <div id="th-ws-body"></div></div>`;
   body.querySelector('#pe-back').addEventListener('click', () => { thp.editing = null; thp.wtab = null; thpRender(); });
   body.querySelectorAll('[data-ws-tab]').forEach(b => b.addEventListener('click', () => planOpenEditor(id, b.dataset.wsTab)));
@@ -143,7 +142,7 @@ function planOpenEditor(id, tab){
 function planChildSummaryHtml(id){
   const row = thp.plans[id] || {}, d = row.draft || row.published || {}, focus = (d.goals || []).filter(g => g.title && (g.status ? g.status === 'focus' : g.focus));
   return `<div class="tp-child-sum">${focus.length ? focus.map(g => `<div class="tp-cs-goal"><span class="tp-lbl">במוקד</span><b>${pEsc(g.title)}</b>
-      ${(g.targets_list || []).length ? g.targets_list.map(t => `<div>🎯 ${pEsc(t.text)}${t.now ? ` <em class="tp-now">${t.now}${t.target ? ' ← ' + t.target : ''}</em>` : ''}</div>`).join('') : (g.targets ? `<div>🎯 ${pEsc(g.targets)}</div>` : '')}
+      ${(g.targets_list || []).length ? g.targets_list.map(t => `<div>🎯 ${pEsc(t.text)}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · יעד ' + t.target : ''}</em>` : ''}</div>`).join('') : (g.targets ? `<div>🎯 ${pEsc(g.targets)}</div>` : '')}
       ${(g.interventions_list || []).length ? `<div class="tp-cs-ints">${g.interventions_list.map(i => `<span class="th-chip">${pEsc(i.name)}</span>`).join('')}</div>` : ''}</div>`).join('')
     : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>${row.published_version || row.draft ? 'אין כרגע מטרה במוקד' : 'עוד אין תכנית'}</b></div>`}
     <button type="button" class="btn" id="pe-full">לתכנית המלאה</button></div>`;

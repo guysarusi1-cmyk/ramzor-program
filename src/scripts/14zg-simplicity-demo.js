@@ -13,7 +13,7 @@ const SIMPLE_GOAL = { id:'demo-goal', kind:'goal', scope:'mercury', active:true,
         { id:'i2', name:'מד הרגשות', what:'מד מ-1 עד 5, ומה עושים בכל מדרגה', why:'מדידה הופכת רגש למשהו שאפשר לטפל בו', freq:'פעמיים ביום', approach:'ARC', targets:['t2', 't3'], sentences:['כמה חזק זה עכשיו?', 'במדרגה 3 לוקחים הפסקה'] },
         { id:'i3', name:'נשימת בלון', what:'שואפים כמו מנפחים בלון, ונושפים לאט', why:'נשימה איטית מורידה עוררות', freq:'פעם ביום', approach:'TF-CBT', targets:['t1'], sentences:['בוא/י ננפח את הבלון', 'עוד נשימה אחת'] }] } } } };
 const SIMPLE_SCREENS = [['tasks', 'משימות'], ['list', 'תכניות טיפוליות: הרשימה'], ['plan', 'דף תכנית'], ['b-start', 'בנייה: התחלה'], ['b-pick', 'בנייה: תמה'], ['b-goal', 'בנייה: מטרה'], ['b-targets', 'בנייה: יעדים'],
-  ['b-ints', 'בנייה: התערבות'], ['b-sents', 'בנייה: משפטים'], ['b-sum', 'בנייה: סיכום'], ['b-preview', 'בנייה: לצוות'], ['child', 'הילד: התוכנית'], ['spiral', 'הספירלה'], ['staff', 'כרטיס הילד אצל המדריך']];
+  ['b-ints', 'בנייה: התערבות'], ['b-sents', 'בנייה: משפטים'], ['b-journey', 'בנייה: מסע ומקדש'], ['b-sum', 'בנייה: סיכום'], ['b-preview', 'בנייה: לצוות'], ['child', 'הילד: התוכנית'], ['spiral', 'הספירלה'], ['staff', 'כרטיס הילד אצל המדריך']];
 function simplicityOn(){ return typeof APP_ENV !== 'undefined' && APP_ENV === 'test' && location.hash.indexOf('#simplicity') === 0; }
 async function simplicityStart(){
   roster.length = 0; roster.push({ id:'d1', firstName:'נועם', lastInitial:'כ', age:'7' }, { id:'d2', firstName:'מאיה', lastInitial:'ל', age:'4' });
@@ -44,12 +44,11 @@ function simplicityShow(screen){
   else if(screen === 'b-targets') b('targets', Object.assign({ targets:t2.slice(0, 1) }, withGoal));
   else if(screen === 'b-ints') b('ints', Object.assign({ targets:t2 }, withGoal));
   else if(screen === 'b-sents') b('sents', Object.assign({ targets:t2, ints:i2 }, withGoal));
+  else if(screen === 'b-journey') b('journey', Object.assign({ targets:t2, ints:i2 }, withGoal));
   else if(screen === 'b-sum') b('sum', Object.assign({ targets:t2, ints:i2, strengths:['אומץ'] }, withGoal));
   else if(screen === 'b-preview') b('preview', Object.assign({ targets:t2, ints:i2, strengths:['אומץ'], status:'focus' }, withGoal));
   else if(screen === 'child'){ thp.tab = 'mine'; thpRender(); planOpenEditor('d1', 'plan'); }
-  else if(screen === 'spiral'){ thp.tab = 'mine'; thpRender(); planOpenEditor('d1', 'track');
-    const t = Object.assign({}, T.targets[0], { now:2, target:4 }), lv = Array.from({ length:40 }, (_, k) => ({ lv:Math.max(1, Math.min(5, 2 + k / 18 + Math.sin(k / 3) * 0.6)), any:k % 2 === 0 }));
-    setTimeout(() => { const box = document.querySelector('#pe-track'); if(box) box.innerHTML = `<h3 class="psec">הספירלה (דוגמה)</h3><div class="tp-sp-row">${tpSpiralSvg(t, lv)}<ol class="tp-stations">${t.scale.map(s => `<li>${pEsc(s)}</li>`).join('')}</ol></div>`; }, 300); }
+  else if(screen === 'spiral'){ thp.tab = 'mine'; thpRender(); planOpenEditor('d1', 'track'); }          // (the real tracking screen; here without data, only today's dot)
   else if(screen === 'staff'){ thp.tab = 'kids'; thpRender(); }
   let bar = document.getElementById('simplicity-bar');
   if(!bar){ bar = document.createElement('nav'); bar.id = 'simplicity-bar'; document.body.appendChild(bar); }

@@ -93,6 +93,14 @@ function thpTabs(){
   }
   return t;
 }
+// a row of tabs: 4 visible, the rest under "עוד" (Guy, after the simplicity checker: tabs must fit a phone). tabs = [[key, word, badge]]
+function thpTabsRow(tabs, active, attr, cls){
+  const btn = ([k, w, n]) => `<button type="button" role="tab" ${attr}="${k}" class="${k === active ? 'active' : ''}">${w}${n ? ` <span class="pcount">${n}</span>` : ''}</button>`;
+  if(tabs.length <= 5) return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist">${tabs.map(btn).join('')}</nav>`;
+  const rest = tabs.slice(4), hidden = rest.find(t => t[0] === active), n = rest.reduce((s, t) => s + (+t[2] || 0), 0);
+  return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist">${tabs.slice(0, 4).map(btn).join('')}
+    <details class="tab-more"><summary class="${hidden ? 'active' : ''}"><span>${hidden ? pEsc(hidden[1]) : 'עוד'}</span> <span aria-hidden="true">▾</span>${n ? ` <span class="pcount">${n}</span>` : ''}</summary><div class="tab-more-list">${rest.map(btn).join('')}</div></details></nav>`;
+}
 // what the person sees inside: a therapist (or the admin) the therapist's tabs; everybody else the staff's
 async function showTherapyPortal(){
   thp.mode = canTherapistPortal() ? 'therapist' : 'staff';
@@ -210,7 +218,7 @@ function thpRender(){
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}" data-thmode="${thp.mode}">
       <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1><span></span></div>
       <div class="portal-hello">שלום ${pEsc(me.first || '')}</div>
-      ${tabs.length > 1 ? `<nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-th-tab="${t[0]}" class="${t[0] === thp.tab ? 'active' : ''}">${t[1]}${t[0] === 'todo' && todoN ? ` <span class="pcount">${todoN}</span>` : ''}</button>`).join('')}</nav>` : ''}
+      ${tabs.length > 1 ? thpTabsRow(tabs.map(t => [t[0], t[1], t[0] === 'todo' ? todoN : 0]), thp.tab, 'data-th-tab') : ''}
       <div id="therapy-body">${inner}</div>
     </div>`;
   view.querySelector('#therapy-home').addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); });

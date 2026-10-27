@@ -57,7 +57,7 @@ function careTodo(c, add){
 // ---- the staff's card: the intake until there is a plan, the next family meeting, the encouraging sentence, the incident button
 function careCardHtml(c){
   if(!thp.v43) return '';
-  const st = thp.stays[c.id] || {}, g = thp.guidance[c.id], fn = thp.famNext[c.id], out = [];
+  const st = (thp.stays || {})[c.id] || {}, g = (thp.guidance || {})[c.id], fn = (thp.famNext || {})[c.id], out = [];
   if(!g && (st.avoid || st.calm || (st.tasks || []).length)) out.push(`<div class="cr-intake"><b>בימים הראשונים</b>${st.avoid ? `<div><span>ממה להימנע:</span> <em class="ar-keep">${pEsc(st.avoid)}</em></div>` : ''}${st.calm ? `<div><span>מה מרגיע:</span> <em class="ar-keep">${pEsc(st.calm)}</em></div>` : ''}
     ${(st.tasks || []).length ? `<div class="cr-tasks">${st.tasks.map((t, i) => `<label class="ar-keep"><input type="checkbox" data-cr-task="${pEsc(c.id)}" data-i="${i}"${t.done ? ' checked' : ''}> ${pEsc(t.t)}</label>`).join('')}</div>` : ''}</div>`);
   if(fn) out.push(`<div class="cr-fam"><span aria-hidden="true">👨‍👩‍👧</span> <span>מפגש עם המשפחה:</span> <b class="ar-keep">${pEsc(dayLabel(fn.next_at))}</b>${fn.next_prep ? ` · <em class="ar-keep">${pEsc(fn.next_prep)}</em>` : ''}</div>`);
