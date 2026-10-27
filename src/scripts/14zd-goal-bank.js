@@ -49,6 +49,13 @@ function bankGender(text, gender){
 }
 const bankWording = (x, age) => { const a = (x.content && x.content.ages) || {}; return a[age] || a['5-8'] || a[Object.keys(a)[0]] || null; };
 const bankSig = g => { const s = [g.title, g.targets, g.interventions, g.sentences, g.why_staff, g.seen, g.needs, g.why].join('|'); let h = 0; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); };
+// the planet whose skill has the most words of the goal's title and skills (none if nothing matches)
+function bankPlanetFor(g){
+  const words = [g.title, ...(g.skills || [])].join(' ').split(/[\s,.]+/).filter(w => w.length > 2);
+  let best = null, score = 0;
+  (thp.planets || []).filter(p => p.active).forEach(p => { const s = `${p.skill || ''} ${p.name || ''}`, n = words.filter(w => s.includes(w)).length; if(n > score){ score = n; best = p.id; } });
+  return best;
+}
 // a goal of the plan from a goal of the bank, in the child's age and gender -> { goal, avoid }
 function bankGoalFrom(x, age, gender){
   const c = x.content || {}, w = bankWording(x, age) || {}, G = t => bankGender(t || '', gender);
@@ -57,6 +64,7 @@ function bankGoalFrom(x, age, gender){
     sentences:G((w.sentences || []).join('\n')), seen:G(w.seen), needs:G(w.needs), why:G(w.why), why_staff:G(w.why_staff),
     strengths:(c.strengths || []).slice(0, 4), skills:(c.skills || []).slice(0, 2), review_months:c.review || 3, methods:x.methods || [],
     scale:(c.scale || []).length ? { anchors:c.scale.map(G), now:null, target:null } : null });
+  g.planet_id = bankPlanetFor(g);          // (a planet for now, by the goal's skill: Mercury 120; the final one in the design meeting)
   const ages = c.ages || {}, used = ages[age] ? age : ages['5-8'] ? '5-8' : Object.keys(ages)[0] || age;
   g.bank = { id:x.id, age:used, method:w.method || '', edited:false };
   g.bank.sig = bankSig(g);
@@ -149,7 +157,7 @@ function bankReplaceAsk(){
 const bankJoin = (a, b) => [String(a || '').trim(), String(b || '').trim()].filter(Boolean).join('\n');
 // merge a bank goal into a goal of the plan ('add': what was written stays first)
 function bankMerge(old, g, how){
-  if(how !== 'add') return Object.assign({}, g, { id:old.id, focus:old.focus, planet_id:old.planet_id });
+  if(how !== 'add') return Object.assign({}, g, { id:old.id, focus:old.focus, planet_id:old.planet_id || g.planet_id });
   const m = Object.assign({}, old);
   ['targets', 'interventions', 'sentences', 'seen', 'needs', 'why', 'why_staff'].forEach(k => { m[k] = bankJoin(old[k], g[k]); });
   m.title = old.title || g.title; m.strengths = [...new Set([...(old.strengths || []), ...(g.strengths || [])])].slice(0, 6);
@@ -273,7 +281,8 @@ function bankLibraryTopHtml(){
   const ms = (thp.library || []).filter(x => x.kind === 'method' && x.active), drafts = bankDrafts().length;
   return `${bankNote()}
     ${bankIsAdmin() ? `<div class="bk-admin"><button type="button" class="btn${drafts ? '' : ' ghost'}" id="bk-review">🔎 בדיקת טיוטות${drafts ? ` (${drafts})` : ''}</button>
-      <label class="th-important"><input type="checkbox" id="bk-devage"${thp.mopts && thp.mopts.dev_age ? ' checked' : ''}> גיל התפתחותי: שדה בתוכנית (למטפלים בלבד), והבנק מסנן לפיו</label></div>` : ''}
+      <label class="th-important"><input type="checkbox" id="bk-devage"${thp.mopts && thp.mopts.dev_age ? ' checked' : ''}> גיל התפתחותי: שדה בתוכנית (למטפלים בלבד), והבנק מסנן לפיו</label>
+      <label class="th-important">תכנית ראשונה תוך <input type="number" id="bk-firstdays" min="3" max="60" value="${+((thp.mopts || {}).first_plan_days) || 14}" style="width:4.5em"> ימים מההגעה</label></div>` : ''}
     <button type="button" class="btn ghost" id="bk-open" style="width:100%">📚 בנק המטרות</button>
     ${ms.length ? `<details class="pfold"><summary><span>שיטות הטיפול</span><span class="pcount">${ms.length}</span></summary><div class="pfold-body">${ms.map(m => `<details class="bk-mcard"><summary><b>${pEsc(m.title)}</b>${m.scope === 'center' ? '<span class="bk-center">המרכז</span>' : ''}${bankDraftTag(m)}</summary><div>${pEsc(m.description || '')}</div></details>`).join('')}</div></details>` : ''}`;
 }
@@ -285,6 +294,11 @@ function bankWireLibrary(body){
     const r = await sbPersonal.from('sched_settings').upsert({ key:'mercury_options', value });
     if(r.error){ dv.checked = !dv.checked; toast('לא נשמר'); return; }
     thp.mopts = value; toast(dv.checked ? 'גיל התפתחותי הופעל' : 'גיל התפתחותי כובה');
+  });
+  const fd = body.querySelector('#bk-firstdays'); if(fd) fd.addEventListener('change', async () => {
+    const n = Math.max(3, Math.min(60, +fd.value || 14)), value = Object.assign({}, thp.mopts || {}, { first_plan_days:n });
+    const r = await sbPersonal.from('sched_settings').upsert({ key:'mercury_options', value });
+    if(r.error){ toast('לא נשמר'); return; } thp.mopts = value; fd.value = n; toast(`תכנית ראשונה תוך ${n} ימים`);
   });
   body.querySelectorAll('[data-lib-edit]').forEach(b => b.addEventListener('click', () => { const x = (thp.library || []).find(y => y.id === b.dataset.libEdit); if(x) bankEdit(x, () => thpRender()); }));
 }

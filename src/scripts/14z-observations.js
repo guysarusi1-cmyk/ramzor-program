@@ -21,10 +21,13 @@ async function obsOpen(childId, kind){          // (kind 'question': "שאלה �
     <div class="pnote">${q ? 'מה תרצו לשאול? התשובה תגיע אליכם בהודעה.' : 'מה ראית? כמה מילים מספיקות.'} מגיע רק לאיש/אשת הטיפול האחראי/ת (ולמנהל המערכת).</div>
     <textarea id="obs-text" class="obs-text" rows="4" maxlength="2000" placeholder="${q ? 'למשל: מה עושים כשהוא מסרב להיכנס למקלחת?' : 'למשל: ביקש עזרה כשנתקע בפאזל, בלי לצעוק'}"></textarea>
     <div class="obs-rec"><button type="button" class="btn ghost" id="obs-rec">🎙️ הקלטה</button><span id="obs-rec-state" class="obs-rec-state"></span><audio id="obs-audio" controls hidden></audio><button type="button" class="btn ghost small" id="obs-rec-x" hidden>מחיקת ההקלטה</button></div>
-    ${goals.length ? `<div class="pfield"><span>קשור למטרה? (רשות)</span><div class="pchoice wrap obs-goals">${goals.map(g => `<button type="button" data-obs-goal="${escapeHtml(g.id)}">${escapeHtml(g.title)}</button>`).join('')}</div></div>` : ''}
+    ${goals.length ? `<div class="pfield"><span>קשור למטרה? (רשות)</span><div class="pchoice wrap obs-goals">${goals.map(g => `<button type="button" data-obs-goal="${escapeHtml(g.id)}">${escapeHtml(g.title)}</button>`).join('')}</div></div>
+      ${q ? '' : '<div class="pfield obs-val" hidden><span>זו הצלחה או קושי?</span><div class="pchoice"><button type="button" data-obs-val="success">🌱 הצלחה</button><button type="button" data-obs-val="difficulty">🌧️ קושי</button></div></div>'}` : ''}
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="obs-send">שליחה</button></div>`);
-  let goal = null, blob = null, rec = null, chunks = [], timer = null;
-  sh.querySelectorAll('[data-obs-goal]').forEach(b => b.addEventListener('click', () => { goal = goal === b.dataset.obsGoal ? null : b.dataset.obsGoal; sh.querySelectorAll('[data-obs-goal]').forEach(x => x.classList.toggle('on', x.dataset.obsGoal === goal)); }));
+  let goal = null, valence = null, blob = null, rec = null, chunks = [], timer = null;          // (an observation marked to a goal: a success or a difficulty, Mercury decision 121)
+  sh.querySelectorAll('[data-obs-goal]').forEach(b => b.addEventListener('click', () => { goal = goal === b.dataset.obsGoal ? null : b.dataset.obsGoal; sh.querySelectorAll('[data-obs-goal]').forEach(x => x.classList.toggle('on', x.dataset.obsGoal === goal));
+    const v = sh.querySelector('.obs-val'); if(v){ v.hidden = !goal; if(!goal){ valence = null; v.querySelectorAll('[data-obs-val]').forEach(x => x.classList.remove('on')); } } }));
+  sh.querySelectorAll('[data-obs-val]').forEach(b => b.addEventListener('click', () => { valence = valence === b.dataset.obsVal ? null : b.dataset.obsVal; sh.querySelectorAll('[data-obs-val]').forEach(x => x.classList.toggle('on', x.dataset.obsVal === valence)); }));
   const recBtn = sh.querySelector('#obs-rec'), state = sh.querySelector('#obs-rec-state'), audio = sh.querySelector('#obs-audio'), recX = sh.querySelector('#obs-rec-x');
   const stopRec = () => { if(rec && rec.state !== 'inactive') rec.stop(); clearInterval(timer); };
   recBtn.addEventListener('click', async () => {
@@ -48,7 +51,8 @@ async function obsOpen(childId, kind){          // (kind 'question': "שאלה �
       const up = await client.storage.from('mercury').upload(audio_path, blob, { contentType:blob.type || 'audio/webm' });
       if(up.error){ e.target.disabled = false; toast('ההקלטה לא נשמרה. אפשר לנסות שוב'); return; }
     }
-    let r = await client.from('observations').insert(Object.assign({ child_id:childId, text:text || null, audio_path, goal_id:goal }, q ? { kind:'question' } : {}));
+    let r = await client.from('observations').insert(Object.assign({ child_id:childId, text:text || null, audio_path, goal_id:goal }, q ? { kind:'question' } : {}, valence ? { valence } : {}));
+    if(r.error && valence && /valence/.test(r.error.message || '')) r = await client.from('observations').insert({ child_id:childId, text:(valence === 'success' ? '🌱 ' : '🌧️ ') + (text || ''), audio_path, goal_id:goal });          // (a project without v43)
     if(r.error && q && /kind/.test(r.error.message || '')) r = await client.from('observations').insert({ child_id:childId, text:'❓ ' + (text || ''), audio_path, goal_id:goal });          // (a project without v40)
     if(r.error){ e.target.disabled = false; toast(q ? 'השאלה לא נשלחה. אפשר לנסות שוב' : 'התצפית לא נשלחה. אפשר לנסות שוב'); return; }
     stopRec(); sh.close(); toast(q ? 'השאלה נשלחה לאיש/אשת הטיפול. התשובה תגיע אליך בהודעה' : 'התצפית נשלחה לאיש/אשת הטיפול. תודה!');
@@ -65,7 +69,7 @@ async function obsSection(childId, box){
   const goals = {}; ((thp.plans[childId] && (thp.plans[childId].published || thp.plans[childId].draft)) || { goals:[] }).goals.forEach(g => { goals[g.id] = g.title; });
   const list = r.data || [];
   box.innerHTML = list.length ? list.map(o => `<div class="obs-item${o.seen_at ? '' : ' new'}${o.kind === 'question' ? ' question' : ''}" data-obs="${o.id}">
-      <div class="obs-head">${o.kind === 'question' ? '<span class="th-chip obs-q">❓ שאלה</span>' : ''}<b>${pEsc(names[o.author] || 'צוות')}</b><small>${pEsc(dayLabel(String(o.created_at).slice(0, 10)))} ${String(o.created_at).slice(11, 16)}</small>${o.goal_id && goals[o.goal_id] ? `<span class="th-chip">${pEsc(goals[o.goal_id])}</span>` : ''}</div>
+      <div class="obs-head">${o.kind === 'question' ? '<span class="th-chip obs-q">❓ שאלה</span>' : ''}<b>${pEsc(names[o.author] || 'צוות')}</b><small>${pEsc(dayLabel(String(o.created_at).slice(0, 10)))} ${String(o.created_at).slice(11, 16)}</small>${o.goal_id && goals[o.goal_id] ? `<span class="th-chip">${o.valence === 'success' ? '🌱 ' : o.valence === 'difficulty' ? '🌧️ ' : ''}${pEsc(goals[o.goal_id])}</span>` : ''}</div>
       ${o.text ? `<div class="obs-body">${pEsc(o.text)}</div>` : ''}${o.audio_path ? `<button type="button" class="btn ghost small" data-obs-play="${pEsc(o.audio_path)}">▶ להאזנה</button>` : ''}
       ${o.reply != null ? `<div class="obs-reply">התשובה שלך: ${pEsc(o.reply || 'ראיתי, תודה')}</div>` : `<div class="th-add-row"><input type="text" maxlength="${o.kind === 'question' ? 600 : 200}" placeholder="${o.kind === 'question' ? 'התשובה שלך' : 'משפט קצר (רשות)'}" data-obs-msg aria-label="תשובה"><button type="button" class="btn small" data-obs-ok${o.kind === 'question' ? ' data-q' : ''}>${o.kind === 'question' ? 'שליחת תשובה' : 'ראיתי, תודה'}</button></div>`}
     </div>`).join('') : '<div class="pnote">עוד אין תצפיות על הילד/ה.</div>';

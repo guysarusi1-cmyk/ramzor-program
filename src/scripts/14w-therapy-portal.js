@@ -67,6 +67,7 @@ async function thpLoad(){
   } catch(e){}
   if(thp.v32) await thpVideosLoad();          // (the plan videos: scheduling-v41.sql; 14zc)
   if(thp.v32 && thp.mode === 'therapist') await bankLoad();          // (the goal bank: favourites, use counts, the center's options; scheduling-v42.sql; 14zd)
+  if(thp.v32){ if(!thp.mopts) thp.mopts = {}; await careLoad(); }          // (the stays, marks, family, incidents: scheduling-v43.sql; 14ze)
   thp.loaded = true;
 }
 
@@ -82,6 +83,7 @@ function thpTabs(){
     if(canAssignTherapist()) t.push(['assign', 'שיוך אנשי טיפול']);
     if(thp.v32 && canAssignTherapist()) t.push(['videos', 'צפייה בסרטונים']);
     if(thp.v32 && srv.profile && srv.profile.admin) t.push(['overview', 'תמונת מצב']);
+    if(thp.v43 && srv.profile && srv.profile.admin) t.push(['archive', 'ארכיון']);
   } else {
     t.push(['kids', 'הילדים']);
     if(thp.v32) t.push(['myobs', 'התצפיות שלי']);
@@ -100,7 +102,7 @@ async function showTherapyPortal(){
   await thpLoad();
   thpRender();
 }
-const thpKids = () => (typeof roster !== 'undefined' ? roster : []).slice().sort((a, b) => displayName(a).localeCompare(displayName(b), 'he'));
+const thpKids = () => (typeof roster !== 'undefined' ? roster : []).filter(c => !(typeof careArchived === 'function' && careArchived(c.id))).sort((a, b) => displayName(a).localeCompare(displayName(b), 'he'));          // (an archived child is out of every list: Mercury 129)
 const thpAvatar = c => { const k = typeof characterFor === 'function' && characterFor(c.id); return k ? `<span class="th-av">${charImgHtml(k)}</span>` : `<span class="th-av th-av-name ar-keep">${pEsc(displayName(c).slice(0, 2))}</span>`; };
 // the children of the therapist's portal: their own; the admin — all of them
 const thpScope = () => { const kids = thpKids(); if(srv.profile && srv.profile.admin) return kids; const mine = new Set(thp.mine); return kids.filter(c => mine.has(c.id)); };
@@ -119,6 +121,7 @@ function thpTodo(){
     if(row && row.published_version && row.review_date){ const d = thpDaysTo(row.review_date); if(d <= 14) add(c.id, 'plan', '🗓️', d < 0 ? `עבר מועד הבדיקה מחדש של התוכנית (${dayLabel(row.review_date)})` : d === 0 ? 'היום מועד הבדיקה מחדש של התוכנית' : `בדיקה מחדש של התוכנית בעוד ${d} ימים`, 3); }
     if(!row || !row.published_version) add(c.id, 'plan', '📋', row && row.draft ? 'יש טיוטה שעוד לא פורסמה' : 'עוד אין תוכנית טיפולית', 4);
     else if(row.draft && JSON.stringify(row.draft) !== JSON.stringify(row.published)) add(c.id, 'plan', '✏️', 'יש שינויים בתוכנית שעוד לא פורסמו', 4);
+    careTodo(c, add);
   });
   thp.risen.filter(s => ids.has(s.child_id)).forEach(s => add(s.child_id, 'temple', '🏛️', `החוזקה "${s.strength}" עלתה למקדש`, 5));
   return items.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'he'));
@@ -142,20 +145,20 @@ function thpStaffCard(c){
   const g = thp.guidance[c.id], ct = g && g.content, focus = ct ? (ct.goals || []).filter(x => x.focus && x.title) : [], strengths = ct ? [...new Set((ct.goals || []).flatMap(x => x.strengths || []))] : [];
   return `<article class="th-kcard${g ? ' has-plan' : ''}" data-th-card="${pEsc(c.id)}">
     <div class="th-kcard-head">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b>${g ? `<button type="button" class="btn ghost small" data-th-kid="${pEsc(c.id)}">עוד</button>` : ''}</div>
-    ${thpVideoBtnHtml(c.id)}
+    ${thpVideoBtnHtml(c.id)}${careCardHtml(c)}
     ${g ? `${strengths.length ? `<div class="th-chips ar-keep">${strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}
-      ${focus.map(x => `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}${x.sentences ? `<div class="th-ksent ar-keep"><span aria-hidden="true">💬</span> ${pEsc(x.sentences)}</div>` : ''}</div>`).join('')}
+      ${focus.map(x => `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}${x.sentences ? `<div class="th-ksent ar-keep"><span aria-hidden="true">💬</span> ${pEsc(x.sentences)}</div>` : ''}${careWeekLine(c.id, x.id)}</div>`).join('')}
       ${ct.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(ct.avoid)}</div></div>` : ''}
       ${!ct.avoid && !focus.length ? '<div class="pnote">אין כרגע מטרות במוקד. "עוד" פותח את כל התוכנית.</div>' : ''}`
       : '<div class="th-kcard-none">עוד אין תוכנית טיפולית</div>'}
-    ${thp.v32 ? `<div class="th-kcard-acts"><button type="button" class="btn ghost small th-kcard-obs" data-th-obs="${pEsc(c.id)}">📝 תצפית</button><button type="button" class="btn ghost small th-kcard-obs" data-th-ask="${pEsc(c.id)}">❓ שאלה למטפל/ת</button></div>` : ''}
+    ${thp.v32 ? `<div class="th-kcard-acts"><button type="button" class="btn ghost small th-kcard-obs" data-th-obs="${pEsc(c.id)}">📝 תצפית</button><button type="button" class="btn ghost small th-kcard-obs" data-th-ask="${pEsc(c.id)}">❓ שאלה למטפל/ת</button>${thp.v43 ? `<button type="button" class="btn ghost small th-kcard-obs" data-th-inc="${pEsc(c.id)}">⚠️ אירוע</button>` : ''}</div>` : ''}
   </article>`;
 }
 function thpStaffKidsHtml(){
   const kids = thpKids(), week = Date.now() - 7 * 864e5;
   const fresh = kids.filter(c => { const g = thp.guidance[c.id]; return g && g.published_at && new Date(g.published_at).getTime() >= week; });
   return `${fresh.length ? `<div class="th-fresh"><span>עודכן לאחרונה:</span>${fresh.map(c => `<button type="button" class="th-chip" data-th-kid="${pEsc(c.id)}"><span class="ar-keep">${pEsc(displayName(c))}</span></button>`).join('')}</div>` : ''}
-    ${thpVideoBannerHtml()}
+    ${thpVideoBannerHtml()}${careMarksBannerHtml()}
     <input type="search" class="th-search" id="th-q" placeholder="חיפוש ילד/ה" aria-label="חיפוש ילד/ה" value="${pEsc(thp.q)}">
     <div class="th-kcards" id="th-kcards">${thpStaffOrder(kids).map(thpStaffCard).join('')}</div>`;
 }
@@ -189,6 +192,7 @@ function thpRender(){
   else if(thp.tab === 'library') inner = planLibraryHtml();
   else if(thp.tab === 'videos') inner = thpVideosHtml();
   else if(thp.tab === 'overview') inner = thpOverviewHtml() + bankOverviewHtml();
+  else if(thp.tab === 'archive') inner = '<div id="cr-archive"><div class="pnote">טוען...</div></div>';
   else if(thp.tab === 'assign'){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
@@ -211,7 +215,8 @@ function thpRender(){
   body.querySelectorAll('[data-todo-kid]').forEach(b => b.addEventListener('click', () => { if(planCanEdit(b.dataset.todoKid)) planOpenEditor(b.dataset.todoKid, b.dataset.todoTab); else thpOpenChild(b.dataset.todoKid); }));
   const wireObs = box => { box.querySelectorAll('[data-th-obs]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thObs)));
     box.querySelectorAll('[data-th-ask]').forEach(b => b.addEventListener('click', () => obsOpen(b.dataset.thAsk, 'question')));
-    box.querySelectorAll('[data-th-video]').forEach(b => b.addEventListener('click', () => { thpVideoOpen(b.dataset.thVideo); setTimeout(() => { if(thp.tab === 'kids') thpRender(); }, 400); })); };
+    box.querySelectorAll('[data-th-video]').forEach(b => b.addEventListener('click', () => { thpVideoOpen(b.dataset.thVideo); setTimeout(() => { if(thp.tab === 'kids') thpRender(); }, 400); }));
+    careWireCard(box); };
   wireObs(body);
   const q = body.querySelector('#th-q');
   if(q) q.addEventListener('input', () => {          // (only the cards change, so the keyboard stays open)
@@ -220,6 +225,7 @@ function thpRender(){
     wireKids(box); wireObs(box);
   });
   if(thp.tab === 'library') planWireLibrary(body);
+  if(thp.tab === 'archive') careArchiveHtml(body.querySelector('#cr-archive'));
   if(thp.tab === 'overview'){ const rv = body.querySelector('#bk-review'); if(rv) rv.addEventListener('click', () => { const s = bankReview(0); const close = s.close; s.close = () => { close(); thpRender(); }; }); }
   if(thp.tab === 'settings') obsWireNotify(body);
   if(thp.editing && ther && thp.v32 && planCanEdit(thp.editing)) planOpenEditor(thp.editing);
@@ -257,11 +263,12 @@ function thpOpenChild(id){
   const sh = portalSheet(`<div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div>
     ${thpVideoBtnHtml(id)}
     ${g ? planGuidanceHtml(g) : `<div class="pnote">עוד אין תוכנית טיפולית ל${pEsc(displayName(c))}. כשאיש/אשת הטיפול יפרסמו אותה, יופיעו כאן מה במוקד, מה לעשות וממה להימנע.</div>`}
-    ${thp.v32 ? '<button type="button" class="btn ghost" id="th-observe" style="width:100%;margin-top:8px">📝 תצפית לאיש/אשת הטיפול</button><button type="button" class="btn ghost" id="th-ask" style="width:100%;margin-top:8px">❓ שאלה לאיש/אשת הטיפול</button>' : ''}
+    ${thp.v32 ? '<button type="button" class="btn ghost" id="th-observe" style="width:100%;margin-top:8px">📝 תצפית לאיש/אשת הטיפול</button><button type="button" class="btn ghost" id="th-ask" style="width:100%;margin-top:8px">❓ שאלה לאיש/אשת הטיפול</button>' : ''}${careChildSheetHtml(id)}
     ${thp.v32 && srv.profile && srv.profile.admin ? '<button type="button" class="btn ghost" id="th-place" style="width:100%;margin-top:8px">מיקום במסע בחלל (מנהל)</button>' : ''}
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סגירה</button></div>`);
   const pl = sh.querySelector('#th-place'); if(pl) pl.addEventListener('click', () => { sh.close(); journeyPlaceSheet(id); });
   const ob = sh.querySelector('#th-observe'); if(ob) ob.addEventListener('click', () => { sh.close(); obsOpen(id); });
   const ak = sh.querySelector('#th-ask'); if(ak) ak.addEventListener('click', () => { sh.close(); obsOpen(id, 'question'); });
   const vb = sh.querySelector('[data-th-video]'); if(vb) vb.addEventListener('click', () => { sh.close(); thpVideoOpen(id); });
+  careChildSheetWire(sh, id);
 }

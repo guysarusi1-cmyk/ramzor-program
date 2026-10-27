@@ -55,7 +55,7 @@ function planGoalHtml(g, i){
       <label class="pfield">משפטים לומר לילד/ה<textarea class="pe-g-sent" rows="2">${pEsc(g.sentences || '')}</textarea></label>
       <label class="pfield">למה זה חשוב (לצוות, בשפה פשוטה)<textarea class="pe-g-whys" rows="2">${pEsc(g.why_staff || '')}</textarea></label>
       ${(g.skills || []).length || g.review_months ? `<div class="pnote">${(g.skills || []).length ? 'מיומנויות למעקב: ' + g.skills.map(pEsc).join(' · ') : ''}${g.review_months ? `${(g.skills || []).length ? ' · ' : ''}בדיקה מחדש של המטרה: בעוד ${g.review_months === 1 ? 'חודש' : g.review_months + ' חודשים'}` : ''}</div>` : ''}
-      <label class="pfield">כוכב לכת במסע בחלל<select class="pe-g-planet"><option value="">ללא</option>${planets.map(p => `<option value="${pEsc(p.id)}"${g.planet_id === p.id ? ' selected' : ''}>${pEsc(p.name)} · ${pEsc(p.skill)}</option>`).join('')}</select></label>
+      <label class="pfield">כוכב לכת במסע בחלל${g.bank ? ' <small>(הצעה זמנית לפי המיומנות, עד ישיבת העיצוב)</small>' : ''}<select class="pe-g-planet"><option value="">ללא</option>${planets.map(p => `<option value="${pEsc(p.id)}"${g.planet_id === p.id ? ' selected' : ''}>${pEsc(p.name)} · ${pEsc(p.skill)}</option>`).join('')}</select></label>
       <div class="pfield"><span>חוזקות במקדש (מוצעות למדריך כשנותנים לבנה)</span>
         <div class="th-chips pe-g-strengths">${(g.strengths || []).map(s => `<span class="th-chip" data-str="${pEsc(s)}">${pEsc(s)} <button type="button" class="th-chip-x" aria-label="הסרה">✕</button></span>`).join('')}</div>
         <div class="th-add-row"><input type="text" class="pe-g-str-new" list="th-lib-strengths" maxlength="20" placeholder="חוזקה (עד 20 תווים)" aria-label="חוזקה חדשה"><button type="button" class="btn ghost small pe-g-str-add">הוספה</button></div></div>
@@ -117,7 +117,7 @@ async function planSave(id, draft, review){
   thp.plans[id] = r.data; return true;
 }
 // the therapist's workspace of one child: the plan, the observations, the tracking, the journey, the temple — each in its own tab
-const PLAN_WS_TABS = [['plan', 'התוכנית'], ['obs', 'תצפיות'], ['track', 'מעקב'], ['journey', 'המסע בחלל'], ['temple', 'המקדש']];
+const PLAN_WS_TABS = [['plan', 'התוכנית'], ['obs', 'תצפיות'], ['track', 'מעקב'], ['events', 'אירועים'], ['family', 'משפחה'], ['stay', 'קליטה ויציאה'], ['docs', 'מסמכים'], ['journey', 'המסע בחלל'], ['temple', 'המקדש']];          // (events, family, stay, docs: 14ze, Mercury 123-129)
 const planStatus = id => { const row = thp.plans[id] || {}; return row.published_version ? `פורסמה גרסה ${row.published_version}${row.draft && JSON.stringify(row.draft) !== JSON.stringify(row.published) ? ' · יש שינויים שלא פורסמו' : ''}${row.review_date ? ' · בדיקה מחדש ' + dayLabel(row.review_date) : ''}` : (row.draft ? 'טיוטה, עוד לא פורסמה' : 'עוד אין תוכנית'); };
 function planOpenEditor(id, tab){
   thp.editing = id; if(tab) thp.wtab = tab; if(!PLAN_WS_TABS.some(x => x[0] === thp.wtab)) thp.wtab = 'plan';
@@ -125,7 +125,8 @@ function planOpenEditor(id, tab){
   const c = roster.find(x => x.id === id), unseen = (thp.unseen && thp.unseen[id]) || 0;
   body.innerHTML = `<div class="th-ws" data-ws="${pEsc(id)}">
     <div class="th-ed-head"><button type="button" class="btn ghost small" id="pe-back">→ חזרה</button><div class="th-child-head">${thpAvatar(c)}<h2 class="ar-keep">${pEsc(displayName(c))}</h2></div><span class="th-status">${pEsc(planStatus(id))}</span></div>
-    <nav class="portal-tabs th-ws-tabs" role="tablist">${PLAN_WS_TABS.map(([k, w]) => `<button type="button" role="tab" data-ws-tab="${k}" class="${k === thp.wtab ? 'active' : ''}">${w}${k === 'obs' && unseen ? ` <span class="pcount">${unseen}</span>` : ''}</button>`).join('')}</nav>
+    <nav class="portal-tabs th-ws-tabs" role="tablist">${PLAN_WS_TABS.filter(([k]) => thp.v43 || !['events', 'family', 'stay', 'docs'].includes(k)).map(([k, w]) => { const n = k === 'obs' ? unseen : k === 'events' ? ((thp.newInc || {})[id] || 0) : 0;
+      return `<button type="button" role="tab" data-ws-tab="${k}" class="${k === thp.wtab ? 'active' : ''}">${w}${n ? ` <span class="pcount">${n}</span>` : ''}</button>`; }).join('')}</nav>
     <div id="th-ws-body"></div></div>`;
   body.querySelector('#pe-back').addEventListener('click', () => { thp.editing = null; thp.wtab = null; thpRender(); });
   body.querySelectorAll('[data-ws-tab]').forEach(b => b.addEventListener('click', () => planOpenEditor(id, b.dataset.wsTab)));
@@ -133,7 +134,9 @@ function planOpenEditor(id, tab){
   if(thp.wtab === 'plan'){ wb.innerHTML = `<div id="pe-video">${typeof thpVideoPanelHtml === 'function' ? thpVideoPanelHtml(id) : ''}</div>${planEditorHtml(id)}`; planWireEditor(id, wb.querySelector('.th-editor'));
     if(typeof thpVideoWire === 'function') thpVideoWire(wb.querySelector('#pe-video'), id, () => planOpenEditor(id, 'plan')); }
   else if(thp.wtab === 'obs'){ wb.innerHTML = '<div id="pe-obs"></div>'; obsSection(id, wb.querySelector('#pe-obs')).then(() => { if(thp.unseen) thp.unseen[id] = 0; }); }
-  else if(thp.wtab === 'track'){ wb.innerHTML = '<div id="pe-track"></div>'; trackSection(id, wb.querySelector('#pe-track')); }
+  else if(thp.wtab === 'track'){ wb.innerHTML = '<div id="pe-track"></div>'; const tb = wb.querySelector('#pe-track'); trackSection(id, tb).then(() => careGraphs(id, tb)); }
+  else if(['events', 'family', 'stay', 'docs'].includes(thp.wtab)){ wb.innerHTML = '<div id="pe-care"><div class="pnote">טוען...</div></div>'; const cb = wb.querySelector('#pe-care');
+    ({ events:careEventsSection, family:careFamilySection, stay:careStaySection, docs:careDocsSection })[thp.wtab](id, cb); }
   else if(thp.wtab === 'journey'){ wb.innerHTML = '<div id="pe-journey"></div>'; const jb = wb.querySelector('#pe-journey'), draw = async () => { jb.innerHTML = await journeyAdminHtml(id); journeyWireAdmin(jb, id, draw); }; draw(); }
   else { wb.innerHTML = '<div id="pe-temple" class="th-temple"></div>'; planTemple(id, wb.querySelector('#pe-temple')); }
 }

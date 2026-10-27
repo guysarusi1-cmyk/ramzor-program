@@ -2171,7 +2171,7 @@
           const vs = await sbPersonal.from('child_plan_versions').select('version').eq('child_id', 'c1').order('version', { ascending:false }).limit(1);
           check('plans: publishing makes a new version, and every version is kept', !pb.error && pb.data >= 1 && vs.data && vs.data[0] && vs.data[0].version === pb.data, (pb.error || {}).message || JSON.stringify(vs.data));
           await showTherapyPortal(); planOpenEditor('c1', 'plan'); await sleep(150);
-          check('plans: the child opens as a workspace in tabs (plan, observations, tracking, journey, temple)', [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(',') === 'plan,obs,track,journey,temple' && document.querySelector('[data-ws-tab="plan"]').classList.contains('active'), [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(','));
+          check('plans: the child opens as a workspace in tabs (plan, observations, tracking, [incidents, family, stay, documents: v43], journey, temple)', [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(',') === (thp.v43 ? 'plan,obs,track,events,family,stay,docs,journey,temple' : 'plan,obs,track,journey,temple') && document.querySelector('[data-ws-tab="plan"]').classList.contains('active'), [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(','));
           check('plans: the editor shows the plan (summary, what to avoid, the goals, focus, planet, strengths)', document.querySelector('#pe-summary').value === draft.summary && document.querySelectorAll('.th-goal').length === 2 && document.querySelector('.th-goal .pe-g-focus').checked && document.querySelector('.th-goal .pe-g-planet').value === 'moon' && /סבלנות/.test(document.querySelector('.th-goal .pe-g-strengths').textContent), document.querySelectorAll('.th-goal').length);
           check('goal bank: the editor has "+ מטרה מהבנק", a "נוסח מהבנק" in every goal, and the child\'s gender for the wordings (Mercury 101, 110)', !!document.querySelector('#pe-add-bank') && document.querySelectorAll('.th-goal .pe-g-bank').length === document.querySelectorAll('.th-goal').length && !!document.querySelector('#pe-gender'), '');
           { document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); await sleep(80);
@@ -2301,6 +2301,18 @@
             if(bs) bs.close(); thp.library = wl;
             if(thp.v42) check('(info) goal bank: in the bank on this server', true, `${thpLib('goal').filter(bankHasAges).length} goals, ${bankDrafts().length} drafts`);
             else check('(info) goal bank: the bank needs scheduling-v42.sql + scheduling-v42-bank.sql on this server', true, ''); }
+          // care in an emergency center (14ze; Mercury 119-130): the shift of an incident, the 30-second form, the documents
+          { const at = h => new Date(2026, 0, 1, h, 0, 0);
+            check('care: an incident\'s shift is recorded by the hour (07-15 morning, 15-23 afternoon, night)', careShift(at(8)) === 'בוקר' && careShift(at(16)) === 'צהריים' && careShift(at(2)) === 'לילה' && careShift(at(23)) === 'לילה', '');
+            const kid = (typeof roster !== 'undefined' && roster[0]) || null;
+            if(kid){ careIncidentOpen(kid.id); await sleep(80); const sh = document.querySelector('.psheet [data-grp="kind"]') && document.querySelector('.psheet [data-grp="kind"]').closest('.sheet');
+              check('care: the incident form is taps: what happened, intensity 1-3, what came before, what helped (Mercury 123)', !!sh && sh.querySelectorAll('[data-grp="kind"] [data-k]').length === INC_KINDS.length && sh.querySelectorAll('[data-grp="intensity"] [data-k]').length === 3 && !!sh.querySelector('[data-grp="before"]') && !!sh.querySelector('[data-grp="helped"]'), '');
+              if(sh){ sh.querySelector('#inc-send').click(); await sleep(60); check('care: an incident needs what happened and the intensity', !!sh.isConnected, 'sent'); sh.close(); } }
+            const ds = careDocSheet('בדיקה', '<h1>כותרת</h1><p>[להשלמה]</p>', 'בדיקה'); await sleep(60);
+            check('care: a document opens to edit, with Word and print / PDF (Mercury 125)', !!ds && ds.querySelector('#cr-doc').isContentEditable && !!ds.querySelector('#cr-doc-word') && !!ds.querySelector('#cr-doc-print'), '');
+            if(ds) ds.close();
+            if(thp.v43) check('care: the staff\'s kids tab has the end-of-shift marks (Mercury 121)', /data-cr-marks/.test(careMarksBannerHtml()), '');
+            else check('(info) care: needs scheduling-v43.sql on this server', true, ''); }
           me.role = was; }
       } finally {
         if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5', 'c15']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }

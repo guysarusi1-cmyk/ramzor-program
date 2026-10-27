@@ -183,3 +183,25 @@
 .bk-scale ol{ margin:4px 0; padding-inline-start:20px; font-size:13.5px; line-height:1.5; } .bk-scale-now{ display:flex; gap:12px; } .bk-scale-now label{ display:flex; align-items:center; gap:6px; }
 .bk-band{ display:block; padding-top:8px; } .bk-mcard{ padding:6px 0; border-bottom:1px solid rgba(255,255,255,.08); } .bk-mcard summary{ cursor:pointer; display:flex; gap:6px; align-items:center; } .bk-mcard div{ white-space:pre-line; font-size:14px; line-height:1.5; padding:4px 0; }
 .th-ksent{ font-size:13.5px; opacity:.9; margin-top:3px; white-space:pre-line; }
+
+/* care in an emergency center / residential home (14ze; Mercury 119-130): marks, incidents, family, stay, graphs, documents */
+.cr-marks-btn{ width:100%; margin-bottom:10px; }
+.cr-mk-kid{ display:flex; align-items:center; gap:8px; margin:12px 0 4px; } .cr-mk-row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.08); }
+.cr-mk-row > span{ flex:1; min-width:140px; font-size:14px; }
+.cr-chips button.on, .cr-mk-row .pchoice button.on{ background:#5fd3c4; color:#0b1027; border-color:#5fd3c4; font-weight:700; }
+.cr-intake{ padding:8px 10px; border-radius:10px; border:1px dashed #f2c14e; font-size:13.5px; display:flex; flex-direction:column; gap:3px; } .cr-intake span{ opacity:.8; }
+.cr-tasks{ display:flex; flex-direction:column; gap:2px; margin-top:4px; } .cr-tasks label{ display:flex; gap:6px; align-items:center; }
+.cr-fam, .cr-week{ font-size:13.5px; } .cr-week{ margin-top:3px; color:var(--p-yes, #7be0a0); }
+.cr-pattern{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin:8px 0 14px; }
+.cr-bars{ display:flex; flex-direction:column; gap:4px; } .cr-bars > b{ font-size:13.5px; margin-bottom:2px; }
+.cr-bar{ display:grid; grid-template-columns:minmax(80px, 40%) 1fr 2.2em; gap:6px; align-items:center; font-size:13px; } .cr-bar i{ display:block; height:10px; border-radius:6px; background:#8fa8ff; min-width:4px; } .cr-bar em{ font-style:normal; text-align:end; font-variant-numeric:tabular-nums; }
+.obs-item.cr-hard{ border-inline-start:3px solid #ff6b6b; }
+.cr-list{ display:flex; flex-direction:column; gap:4px; } .cr-li{ display:flex; gap:6px; align-items:center; } .cr-li input[type=text]{ flex:1; min-width:0; }
+.cr-graphs{ margin-top:14px; } .cr-goal{ border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:6px; }
+.cr-charts{ display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px; } .cr-scale{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font-size:13.5px; } .cr-scale em{ font-style:normal; font-weight:700; }
+.cr-docs{ display:flex; flex-direction:column; gap:8px; } .cr-report{ border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.cr-doc-sheet .sheet-card{ max-width:860px; } .cr-doc{ background:#fff; color:#1d1d1f; border-radius:10px; padding:18px 20px; max-height:60vh; overflow:auto; line-height:1.6; font-size:14.5px; outline:none; }
+.cr-doc h1{ font-size:22px; margin:0 0 6px; } .cr-doc h2{ font-size:17px; margin:14px 0 4px; } .cr-doc h3{ font-size:15px; margin:10px 0 2px; } .cr-doc .cr-meta{ color:#666; font-size:13px; }
+.cr-doc .cr-pg{ border-bottom:1px dashed #ccc; padding-bottom:12px; margin-bottom:12px; } .cr-cover{ text-align:center; } .cr-cover-av .th-av{ transform:scale(2.2); display:inline-block; margin:30px 0; }
+.cr-doc-acts{ grid-template-columns:repeat(3, 1fr); }
+@media print{ .cr-print .cr-pg{ page-break-after:always; border:0; } .cr-print .cr-cover{ text-align:center; padding-top:20vh; } }
