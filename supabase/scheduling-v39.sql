@@ -46,12 +46,12 @@ begin
     if not p_force then return 0; end if;
     delete from public.duty_assign where week = p_week;
   end if;
-  create temp table if not exists duty_kids (child_id text primary key, r float) on commit drop; delete from duty_kids;
-  insert into duty_kids select id, random() from public.roster where nullif(regexp_replace(coalesce(age, ''), '[^0-9]', '', 'g'), '')::int >= 5;
+  create temp table if not exists duty_kids (child_id text primary key, r float) on commit drop; delete from duty_kids where true;
+  insert into duty_kids select id, random() from public.roster where replace(substring(coalesce(age, '') from '[0-9]+(?:[.,][0-9]+)?'), ',', '.')::numeric >= 5;          -- (the age as written: "4.5" is 4.5, not 45)
   select count(*) into nk from duty_kids;
   select coalesce(sum(kids), 0) into total from public.duties where active;
   if nk = 0 or total = 0 then return 0; end if;
-  create temp table if not exists duty_cap (duty_id uuid primary key, cap int, sort int, kids int, taken int) on commit drop; delete from duty_cap;
+  create temp table if not exists duty_cap (duty_id uuid primary key, cap int, sort int, kids int, taken int) on commit drop; delete from duty_cap where true;
   insert into duty_cap select id, case when nk >= total then kids else 0 end, sort, kids, 0 from public.duties where active;
   if nk >= total then
     extra := nk - total;
@@ -68,7 +68,7 @@ begin
     end loop;
   end if;
   -- how many times each kid did each duty before this week; her "round" is the fewest of them: the duties at that number are the new ones for her
-  create temp table if not exists duty_cnt (child_id text, duty_id uuid, cnt int, primary key (child_id, duty_id)) on commit drop; delete from duty_cnt;
+  create temp table if not exists duty_cnt (child_id text, duty_id uuid, cnt int, primary key (child_id, duty_id)) on commit drop; delete from duty_cnt where true;
   insert into duty_cnt select k.child_id, c.duty_id, (select count(*) from public.duty_assign a where a.child_id = k.child_id and a.duty_id = c.duty_id and a.week < p_week) from duty_kids k, duty_cap c;
   loop          -- the kid with the fewest new duties that still have room goes first; she gets a new one if there is (the one with the most room left)
     select x.child_id into kid from (

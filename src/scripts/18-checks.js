@@ -2173,6 +2173,7 @@
           await showTherapyPortal(); planOpenEditor('c1', 'plan'); await sleep(150);
           check('plans: the child opens as a workspace in tabs (plan, observations, tracking, journey, temple)', [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(',') === 'plan,obs,track,journey,temple' && document.querySelector('[data-ws-tab="plan"]').classList.contains('active'), [...document.querySelectorAll('#view-therapy [data-ws-tab]')].map(b => b.dataset.wsTab).join(','));
           check('plans: the editor shows the plan (summary, what to avoid, the goals, focus, planet, strengths)', document.querySelector('#pe-summary').value === draft.summary && document.querySelectorAll('.th-goal').length === 2 && document.querySelector('.th-goal .pe-g-focus').checked && document.querySelector('.th-goal .pe-g-planet').value === 'moon' && /סבלנות/.test(document.querySelector('.th-goal .pe-g-strengths').textContent), document.querySelectorAll('.th-goal').length);
+          check('goal bank: the editor has "+ מטרה מהבנק", a "נוסח מהבנק" in every goal, and the child\'s gender for the wordings (Mercury 101, 110)', !!document.querySelector('#pe-add-bank') && document.querySelectorAll('.th-goal .pe-g-bank').length === document.querySelectorAll('.th-goal').length && !!document.querySelector('#pe-gender'), '');
           { document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); document.querySelector('#pe-add-goal').click(); await sleep(80);
             const boxes = [...document.querySelectorAll('.th-goal .pe-g-focus')]; boxes.forEach(b => { if(!b.checked){ b.checked = true; b.dispatchEvent(new Event('change')); } });
             check('plans: at most 3 goals in focus', document.querySelectorAll('.th-goal .pe-g-focus:checked').length === 3, document.querySelectorAll('.th-goal .pe-g-focus:checked').length); }
@@ -2282,6 +2283,24 @@
               const panel = thpVideoPanelHtml(kid.id);
               check('plan videos: a draft waits for the therapist: watch, approve, reject (Mercury 69); the staff does not see it (Mercury 70)', /data-pv-ok/.test(panel) && /data-pv-no/.test(panel) && !thpVideoOf(kid.id), '');
               thp.videos = wv; thp.vOk = wok; } }
+          // the goal bank (14zd; Mercury 97-118): the child's gender and age band, a goal filled from a wording, the picker, the editor's buttons
+          { const w = 'מצליח/ה עם שלו/ה, עשה/תה, הוא/היא צריך/ה. אני שומר/ת. המטפל/ת';
+            check('goal bank: the wording follows the child: בת', bankGender(w, 'f') === 'מצליחה עם שלה, עשתה, היא צריכה. אני שומר/ת. המטפל/ת', bankGender(w, 'f'));
+            check('goal bank: ... בן, and unknown keeps the slashes', bankGender(w, 'm') === 'מצליח עם שלו, עשה, הוא צריך. אני שומר/ת. המטפל/ת' && bankGender(w, '') === w, bankGender(w, 'm'));
+            check('goal bank: the age bands (5 counts with 5-8, 8 with 8-12; unknown: all)', bankBand(4.5) === '2-5' && bankBand(5) === '5-8' && bankBand(7.9) === '5-8' && bankBand(8) === '8-12' && bankBand(null) === '' && bankBand(bankAgeNum('בן 6')) === '5-8', '');
+            const fake = { id:'00000000-0000-0000-0000-0000000000b1', kind:'goal', scope:'mercury', active:true, draft:true, title:'בדיקת בנק', themes:['ויסות רגשי'], methods:['ARC'],
+              content:{ bank:1, review:1, scale:['1', '2', '3', '4', '5'], avoid:'לא לצעוק עליו/עליה', strengths:['סבלנות'], skills:['בקשת עזרה'],
+                ages:{ '2-5':{ targets:'קטן', steps:['צעד'], sentences:['משפט'] }, '5-8':{ targets:'נרגע/ת ב-3 מתוך 5', steps:['כש... ← מתקרבים', 'שני'], principles:'רוגע', sentences:['אני פה', 'מותר לכעוס'], seen:'רואים', needs:'צריך/ה', why:'מקצועי', why_staff:'פשוט', method:'ARC – ויסות' } } } };
+            const { goal, avoid } = bankGoalFrom(fake, '5-8', 'f');
+            check('goal bank: a wording fills every field of the goal, in the child\'s gender (Mercury 99)', goal.title === 'בדיקת בנק' && goal.targets === 'נרגעת ב-3 מתוך 5' && /• כש/.test(goal.interventions) && /העיקרון: רוגע/.test(goal.interventions) && goal.sentences === 'אני פה\nמותר לכעוס' && goal.why === 'מקצועי' && goal.why_staff === 'פשוט' && goal.needs === 'צריכה' && goal.review_months === 1 && goal.scale.anchors.length === 5 && goal.bank.age === '5-8' && goal.bank.method === 'ARC – ויסות' && avoid === 'לא לצעוק עליה', JSON.stringify(goal).slice(0, 200));
+            check('goal bank: a goal changed after it was filled is marked "with changes" (Mercury 111)', bankSig(goal) === goal.bank.sig && bankSig(Object.assign({}, goal, { targets:'אחר' })) !== goal.bank.sig, '');
+            const wl = thp.library; thp.library = (thp.library || []).concat([fake]);
+            check('goal bank: the filters: theme, method, age (Mercury 105)', bankList('goal', { theme:'ויסות רגשי', method:'ARC', age:'5-8' }).some(x => x.id === fake.id) && !bankList('goal', { theme:'שינה ואכילה' }).some(x => x.id === fake.id) && !bankList('goal', { age:'8-12' }).some(x => x.id === fake.id) && bankList('goal', { q:'מתקרבים' }).some(x => x.id === fake.id), '');
+            const bs = bankPick('goal', { age:'5-8' }); await sleep(80);
+            check('goal bank: the bank opens with the filters, the draft mark and a preview of the wording (Mercury 108, 110)', !!bs && !!bs.querySelector('#bk-theme') && !!bs.querySelector('#bk-method') && !!bs.querySelector(`[data-bk="${fake.id}"] .bk-draft`) && /נרגע\/ת ב-3 מתוך 5/.test(bs.querySelector(`[data-bk="${fake.id}"] .bk-pv`).textContent), '');
+            if(bs) bs.close(); thp.library = wl;
+            if(thp.v42) check('(info) goal bank: in the bank on this server', true, `${thpLib('goal').filter(bankHasAges).length} goals, ${bankDrafts().length} drafts`);
+            else check('(info) goal bank: the bank needs scheduling-v42.sql + scheduling-v42-bank.sql on this server', true, ''); }
           me.role = was; }
       } finally {
         if(await enter('coordinator')){ await sbPersonal.from('child_therapist').delete().in('child_id', ['c1', 'c2', 'c3', 'c4', 'c5', 'c15']); if(th) await sbPersonal.from('staff_private').update({ is_therapist:false }).eq('staff_id', th); }

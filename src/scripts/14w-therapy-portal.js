@@ -66,6 +66,7 @@ async function thpLoad(){
     }
   } catch(e){}
   if(thp.v32) await thpVideosLoad();          // (the plan videos: scheduling-v41.sql; 14zc)
+  if(thp.v32 && thp.mode === 'therapist') await bankLoad();          // (the goal bank: favourites, use counts, the center's options; scheduling-v42.sql; 14zd)
   thp.loaded = true;
 }
 
@@ -143,7 +144,7 @@ function thpStaffCard(c){
     <div class="th-kcard-head">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b>${g ? `<button type="button" class="btn ghost small" data-th-kid="${pEsc(c.id)}">עוד</button>` : ''}</div>
     ${thpVideoBtnHtml(c.id)}
     ${g ? `${strengths.length ? `<div class="th-chips ar-keep">${strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}
-      ${focus.map(x => `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}</div>`).join('')}
+      ${focus.map(x => `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}${x.sentences ? `<div class="th-ksent ar-keep"><span aria-hidden="true">💬</span> ${pEsc(x.sentences)}</div>` : ''}</div>`).join('')}
       ${ct.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(ct.avoid)}</div></div>` : ''}
       ${!ct.avoid && !focus.length ? '<div class="pnote">אין כרגע מטרות במוקד. "עוד" פותח את כל התוכנית.</div>' : ''}`
       : '<div class="th-kcard-none">עוד אין תוכנית טיפולית</div>'}
@@ -187,7 +188,7 @@ function thpRender(){
   else if(thp.tab === 'myobs') inner = thpMyObsHtml();
   else if(thp.tab === 'library') inner = planLibraryHtml();
   else if(thp.tab === 'videos') inner = thpVideosHtml();
-  else if(thp.tab === 'overview') inner = thpOverviewHtml();
+  else if(thp.tab === 'overview') inner = thpOverviewHtml() + bankOverviewHtml();
   else if(thp.tab === 'assign'){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
@@ -219,6 +220,7 @@ function thpRender(){
     wireKids(box); wireObs(box);
   });
   if(thp.tab === 'library') planWireLibrary(body);
+  if(thp.tab === 'overview'){ const rv = body.querySelector('#bk-review'); if(rv) rv.addEventListener('click', () => { const s = bankReview(0); const close = s.close; s.close = () => { close(); thpRender(); }; }); }
   if(thp.tab === 'settings') obsWireNotify(body);
   if(thp.editing && ther && thp.v32 && planCanEdit(thp.editing)) planOpenEditor(thp.editing);
   { const add = view.querySelector('#sub-add'); if(add) add.addEventListener('click', async () => {

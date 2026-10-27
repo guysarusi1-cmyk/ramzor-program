@@ -4,13 +4,15 @@
 // "what we see / what may be needed / why" thinking (never shown to the staff), an attached document and a review date.
 // A draft until "פרסום"; every publish is kept; the staff sees the published plan only (plan_guidance). (scheduling-v32.sql; decisions 7-17, 46, 47, 56-58)
 const PLAN_FOCUS_MAX = 3;
-const planNewGoal = () => ({ id:'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title:'', library_id:null, focus:false, targets:'', interventions:'', seen:'', needs:'', why:'', planet_id:null, strengths:[] });
-const planEmpty = () => ({ summary:'', avoid:'', calm:'', signs:'', routine:'', goals:[planNewGoal()] });
+const planNewGoal = () => ({ id:'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title:'', library_id:null, focus:false, targets:'', interventions:'', sentences:'', seen:'', needs:'', why:'', why_staff:'', planet_id:null, strengths:[],
+  themes:[], skills:[], scale:null, review_months:null, methods:[], bank:null });          // (the last ones: a goal from the bank, decisions 97-112)
+const planEmpty = () => ({ summary:'', avoid:'', calm:'', signs:'', routine:'', gender:'', dev_age:'', goals:[planNewGoal()] });
+const PLAN_BLANK = /\[[^\]\n]{1,40}\]/;          // (a place to fill in a whole-plan template, "[שם]": a plan with one is not published, decision 114)
 // the parts of a plan besides the goals (Mercury decision 80), each with its own templates in the library; and the categories of the templates (91)
 const PLAN_PARTS = [['avoid', 'ממה להימנע', 'מצבים או מילים שמעוררים את הילד/ה'], ['signs', 'אותות מוקדמים', 'איך הילד/ה נראה/ית לפני שזה מתפרץ'],
   ['calm', 'מה עוזר להירגע', 'דרכים שעובדות ברגעי קושי'], ['routine', 'שגרה יומית מיוחדת', 'שינה, אוכל וכדומה (בלי פרטים רפואיים רגישים)']];
-const PLAN_KIND_WORD = { goal:'מטרות', todo:'מה הצוות עושה', avoid:'ממה להימנע', signs:'אותות מוקדמים', calm:'מה עוזר להירגע', routine:'שגרה יומית', strength:'חוזקות', skill:'מיומנויות', plan:'תכניות שלמות' };
-const PLAN_CATS = ['ויסות רגשי', 'חברתי', 'למידה', 'שגרה', 'טראומה', 'תקשורת', 'אחר'];          // (a first list: Guy approves the final one)
+const PLAN_KIND_WORD = { goal:'מטרות', todo:'מה הצוות עושה', avoid:'ממה להימנע', signs:'אותות מוקדמים', calm:'מה עוזר להירגע', routine:'שגרה יומית', strength:'חוזקות', skill:'מיומנויות', plan:'תכניות שלמות', method:'שיטות טיפול' };
+const PLAN_CATS = ['ביטחון ויציבות', 'ויסות רגשי', 'היקשרות וקשר עם מבוגר', 'זהות ודימוי עצמי', 'מעברים ושגרה', 'קשרים חברתיים', 'למידה ותפקוד', 'התנהגות מסכנת וגבולות', 'שינה ואכילה', 'אובדן ופרידה'];          // (the themes of the bank, trauma informed: Guy, decision 97)
 const planCanEdit = id => !!(srv.profile && (srv.profile.admin || (srv.profile.therapist && thp.mine.includes(id))));
 const thpLib = kind => (thp.library || []).filter(x => x.kind === kind && x.active);
 
@@ -18,9 +20,10 @@ const thpLib = kind => (thp.library || []).filter(x => x.kind === kind && x.acti
 function planGuidanceHtml(g){
   if(!g || !g.content) return '';
   const c = g.content, goals = c.goals || [], focus = goals.filter(x => x.focus), rest = goals.filter(x => !x.focus);
-  const goalHtml = x => `<div class="th-g"><b class="ar-keep">${pEsc(x.title || '')}</b>
-      ${x.targets ? `<div class="th-g-row"><span>מה רואים כשמצליח/ה:</span> <em class="ar-keep">${pEsc(x.targets)}</em></div>` : ''}
+  const goalHtml = x => `<div class="th-g"><b class="ar-keep">${pEsc(x.title || '')}</b>${(x.themes || []).length ? `<span class="bk-tags ar-keep">${x.themes.map(t => `<span class="bk-theme">${pEsc(t)}</span>`).join('')}</span>` : ''}
       ${x.interventions ? `<div class="th-g-row"><span>מה עושים:</span> <em class="ar-keep">${pEsc(x.interventions)}</em></div>` : ''}
+      ${x.sentences ? `<div class="th-g-row"><span>מה אומרים:</span> <em class="ar-keep">${pEsc(x.sentences)}</em></div>` : ''}
+      ${x.why_staff ? `<div class="th-g-row"><span>למה זה חשוב:</span> <em class="ar-keep">${pEsc(x.why_staff)}</em></div>` : ''}
       ${(x.strengths || []).length ? `<div class="th-chips ar-keep">${x.strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}</div>`;
   const strengths = [...new Set(goals.flatMap(x => x.strengths || []))];
   const part = (k, w) => c[k] ? `<div class="th-part th-part-${k}"><b>${w}</b><div class="ar-keep">${pEsc(c[k])}</div></div>` : '';
@@ -37,12 +40,21 @@ const planCardSub = id => { const g = thp.guidance && thp.guidance[id]; if(!g) r
 // one goal box of the editor
 function planGoalHtml(g, i){
   const planets = (thp.planets || []).filter(p => p.active);
-  return `<div class="th-goal" data-gi="${i}" data-gid="${pEsc(g.id)}">
-      <div class="th-goal-top"><input type="text" class="pe-g-title" list="th-lib-goals" maxlength="80" placeholder="שם המטרה (מהספרייה או חופשי)" value="${pEsc(g.title || '')}" aria-label="שם המטרה">
+  const sc = g.scale && (g.scale.anchors || []).length ? g.scale : null, num = (cls, v) => `<select class="${cls}"><option value="">—</option>${[1, 2, 3, 4, 5].map(k => `<option${+v === k ? ' selected' : ''}>${k}</option>`).join('')}</select>`;
+  const bk = g.bank ? `<span class="bk-from">${g.bank.edited ? 'מהבנק, עם שינויים' : 'מהבנק'}${g.bank.age ? ' · ' + pEsc(g.bank.age) : ''}</span>` : '';
+  return `<div class="th-goal" data-gi="${i}" data-gid="${pEsc(g.id)}" data-bank="${pEsc(JSON.stringify(g.bank || null))}" data-extra="${pEsc(JSON.stringify({ themes:g.themes || [], skills:g.skills || [], review_months:g.review_months || null, methods:g.methods || [], library_id:g.library_id || null }))}">
+      <div class="th-goal-top"><input type="text" class="pe-g-title" list="th-lib-goals" maxlength="80" placeholder="שם המטרה (מהבנק או חופשי)" value="${pEsc(g.title || '')}" aria-label="שם המטרה">
         <label class="th-focus"><input type="checkbox" class="pe-g-focus"${g.focus ? ' checked' : ''}> במוקד</label>
         <button type="button" class="btn ghost small pe-g-rm" aria-label="הסרת המטרה">✕</button></div>
-      <label class="pfield">יעדים נצפים: מה רואים כשהילד/ה מצליח/ה<textarea class="pe-g-targets" rows="2">${pEsc(g.targets || '')}</textarea></label>
-      <label class="pfield">דרכי התערבות: מה הצוות עושה <button type="button" class="btn ghost small th-tpl-btn" data-tpl="todo">📚 מהספרייה</button><textarea class="pe-g-int" rows="2">${pEsc(g.interventions || '')}</textarea></label>
+      <div class="bk-goal-bar"><button type="button" class="btn ghost small pe-g-bank">📚 נוסח מהבנק</button>${bk}${(g.themes || []).map(t => `<span class="bk-theme">${pEsc(t)}</span>`).join('')}${g.bank && g.bank.method ? `<span class="bk-method">${pEsc(g.bank.method)}</span>` : ''}
+        <button type="button" class="btn ghost small pe-g-save">💾 לבנק</button></div>
+      <label class="pfield">יעדים: מה רואים כשהילד/ה מצליח/ה (ובכמה פעמים)<textarea class="pe-g-targets" rows="2">${pEsc(g.targets || '')}</textarea></label>
+      ${sc ? `<div class="pfield bk-scale"><span>סולם 1–5 (המטפל/ת מעריך/ה פעם בחודש)</span><ol>${sc.anchors.map(a => `<li>${pEsc(a)}</li>`).join('')}</ol>
+        <div class="bk-scale-now"><label>עכשיו ${num('pe-g-snow', sc.now)}</label><label>יעד ${num('pe-g-starget', sc.target)}</label></div><input type="hidden" class="pe-g-anchors" value="${pEsc(JSON.stringify(sc.anchors))}"></div>` : ''}
+      <label class="pfield">דרכי התערבות: מה הצוות עושה <button type="button" class="btn ghost small th-tpl-btn" data-tpl="todo">📚 מהספרייה</button><textarea class="pe-g-int" rows="3">${pEsc(g.interventions || '')}</textarea></label>
+      <label class="pfield">משפטים לומר לילד/ה<textarea class="pe-g-sent" rows="2">${pEsc(g.sentences || '')}</textarea></label>
+      <label class="pfield">למה זה חשוב (לצוות, בשפה פשוטה)<textarea class="pe-g-whys" rows="2">${pEsc(g.why_staff || '')}</textarea></label>
+      ${(g.skills || []).length || g.review_months ? `<div class="pnote">${(g.skills || []).length ? 'מיומנויות למעקב: ' + g.skills.map(pEsc).join(' · ') : ''}${g.review_months ? `${(g.skills || []).length ? ' · ' : ''}בדיקה מחדש של המטרה: בעוד ${g.review_months === 1 ? 'חודש' : g.review_months + ' חודשים'}` : ''}</div>` : ''}
       <label class="pfield">כוכב לכת במסע בחלל<select class="pe-g-planet"><option value="">ללא</option>${planets.map(p => `<option value="${pEsc(p.id)}"${g.planet_id === p.id ? ' selected' : ''}>${pEsc(p.name)} · ${pEsc(p.skill)}</option>`).join('')}</select></label>
       <div class="pfield"><span>חוזקות במקדש (מוצעות למדריך כשנותנים לבנה)</span>
         <div class="th-chips pe-g-strengths">${(g.strengths || []).map(s => `<span class="th-chip" data-str="${pEsc(s)}">${pEsc(s)} <button type="button" class="th-chip-x" aria-label="הסרה">✕</button></span>`).join('')}</div>
@@ -50,21 +62,25 @@ function planGoalHtml(g, i){
       <details class="pfold th-think"${g.seen || g.needs || g.why ? ' open' : ''}><summary><span>עוזר חשיבה (רשות, לא מוצג לצוות)</span></summary><div class="pfold-body">
         <label class="pfield">מה רואים אצל הילד/ה?<textarea class="pe-g-seen" rows="2">${pEsc(g.seen || '')}</textarea></label>
         <label class="pfield">מה הוא/היא אולי צריך/ה?<textarea class="pe-g-needs" rows="2">${pEsc(g.needs || '')}</textarea></label>
-        <label class="pfield">למה המטרה הזו תעזור?<textarea class="pe-g-why" rows="2">${pEsc(g.why || '')}</textarea></label></div></details>
+        <label class="pfield">למה המטרה הזו תעזור? (מקצועי)<textarea class="pe-g-why" rows="2">${pEsc(g.why || '')}</textarea></label></div></details>
     </div>`;
 }
 // ---- the plan editor (the responsible therapist, or the admin)
 function planEditorHtml(id){
   const row = thp.plans[id] || {}, d = row.draft || row.published || planEmpty();
-  return `<div class="th-editor" data-plan="${pEsc(id)}">
+  const devOn = !!(thp.mopts && thp.mopts.dev_age), band = typeof bankAgeOf === 'function' ? bankAgeOf(id, d) : '';
+  return `<div class="th-editor" data-plan="${pEsc(id)}" data-bank-parts="${pEsc(JSON.stringify(d.bank_parts || []))}">
     <datalist id="th-lib-goals">${thpLib('goal').map(x => `<option value="${pEsc(x.title)}">`).join('')}</datalist>
     <datalist id="th-lib-strengths">${thpLib('strength').map(x => `<option value="${pEsc(x.title)}">`).join('')}</datalist>
     <div class="th-tpl-top"><button type="button" class="btn ghost small" id="pe-from-tpl">📋 תכנית מתבנית</button><button type="button" class="btn ghost small" id="pe-save-tpl">💾 שמירה כתבנית</button></div>
+    <div class="th-ed-grid bk-kid"><label class="pfield">הילד/ה (לנוסחים מהבנק)<select id="pe-gender"><option value="">לא צוין</option><option value="m"${d.gender === 'm' ? ' selected' : ''}>בן</option><option value="f"${d.gender === 'f' ? ' selected' : ''}>בת</option></select></label>
+      ${devOn ? `<label class="pfield">גיל התפתחותי (למטפלים בלבד)<input type="text" id="pe-devage" inputmode="decimal" maxlength="5" value="${pEsc(d.dev_age || '')}" placeholder="למשל 6"></label>` : ''}
+      <div class="pfield"><span>גיל לנוסחים</span><b class="bk-band">${band ? pEsc((BANK_AGES.find(a => a[0] === band) || [, band])[1]) : 'לא ידוע (כל הגילאים)'}</b></div></div>
     <label class="pfield">תקציר קצר לצוות<textarea id="pe-summary" rows="3" placeholder="בכמה משפטים: מה חשוב לדעת על הילד/ה עכשיו">${pEsc(d.summary || '')}</textarea></label>
     ${PLAN_PARTS.map(([k, w, hint]) => `<label class="pfield${k === 'avoid' ? ' th-avoid-field' : ''}">${w} <small>(${hint})</small> <button type="button" class="btn ghost small th-tpl-btn" data-tpl="${k}">📚 מהספרייה</button><textarea id="pe-${k}" rows="2">${pEsc(d[k] || '')}</textarea></label>`).join('')}
     <h3 class="psec">מטרות <small>(עד ${PLAN_FOCUS_MAX} במוקד)</small></h3>
     <div id="pe-goals">${(d.goals || []).map(planGoalHtml).join('')}</div>
-    <button type="button" class="btn ghost" id="pe-add-goal">+ מטרה</button>
+    <div class="bk-add-row"><button type="button" class="btn ghost" id="pe-add-goal">+ מטרה</button><button type="button" class="btn ghost" id="pe-add-bank">+ מטרה מהבנק</button></div>
     <div class="th-ed-grid">
       <label class="pfield">תאריך לבדיקה מחדש<input type="date" id="pe-review" value="${pEsc(row.review_date || '')}"></label>
       <div class="pfield"><span>קובץ מצורף (Word או PDF)</span><div class="th-file">${d.file ? `<button type="button" class="btn ghost small" id="pe-file-open">📎 ${pEsc(d.file.name)}</button><button type="button" class="btn ghost small" id="pe-file-rm" aria-label="הסרת הקובץ">✕</button>` : ''}<input type="file" id="pe-file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></div></div>
@@ -76,16 +92,24 @@ function planEditorHtml(id){
 }
 // the editor as it is on the screen now -> the draft
 function planRead(root){
+  const js = v => { try { return JSON.parse(v || 'null'); } catch(e){ return null; } };
   const goals = [...root.querySelectorAll('.th-goal')].map(el => {
-    const title = el.querySelector('.pe-g-title').value.trim(), lib = thpLib('goal').find(x => x.title === title);
-    return { id:el.dataset.gid, title, library_id:lib ? lib.id : null, focus:el.querySelector('.pe-g-focus').checked,
-      targets:el.querySelector('.pe-g-targets').value.trim(), interventions:el.querySelector('.pe-g-int').value.trim(),
-      seen:el.querySelector('.pe-g-seen').value.trim(), needs:el.querySelector('.pe-g-needs').value.trim(), why:el.querySelector('.pe-g-why').value.trim(),
-      planet_id:el.querySelector('.pe-g-planet').value || null, strengths:[...el.querySelectorAll('.pe-g-strengths [data-str]')].map(s => s.dataset.str) };
+    const title = el.querySelector('.pe-g-title').value.trim(), lib = thpLib('goal').find(x => x.title === title), ex = js(el.dataset.extra) || {}, bank = js(el.dataset.bank);
+    const an = el.querySelector('.pe-g-anchors'), v = s => { const x = el.querySelector(s); return x ? x.value.trim() : ''; };
+    const g = { id:el.dataset.gid, title, library_id:lib ? lib.id : (ex.library_id || null), focus:el.querySelector('.pe-g-focus').checked,
+      targets:v('.pe-g-targets'), interventions:v('.pe-g-int'), sentences:v('.pe-g-sent'), why_staff:v('.pe-g-whys'),
+      seen:v('.pe-g-seen'), needs:v('.pe-g-needs'), why:v('.pe-g-why'),
+      planet_id:el.querySelector('.pe-g-planet').value || null, strengths:[...el.querySelectorAll('.pe-g-strengths [data-str]')].map(s => s.dataset.str),
+      themes:ex.themes || [], skills:ex.skills || [], review_months:ex.review_months || null, methods:ex.methods || [],
+      scale:an ? { anchors:js(an.value) || [], now:+v('.pe-g-snow') || null, target:+v('.pe-g-starget') || null } : null, bank:bank || null };
+    if(g.bank && typeof bankSig === 'function' && bankSig(g) !== g.bank.sig) g.bank = Object.assign({}, g.bank, { edited:true });          // (decision 111: "מהבנק, עם שינויים")
+    return g;
   }).filter(g => g.title || g.targets || g.interventions);
   const row = thp.plans[root.dataset.plan] || {}, base = row.draft || row.published || {};
   const parts = {}; PLAN_PARTS.forEach(([k]) => { parts[k] = root.querySelector('#pe-' + k).value.trim(); });
-  return Object.assign({ summary:root.querySelector('#pe-summary').value.trim() }, parts, { goals, file:base.file || null });
+  const gd = root.querySelector('#pe-gender'), da = root.querySelector('#pe-devage');
+  return Object.assign({ summary:root.querySelector('#pe-summary').value.trim() }, parts, { goals, file:base.file || null,
+    gender:gd ? gd.value : (base.gender || ''), dev_age:da ? da.value.trim() : (base.dev_age || ''), bank_parts:js(root.dataset.bankParts) || [] });
 }
 async function planSave(id, draft, review){
   const r = await sbPersonal.from('child_plans').upsert({ child_id:id, draft, review_date:review || null }).select('*').single();
@@ -124,16 +148,35 @@ function planWireEditor(id, root){
     el.querySelector('.pe-g-str-add').addEventListener('click', addStr);
     strIn.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addStr(); } });
     strBox.addEventListener('click', e => { const x = e.target.closest('.th-chip-x'); if(x) x.parentElement.remove(); });
+    // the bank (decisions 110, 115): a wording for this goal (replace or add after what is written), or this goal into the center's bank
+    el.querySelector('.pe-g-bank').addEventListener('click', () => bankPick('goal', { age:kidAge(), onPick:async (x, age) => {
+      const old = planRead(root).goals.find(g => g.id === el.dataset.gid) || Object.assign(planNewGoal(), { id:el.dataset.gid });
+      const { goal, avoid } = bankGoalFrom(x, age, kidGender()), has = ['targets', 'interventions', 'sentences', 'why_staff'].some(k => (old[k] || '').trim());
+      const how = has ? await bankReplaceAsk() : 'replace'; if(!how) return;
+      putGoal(el, bankMerge(old, goal, how)); await offerAvoid(avoid);
+    } }));
+    el.querySelector('.pe-g-save').addEventListener('click', () => { const g = planRead(root).goals.find(y => y.id === el.dataset.gid); if(!g || !g.title){ toast('צריך קודם שם למטרה'); return; } bankSaveGoal(g, kidAge()); });
   };
+  const kidGender = () => (root.querySelector('#pe-gender') || {}).value || '';
+  const kidAge = () => bankAgeOf(id, { dev_age:(root.querySelector('#pe-devage') || {}).value });
+  const putGoal = (el, g) => { const tmp = document.createElement('div'); tmp.innerHTML = planGoalHtml(g, el ? [...goalsBox.children].indexOf(el) : goalsBox.children.length); const nu = tmp.firstElementChild;
+    if(el) el.replaceWith(nu); else goalsBox.appendChild(nu); wireGoal(nu); return nu; };
+  const addPart = id2 => { const l = JSON.parse(root.dataset.bankParts || '[]'); if(!l.includes(id2)){ l.push(id2); root.dataset.bankParts = JSON.stringify(l); } };
+  // the one "what to avoid" line of a bank goal goes into the plan's part only if the therapist says so (decision 99)
+  const offerAvoid = async line => { const ta = root.querySelector('#pe-avoid'); if(!line || ta.value.includes(line)) return;
+    if(await confirmSheet({ title:'להוסיף ל"ממה להימנע"?', text:line, okLabel:'כן, להוסיף', cancelLabel:'לא' })) ta.value = bankJoin(ta.value, line); };
   root.querySelectorAll('.th-goal').forEach(wireGoal);
-  root.querySelector('#pe-add-goal').addEventListener('click', () => {
-    const tmp = document.createElement('div'); const g = planNewGoal();
-    tmp.innerHTML = planGoalHtml(g, goalsBox.children.length); const el = tmp.firstElementChild; goalsBox.appendChild(el); wireGoal(el); el.querySelector('.pe-g-title').focus();
-  });
+  root.querySelector('#pe-add-goal').addEventListener('click', () => { putGoal(null, planNewGoal()).querySelector('.pe-g-title').focus(); });
+  root.querySelector('#pe-add-bank').addEventListener('click', () => bankPick('goal', { age:kidAge(), onPick:async (x, age) => {
+    const { goal, avoid } = bankGoalFrom(x, age, kidGender()), empty = [...goalsBox.querySelectorAll('.th-goal')].find(e => !e.querySelector('.pe-g-title').value.trim() && !e.querySelector('.pe-g-int').value.trim());
+    const nu = putGoal(empty || null, goal); nu.scrollIntoView({ block:'nearest' }); await offerAvoid(avoid);
+  } }));
   const save = async () => { const ok = await planSave(id, planRead(root), root.querySelector('#pe-review').value); if(!ok) toast('השמירה נכשלה. אפשר לנסות שוב בעוד רגע'); return ok; };
   root.querySelector('#pe-save').addEventListener('click', async e => { e.target.disabled = true; if(await save()){ toast('הטיוטה נשמרה. הצוות עוד רואה את הגרסה שפורסמה'); planOpenEditor(id); } else e.target.disabled = false; });
   root.querySelector('#pe-publish').addEventListener('click', async e => {
     const d = planRead(root); if(!d.goals.length && !d.summary){ toast('צריך לפחות מטרה אחת או תקציר'); return; }
+    { const blank = [d.summary, ...PLAN_PARTS.map(([k]) => d[k]), ...d.goals.flatMap(g => [g.targets, g.interventions, g.sentences, g.why_staff])].map(t => String(t || '').match(PLAN_BLANK)).find(Boolean);
+      if(blank){ toast(`יש עוד מקום להשלמה: ${blank[0]}. ממלאים אותו לפני הפרסום`, 6000); return; } }
     const imp = root.querySelector('#pe-important').checked, first = !((thp.plans[id] || {}).published_version);
     const full = first ? true : await planUpdateKind(); if(full === null) return;
     if(!(await confirmSheet({ title:'לפרסם את התוכנית?', text:full ? `היא נכנסת לתוקף מיד, ונוצר ממנה סרטון. אחרי שתאשרו את הסרטון, הצוות מקבל הודעה בפורטל${imp ? ' וגם מייל' : ''}. הגרסה הקודמת נשמרת.` : 'עדכון קטן: נכנס לתוקף מיד, בלי הודעה לצוות. הגרסה הקודמת נשמרת.', okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
@@ -149,12 +192,22 @@ function planWireEditor(id, root){
   // the templates: a part from the library (added to what is written), a whole plan (fills everything), saving this plan as a template
   root.addEventListener('click', e => { const b = e.target.closest('.th-tpl-btn'); if(!b) return; e.preventDefault();
     const ta = b.dataset.tpl === 'todo' ? b.closest('.th-goal').querySelector('.pe-g-int') : root.querySelector('#pe-' + b.dataset.tpl);
-    planPickTemplate(b.dataset.tpl, x => { const text = x.description || x.title; ta.value = ta.value.trim() ? ta.value.trim() + '\n' + text : text; }); });
-  root.querySelector('#pe-from-tpl').addEventListener('click', () => planPickTemplate('plan', async x => {
+    bankPick(b.dataset.tpl, { age:kidAge(), onPick:(x, age) => { ta.value = bankJoin(ta.value, bankPartText(x, age, kidGender())); if(bankHasAges(x)) addPart(x.id); } }); });
+  root.querySelector('#pe-from-tpl').addEventListener('click', () => bankPick('plan', { age:kidAge(), onPick:async x => {
     if(!(await confirmSheet({ title:`למלא מהתבנית "${x.title}"?`, text:'מה שכתוב עכשיו בטיוטה יוחלף. אפשר לערוך הכל אחר כך, והתבנית בספרייה לא משתנה.', okLabel:'כן, למלא', cancelLabel:'חזרה' }))) return;
-    const c = x.content || {}, d = Object.assign(planEmpty(), c, { goals:(c.goals || []).map(g => Object.assign(planNewGoal(), g, { id:planNewGoal().id })), file:(planRead(root) || {}).file || null });
-    if(await planSave(id, d, root.querySelector('#pe-review').value)){ toast('הטיוטה מולאה מהתבנית'); planOpenEditor(id); }
-  }));
+    const now = planRead(root) || {}, c = x.content || {}, keep = { file:now.file || null, gender:now.gender, dev_age:now.dev_age };
+    let d;
+    if(c.bank && (c.goal_titles || []).length){          // (a whole plan of the bank: its goals in the child's age and gender, its parts, the summary's skeleton: decision 114)
+      const age = kidAge() || '5-8', gn = now.gender, goals = [], avoid = [], parts = { avoid:[], signs:[], calm:[], routine:[] }, used = [x.id];
+      c.goal_titles.forEach(t => { const gx = thpLib('goal').find(y => y.title === t); if(!gx) return; const r = bankGoalFrom(gx, age, gn); r.goal.focus = goals.length < PLAN_FOCUS_MAX; goals.push(r.goal); if(r.avoid) avoid.push(r.avoid); });
+      BANK_PART_KINDS.forEach(k => { const t = (c.parts || {})[k], px = t ? thpLib(k).find(y => y.title === t) : thpLib(k).find(y => bankHasAges(y) && bankThemesOf(y).includes(bankThemesOf(x)[0]));
+        if(px){ parts[k].push(bankPartText(px, age, gn)); used.push(px.id); } });
+      parts.avoid.push(...avoid);
+      d = Object.assign(planEmpty(), keep, { summary:bankGender(c.summary || '', gn), goals:goals.length ? goals : [planNewGoal()], bank_parts:used });
+      BANK_PART_KINDS.forEach(k => { d[k] = parts[k].filter(Boolean).join('\n'); });
+    } else d = Object.assign(planEmpty(), c, { goals:(c.goals || []).map(g => Object.assign(planNewGoal(), g, { id:planNewGoal().id })) }, keep);
+    if(await planSave(id, d, root.querySelector('#pe-review').value)){ toast(PLAN_BLANK.test(d.summary || '') ? 'הטיוטה מולאה מהתבנית. המקומות בסוגריים מחכים להשלמה' : 'הטיוטה מולאה מהתבנית', 6000); planOpenEditor(id); }
+  } }));
   root.querySelector('#pe-save-tpl').addEventListener('click', () => planSaveTemplate(planRead(root)));
   root.querySelector('#pe-print').addEventListener('click', () => planPrint(id, planRead(root)));
   const fin = root.querySelector('#pe-file');
@@ -198,32 +251,20 @@ function planPrint(id, d){
 }
 
 // ---- the libraries: Mercury's (only the admin adds to it) and the center's (every therapist adds)
-const planLibMatch = (x, q, cat) => (!cat || x.category === cat) && (!q || `${x.title} ${x.description || ''}`.includes(q));
+const planLibMatch = (x, q, cat) => (!cat || x.category === cat || (x.themes || []).includes(cat)) && (!q || `${x.title} ${x.description || ''} ${x.content ? JSON.stringify(x.content) : ''}`.includes(q));
 function planLibraryHtml(){
   const admin = !!(srv.profile && srv.profile.admin), q = thp.libQ || '', cat = thp.libCat || '';
-  const item = x => `<div class="th-lib-item${x.active ? '' : ' off'}"><span><b>${pEsc(x.title)}</b>${x.category ? `<em class="th-lib-cat">${pEsc(x.category)}</em>` : ''}${x.description ? `<small>${pEsc(x.description)}</small>` : ''}</span><span class="th-lib-scope ${x.scope}">${x.scope === 'mercury' ? 'מרקורי' : 'המרכז'}</span>${admin || (x.scope === 'center' && x.created_by === srv.me) ? `<button type="button" class="btn ghost small" data-lib-toggle="${x.id}">${x.active ? 'הסתרה' : 'החזרה'}</button>` : ''}</div>`;
-  return `<div class="pnote">שתי ספריות: של מרקורי (לכל המוסדות; מנהל המערכת מחליט מה נכנס אליה) ושל המרכז (כל איש/אשת טיפול מוסיפים). תבנית שנבחרת נעתקת לתוכנית ונערכת שם; התבנית עצמה לא משתנה. מה שמוסתר לא מוצע יותר.</div>
-    <div class="th-lib-filter"><input type="search" id="lib-q" placeholder="חיפוש בספרייה" aria-label="חיפוש בספרייה" value="${pEsc(q)}"><select id="lib-cat" aria-label="קטגוריה"><option value="">כל הקטגוריות</option>${PLAN_CATS.map(c => `<option${c === cat ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
+  const mine = x => x.scope === 'center' && x.created_by === srv.me, canEdit = x => admin || mine(x) || (x.scope === 'mercury' && isTherapistMe() && x.kind !== 'method');
+  const item = x => `<div class="th-lib-item${x.active ? '' : ' off'}"><span><b>${pEsc(x.title)}</b>${typeof bankThemeChips === 'function' ? `<span class="bk-tags">${bankThemeChips(x)}${bankDraftTag(x)}${bankUseTag(x)}${x.source_id ? '<span class="bk-center">עותק ששונה</span>' : ''}</span>` : ''}${x.description && x.kind !== 'method' ? `<small>${pEsc(x.description)}</small>` : ''}</span><span class="th-lib-scope ${x.scope}">${x.scope === 'mercury' ? 'מרקורי' : 'המרכז'}</span>
+    ${canEdit(x) ? `<button type="button" class="btn ghost small" data-lib-edit="${x.id}">עריכה</button>` : ''}${admin || mine(x) ? `<button type="button" class="btn ghost small" data-lib-toggle="${x.id}">${x.active ? (admin ? 'לארכיון' : 'הסתרה') : 'החזרה'}</button>` : ''}</div>`;
+  return `${typeof bankLibraryTopHtml === 'function' ? bankLibraryTopHtml() : ''}<div class="pnote">שתי ספריות: של מרקורי (לכל המוסדות; מנהל המערכת מחליט מה נכנס אליה) ושל המרכז (כל איש/אשת טיפול מוסיפים). תבנית שנבחרת נעתקת לתוכנית ונערכת שם; התבנית עצמה לא משתנה. שינוי בנוסח של מרקורי נשמר כעותק במרכז. מה שבארכיון לא מוצע יותר.</div>
+    <div class="th-lib-filter"><input type="search" id="lib-q" placeholder="חיפוש בספרייה" aria-label="חיפוש בספרייה" value="${pEsc(q)}"><select id="lib-cat" aria-label="תמה"><option value="">כל התמות</option>${PLAN_CATS.map(c => `<option${c === cat ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
     <div class="th-lib-add"><select id="lib-kind" aria-label="סוג">${Object.keys(PLAN_KIND_WORD).filter(k => k !== 'plan').map(k => `<option value="${k}">${PLAN_KIND_WORD[k]}</option>`).join('')}</select>
       <input type="text" id="lib-title" maxlength="60" placeholder="שם" aria-label="שם"><textarea id="lib-desc" maxlength="600" rows="2" placeholder="הנוסח שייכנס לתוכנית (רשות במטרות ובחוזקות)" aria-label="הנוסח"></textarea>
-      <select id="lib-cat-new" aria-label="קטגוריה">${PLAN_CATS.map(c => `<option>${c}</option>`).join('')}</select>
+      <select id="lib-cat-new" aria-label="תמה">${PLAN_CATS.map(c => `<option>${c}</option>`).join('')}</select>
       ${admin ? '<select id="lib-scope" aria-label="ספרייה"><option value="center">ספריית המרכז</option><option value="mercury">ספריית מרקורי</option></select>' : ''}<button type="button" class="btn" id="lib-add">הוספה</button></div>
     <div class="pnote">תכנית שלמה נשמרת לספרייה מתוך עורך התוכנית ("💾 שמירה כתבנית").</div>
-    ${Object.keys(PLAN_KIND_WORD).map(k => { const l = (thp.library || []).filter(x => x.kind === k && planLibMatch(x, q, cat)); return `<details class="pfold"${k === 'goal' || q || cat ? ' open' : ''}><summary><span>${PLAN_KIND_WORD[k]}</span><span class="pcount">${l.filter(x => x.active).length}</span></summary><div class="pfold-body">${l.map(item).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('')}`;
-}
-// choosing a template of one kind (search + category) -> onPick(item)
-function planPickTemplate(kind, onPick){
-  let q = '', cat = '';
-  const sh = portalSheet(`<h2>${PLAN_KIND_WORD[kind] || 'תבניות'} מהספרייה</h2><div class="th-lib-filter"><input type="search" id="tp-q" placeholder="חיפוש" aria-label="חיפוש"><select id="tp-cat" aria-label="קטגוריה"><option value="">כל הקטגוריות</option>${PLAN_CATS.map(c => `<option>${c}</option>`).join('')}</select></div>
-    <div class="th-tpl-list" id="tp-list"></div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
-  const draw = () => {
-    const l = (thp.library || []).filter(x => x.kind === kind && x.active && planLibMatch(x, q, cat));
-    sh.querySelector('#tp-list').innerHTML = l.map(x => `<button type="button" class="th-tpl-item" data-tp="${x.id}"><b>${pEsc(x.title)}</b>${x.category ? `<em class="th-lib-cat">${pEsc(x.category)}</em>` : ''}${x.description ? `<small>${pEsc(x.description)}</small>` : ''}</button>`).join('') || '<div class="pnote">אין עדיין תבניות כאלה. מוסיפים בלשונית "ספרייה".</div>';
-    sh.querySelectorAll('[data-tp]').forEach(b => b.addEventListener('click', () => { const x = thp.library.find(y => y.id === b.dataset.tp); sh.close(); if(x) onPick(x); }));
-  };
-  sh.querySelector('#tp-q').addEventListener('input', e => { q = e.target.value.trim(); draw(); });
-  sh.querySelector('#tp-cat').addEventListener('change', e => { cat = e.target.value; draw(); });
-  draw();
+    ${Object.keys(PLAN_KIND_WORD).map(k => { const l = (thp.library || []).filter(x => x.kind === k && planLibMatch(x, q, cat)); return `<details class="pfold"${q || cat ? ' open' : ''}><summary><span>${PLAN_KIND_WORD[k]}</span><span class="pcount">${l.filter(x => x.active).length}</span></summary><div class="pfold-body">${l.map(item).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('')}`;
 }
 // this plan as a whole-plan template of the center (without the thinking and the file)
 function planSaveTemplate(d){
@@ -251,6 +292,7 @@ function planUpdateKind(){
   });
 }
 function planWireLibrary(body){
+  if(typeof bankWireLibrary === 'function') bankWireLibrary(body);
   const add = body.querySelector('#lib-add'); if(!add) return;
   add.addEventListener('click', async () => {
     const title = body.querySelector('#lib-title').value.trim(); if(!title){ toast('צריך שם'); return; }
