@@ -1,6 +1,6 @@
 // Service worker: keeps the app (the single page + icons) available offline, and picks up new releases.
 // The data (children, stars, bonuses) always comes live from Supabase and is NEVER cached here.
-const VERSION = '498e95e7021e';
+const VERSION = '799f40bf08db';
 const CACHE = 'ramzor-' + VERSION;
 const SHELL = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
@@ -33,6 +33,7 @@ self.addEventListener('fetch', event => {
 
   // anything else on another origin (Supabase API, realtime, WhatsApp...) is not ours to touch
   if(url.origin !== self.location.origin) return;
+  if(url.pathname.indexOf('/learn/') >= 0) return;          // (the narration of the training videos: straight from the site, the phone streams it)
 
   // the page itself: newest copy when online, the saved copy when offline
   if(req.mode === 'navigate'){
