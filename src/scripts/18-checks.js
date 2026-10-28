@@ -1395,7 +1395,9 @@
       }
       portalUi.persona = srv.me; portalUi.tab = 'prefs'; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
       check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
-      check('portal server: the level buttons are named כן / יכול / לא', ['כן', 'יכול', 'לא'].every(w => [...document.querySelectorAll('.lvbtn')].some(b => b.textContent === w)), [...document.querySelectorAll('.lvbtn')].map(b => b.textContent).join(','));
+      const prefsShut = !srvPrefsOpen(next);          // (after the 24th the month is closed: one line, the marks to read only — Guy 2026-10-28)
+      if(prefsShut) check('portal server: a closed month shows one line and no level buttons, no hand-in button', !!document.getElementById('prefs-locked') && !document.querySelector('.lvbtn') && !document.getElementById('prefs-submit') && document.querySelectorAll('#portal-body .pstatus').length === 1, document.querySelectorAll('.lvbtn').length + ' buttons');
+      else check('portal server: the level buttons are named כן / יכול / לא', ['כן', 'יכול', 'לא'].every(w => [...document.querySelectorAll('.lvbtn')].some(b => b.textContent === w)), [...document.querySelectorAll('.lvbtn')].map(b => b.textContent).join(','));
       // the gear: the person chooses the language of the system
       check('portal server: there is a gear (system settings) in the top bar', !!document.getElementById('portal-gear'), 'no gear');
       document.getElementById('portal-gear').click(); await sleep(150);
@@ -1404,11 +1406,11 @@
       check('portal server: the settings sheet scrolls inside itself and stays within the screen (a small phone must reach the last voice)', getComputedStyle(gcard).overflowY === 'auto' && gcard.getBoundingClientRect().height <= window.innerHeight, getComputedStyle(gcard).overflowY + ' / ' + gcard.getBoundingClientRect().height + ' / ' + window.innerHeight);
       check('portal server: the settings offer to switch the reminders off (Guy 2026-10-21: the button stays)', !!document.querySelector('.psheet [data-set-rem="0"]'), 'no button');
       document.querySelector('.psheet [data-voice="brief"]').click(); await sleep(400);
-      check('portal server: choosing the brief voice changes the screen at once', srv.voice === 'brief' && /נא להגיש העדפות|ההעדפות הוגשו\./.test(document.getElementById('portal-body').textContent), srv.voice + ' / ' + document.querySelector('.pstatus').textContent);
+      check('portal server: choosing the brief voice changes the screen at once', srv.voice === 'brief' && (prefsShut ? /ההגשה סגורה\. לשינוי: הרכזת/ : /נא להגיש העדפות|ההעדפות הוגשו\./).test(document.getElementById('portal-body').textContent), srv.voice + ' / ' + document.querySelector('.pstatus').textContent);
       document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-voice="light"]').click(); await sleep(400);
-      check('portal server: choosing the light voice changes the screen too', srv.voice === 'light' && /לא יכתוב את עצמו|שמנו במקום בטוח/.test(document.getElementById('portal-body').textContent), srv.voice);
+      check('portal server: choosing the light voice changes the screen too', srv.voice === 'light' && (prefsShut ? /הסידור כבר בבנייה/ : /לא יכתוב את עצמו|שמנו במקום בטוח/).test(document.getElementById('portal-body').textContent), srv.voice);
       document.getElementById('portal-gear').click(); await sleep(150); document.querySelector('.psheet [data-voice="warm"]').click(); await sleep(400);
-      check('portal server: back to the warm voice', srv.voice === 'warm' && /נשמח לקבל את ההעדפות|אצלנו, תודה/.test(document.getElementById('portal-body').textContent), srv.voice);
+      check('portal server: back to the warm voice', srv.voice === 'warm' && (prefsShut ? /הרכזת כבר בונה את הסידור/ : /נשמח לקבל את ההעדפות|אצלנו, תודה/).test(document.getElementById('portal-body').textContent), srv.voice);
       if(srvPrefsOpen(next)){
         check('portal server: the monthly-goal question offers three choices and "no preference"', document.querySelectorAll('.pgoal-opt').length === 4 && /המינימום שלך/.test(document.querySelector('.pgoal').textContent), document.querySelectorAll('.pgoal-opt').length + ' / ' + JSON.stringify(srv.profile));
         document.querySelector('[data-goal="weekly45"]').click(); await sleep(60);
