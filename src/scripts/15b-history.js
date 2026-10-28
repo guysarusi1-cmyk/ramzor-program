@@ -6,7 +6,7 @@
 // Only from the first page does Back leave. Open sheets (a question, a portal sheet, accessibility...) close first.
 // The bottom bar has a "→ חזור" button that does the same (Guy, 2026-10-22); on a wide screen it floats at the bottom.
 (function(){
-  if(location.hash === '#tv' || location.hash === '#diag' || IS_TV_PREVIEW) return;   // the room TV has no Back button to care about
+  if(location.hash === '#tv' || location.hash === '#diag' || IS_TV_PREVIEW || /^#learn/.test(location.hash)) return;   // the room TV has no Back button to care about (nor the training videos)
 
   const el = id => document.getElementById(id);
   const shown = id => { const e = el(id); return !!e && getComputedStyle(e).display !== 'none'; };

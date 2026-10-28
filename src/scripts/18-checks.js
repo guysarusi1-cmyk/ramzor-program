@@ -2707,6 +2707,35 @@
       check('no two Mercury ships overlap', overlaps === 0, overlaps + ' overlapping pairs');
     });
 
+    // ---- the training videos (14zh-learn.js): every step of every video finds its part of the real screen in the phone, and the player page draws
+    await step('learn', async () => {
+      if(!PORTAL_ENABLED) return;
+      const frame = document.createElement('iframe'); frame.style.cssText = 'position:fixed;left:0;top:0;width:356px;height:746px;opacity:0;pointer-events:none;';
+      frame.src = location.pathname + '#learnframe'; document.body.appendChild(frame);
+      const fw = () => frame.contentWindow, fd = () => frame.contentDocument;
+      for(let i = 0; i < 150 && !(fw() && fw().learnFrame && fw().learnFrame.ready); i++) await sleep(200);
+      check('learn: the phone of the videos starts (#learnframe, no server)', !!(fw() && fw().learnFrame), 'not ready');
+      if(!(fw() && fw().learnFrame)){ frame.remove(); return; }
+      const find = sel => [...fd().querySelectorAll(sel)].find(el => el.getClientRects().length) || fd().querySelector(sel);
+      const missing = [];
+      for(const v of LEARN_ITEMS){
+        for(const [i, st] of learnSteps(v).entries()){
+          if(st.scene) fw().learnFrame.scene(st.scene);
+          if(st.act) fw().learnFrame.act(st.act);
+          await sleep(60);
+          [st.hl, st.type && st.type[0], st.tap].filter(Boolean).forEach(sel => { if(!find(sel)) missing.push(`${v.id} #${i + 1} ${sel}`); });
+          if(st.type){ const el = find(st.type[0]); if(el){ el.value = st.type[1]; el.dispatchEvent(new Event('input', { bubbles:true })); } }
+          if(st.tap){ const el = find(st.tap); if(el){ el.click(); await sleep(250); } }
+        }
+      }
+      check('learn: every step of every video finds its part of the screen', missing.length === 0, missing.join(' | '));
+      frame.remove(); frame.src = location.pathname + '?v=learn#learn:inst-prefs'; document.body.appendChild(frame); await sleep(300);          // (a new page: only the part after # would not load it again)
+      for(let i = 0; i < 100 && !(fd() && fd().querySelector('.ln-player')); i++) await sleep(200);
+      const pl = fd() && fd().querySelector('.ln-player');
+      check('learn: a shared link opens the player without a sign-in (#learn:<id>)', !!pl && /בחירת העדפות/.test(pl.textContent) && !!fd().getElementById('ln-frame'), 'no player');
+      frame.remove();
+    });
+
     check('no JavaScript errors during the run', errors.length === 0, errors.join(' | '));
   }
 
