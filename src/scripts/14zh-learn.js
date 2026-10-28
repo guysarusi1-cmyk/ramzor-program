@@ -53,7 +53,7 @@ const LEARN_ITEMS = [
         { say:'יש לכם העדפה קבועה, למשל שאתם לא עושים לילות? מגדירים אותה ב"שינוי", והיא תסומן לבד בכל חודש.', hl:'#prefs-fixed-line' },
         { say:'וכאן רואים את השעות של כל משמרת: בוקר, צהריים ולילה.', hl:'.pshift-key' }]},
       { title:'סימון המשמרות', steps:[
-        { scene:'prefs', act:'markPrefs', say:'בלוח, בכל יום יש שלוש משמרות: ב׳ לבוקר, צ׳ לצהריים ול׳ ללילה. בהתחלה אף משמרת לא מסומנת.', hl:'#ln-week1' },
+        { scene:'prefs', act:'markPrefs', say:'בלוח, בכל יום יש שלוש משמרות: בוקר, צהריים ולילה. בהתחלה אף משמרת לא מסומנת.', hl:'#ln-week1' },
         { say:'בתחתית בוחרים רמה. "כן": אשמח לקבל. "יכול": אפשר, אבל פחות נוח. "לא": לא מתאים.', hl:'.plevelbar' },
         { say:'נבחר "כן"...', tap:'.plevelbar [data-plevel="yes"]' },
         { act:'markPrefs', say:'ונלחץ על המספר של היום, כדי לסמן את כל המשמרות שלו.', tap:'#ln-day1' },
@@ -250,7 +250,7 @@ function learnStart(){
 }
 function learnRoot(){ let r = document.getElementById('learn-root'); if(!r){ r = document.createElement('div'); r.id = 'learn-root'; r.className = 'learn'; document.body.appendChild(r); } return r; }
 function learnRoute(){
-  LP.run++; LP.playing = false; try { speechSynthesis.cancel(); } catch(e){}
+  LP.run++; LP.playing = false; learnStopSound();
   const id = location.hash.split(':')[1], v = id && learnItem(id);
   if(v) return learnOpen(v);
   LP.v = null; document.title = 'סרטוני הדרכה · מרכז חירום';
@@ -291,7 +291,7 @@ function learnOpen(v){
   $('ln-next').addEventListener('click', () => learnGo(Math.min(LP.steps.length - 1, LP.idx + 1)));
   $('ln-bar').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); learnGo(Math.round((r.right - e.clientX) / r.width * (LP.steps.length - 1))); });
   $('ln-layer').addEventListener('click', learnToggle);
-  $('ln-voice').addEventListener('click', () => { LP.voiceOn = !LP.voiceOn; $('ln-voice').setAttribute('aria-pressed', LP.voiceOn); if(LP.voiceOn) learnUnlock(); else try { speechSynthesis.cancel(); } catch(e){} });
+  $('ln-voice').addEventListener('click', () => { LP.voiceOn = !LP.voiceOn; $('ln-voice').setAttribute('aria-pressed', LP.voiceOn); if(LP.voiceOn) learnUnlock(); else learnStopSound(); });
   document.querySelectorAll('.ln-chap').forEach(b => b.addEventListener('click', () => learnGo(LP.steps.findIndex(s => s.ci === +b.dataset.ci))));
 }
 // the voice: a Hebrew one of the device. Some phones list no voices at all and still read Hebrew by the language alone, so then it is tried that way
@@ -302,12 +302,18 @@ function learnPickVoice(){
   if(b){ b.disabled = !ok; if(ok) b.removeAttribute('title'); b.setAttribute('aria-pressed', LP.voiceOn && ok); }
   if(n) n.hidden = ok;
 }
-const learnCanSpeak = () => 'speechSynthesis' in window && (!!LP.voice || !!LP.byLang);
-// phones (iPhone, and Chrome on Android) speak only after a speech that started inside a tap: the "הפעלה" tap starts a silent one
+// the narration is recorded (tools\learn-voice.ps1, 14zi-learn-voice.js): it plays on every phone. Only a sentence with no recording uses the device's voice
+const learnClip = text => typeof LEARN_VOICE !== 'undefined' && LEARN_VOICE[text] ? 'learn/' + LEARN_VOICE[text] : null;
+const learnCanSpeak = () => (typeof LEARN_VOICE !== 'undefined' && Object.keys(LEARN_VOICE).length > 0) || ('speechSynthesis' in window && (!!LP.voice || !!LP.byLang));
+// a phone plays sound only after a sound that started inside a tap: the "הפעלה" tap plays the first recording silently (and a silent speech)
 function learnUnlock(){
+  if(!LP.audio){ LP.audio = new Audio(); LP.audio.preload = 'auto'; }
+  const a = LP.audio, first = learnClip((LP.steps[0] || {}).say);
+  if(first){ a.muted = true; a.src = first; const p = a.play(); LP.unlocking = (p && p.then ? p : Promise.resolve()).then(() => { a.pause(); }, () => {}).then(() => { a.muted = false; }); }
   if(!('speechSynthesis' in window)) return;
   try { learnPickVoice(); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(' '); u.lang = 'he-IL'; if(LP.voice) u.voice = LP.voice; u.volume = 0; speechSynthesis.speak(u); speechSynthesis.resume(); } catch(e){}
 }
+function learnStopSound(){ if(LP.audio) try { LP.audio.pause(); } catch(e){} try { speechSynthesis.cancel(); } catch(e){} }
 function learnFit(){
   const stage = document.getElementById('ln-stage'), phone = document.getElementById('ln-phone'), slot = document.getElementById('ln-slot'); if(!stage) return;
   const narrow = innerWidth <= 860, availH = narrow ? innerHeight - 250 : stage.clientHeight - 170, availW = stage.clientWidth - 24;          // (on a phone: the phone fills the screen, the chapters are below)
@@ -317,10 +323,19 @@ function learnFit(){
 // waits ms of playing time; false when another step started meanwhile
 function learnWait(ms, my){
   return new Promise(res => { let el = 0, last = performance.now();
-    (function tick(now){ if(my !== LP.run) return res(false); if(LP.playing) el += now - last; last = now; if(el >= ms) return res(true); requestAnimationFrame(tick); })(last); });
+    (function tick(){ const now = performance.now(); if(my !== LP.run) return res(false); if(LP.playing) el += now - last; last = now; if(el >= ms) return res(true); setTimeout(tick, 40); })(); });          // (a timer, not animation frames: those stop when the page is not on the screen)
 }
 function learnSpeak(text, my){
-  if(!LP.voiceOn || !learnCanSpeak() || !text) return Promise.resolve();
+  const clip = learnClip(text);
+  if(LP.voiceOn && clip && LP.audio) return (async () => {
+    await LP.unlocking; if(my !== LP.run) return;
+    const a = LP.audio;
+    await new Promise(res => { let iv, t; const done = () => { clearInterval(iv); clearTimeout(t); a.onended = a.onerror = null; res(); };
+      a.onended = done; a.onerror = done; t = setTimeout(done, learnReadMs(text) * 4);
+      iv = setInterval(() => { if(my !== LP.run){ a.pause(); done(); } }, 200);
+      a.muted = false; a.src = clip; const p = a.play(); if(p && p.catch) p.catch(done); });
+  })();
+  if(!LP.voiceOn || !('speechSynthesis' in window) || !(LP.voice || LP.byLang) || !text) return Promise.resolve();
   let busy = false; try { busy = speechSynthesis.speaking || speechSynthesis.pending; if(busy) speechSynthesis.cancel(); } catch(e){ return Promise.resolve(); }
   return new Promise(res => {
     const u = new SpeechSynthesisUtterance(text.replace(/[„”"׳]/g, '')); u.lang = LP.voice ? LP.voice.lang : 'he-IL'; if(LP.voice) u.voice = LP.voice; u.rate = 1.02;
@@ -386,7 +401,7 @@ function learnShow(i){
   document.querySelectorAll('.ln-chap').forEach(b => { b.classList.toggle('cur', +b.dataset.ci === st.ci); b.classList.toggle('done', +b.dataset.ci < st.ci); });
 }
 async function learnGo(i){
-  const my = ++LP.run; LP.idx = i; try { speechSynthesis.cancel(); } catch(e){}
+  const my = ++LP.run; LP.idx = i; learnStopSound();
   document.getElementById('ln-end').classList.remove('on'); document.getElementById('ln-cover').classList.remove('on');
   learnClear(); learnShow(i);
   const st = LP.steps[i], fw = learnFW();
@@ -414,6 +429,7 @@ function learnToggle(){
   if(document.getElementById('ln-cover').classList.contains('on')) return;
   if(document.getElementById('ln-end').classList.contains('on')){ document.getElementById('ln-end').classList.remove('on'); LP.playing = true; learnGo(0); return; }
   LP.playing = !LP.playing;
+  if(LP.audio && LP.audio.src && !LP.audio.ended){ try { LP.playing ? LP.audio.play() : LP.audio.pause(); } catch(e){} }
   try { LP.playing ? speechSynthesis.resume() : speechSynthesis.pause(); } catch(e){}
   document.getElementById('ln-play').textContent = LP.playing ? '⏸' : '▶';
 }

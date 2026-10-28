@@ -33,6 +33,7 @@ self.addEventListener('fetch', event => {
 
   // anything else on another origin (Supabase API, realtime, WhatsApp...) is not ours to touch
   if(url.origin !== self.location.origin) return;
+  if(url.pathname.indexOf('/learn/') >= 0) return;          // (the narration of the training videos: straight from the site, the phone streams it)
 
   // the page itself: newest copy when online, the saved copy when offline
   if(req.mode === 'navigate'){

@@ -2729,6 +2729,8 @@
         }
       }
       check('learn: every step of every video finds its part of the screen', missing.length === 0, missing.join(' | '));
+      const unrec = [...new Set(LEARN_ITEMS.flatMap(v => learnSteps(v)).map(st => st.say).filter(t => t && !LEARN_VOICE[t]))];
+      check('learn: every sentence has its recording (run tools\learn-voice.ps1 after changing one)', unrec.length === 0, unrec.join(' | '));
       frame.remove(); frame.src = location.pathname + '?v=learn#learn:inst-prefs'; document.body.appendChild(frame); await sleep(300);          // (a new page: only the part after # would not load it again)
       for(let i = 0; i < 100 && !(fd() && fd().querySelector('.ln-player')); i++) await sleep(200);
       const pl = fd() && fd().querySelector('.ln-player');
