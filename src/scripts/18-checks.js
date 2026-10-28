@@ -1289,7 +1289,8 @@
         showAppHome(); await sleep(300); }
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
-      check('personal sign-in: an instructor who is the admin gets three cards (Ramzor, his instructor portal, the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && document.querySelectorAll('#view-apphome .home-card').length === (therapyAvailable() ? 4 : 3), document.querySelectorAll('#view-apphome .home-card').length);
+      { const ids = [...document.querySelectorAll('#view-apphome .home-card')].map(b => b.id);
+        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 5 : 4) && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
       { const other = portalLoad().instructors.find(p => p.active && p.role === 'instructor' && p.id !== srv.me);
         portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.editPrefs = true;
         check('admin fills preferences: the screen writes the other person\'s preferences, only the preferences tab, also after the closing time', srvWho() === other.id && srvTabs(portalMe()).map(x => x[0]).join(',') === 'prefs' && srvPrefsOpen('2020-01'), [srvWho(), srvTabs(portalMe()).map(x => x[0]).join(',')].join(' / '));
@@ -2734,6 +2735,9 @@
       frame.remove(); frame.src = location.pathname + '?v=learn#learn:inst-prefs'; document.body.appendChild(frame); await sleep(300);          // (a new page: only the part after # would not load it again)
       for(let i = 0; i < 100 && !(fd() && fd().querySelector('.ln-player')); i++) await sleep(200);
       const pl = fd() && fd().querySelector('.ln-player');
+      if(typeof showLearnHome === 'function'){ showLearnHome(); await sleep(100);
+        check('learn: the admin\'s "לומדה" screen lists every video with watch and WhatsApp', document.querySelectorAll('#view-learn .learn-row').length === LEARN_ITEMS.length && document.querySelectorAll('#view-learn .learn-row a[href*="learn"]').length >= LEARN_ITEMS.length, document.querySelectorAll('#view-learn .learn-row').length);
+        showHub(); }
       check('learn: a shared link opens the player without a sign-in (#learn:<id>)', !!pl && /מילוי העדפות/.test(pl.textContent) && !!fd().getElementById('ln-frame'), 'no player');
       frame.remove();
     });

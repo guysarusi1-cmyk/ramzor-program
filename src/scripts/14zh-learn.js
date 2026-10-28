@@ -161,7 +161,17 @@ const learnReadMs = t => Math.max(2600, String(t || '').length * 62 + 900);
 const learnMinutes = v => Math.max(1, Math.round(learnSteps(v).reduce((a, s) => a + learnReadMs(s.say) + (s.tap ? 1300 : 0) + (s.type ? s.type[1].length * 90 : 0), 0) / 60000));
 const learnUrl = id => location.origin + location.pathname + '#learn:' + id;
 
-// ---------------------------------------------------------------- the admin's tab: the list, watch, share
+// ---------------------------------------------------------------- the admin's "לומדה": a card on the app home (between the therapy portal and the management portal)
+function showLearnHome(){
+  document.body.classList.remove('leopard-bg');
+  portalActivateView('view-learn');
+  const st = portalLoad();
+  document.getElementById('view-learn').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc((st.settings || {}).theme || 'dark')}">
+    <div class="portal-top"><button type="button" class="back-btn portal-back" id="learn-home-back">→ מסך ראשי</button><h1 class="portal-title">לומדה</h1><span class="portal-top-actions"></span></div>
+    <div id="learn-body"></div></div>`;
+  document.getElementById('learn-home-back').addEventListener('click', showAppHome);
+  learnAdminRender(document.getElementById('learn-body'));
+}
 function learnAdminRender(body){
   body.innerHTML = `<div class="pnote">סרטוני הדרכה קצרים. כל סרטון נפתח מקישור, בלי כניסה לפורטל, אז אפשר לשלוח אותו בוואטסאפ לקבוצה או למדריך מסוים. אין בסרטונים שמות אמיתיים.</div>
     ${[...new Set(LEARN_ITEMS.map(v => v.group))].map(g => `<h2 class="psec">${pEsc(g)}</h2>${LEARN_ITEMS.filter(v => v.group === g).map(v => `<div class="learn-row"><span class="learn-ic" aria-hidden="true">${v.icon}</span><span class="learn-txt"><b>${pEsc(v.title)}</b><small>${pEsc(v.sub)} · כ-${learnMinutes(v)} דק'</small></span>

@@ -55,6 +55,11 @@ function showAppHome(){
           <span class="home-card-title">פורטל הטיפול</span>
           <span class="home-card-sub">${canTherapistPortal() ? 'מה מחכה לך, התוכניות, התצפיות והמעקב' : 'מה עושים עם כל ילד, וממה להימנע'}</span>
         </button>` : ''}
+        ${portalServerOn && (portalMe() || {}).admin ? `<button type="button" class="home-card" id="apphome-learn">
+          <span class="apphome-emoji" aria-hidden="true">🎬</span>
+          <span class="home-card-title">לומדה</span>
+          <span class="home-card-sub">סרטוני הדרכה, ושיתוף שלהם לצוות</span>
+        </button>` : ''}
         ${portalServerOn && (portalMe() || {}).admin && (portalMe() || {}).role !== 'coordinator' ? `<button type="button" class="home-card" id="apphome-manage">
           <span class="apphome-emoji" aria-hidden="true">🛠️</span>
           <span class="home-card-title">פורטל ניהול</span>
@@ -67,6 +72,7 @@ function showAppHome(){
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
   { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
+  { const ln = document.getElementById('apphome-learn'); if(ln) ln.addEventListener('click', showLearnHome); }          // (the admin's training videos, 14zh-learn.js)
   const mg = document.getElementById('apphome-manage'); if(mg) mg.addEventListener('click', () => { portalUi.manager = true; srvOpenPortal(); });
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
 }

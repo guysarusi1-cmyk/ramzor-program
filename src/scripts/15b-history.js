@@ -26,7 +26,7 @@
     }
     if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}${portalUi.prefsPast ? 'p' : ''}`;
     if(v.id === 'view-therapy' && typeof thp !== 'undefined') return `therapy:${thp.mode}|${thp.tab || ''}|${thp.editing || ''}|${thp.editing ? thp.wtab || '' : ''}`;
-    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control' })[v.id] || 'hub';
+    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control', 'view-learn':'learn' })[v.id] || 'hub';
   }
   function snapshot(key){
     if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona, prefsPast:!!portalUi.prefsPast };
@@ -54,6 +54,7 @@
     if(key === 'apphome' && typeof showAppHome === 'function') return showAppHome();
     if(key === 'manage' && typeof openManagement === 'function') return openManagement();
     if(key === 'control' && typeof showControl === 'function') return showControl();
+    if(key === 'learn' && typeof showLearnHome === 'function') return showLearnHome();
     if(key.startsWith('portal:') && snap){
       if(portalUi.editPrefs && !snap.editPrefs && typeof srvFlush === 'function'){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled for somebody is saved before leaving)
       const wasEditing = !!portalUi.editPrefs;
