@@ -509,3 +509,7 @@
   .tv-duties .duty-board{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:2vh; } .tv-duties .duty-name{ font-size:3.4vh; } .tv-duties .duty-kid{ font-size:3vh; } .tv-duties .duty-kid .duty-av, .tv-duties .duty-kid img{ width:6vh; height:6vh; }
   .ctl-duty{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; padding:6px 0; border-bottom:1px solid var(--p-line, rgba(255,255,255,.1)); } .ctl-duty-kids{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
   .duty-move{ display:flex; flex-direction:column; gap:6px; }
+  /* the review of the portals (Guy 2026-10-28): the next shift, open shifts by day, the fixed preferences line */
+  .pnext-line{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:0 0 10px; padding:8px 12px; border:1px solid var(--p-line); border-radius:12px; background:var(--p-panel); }
+  .popen-day{ margin:0 0 8px; } .popen-date{ font-weight:700; margin:6px 0 2px; }
+  .pfixed-edit{ background:none; border:0; padding:0 4px; font:inherit; color:inherit; text-decoration:underline; cursor:pointer; min-height:32px; }

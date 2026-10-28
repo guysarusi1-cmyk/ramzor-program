@@ -3,7 +3,7 @@
 // Demo mode: there are no personal logins yet, so a small "viewing as" selector lets you see the portal as the
 // coordinator or as any instructor. Everything is stored in this browser only (see 14a-portal-data.js).
 const portalHomeFirst = () => PORTAL_ENABLED && !window.__portalNoHome && location.hash !== '#tv';       // (the test tools set __portalNoHome: they start from the רמזור home)
-const portalUi = { persona:'c1', tab:null, month:null, level:'avoid', openDay:null, fold:{ mine:false, team:false, swap:false } };
+const portalUi = { persona:'c1', tab:null, month:null, level:'avoid', openDay:null, fold:{ mine:false, team:true, swap:false } };          // (the team calendar opens by itself: Guy 2026-10-28)
 
 function portalPerson(id){ return portalLoad().instructors.find(p => p.id === id); }
 function portalMe(){ return portalPerson(portalUi.persona) || portalLoad().instructors[0]; }          // (in server mode persona = the signed-in person)

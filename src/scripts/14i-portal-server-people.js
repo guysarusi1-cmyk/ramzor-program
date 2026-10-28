@@ -33,6 +33,7 @@ function srvRenderSchedule(body){
       ${notices.map(n => `<div class="pnotice ${n.kind}" role="status"><span>${pEsc(n.text)}</span><button type="button" class="btn small" data-notice-ok="${n.id}">הבנתי, תודה</button></div>`).join('')}
       </div></details>` : ''}
     ${isInstr ? '<div id="od-cards" class="od-cards"></div>' : ''}
+    ${next ? `<div class="pnext-line" id="pnext-line"><span class="pnext-badge">המשמרת הבאה שלך</span><span>${srvRowLine(next)}</span></div>` : ''}
     ${monthNavHtml(mk)}
     ${!m.published ? `<div class="pnote">${tx('sch_unpub')}</div>` : `
     <details class="pfold" data-fold="mine"${openFold('mine') ? ' open' : ''}>
@@ -258,10 +259,15 @@ async function srvRenderTeacherHours(body){
 async function srvOpenShiftList(mk){
   try { const r = await sbPersonal.rpc('open_shifts', { p_month:firstOf(mk) }); return r.error || !r.data ? [] : r.data; } catch(e){ return []; }
 }
+// by day, and in a day morning, noon, night; one small button on every row (Guy 2026-10-28)
 function srvOpenShiftsHtml(list){
-  return list.length ? list.map(o => `<div class="pmine-row"><span><b>${dayLabel(o.day)}</b> · ${SRV_SHIFT_WORD[o.shift]} <small>(חסר/ים ${o.need - o.have})</small></span>${o.req
-    ? `<span class="pmine-actions"><em class="pst pst-offered">${tx('open_waiting')}</em><button type="button" class="btn ghost small" data-ocancel="${o.req}">ביטול</button></span>`
-    : `<button type="button" class="btn small" data-ojoin="${o.day}|${o.shift}">אשמח להצטרף</button>`}</div>`).join('') : `<div class="pnote">${tx('open_none')}</div>`;
+  if(!list.length) return `<div class="pnote">${tx('open_none')}</div>`;
+  const ORD = { M:0, S:0, A:1, N:2, L:3 }, sorted = list.slice().sort((x, y) => x.day.localeCompare(y.day) || (ORD[x.shift] - ORD[y.shift]));
+  const days = [...new Set(sorted.map(o => o.day))];
+  return days.map(d => `<div class="popen-day"><div class="popen-date">${dayLabel(d)}</div>${sorted.filter(o => o.day === d).map(o => { const n = o.need - o.have;
+    return `<div class="pmine-row"><span>${SRV_SHIFT_WORD[o.shift]} <small>${n > 1 ? `חסרים ${n}` : `חסר ${n}`}</small></span>${o.req
+      ? `<span class="pmine-actions"><em class="pst pst-offered">${tx('open_waiting')}</em><button type="button" class="btn ghost small" data-ocancel="${o.req}">ביטול</button></span>`
+      : `<button type="button" class="btn ghost small" data-ojoin="${o.day}|${o.shift}">אשמח להצטרף</button>`}</div>`; }).join('')}</div>`).join('');
 }
 function srvWireOpenShifts(root, refresh){
   root.querySelectorAll('[data-ojoin]').forEach(b => b.addEventListener('click', async () => {

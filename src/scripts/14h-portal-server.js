@@ -125,8 +125,10 @@ async function srvLoad(){
   if(srv.pendingOn && srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)){
     try { const pr = await sbPersonal.from('assignment_pending').select('id,discarded_at'); if(!pr.error) (pr.data || []).forEach(x => { st.pending[x.discarded_at ? 'discarded' : 'waiting']++; }); } catch(e){}
   }
+  try { await sbPersonal.rpc('swaps_close_expired'); } catch(e){}          // (a request whose shift has passed closes by itself: scheduling-v45.sql)
   const swapRows = await srvAll(() => sbPersonal.from('swap_requests').select('id,assignment_id,from_staff,to_staff,status,urgent,created_at').order('created_at', { ascending:false })).catch(() => []);
-  st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
+  const swapPast = s => ['open', 'offered'].includes(s.status) && String(st.assignmentIds[s.assignment_id].key).split('|')[0] < srvToday();          // (and is not shown while the server has not closed it yet)
+  st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id] && !swapPast(s)).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
   if(!fresh()) return false;
   if(old){ Object.keys(old).forEach(k => { if(!(k in st)) st[k] = old[k]; }); portalState = st; }          // (what only the coordinator's load adds stays until it is read again, just below)
   await srvLoadPrefsOpen();
@@ -284,8 +286,13 @@ async function srvRenderInbox(body){
   if(!body.textContent.trim()) body.innerHTML = '<div class="pnote">טוען…</div>';          // (not a blank screen while the messages come)
   const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
   if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
-  body.innerHTML = `<h2 class="psec">העדכונים שלך</h2>${st.notices.length ? st.notices.map(n => `<div class="pannounce ${n.kind}"><small>${new Date(n.at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}${n.seen ? '' : ' · חדש'}</small><div>${pEsc(n.text)}</div></div>`).join('') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}
-    <h2 class="psec">הודעות מהרכזת</h2>${(an.data || []).length ? an.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}`;
+  // the coordinator's messages first; then her updates, the same text only once (with how many times), the latest 7 and the rest under "עוד" (Guy 2026-10-28)
+  const when = d => new Date(d).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' });
+  const groups = []; st.notices.forEach(n => { const g = groups.find(x => x.text === n.text); if(g){ g.n++; if(!n.seen) g.fresh = true; } else groups.push({ text:n.text, at:n.at, kind:n.kind, n:1, fresh:!n.seen }); });
+  const one = g => `<div class="pannounce ${g.kind}"><small>${when(g.at)}${g.fresh ? ' · חדש' : ''}${g.n > 1 ? ` · ${g.n} פעמים` : ''}</small><div>${pEsc(g.text)}</div></div>`;
+  const ann = an.data || [];
+  body.innerHTML = `<h2 class="psec">הודעות מהרכזת</h2>${ann.length ? ann.map(a => `<div class="pannounce"><small>${when(a.created_at)}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}
+    <h2 class="psec">העדכונים שלך</h2>${groups.length ? groups.slice(0, 7).map(one).join('') + (groups.length > 7 ? `<details class="pfold" data-fold="inbox-more"><summary><span>עוד ${groups.length - 7} עדכונים</span></summary><div class="pfold-body">${groups.slice(7).map(one).join('')}</div></details>` : '') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}`;
   st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)
 }// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
 async function srvReload(){ await srvFlush(); await srvLoad(); }

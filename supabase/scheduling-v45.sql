@@ -166,6 +166,9 @@ begin
     else
       subj := 'עדכון'; txt := coalesce(a, '');
   end case;
+  if p_key = 'vac_ok' and b is not null then txt := txt || E'
+' || b; ta := ta || E'
+' || coalesce(c, b); end if;
   perform public.tell_staff_ar(p_staff, subj, txt, p_kind, sa, ta);
   perform set_config('sched.mail_key', '', true);
 end $$;
@@ -388,5 +391,62 @@ begin
 end $$;
 revoke all on function public.sched_pending_write(text, uuid, jsonb), public.sched_rows(date[]), public.sched_send_updates(), public.sched_discard_updates(), public.sched_restore_updates() from public, anon;
 grant execute on function public.sched_pending_write(text, uuid, jsonb), public.sched_rows(date[]), public.sched_send_updates(), public.sched_discard_updates(), public.sched_restore_updates() to authenticated;
+
+-- ---------------------------------------------------------------- from the review of the portals (Guy 2026-10-28)
+-- a swap request whose shift has passed closes by itself (every load of the portal asks for it; cheap when there is nothing to close)
+create or replace function public.swaps_close_expired() returns int language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if public.my_staff_id() is null then return 0; end if;
+  update public.swap_requests s set status = 'cancelled', decided_at = now()
+    from public.assignment a where a.id = s.assignment_id and s.status in ('open', 'offered') and a.day < (now() at time zone 'Asia/Jerusalem')::date;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke all on function public.swaps_close_expired() from public, anon;
+grant execute on function public.swaps_close_expired() to authenticated;
+
+-- a vacation approved although the person has shifts on those days: her coming shifts open for a replacement at once, like "I cannot come"
+-- (an urgent swap request each, and the call for help to who marked yes / can and is free); she is told in the same message
+create or replace function public.decide_vacation(p_id uuid, p_approve boolean) returns void language plpgsql security definer set search_path = public as $$
+declare v public.vacation_requests; a public.assignment; i record; dates text; st text; k text; opened text[] := '{}';
+begin
+  if not public.is_coordinator() then raise exception 'not allowed'; end if;
+  select * into v from public.vacation_requests where id = p_id and status = 'pending'; if not found then raise exception 'nothing to decide'; end if;
+  dates := to_char(v.from_day, 'DD/MM') || '–' || to_char(v.to_day, 'DD/MM');
+  if p_approve then
+    update public.vacation_requests set status = 'approved', decided_at = now() where id = p_id;
+    insert into public.prefs_absence (staff_id, day, reason, note)
+      select v.staff_id, g::date, 'vacation', v.note from generate_series(v.from_day::timestamp, v.to_day::timestamp, interval '1 day') g
+      on conflict (staff_id, day) do update set reason = 'vacation', note = excluded.note;
+    select kind into k from public.staff where id = v.staff_id;
+    for a in select x.* from public.assignment x join public.schedule sc on sc.month = x.month and sc.status = 'published'
+             where x.staff_id = v.staff_id and x.day between v.from_day and v.to_day and x.day >= (now() at time zone 'Asia/Jerusalem')::date order by x.day loop
+      st := public.shift_text(a.day, a.shift, a.from_time, a.to_time);
+      if not exists (select 1 from public.swap_requests where assignment_id = a.id and status in ('open', 'offered')) then
+        insert into public.swap_requests (assignment_id, from_staff, urgent) values (a.id, v.staff_id, true);
+      end if;
+      opened := opened || st;
+      for i in select s.id from public.staff s where s.kind = k and s.active and s.id <> v.staff_id and public.can_replace(s.id, a)
+                 and (s.kind <> 'instructor' or exists (select 1 from public.prefs_slot f where f.staff_id = s.id and f.day = a.day
+                                                         and f.shift = case a.shift when 'S' then 'M' else a.shift end and f.level in ('yes', 'can'))) loop
+        perform public.tell_key(i.id, 'cant_team', st);
+      end loop;
+    end loop;
+    -- (a schedule that was not published yet: the coordinator sees the clash and fixes it while she builds, as before)
+    for a in select x.* from public.assignment x join public.schedule sc on sc.month = x.month and sc.status <> 'published'
+             where x.staff_id = v.staff_id and x.day between v.from_day and v.to_day loop
+      insert into public.coordinator_flags (month, day, kind, text, staff_id) values (a.month, a.day, 'vacation_conflict', 'חופשה שאושרה חופפת למשמרת ' || public.shift_text(a.day, a.shift, a.from_time, a.to_time), a.staff_id);
+    end loop;
+    perform public.tell_key(v.staff_id, 'vac_ok', dates,
+      case when array_length(opened, 1) > 0 then 'המשמרות שלך בימים האלה נפתחו להחלפה, ואין צורך לחפש מחליף/ה: ' || array_to_string(opened, ', ') || '.' end,
+      case when array_length(opened, 1) > 0 then 'مناوباتك في هذه الأيام فُتحت للاستبدال، ولا حاجة للبحث عن بديل/ة: ' || public.ar_words(array_to_string(opened, ', ')) || '.' end, 'ok');
+  else
+    update public.vacation_requests set status = 'rejected', decided_at = now() where id = p_id;
+    perform public.tell_key(v.staff_id, 'vac_no', dates);
+  end if;
+end $$;
+revoke all on function public.decide_vacation(uuid, boolean) from public, anon;
+grant execute on function public.decide_vacation(uuid, boolean) to authenticated;
 
 select 'scheduling_v45' as part, 'ok' as result;

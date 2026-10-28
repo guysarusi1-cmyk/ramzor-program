@@ -188,11 +188,11 @@ function renderInstructorPrefs(body){
     ${past ? `<div class="pprefs-past"><span>👁️ ההעדפות שהגשת ל${pEsc(monthLabel(mk))} · לצפייה בלבד</span><button type="button" class="btn small" id="prefs-past-end">חזרה להעדפות של ${pEsc(monthLabel(addMonths(mk, 1)))}</button></div>`
       : portalServerOn ? `<button type="button" class="btn ghost small prefs-past-btn" id="prefs-past">👁️ ההעדפות שהגשת ל${pEsc(monthLabel(addMonths(mk, -1)))}</button>` : ''}
     ${portalServerOn && !past && !locked && srvPrefsDeadlinePassed(mk) ? `<div class="pnote">${tx('late')}</div>` : ''}
-    <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn && !locked ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>
-    ${locked ? `<div class="pnote">${tx('locked')}</div>` : ''}
+    ${locked ? `<div class="pstatus ${submitted ? 'ok' : 'bad'}" id="prefs-locked">${tx('locked')}</div>`          // (closed: one line, and the marks are shown to read only — Guy 2026-10-28)
+      : `<div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>`}
     ${fixedList.length ? `<div class="pnote">הימים שאושרו לך או שהרכזת סימנה: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
-    <details class="pfold" data-fold="prefhelp"${openFold('prefhelp') ? ' open' : ''}><summary><span>איך ממלאים? (לחצו להסבר)</span></summary><div class="pfold-body"><div class="pnote">${portalServerOn ? 'בהתחלה אף משמרת לא מסומנת. נשמח שתעברו על כל החודש: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "כן" אומר שתשמחו לקבל אותה, "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. לחיצה נוספת על אותו סימון מחזירה את המשמרת למצב שלא סומן. משמרת שלא תסמנו נשבץ רק אם לא תהיה שום ברירה אחרת, אז כדאי לסמן "כן" או "יכול" בכל מה שמתאים לכם.' : 'כל המשמרות מסומנות "כן", כלומר שאתם זמינים. נשמח לדעת אם יש משמרות שפחות מתאימות לכם: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים.'} ${[...DEFAULT_SHIFT_LEGEND(st.shiftTypes)].join(' · ')}${portalServerOn ? ` · 🕯️ = סופ"ש ארוך (${SRV_LONG.sub}). הוא כפתור אחד לכל סופ"ש, מתחת לשישי ולשבת, ולא תלוי בסימונים של שישי או של שבת. אם לא סימנתם אותו, לא נשבץ אתכם אליו. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.` : ''}</div></div></details>
-    ${availHint}${neutralHint}${portalServerOn && prefFixedKinds().size && !locked ? `<div class="pnote pnote-soft" id="nonight-note">${prefFixedNote()}</div>` : ''}
+    ${locked ? '' : `<details class="pfold" data-fold="prefhelp"${openFold('prefhelp') ? ' open' : ''}><summary><span>איך ממלאים? (לחצו להסבר)</span></summary><div class="pfold-body"><div class="pnote">${portalServerOn ? 'בהתחלה אף משמרת לא מסומנת. נשמח שתעברו על כל החודש: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "כן" אומר שתשמחו לקבל אותה, "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. לחיצה נוספת על אותו סימון מחזירה את המשמרת למצב שלא סומן. משמרת שלא תסמנו נשבץ רק אם לא תהיה שום ברירה אחרת, אז כדאי לסמן "כן" או "יכול" בכל מה שמתאים לכם.' : 'כל המשמרות מסומנות "כן", כלומר שאתם זמינים. נשמח לדעת אם יש משמרות שפחות מתאימות לכם: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים.'} ${[...DEFAULT_SHIFT_LEGEND(st.shiftTypes)].join(' · ')}${portalServerOn ? ` · 🕯️ = סופ"ש ארוך (${SRV_LONG.sub}). הוא כפתור אחד לכל סופ"ש, מתחת לשישי ולשבת, ולא תלוי בסימונים של שישי או של שבת. אם לא סימנתם אותו, לא נשבץ אתכם אליו. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.` : ''}</div></div></details>`}
+    ${locked ? '' : availHint}${neutralHint}${portalServerOn && !locked && me.role === 'instructor' && !prefOther() ? prefFixedLineHtml() : portalServerOn && prefFixedKinds().size && !locked ? `<div class="pnote pnote-soft" id="nonight-note">${prefFixedNote()}</div>` : ''}
     <div class="pshift-key" aria-label="שעות המשמרות">${portalLoad().shiftTypes.map(s => `<span><b>${pEsc(s.label)}</b> <bdi dir="ltr">${pEsc(s.start)}–${pEsc(s.end)}</bdi></span>`).join('')}</div>          
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
     ${portalServerOn ? `
@@ -205,7 +205,7 @@ function renderInstructorPrefs(body){
         ${goalBtn('max', 'אני רוצה לעבוד כמה שיותר החודש', 'מתוך המשמרות שסימנת "כן" או "יכול"')}
         ${goalBtn('', 'אין לי העדפה מיוחדת', '')}
       </div>
-      ${goal !== null || !locked ? '<div class="pnote">הבחירה נשמרת כשמגישים את ההעדפות.</div>' : ''}
+      ${!locked ? '<div class="pnote">הבחירה נשמרת כשמגישים את ההעדפות.</div>' : ''}
     </div>
     <div class="pconsents${cons.extend === null || cons.pull === null ? ' unanswered' : ''}">
       <h2 class="psec">עוד שתי שאלות קטנות לחודש הזה</h2>
@@ -213,9 +213,10 @@ function renderInstructorPrefs(body){
       <div class="pconsent"><span>אם נצטרך, האם יהיה לך נוח להמשיך משבת בלילה עד יום ראשון ב-11:00?</span>${choice('pull')}</div>
     </div>
     <label class="pfield">יש משהו שחשוב לך שנדע? (לא חובה)<textarea id="prefs-note" rows="2" maxlength="400"${locked ? ' disabled' : ''}>${pEsc(m.notes && m.notes[me.id] || '')}</textarea></label>` : ''}
-    <div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
-    <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`;
+    ${locked ? '' : `<div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
+    <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`}`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
+  { const fe = body.querySelector('#prefs-fixed-edit'); if(fe) fe.addEventListener('click', () => { portalUi.gearFold = Object.assign(portalUi.gearFold || {}, { prefs:true }); openPortalSettings(); }); }
   { const pp = body.querySelector('#prefs-past'), pe = body.querySelector('#prefs-past-end');
     if(pp) pp.addEventListener('click', () => { portalUi.prefsPast = true; renderInstructorPrefs(body); });
     if(pe) pe.addEventListener('click', () => { portalUi.prefsPast = false; renderInstructorPrefs(body); }); }
@@ -266,12 +267,12 @@ function renderInstructorPrefs(body){
     else if(keys.every(k => prefs.slots[k] === lv)){ keys.forEach(k => delete prefs.slots[k]); } else { keys.forEach(k => { prefs.slots[k] = lv; }); }
     portalSave(); renderInstructorPrefs(body);
   }));
-  document.getElementById('prefs-clear-all').addEventListener('click', async () => {
+  if(document.getElementById('prefs-clear-all')) document.getElementById('prefs-clear-all').addEventListener('click', async () => {
     if(locked) return;
     if(!(await confirmSheet({ title:'לנקות את כל ההעדפות?', text:tx('clear_text', portalServerOn ? ' ושעות אחרות' : ', היעדרויות'), okLabel:'כן, לנקות הכל', cancelLabel:'חזרה', danger:true }))) return;
     prefs.slots = {}; prefs.absent = []; if(portalServerOn){ prefs.hours = {}; prefs.pick = []; } portalSave(); toast(tx('clear_done')); renderInstructorPrefs(body);
   });
-  document.getElementById('prefs-submit').addEventListener('click', async () => {
+  if(document.getElementById('prefs-submit')) document.getElementById('prefs-submit').addEventListener('click', async () => {
     if(locked) return;
     if(portalServerOn){
       if(cons.extend === null || cons.pull === null){ toast(tx('consent_needed')); const box = body.querySelector('.pconsents'); if(box) box.scrollIntoView({ block:'center' }); return; }
@@ -388,6 +389,11 @@ function showMailPreview(e){
 }
 
 // the sentence over the calendar: which kinds start as "no", and how to change one
+// her fixed preferences, in one line at the top of the preferences, with a way to the gear where they are set (Guy 2026-10-28)
+function prefFixedLineHtml(){
+  const k = prefFixedKinds(), words = [['m', 'לא עושה בקרים'], ['e', 'לא עושה צהריים'], ['n', 'לא עושה לילות']].filter(x => k.has(x[0])).map(x => `<span>${x[1]}</span>`);
+  return `<div class="pnote pnote-soft pfixed-line"${k.size ? ' id="nonight-note"' : ' id="prefs-fixed-line"'}>${k.size ? `<span>קבוע אצלך:</span> ${words.join(' · ')}. <span>משמרת מסוימת משנים בלחיצה עליה.</span>` : '<span>אין לך העדפות קבועות.</span>'} <button type="button" class="pfixed-edit" id="prefs-fixed-edit">שינוי</button></div>`;
+}
 function prefFixedNote(){
   const k = prefFixedKinds(), words = [['m', 'הבקרים'], ['e', 'הצהריים'], ['n', 'הלילות']].filter(x => k.has(x[0])).map(x => x[1]);
   const list = words.length === 1 ? words[0] : words.slice(0, -1).join(', ') + ' ו' + words[words.length - 1];
