@@ -162,7 +162,7 @@ function renderInstructorPrefs(body){
     cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${barOn && [5, 6].includes(dowOf(date)) && days.includes(dowOf(date) === 5 ? date : addDays(date, -1)) ? ' linked' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${fx ? `<span class="pday-fixed">${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}</span>` : ''}
-      ${hrs ? `<span class="pday-hrs" title="שעות אחרות">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</span>` : ''}
+      ${hrs ? `<span class="pday-hrs" title="שעות אחרות"><bdi dir="ltr">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</bdi></span>` : ''}
       <div class="pday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = !absent && prefInsideLong(prefs, key), lv = absent ? 'no' : inLong ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
         return `<button type="button" class="pshift lv-${lv}${inLong ? ' in-long' : ''}" data-pslot="${key}" aria-label="${pEsc(s.label)}${inLong ? ' (בתוך הסופ&quot;ש הארוך)' : ''}">${inLong ? '🕯️' : `<span class="ps-l">${pEsc(s.letter || s.label.charAt(0))}</span><span class="ps-w">${pEsc(s.label)}</span>`}</button>`; }).join('')}</div>
     </div>`;
@@ -294,9 +294,10 @@ function openHoursSheet(date, prefs, done){
   const cur = (prefs.hours[date] || []).slice(0, 2);
   const opts = (from, to, sel) => { let o = '<option value="">—</option>'; for(let h = from; h <= to; h++) o += `<option value="${h}"${sel === h ? ' selected' : ''}>${String(h % 24).padStart(2, '0')}:00</option>`; return o; };
   const row = i => `<div class="phours-row"><select data-hfrom="${i}" aria-label="משעה">${opts(6, 23, cur[i] && cur[i][0])}</select><span>עד</span><select data-hto="${i}" aria-label="עד שעה">${opts(7, 24, cur[i] && cur[i][1])}</select></div>`;
-  const sh = portalSheet(`<h2>שעות אחרות ב${dayLabel(date)}</h2><div class="pnote">אפשר לציין עד שני טווחים שבהם אתם זמינים. המערכת תשתמש בהם רק כשהם משלימים משמרת שלמה.</div>${row(0)}${row(1)}<div id="hours-err" class="pwarn" aria-live="polite"></div>
+  const sh = portalSheet(`<h2>שעות אחרות ב${dayLabel(date)}</h2><button type="button" class="btn ghost hours-mid" id="hours-mid"><span>משמרת אמצע</span> <bdi dir="ltr">12:00–20:00</bdi></button><div class="pnote">אפשר לציין עד שני טווחים שבהם אתם זמינים. המערכת תשתמש בהם רק כשהם משלימים משמרת שלמה.</div>${row(0)}${row(1)}<div id="hours-err" class="pwarn" aria-live="polite"></div>
     <div class="confirm-actions"><button type="button" class="btn ghost" id="hours-clear">מחיקה</button><button type="button" class="btn" id="hours-save">שמירה</button></div>`);
   sh.querySelector('#hours-clear').addEventListener('click', () => { delete prefs.hours[date]; portalSave(); sh.close(); done(); });
+  sh.querySelector('#hours-mid').addEventListener('click', () => { prefs.hours[date] = [[12, 20]]; portalSave(); sh.close(); done(); });          // (the middle shift, one tap: Guy 2026-10-28)
   sh.querySelector('#hours-save').addEventListener('click', () => {
     const rs = [0, 1].map(i => [sh.querySelector(`[data-hfrom="${i}"]`).value, sh.querySelector(`[data-hto="${i}"]`).value]).filter(r => r[0] !== '' || r[1] !== '');
     const bad = rs.some(r => r[0] === '' || r[1] === '' || Number(r[0]) >= Number(r[1])) || (rs.length === 2 && Number(rs[0][0]) < Number(rs[1][1]) && Number(rs[1][0]) < Number(rs[0][1]));

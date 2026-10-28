@@ -517,3 +517,8 @@
   /* who could take my shift, under my swap request (Guy 2026-10-28) */
   .pcands{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:-4px 0 10px; padding:6px 10px; border-radius:10px; background:var(--p-panel); }
   .pcands-title{ flex-basis:100%; color:var(--p-muted); } .pcand{ display:inline-flex; align-items:center; gap:6px; } .pcand .mcal-name{ font-size:11px; padding:1px 7px; }
+  /* the middle shift 12–20 (Guy 2026-10-28): the tag by a name, and on the shift while she is dragged over it */
+  .mid-tag{ display:inline-block; margin-inline-start:6px; padding:0 6px; border-radius:8px; font-size:11px; line-height:16px; background:#123322; color:#7be0a0; font-weight:700; }
+  .mcal-cell.drop-mid{ position:relative; }
+  .mcal-cell.drop-mid::after{ content:'12–20'; position:absolute; top:3px; inset-inline-end:4px; direction:ltr; unicode-bidi:isolate; padding:0 6px; border-radius:8px; font-size:11px; line-height:16px; background:#123322; color:#7be0a0; font-weight:700; }
+  .hours-mid{ width:100%; margin:4px 0 8px; }

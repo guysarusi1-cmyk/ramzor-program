@@ -2708,6 +2708,25 @@
       check('no two Mercury ships overlap', overlaps === 0, overlaps + ' overlapping pairs');
     });
 
+    // ---- the middle shift 12–20 (Guy 2026-10-28): one tap in "שעות אחרות"; for the coordinator a "yes" in that day's morning and afternoon
+    await step('mid shift', async () => {
+      const day = addDays(srvToday ? srvToday() : isoDate(new Date()), 40), prefs = { slots:{}, absent:[], hours:{}, fixed:[] };
+      let redrawn = false; openHoursSheet(day, prefs, () => { redrawn = true; }); await sleep(100);
+      const b = document.querySelector('.psheet #hours-mid');
+      check('mid shift: "שעות אחרות" has a one-tap "12:00–20:00", written left to right', !!b && /12:00–20:00/.test(b.querySelector('bdi[dir="ltr"]').textContent), b ? b.outerHTML.slice(0, 120) : 'none');
+      if(b){ b.click(); await sleep(60); }
+      check('mid shift: ... which marks the day 12–20', JSON.stringify(prefs.hours[day]) === '[[12,20]]' && redrawn, JSON.stringify(prefs.hours));
+      { const c = document.querySelector('.psheet [data-close]'); if(c) c.click(); }
+      const was = window.portalMonth; window.portalMonth = () => ({ prefs:{ p1:prefs } });
+      try {
+        check('mid shift: for the coordinator she is a "yes" in that morning and afternoon, not in the night', srvWishFor('p1', `${day}|m`) === 'yes' && srvWishFor('p1', `${day}|e`) === 'yes' && srvWishFor('p1', `${day}|n`) === 'none' && srvMidKey('p1', `${day}|e`) && !srvMidKey('p1', `${day}|n`), [srvWishFor('p1', `${day}|m`), srvWishFor('p1', `${day}|n`)].join());
+        const cell = document.createElement('div'); cell.className = 'mcal-cell'; cell.dataset.key = `${day}|m`; document.body.appendChild(cell);
+        srvDragWho = 'p1'; srvDropShow(cell); srvDragWho = null;
+        check('mid shift: dragged over that morning the shift turns green with the tag 12–20', cell.classList.contains('drop-yes') && cell.classList.contains('drop-mid') && getComputedStyle(cell, '::after').content.includes('12–20'), cell.className);
+        cell.remove();
+      } finally { window.portalMonth = was; }
+    });
+
     // ---- the training videos (14zh-learn.js): every step of every video finds its part of the real screen in the phone, and the player page draws
     // ---- who could take my shift, under my swap request: by name, "כן" / "יכול" marked, WhatsApp only inside a button (scheduling-v46.sql)
     await step('swap candidates', async () => {

@@ -286,7 +286,7 @@ function monthCalHtml(ctx, assignments, opts){
     const cls = `mcal-cell${wk ? ' weekend' : ''}${r.date === today ? ' today' : ''}${last ? ' last' : ''}${opts.edit && c.slot ? ' editable' : ''}`, edit = opts.edit && c.slot ? ` data-key="${c.slot.key}" tabindex="0" role="button" aria-label="עריכת משמרת"` : '';
     const hrs = n => n && typeof calHours === 'function' ? calHours(n, s) : n;
     const oth = (inCells[`${r.date}|${s.id}`] || []).filter(x => !(opts.hideRoles || []).includes(x.role)), othName = x => `<span class="mcal-name${opts.me && x.id === opts.me ? ' me' : ''}" data-role="${x.role}">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}${opts.otherRm && x.rowId ? `<button type="button" class="mcal-x" data-other-rm="${x.rowId}" data-sid="${s.id}" aria-label="הסרה מהמשמרת" title="הסרה מהמשמרת">×</button>` : ''}</span>`;          // (the × takes a service girl or a teacher off this shift: Guy 2026-10-26)
-    const extra = (extras[`${r.date}|${s.id}`] || []).map(x => `<span class="mcal-name extra${opts.me && x.id === opts.me ? ' me' : ''}" title="משובץ/ת במשמרת הסמוכה, ונמצא/ת גם כאן">${pEsc(x.name)}${x.note ? `<small>${pEsc(hrs(x.note))}</small>` : ''}</span>`).join('');
+    const extra = (extras[`${r.date}|${s.id}`] || []).map(x => `<span class="mcal-name extra${opts.me && x.id === opts.me ? ' me' : ''}" title="משובץ/ת במשמרת הסמוכה, ונמצא/ת גם כאן">${pEsc(x.name)}${x.note ? `<small><bdi>${pEsc(hrs(x.note))}</bdi></small>` : ''}</span>`).join('');
     const teachers = oth.filter(x => x.role === 'teacher').map(othName).join(''), service = oth.filter(x => x.role === 'service').map(othName).join('');
     if(!c.slot) return oth.length ? `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}">${teachers}${service}</div>` : `<div class="${cls} off" data-day="${r.date}" data-shift="${s.id}"></div>`;
     const wish = p => {          // how the wish of this person was kept: placed where she wanted = no colour; "can", "no" and "did not say" each have a colour
@@ -300,7 +300,7 @@ function monthCalHtml(ctx, assignments, opts){
     const name = (p, isLead) => {
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       const pend = opts.pend && opts.pend[c.slot.key + '|' + p.iid];          // (a change that waits for "שליחת עדכונים": the staff do not see it yet)
-      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}${pend ? ' pend' : ''}"${pend ? ' title="שינוי שעוד לא נשלח למדריכים"' : ''}${opts.drag ? ` data-iid="${p.iid}"` : ''}>${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small>${pEsc(ann)}</small>` : ''}</span>`;
+      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}${pend ? ' pend' : ''}"${pend ? ' title="שינוי שעוד לא נשלח למדריכים"' : ''}${opts.drag ? ` data-iid="${p.iid}"` : ''}>${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small><bdi>${pEsc(ann)}</bdi></small>` : ''}</span>`;
     };
     return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${(liveMiss ? liveMiss[c.slot.key] || 0 : c.missing) ? `<span class="mcal-missing">חסר ${liveMiss ? liveMiss[c.slot.key] : c.missing}</span>` : ''}</div>`;
   };
