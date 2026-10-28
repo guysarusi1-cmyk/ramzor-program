@@ -27,7 +27,9 @@ create unique index if not exists assignment_pending_one on public.assignment_pe
 alter table public.assignment_pending enable row level security;
 drop policy if exists "coordinator pending read" on public.assignment_pending;
 create policy "coordinator pending read" on public.assignment_pending for select to authenticated using (public.is_coordinator());
-revoke insert, update, delete on public.assignment_pending from authenticated, anon;          -- (written only through the functions below)
+revoke all on public.assignment_pending from anon;
+revoke insert, update, delete on public.assignment_pending from authenticated;          -- (written only through the functions below)
+grant select on public.assignment_pending to authenticated;
 
 -- the mail rules: tell_staff_ar knows which message it sends (tell_key says it), and some stay in the portal
 create or replace function public.tell_staff_ar(p_staff uuid, p_subject text, p_text text, p_kind text, p_subject_ar text, p_text_ar text) returns void

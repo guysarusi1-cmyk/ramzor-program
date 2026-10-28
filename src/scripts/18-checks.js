@@ -1804,33 +1804,6 @@
         document.querySelector('#cs-publish').click(); await answerSheet();
         check('portal people: publishing makes the schedule published on the server', await waitFor(async () => { const s = await sbPersonal.from('schedule').select('status').eq('month', firstOf(mkT)); return s.data && s.data[0] && s.data[0].status === 'published'; }), 'not published');
         await waitFor(() => [...document.querySelectorAll('.toast')].some(t => /הסידור פורסם/.test(t.textContent)), 400);          // (the personal messages to everybody are sent after the publishing; wait until that is over before changing the user)
-        // ---- a published month: the coordinator's change waits for "שליחת עדכונים", then the person gets one message (scheduling-v45.sql)
-        await srvReload();
-        if(!srv.pendingOn) check('(info) send updates: needs scheduling-v45.sql on the test server', true, '');
-        else {
-          const real = async () => { const q = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return (q.data || []).length; };
-          try { localStorage.removeItem('ramzor-pending-told'); } catch(e){}
-          const w = await asgWrite(mkT, 'insert', null, { month:firstOf(mkT), staff_id:i2, day, shift:'M', from_time:'07:00', to_time:'15:00', flags:['manual'] });
-          check('send updates: at the first change an explanation: saved, but not sent until "שליחת עדכונים"', /עוד לא נשלח/.test((document.querySelector('.psheet') || {}).textContent || ''), 'no explanation');
-          { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
-          check('send updates: a change of a published month is kept aside (the staff do not see it yet)', !w.error && (await real()) === 0, w.error ? w.error.message : 'already in the schedule');
-          await srvReload(); showPortal('schedule'); await sleep(200);
-          const sendB = document.querySelector('#cs-send');
-          check('send updates: the coordinator sees "שליחת עדכונים" blinking, with "ביטול השינויים", and the waiting name dashed', !!sendB && sendB.classList.contains('blink') && /\(1\)/.test(sendB.textContent) && !!document.querySelector('#cs-discard') && !!document.querySelector(`.mcal-cell[data-key="${day}|m"] .mcal-name.pend`), sendB ? sendB.outerHTML.slice(0, 120) : 'no button');
-          // "ביטול השינויים" and "שחזור"
-          document.querySelector('#cs-discard').click(); await answerSheet();
-          check('send updates: "ביטול השינויים" throws the change away and offers "שחזור"', await waitFor(async () => !!document.querySelector('#cs-restore') && !document.querySelector('#cs-send'), 100), 'no restore');
-          document.querySelector('#cs-restore').click();
-          check('send updates: "שחזור" brings the change back (it still waits)', await waitFor(async () => !!document.querySelector('#cs-send'), 100) && (await real()) === 0, 'not back');
-          const since = new Date(Date.now() - 2000).toISOString();
-          document.querySelector('#cs-send').click(); await answerSheet();
-          check('send updates: after "שליחת עדכונים" the staff see the change', await waitFor(async () => (await real()) === 1, 100), 'not in the schedule');
-          { const nt = await sbPersonal.from('notices').select('text').eq('to_staff', i2).gte('created_at', since);
-            const txts = (nt.data || []).map(n => n.text);
-            check('send updates: the person got ONE message with her change', txts.filter(t => /עדכונים בסידור/.test(t)).length === 1 && txts.some(t => /נוספה לך משמרת/.test(t)), JSON.stringify(txts).slice(0, 160)); }
-          check('send updates: nothing waits any more', await waitFor(async () => !document.querySelector('#cs-send') && !document.querySelector('#cs-restore'), 60), 'still waiting');
-          await sbPersonal.from('assignment').delete().eq('day', day).eq('shift', 'M').eq('staff_id', i2); await srvReloadSafe();
-        }
         // ---- an instructor reports "I cannot come" (the shift opens at once)
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(200);
         const cantOk = await changeFlow('cant', day); check('portal people: "בקשת החלפה" -> cannot come -> asked which shift -> picking it asks to confirm', cantOk && /לאיזו משמרת לא תוכל[י]? להגיע\?/.test(lastQuestion), cantOk + ' / ' + lastQuestion);
@@ -1918,6 +1891,53 @@
         if(created.day) await sbPersonal.from('special_days').delete().eq('day', created.day);
         await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
         portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = null; portalUi.fold = { mine:false, team:false, swap:false }; showHub();
+      }
+    });
+
+    // ---- a published month: the coordinator's change waits for "שליחת עדכונים", then the person gets ONE message (scheduling-v45.sql).
+    //      On a month of its own that has no schedule on the test server (made here and removed at the end)
+    await step('send updates', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
+      const enter = async kind => { await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; const { error } = await signInRetry(M(kind), PW); if(error) return false; portalServerOn = true; if(!(await srvLoad())) return false; portalUi.persona = srv.me; return true; };
+      if(!(await enter('instructor2'))){ check('(info) send updates: skipped, the second instructor test account is missing', true, ''); portalServerOn = false; return; }
+      const i2 = srv.me;
+      if(!(await enter('coordinator'))){ check('send updates: the coordinator signs in', false, 'no'); portalServerOn = false; return; }
+      let mk = null;
+      for(const n of [2, 1]){ const k = addMonths(monthKeyOf(srvToday()), n), h = await sbPersonal.from('schedule').select('month').eq('month', firstOf(k)); if(!h.error && !h.data.length){ mk = k; break; } }
+      if(!mk){ check('(info) send updates: skipped, the next months already have schedules on the test server (the checks never touch them)', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; return; }
+      const day = addDays(firstOf(mk), 9);
+      try {
+        let r = await sbPersonal.from('schedule').insert({ month:firstOf(mk), status:'published', published_at:new Date().toISOString() }); if(r.error) throw r.error;
+        await srvReload(); portalUi.month = mk; portalUi.tab = 'schedule';
+        if(!srv.pendingOn){ check('(info) send updates: needs scheduling-v45.sql on the test server', true, ''); return; }
+        const real = async () => { const q = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return (q.data || []).length; };
+        try { localStorage.removeItem('ramzor-pending-told'); } catch(e){}
+        const w = await asgWrite(mk, 'insert', null, { month:firstOf(mk), staff_id:i2, day, shift:'M', from_time:'07:00', to_time:'15:00', flags:['manual'] });
+        check('send updates: at the first change an explanation: saved, but not sent until "שליחת עדכונים"', /עוד לא נשלח/.test((document.querySelector('.psheet') || {}).textContent || ''), 'no explanation');
+        { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+        check('send updates: a change of a published month is kept aside (the staff do not see it yet)', !w.error && (await real()) === 0, w.error ? w.error.message : 'already in the schedule');
+        await srvReload(); showPortal('schedule'); await waitFor(async () => !!document.querySelector('#cs-send'), 60);
+        const sendB = document.querySelector('#cs-send');
+        check('send updates: the coordinator sees "שליחת עדכונים" blinking, with "ביטול השינויים", and the waiting name dashed', !!sendB && sendB.classList.contains('blink') && /\(1\)/.test(sendB.textContent) && !!document.querySelector('#cs-discard') && !!document.querySelector(`.mcal-cell[data-key="${day}|m"] .mcal-name.pend`), sendB ? sendB.outerHTML.slice(0, 120) : 'no button ' + JSON.stringify({ pend:portalLoad().pending, on:srv.pendingOn, month:portalUi.month, mk, pub:portalMonth(mk).published, tab:portalUi.tab }));
+        if(!sendB) return;
+        document.querySelector('#cs-discard').click(); await answerSheet();
+        check('send updates: "ביטול השינויים" throws the change away and offers "שחזור"', await waitFor(async () => !!document.querySelector('#cs-restore') && !document.querySelector('#cs-send'), 100), 'no restore');
+        if(document.querySelector('#cs-restore')) document.querySelector('#cs-restore').click();
+        check('send updates: "שחזור" brings the change back (it still waits)', await waitFor(async () => !!document.querySelector('#cs-send'), 100) && (await real()) === 0, 'not back');
+        const since = new Date(Date.now() - 2000).toISOString();
+        if(document.querySelector('#cs-send')){ document.querySelector('#cs-send').click(); await answerSheet(); }
+        check('send updates: after "שליחת עדכונים" the staff see the change', await waitFor(async () => (await real()) === 1, 100), 'not in the schedule');
+        { const nt = await sbPersonal.from('notices').select('text').eq('to_staff', i2).gte('created_at', since);
+          const txts = (nt.data || []).map(n => n.text);
+          check('send updates: the person got ONE message with her change', txts.filter(t => /עדכונים בסידור|تحديثات في جدولك/.test(t)).length === 1 && txts.some(t => /نوبة|مناوبة|נוספה לך משמרת/.test(t)), JSON.stringify(txts).slice(0, 160)); }
+        check('send updates: nothing waits any more', await waitFor(async () => !document.querySelector('#cs-send') && !document.querySelector('#cs-restore'), 60), 'still waiting');
+      } finally {
+        await sbPersonal.from('schedule').delete().eq('month', firstOf(mk));          // (its shifts and waiting changes go with it)
+        await sbPersonal.from('notices').delete().eq('to_staff', i2);
+        if(await enter('instructor2')) await sbPersonal.from('notices').update({ seen:true }).eq('seen', false);
+        await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
+        portalUi.persona = 'c1'; portalUi.tab = null; portalUi.month = portalUi.pmonth = portalUi.smonth = null; showHub();
       }
     });
 
