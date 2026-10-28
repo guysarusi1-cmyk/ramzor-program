@@ -2709,6 +2709,18 @@
     });
 
     // ---- the training videos (14zh-learn.js): every step of every video finds its part of the real screen in the phone, and the player page draws
+    // ---- who could take my shift, under my swap request: by name, "כן" / "יכול" marked, WhatsApp only inside a button (scheduling-v46.sql)
+    await step('swap candidates', async () => {
+      const was = window.srvSwapCandidates2, box = document.createElement('div'); document.body.appendChild(box);
+      window.srvSwapCandidates2 = async () => [{ name:'דנה כ', level:'yes', wa:'0541234567', female:true }, { name:'יוסי', level:'can', wa:null, female:false }];
+      try { await srvFillCandidates(box, 'none');
+        const a = box.querySelector('a.wa-btn');
+        check('swaps: under my request the colleagues who could take it, by name, "כן" first, a WhatsApp button only where there is a number (the number is not written)', box.querySelectorAll('.pcand').length === 2 && /דנה כ/.test(box.querySelector('.pcand').textContent) && !!box.querySelector('.pcand .wish-yes') && box.querySelectorAll('a.wa-btn').length === 1 && /972541234567/.test(a.href) && !/054|972/.test(box.textContent), box.innerHTML.slice(0, 200));
+        window.srvSwapCandidates2 = async () => []; await srvFillCandidates(box, 'none');
+        check('swaps: ... and when nobody is free, a short line that the coordinator can help', /אין עמיתים פנויים/.test(box.textContent), box.textContent);
+      } finally { window.srvSwapCandidates2 = was; box.remove(); }
+    });
+
     await step('learn', async () => {
       if(!PORTAL_ENABLED) return;
       const frame = document.createElement('iframe'); frame.style.cssText = 'position:fixed;left:0;top:0;width:356px;height:746px;opacity:0;pointer-events:none;';

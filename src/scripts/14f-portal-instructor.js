@@ -330,7 +330,7 @@ function renderInstructorSwaps(body){
     ${approvalsForMe.map(a => `<div class="preq warn"><div>הרכזת שיבצה אותך למשמרת שסימנת עליה "לא":<br><b>${slotLabel(a.key)}</b><br>האם את/ה מאשר/ת?</div><div class="preq-actions"><button type="button" class="btn" data-appr-ok="${a.mk}|${a.k}">מאשר/ת</button><button type="button" class="btn ghost" data-appr-no="${a.mk}|${a.k}">לא מאשר/ת</button></div></div>`).join('')}
     <details class="pfold" data-fold="swmine"${openFold('swmine') ? ' open' : ''}>
       <summary><span>הבקשות שלי</span><span class="pcount">${mineReq.length}</span></summary>
-      <div class="pfold-body">${mineReq.length ? mineReq.map(s => `<div class="pmine-row"><span>${slotLabel(s.key)}<br><small>${s.from === me.id ? 'ביקשתם החלפה' + (s.to ? ' · מוכן/ה לעזור: ' + pEsc(name(s.to)) : '') : 'הצעתם להחליף את ' + pEsc(name(s.from))}</small></span><span class="pmine-actions">${portalServerOn && s.from === me.id && s.status === 'open' ? `<button type="button" class="btn ghost small" data-cands="${s.aid}">מי זמין/ה?</button>` : ''}<em class="pst pst-${s.status}">${SWAP_STATUS[s.status]}</em></span></div>`).join('') : '<div class="pnote">אין בקשות.</div>'}</div>
+      <div class="pfold-body">${mineReq.length ? mineReq.map(s => `<div class="pmine-row"><span>${slotLabel(s.key)}<br><small>${s.from === me.id ? 'ביקשתם החלפה' + (s.to ? ' · מוכן/ה לעזור: ' + pEsc(name(s.to)) : '') : 'הצעתם להחליף את ' + pEsc(name(s.from))}</small></span><span class="pmine-actions"><em class="pst pst-${s.status}">${SWAP_STATUS[s.status]}</em></span></div>${portalServerOn && s.from === me.id && s.status === 'open' ? `<div class="pcands" data-cands-for="${s.aid}"><small>רק רגע...</small></div>` : ''}`).join('') : '<div class="pnote">אין בקשות.</div>'}</div>
     </details>
     <details class="pfold" data-fold="swopen"${openFold('swopen') ? ' open' : ''}>
       <summary><span>בקשות החלפה פתוחות</span><span class="pcount">${open.length}</span></summary>
@@ -353,6 +353,7 @@ function renderInstructorSwaps(body){
     addNotice(me.id, `הבקשה להחליף את ${name(sw.from)} ב-${slotText(sw.key)} הועברה לרכזת.`, 'info');
     portalSave(); toast('הבקשה הועברה לרכזת'); renderInstructorSwaps(body);
   }));
+  body.querySelectorAll('[data-cands-for]').forEach(box => srvFillCandidates(box, box.dataset.candsFor));          // (who could take it, by name, with WhatsApp: Guy 2026-10-28)
   body.querySelectorAll('[data-cands]').forEach(b => b.addEventListener('click', async () => {
     const names = await srvSwapCandidates(b.dataset.cands);
     portalSheet(`<h2>עמיתים שזמינים למשמרת</h2><div class="pnote">${names.length ? 'אלה העמיתים שזמינים למשמרת הזאת ולא שובצו אליה. אפשר לפנות אליהם ישירות ולבקש עזרה: ' + names.map(pEsc).join(', ') + '.' : 'כרגע לא מצאנו עמיתים פנויים למשמרת הזאת. נשמח לעזור, ואפשר גם לדבר עם הרכזת.'}</div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>תודה</button></div>`);

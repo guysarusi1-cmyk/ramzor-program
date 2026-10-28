@@ -15,6 +15,20 @@ function srvRowLine(r){
 async function srvSwapCandidates(assignmentId){
   try { const r = await sbPersonal.rpc('swap_candidates', { p_assignment:assignmentId }); return r.error || !r.data ? [] : r.data.map(x => x.name); } catch(e){ return []; }
 }
+// the same, by name with her wish for that shift and a WhatsApp number (scheduling-v46.sql; before it: the names only)
+async function srvSwapCandidates2(assignmentId){
+  try { const r = await sbPersonal.rpc('swap_candidates2', { p_assignment:assignmentId }); if(!r.error && r.data) return r.data; } catch(e){}
+  return (await srvSwapCandidates(assignmentId)).map(n => ({ name:n, level:null, wa:null, female:true }));
+}
+async function srvFillCandidates(box, assignmentId){
+  const list = await srvSwapCandidates2(assignmentId); if(!box.isConnected) return;
+  const st = portalLoad(), row = (st.rows || []).find(r => r.id === assignmentId), when = row ? `${dayLabel(row.day)} ${SRV_SHIFT_WORD[row.shift] || ''}` : '';
+  const txt = c => `היי ${String(c.name || '').split(' ')[0]}, ביקשתי החלפה ב${when}. יש מצב ש${c.female === false ? 'תוכל' : 'תוכלי'} לקחת אותה? אפשר להציע בפורטל, בלשונית "החלפות". תודה!`;
+  const LV = { yes:'כן', can:'יכול' };
+  box.innerHTML = list.length ? `<small class="pcands-title">יכולים לקחת את המשמרת:</small>${list.map(c => { const num = waNorm(c.wa);
+      return `<span class="pcand">${pEsc(c.name)}${LV[c.level] ? ` <span class="mcal-name wish-${c.level === 'can' ? 'can' : 'yes'}">${LV[c.level]}</span>` : ''}${num ? `<a class="wa-btn" href="${pEsc(waUrl(num, txt(c)))}"${waTarget()} title="שאלה בוואטסאפ" aria-label="שאלה בוואטסאפ ל${pEsc(c.name)}">${WA_SVG}</a>` : ''}</span>`; }).join('')}`
+    : '<small>כרגע אין עמיתים פנויים למשמרת הזאת. אפשר לדבר עם הרכזת.</small>';
+}
 const srvCandidatesText = names => names.length ? tx('cands', names.join(', ')) : '';
 
 // the schedule tab (everybody): how the requests went, my shifts, and the whole team's board

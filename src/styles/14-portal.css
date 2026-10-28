@@ -514,3 +514,6 @@
   .popen-day{ margin:0 0 8px; } .popen-date{ font-weight:700; margin:6px 0 2px; }
   .pfixed-edit{ background:none; border:0; padding:0 4px; font:inherit; color:inherit; text-decoration:underline; cursor:pointer; min-height:32px; }
   .ptab-count{ display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:4px; border-radius:9px; font-size:11px; line-height:18px; text-align:center; background:var(--p-gold, #f0c060); color:#1a1a1a; font-weight:700; }
+  /* who could take my shift, under my swap request (Guy 2026-10-28) */
+  .pcands{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:-4px 0 10px; padding:6px 10px; border-radius:10px; background:var(--p-panel); }
+  .pcands-title{ flex-basis:100%; color:var(--p-muted); } .pcand{ display:inline-flex; align-items:center; gap:6px; } .pcand .mcal-name{ font-size:11px; padding:1px 7px; }
