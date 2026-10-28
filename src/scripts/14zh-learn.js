@@ -260,7 +260,7 @@ function learnRoute(){
 }
 function learnOpen(v){
   LP.v = v; LP.steps = learnSteps(v); LP.idx = 0; LP.lastDone = -1; document.title = v.title + ' · סרטון הדרכה';
-  const voiceOk = !!LP.voice;
+  const voiceOk = learnCanSpeak();
   learnRoot().innerHTML = `<section class="ln-player">
     <header class="ln-top"><span class="ln-title"><b>${pEsc(v.title)}</b><small>סרטון הדרכה · ${pEsc(v.who)}</small></span>
       <button type="button" class="ln-ibtn" id="ln-voice" aria-pressed="${LP.voiceOn && voiceOk}"${voiceOk ? '' : ' disabled title="אין קול עברי בדפדפן הזה. הכתוביות מספרות הכל"'}>🔊 קריינות</button></header>
@@ -274,6 +274,7 @@ function learnOpen(v){
         <div class="ln-cover" id="ln-end"><span class="ln-big">🎉</span><b>הסרטון הסתיים</b><small>${pEsc(v.end)}</small><button type="button" class="ln-play-big" id="ln-replay">↻ צפייה חוזרת</button></div>
       </div></div></div>
       <div class="ln-caption" id="ln-cap" aria-live="polite"></div>
+      <div class="ln-voice-note" id="ln-voice-note"${voiceOk ? ' hidden' : ''}>אין בדפדפן הזה קול בעברית, אז אין קריינות. הכתוביות מספרות הכל. (בדרך כלל עובד בכרום או בספארי)</div>
       <div class="ln-controls"><button type="button" class="ln-ctrl" id="ln-prev" aria-label="שלב קודם">→</button><button type="button" class="ln-ctrl main" id="ln-play" aria-label="הפעלה או עצירה">▶</button><button type="button" class="ln-ctrl" id="ln-next" aria-label="שלב הבא">←</button>
         <div class="ln-bar" id="ln-bar"><i id="ln-fill"></i></div><span class="ln-count" id="ln-count"></span></div>
     </div>
@@ -283,20 +284,29 @@ function learnOpen(v){
   learnFit();
   const ready = () => { const w = LP.frame.contentWindow; return w && w.learnFrame && w.learnFrame.ready; };
   const wait = setInterval(() => { if(!document.body.contains(LP.frame)){ clearInterval(wait); return; } if(ready()){ clearInterval(wait); learnFW().learnFrame.scene(LP.steps[0].scene || 'schedule'); $('ln-start').disabled = false; $('ln-start').textContent = '▶ הפעלה'; } }, 200);
-  $('ln-start').addEventListener('click', () => { $('ln-cover').classList.remove('on'); LP.playing = true; learnGo(0); });
-  $('ln-replay').addEventListener('click', () => { $('ln-end').classList.remove('on'); LP.playing = true; learnGo(0); });
+  $('ln-start').addEventListener('click', () => { learnUnlock(); $('ln-cover').classList.remove('on'); LP.playing = true; learnGo(0); });
+  $('ln-replay').addEventListener('click', () => { learnUnlock(); $('ln-end').classList.remove('on'); LP.playing = true; learnGo(0); });
   $('ln-play').addEventListener('click', learnToggle);
   $('ln-prev').addEventListener('click', () => learnGo(Math.max(0, LP.idx - 1)));
   $('ln-next').addEventListener('click', () => learnGo(Math.min(LP.steps.length - 1, LP.idx + 1)));
   $('ln-bar').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); learnGo(Math.round((r.right - e.clientX) / r.width * (LP.steps.length - 1))); });
   $('ln-layer').addEventListener('click', learnToggle);
-  $('ln-voice').addEventListener('click', () => { LP.voiceOn = !LP.voiceOn; $('ln-voice').setAttribute('aria-pressed', LP.voiceOn); if(!LP.voiceOn) try { speechSynthesis.cancel(); } catch(e){} });
+  $('ln-voice').addEventListener('click', () => { LP.voiceOn = !LP.voiceOn; $('ln-voice').setAttribute('aria-pressed', LP.voiceOn); if(LP.voiceOn) learnUnlock(); else try { speechSynthesis.cancel(); } catch(e){} });
   document.querySelectorAll('.ln-chap').forEach(b => b.addEventListener('click', () => learnGo(LP.steps.findIndex(s => s.ci === +b.dataset.ci))));
 }
+// the voice: a Hebrew one of the device. Some phones list no voices at all and still read Hebrew by the language alone, so then it is tried that way
 function learnPickVoice(){
-  const vs = speechSynthesis.getVoices().filter(v => /^(he|iw)/i.test(v.lang));
-  LP.voice = vs.find(v => /natural|online|neural/i.test(v.name)) || vs[0] || null;
-  const b = document.getElementById('ln-voice'); if(b && LP.voice){ b.disabled = false; b.removeAttribute('title'); b.setAttribute('aria-pressed', LP.voiceOn); }
+  const all = speechSynthesis.getVoices(), vs = all.filter(v => /^(he|iw)/i.test(v.lang));
+  LP.voice = vs.find(v => /natural|online|neural/i.test(v.name)) || vs[0] || null; LP.byLang = !all.length;
+  const b = document.getElementById('ln-voice'), n = document.getElementById('ln-voice-note'), ok = learnCanSpeak();
+  if(b){ b.disabled = !ok; if(ok) b.removeAttribute('title'); b.setAttribute('aria-pressed', LP.voiceOn && ok); }
+  if(n) n.hidden = ok;
+}
+const learnCanSpeak = () => 'speechSynthesis' in window && (!!LP.voice || !!LP.byLang);
+// phones (iPhone, and Chrome on Android) speak only after a speech that started inside a tap: the "הפעלה" tap starts a silent one
+function learnUnlock(){
+  if(!('speechSynthesis' in window)) return;
+  try { learnPickVoice(); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(' '); u.lang = 'he-IL'; if(LP.voice) u.voice = LP.voice; u.volume = 0; speechSynthesis.speak(u); speechSynthesis.resume(); } catch(e){}
 }
 function learnFit(){
   const stage = document.getElementById('ln-stage'), phone = document.getElementById('ln-phone'), slot = document.getElementById('ln-slot'); if(!stage) return;
@@ -310,13 +320,13 @@ function learnWait(ms, my){
     (function tick(now){ if(my !== LP.run) return res(false); if(LP.playing) el += now - last; last = now; if(el >= ms) return res(true); requestAnimationFrame(tick); })(last); });
 }
 function learnSpeak(text, my){
-  if(!LP.voiceOn || !LP.voice || !text) return Promise.resolve();
-  try { speechSynthesis.cancel(); } catch(e){ return Promise.resolve(); }
+  if(!LP.voiceOn || !learnCanSpeak() || !text) return Promise.resolve();
+  let busy = false; try { busy = speechSynthesis.speaking || speechSynthesis.pending; if(busy) speechSynthesis.cancel(); } catch(e){ return Promise.resolve(); }
   return new Promise(res => {
-    const u = new SpeechSynthesisUtterance(text.replace(/[„”"׳]/g, '')); u.voice = LP.voice; u.lang = LP.voice.lang; u.rate = 1.02;
+    const u = new SpeechSynthesisUtterance(text.replace(/[„”"׳]/g, '')); u.lang = LP.voice ? LP.voice.lang : 'he-IL'; if(LP.voice) u.voice = LP.voice; u.rate = 1.02;
     let iv; const done = () => { clearInterval(iv); res(); }; u.onend = done; u.onerror = done;
     setTimeout(done, learnReadMs(text) * 3); iv = setInterval(() => { if(my !== LP.run) done(); }, 200);
-    speechSynthesis.speak(u);
+    setTimeout(() => { if(my !== LP.run) return done(); try { speechSynthesis.resume(); speechSynthesis.speak(u); } catch(e){ done(); } }, busy ? 120 : 0);          // (Chrome drops a speech that comes right after a cancel)
   });
 }
 const learnFW = () => LP.frame && LP.frame.contentWindow;
