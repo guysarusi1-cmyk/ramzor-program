@@ -38,10 +38,10 @@ declare k text; mail text; nm text; url text; v text := public.voice_of(p_staff)
 begin
   if p_staff is null then return; end if;
   insert into public.notices (to_staff, text, kind) values (p_staff, case when ar then p_text_ar else p_text end, coalesce(p_kind, 'info'));
-  -- which messages come by e-mail too (Guy 2026-10-28): confirmations, a change in the team of a shift, "someone offered to swap" and the
-  -- schedule that was built stay in the portal; a coordinator may switch off the e-mail of her own kinds of messages (the gear)
+  -- which messages come by e-mail too (Guy 2026-10-28): confirmations, a change in the team of a shift, "someone offered to swap", a swap or a
+  -- join request that was not approved and the schedule that was built stay in the portal (a vacation that was not approved: by e-mail); a coordinator may switch off the e-mail of her own kinds of messages (the gear)
   k := coalesce(current_setting('sched.mail_key', true), '');
-  if k in ('team_change', 'swap_found', 'swap_thanks', 'cant_reporter', 'open_self', 'open_req_self', 'built') then return; end if;
+  if k in ('team_change', 'swap_found', 'swap_thanks', 'cant_reporter', 'open_self', 'open_req_self', 'built', 'swap_rej_req', 'swap_rej_take', 'open_no') then return; end if;
   if k <> '' and exists (select 1 from public.staff_settings ss where ss.staff_id = p_staff and k = any(coalesce(ss.mail_off, '{}'))) then return; end if;
   select p.email, s.display_name into mail, nm from public.staff_private p join public.staff s on s.id = p.staff_id where p.staff_id = p_staff;
   select value #>> '{}' into url from public.sched_settings where key = 'portal_url';

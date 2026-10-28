@@ -1,7 +1,8 @@
 -- ================================================================
 -- Scheduling, part 45 (the e-mail rules only) — for the LIVE project before the big release. Safe to run again; the full
 -- scheduling-v45.sql later includes all of this. Nothing here changes what the site calls (Guy 2026-10-28):
---   * confirmations, a change in the team of a shift, "someone offered to swap" and the built schedule: in the portal only, no e-mail
+--   * confirmations, a change in the team of a shift, "someone offered to swap", a swap / join request not approved and the built schedule:
+--     in the portal only, no e-mail (a vacation not approved: by e-mail)
 --   * "a shift looks for a replacement": only to who marked yes / can for it and is free that day
 --   * "הסידור פורסם": an e-mail to everybody with shifts, when a month is published
 --   * staff_settings.mail_off: the coordinator's choices (the gear comes with the release)
@@ -16,10 +17,10 @@ declare k text; mail text; nm text; url text; v text := public.voice_of(p_staff)
 begin
   if p_staff is null then return; end if;
   insert into public.notices (to_staff, text, kind) values (p_staff, case when ar then p_text_ar else p_text end, coalesce(p_kind, 'info'));
-  -- which messages come by e-mail too (Guy 2026-10-28): confirmations, a change in the team of a shift, "someone offered to swap" and the
-  -- schedule that was built stay in the portal; a coordinator may switch off the e-mail of her own kinds of messages (the gear)
+  -- which messages come by e-mail too (Guy 2026-10-28): confirmations, a change in the team of a shift, "someone offered to swap", a swap or a
+  -- join request that was not approved and the schedule that was built stay in the portal (a vacation that was not approved: by e-mail); a coordinator may switch off the e-mail of her own kinds of messages (the gear)
   k := coalesce(current_setting('sched.mail_key', true), '');
-  if k in ('team_change', 'swap_found', 'swap_thanks', 'cant_reporter', 'open_self', 'open_req_self', 'built') then return; end if;
+  if k in ('team_change', 'swap_found', 'swap_thanks', 'cant_reporter', 'open_self', 'open_req_self', 'built', 'swap_rej_req', 'swap_rej_take', 'open_no') then return; end if;
   if k <> '' and exists (select 1 from public.staff_settings ss where ss.staff_id = p_staff and k = any(coalesce(ss.mail_off, '{}'))) then return; end if;
   select p.email, s.display_name into mail, nm from public.staff_private p join public.staff s on s.id = p.staff_id where p.staff_id = p_staff;
   select value #>> '{}' into url from public.sched_settings where key = 'portal_url';
