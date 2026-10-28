@@ -112,6 +112,64 @@ function srvOpenShiftsOf(mk){
   return out;
 }
 
+// ---- a published month: the coordinator's changes wait for "שליחת עדכונים" (Guy 2026-10-28, scheduling-v45.sql). Until it is pressed the
+// staff do not see them and nobody is told; then each person gets one message with all of her changes. Before v45 (or a month that was
+// not published) a change is written at once, as before.
+const csPendingOn = mk => !!(srv.pendingOn && portalMonth(mk).published);
+const csTold = mk => csPendingOn(mk) ? ' יישלח למדריכים בלחיצה על "שליחת עדכונים".' : portalMonth(mk).published ? ' מי שנוגע בעניין קיבל עדכון.' : '';
+async function asgWrite(mk, op, id, data, news = true){
+  if(csPendingOn(mk)){
+    const r = await sbPersonal.rpc('sched_pending_write', { p_op:op, p_target:id || null, p_data:data || null });
+    if(!r.error && news){ const st = portalLoad(); st.pending = st.pending || { waiting:0, discarded:0 }; st.pending.waiting = Math.max(1, st.pending.waiting); st.pending.discarded = 0; csFirstPendingNote(); }
+    return { error:r.error, data:r.data && typeof r.data === 'object' ? Object.assign({ pending:op }, r.data) : r.data };
+  }
+  if(op === 'insert') return sbPersonal.from('assignment').insert(data).select('id,staff_id,day,shift,from_time,to_time,flags').single();
+  if(op === 'update') return sbPersonal.from('assignment').update(data).eq('id', id);
+  return sbPersonal.from('assignment').delete().eq('id', id);
+}
+// at her first change of a published month: what happens to it (once on this device)
+function csFirstPendingNote(){
+  try { if(localStorage.getItem('ramzor-pending-told') === '1') return; localStorage.setItem('ramzor-pending-told', '1'); } catch(e){ return; }
+  portalSheet(`<h2>השינוי נשמר, אבל עוד לא נשלח</h2>
+    <div class="pnote">הסידור הזה כבר פורסם. כל שינוי שתעשי בו נשמר אצלך, אבל המדריכים לא רואים אותו ולא מקבלים עליו הודעה עד שתלחצי על "שליחת עדכונים" (הכפתור המהבהב למעלה).</div>
+    <div class="pnote">כשתלחצי, כל מי שהושפע יקבל הודעה ומייל אחד עם כל השינויים שלו. השינויים שעוד לא נשלחו מסומנים בלוח בקו מקווקו, ואפשר גם לבטל את כולם.</div>
+    <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>הבנתי</button></div>`);
+}
+function csPendingBarHtml(mk){
+  if(!csPendingOn(mk)) return '';
+  const p = portalLoad().pending || { waiting:0, discarded:0 };
+  if(p.waiting) return `<div class="cs-pending" id="cs-pending"><button type="button" class="btn cs-send blink" id="cs-send">שליחת עדכונים (${p.waiting})</button><button type="button" class="btn ghost" id="cs-discard">ביטול השינויים</button>
+    <small>${p.waiting === 1 ? 'שינוי אחד שעוד לא נשלח' : `${p.waiting} שינויים שעוד לא נשלחו`} (בקו מקווקו בלוח). המדריכים יראו אותם, ויקבלו הודעה ומייל אחד עם כל השינויים שלהם, רק אחרי הלחיצה.</small></div>`;
+  if(p.discarded) return `<div class="cs-pending" id="cs-pending"><button type="button" class="btn ghost" id="cs-restore">שחזור השינויים שבוטלו (${p.discarded})</button><small>אפשר להחזיר אותם עד השינוי הבא בסידור.</small></div>`;
+  return '';
+}
+function csPendingWire(body, mk){
+  const after = async (msg, ms) => { await srvReloadSafe(); await srvLoadCoord(); toast(msg, ms || 0); if(body.isConnected) srvRenderCoordSchedule(body); };
+  const send = body.querySelector('#cs-send'), discard = body.querySelector('#cs-discard'), restore = body.querySelector('#cs-restore');
+  const n = (portalLoad().pending || {}).waiting || 0;
+  if(send) send.addEventListener('click', async () => {
+    if(!(await confirmSheet({ title:'לשלוח את העדכונים?', text:`${n === 1 ? 'השינוי יופיע' : `${n} השינויים יופיעו`} עכשיו למדריכים, וכל מי שהושפע יקבל הודעה ומייל אחד עם כל השינויים שלו.`, okLabel:'כן, לשלוח', cancelLabel:'חזרה' }))) return;
+    send.disabled = true;
+    const r = await sbPersonal.rpc('sched_send_updates');
+    if(r.error){ send.disabled = false; toast('השליחה נכשלה. אפשר לנסות שוב בעוד רגע'); return; }
+    const d = r.data || {};
+    await after(`העדכונים נשלחו${d.people ? ` ל-${d.people} ${d.people === 1 ? 'איש צוות' : 'אנשי צוות'}` : ''}.${d.skipped ? ` ${d.skipped} שינויים לא נשלחו, כי המשמרת השתנתה בינתיים (למשל החלפה שאושרה).` : ''}`, d.skipped ? 6000 : 0);
+  });
+  if(discard) discard.addEventListener('click', async () => {
+    if(!(await confirmSheet({ title:'לבטל את כל השינויים?', text:`${n === 1 ? 'השינוי שעוד לא נשלח יימחק' : `${n} השינויים שעוד לא נשלחו יימחקו`}, והסידור יחזור למה שהמדריכים רואים. אם זה קרה בטעות, אפשר לשחזר אותם מיד אחר כך (עד השינוי הבא).`, okLabel:'כן, לבטל', cancelLabel:'חזרה', danger:true }))) return;
+    discard.disabled = true;
+    const r = await sbPersonal.rpc('sched_discard_updates');
+    if(r.error){ discard.disabled = false; toast('הביטול נכשל. אפשר לנסות שוב בעוד רגע'); return; }
+    await after('השינויים בוטלו. אפשר לשחזר אותם בכפתור "שחזור".', 5000);
+  });
+  if(restore) restore.addEventListener('click', async () => {
+    restore.disabled = true;
+    const r = await sbPersonal.rpc('sched_restore_updates');
+    if(r.error){ restore.disabled = false; toast('השחזור נכשל. אפשר לנסות שוב בעוד רגע'); return; }
+    await after('השינויים חזרו. הם עדיין מחכים ל"שליחת עדכונים".');
+  });
+}
+
 // ---- the screen
 function srvDefaultCoordMonth(){
   const st = portalLoad(), cur = monthKeyOf(srvToday()), next = addMonths(cur, 1);
@@ -129,6 +187,7 @@ function srvRenderCoordSchedule(body){
   const has = !!m.status, issues = has ? csAllIssues(mk) : [];          // (by date; the live checks are worked out again at every drawing: 14jb)
   const keep = csKeepScroll(body);          // (after a change the screen stays where it was: Guy 2026-10-25)
   const group = String((st.waMsg || {}).group || '').trim();
+  const pend = {}; st.rows.forEach(r => { const a = r.pending && (st.assignmentIds || {})[r.id]; if(a) pend[a.key + '|' + r.staff] = true; });
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
     ${srvBuildBoxHtml(mk)}
@@ -139,11 +198,12 @@ function srvRenderCoordSchedule(body){
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
       ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת המדריכים</span></a>` : ''}
     </div>
+    ${csPendingBarHtml(mk)}
     ${issues.length ? `<details class="pissues" id="cs-issues"${portalUi.csIssuesOpen ? ' open' : ''}><summary>${issues.length} דברים שדורשים תשומת לב</summary>${issues.map(csIssueHtml).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
     <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">הסתר מורות/בנות שירות${csHiddenMode() ? ` · <small>${({ teacher:'המורות מוסתרות', service:'בנות השירות מוסתרות', both:'שתיהן מוסתרות' })[csHiddenMode()]}</small>` : ''}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
+    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, pend, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   keep();
   wireMonthNav(body);
@@ -157,6 +217,7 @@ function srvRenderCoordSchedule(body){
       sh.querySelectorAll('[data-cs-hide]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-cs-hide-others', b.dataset.csHide || '0'); } catch(e){} sh.close(); srvRenderCoordSchedule(body); }));
     }); }
   if(m.published) srvOdWire(body, mk);
+  csPendingWire(body, mk);
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });
   if(csClose) csClose.addEventListener('click', () => { portalUi.csOpen = false; portalUi.csPerson = null; srvRenderCoordSchedule(body); });
@@ -205,7 +266,7 @@ function srvRenderCoordSchedule(body){
   if(pub) pub.addEventListener('click', async () => {
     const open = (st.flags || []).filter(f => f.month && f.month.slice(0, 7) === mk && !['service_absent', 'service'].includes(f.kind)).length;
     const openShifts = srvOpenShiftsOf(mk);
-    if(!(await confirmSheet({ title:'לפרסם את הסידור?', text:`מרגע הפרסום כל המדריכים רואים אותו, ובכל מסך אישי מופיע הסעיף "איך הלכו הבקשות שלך"${open ? ` (עדיין יש ${open} דברים שדורשים תשומת לב)` : ''}.${openShifts.length ? ` יש ${openShifts.length} משמרות שעדיין לא הושלמו (חסרים בהן מדריכים). אחרי הפרסום הן יופיעו למדריכים כמשמרות פתוחות: רק מי שיכול לאייש אותן (לפי המנוחה, המקסימום של מי שאינם מובילים ועוד) יוכל לבקש להצטרף, וכל בקשה תגיע אלייך לאישור. מדריך ישובץ רק אחרי שתאשרי.` : ''} כל שינוי אחר כך שולח הודעה ומייל למי שהושפע.`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+    if(!(await confirmSheet({ title:'לפרסם את הסידור?', text:`מרגע הפרסום כל המדריכים רואים אותו, ובכל מסך אישי מופיע הסעיף "איך הלכו הבקשות שלך"${open ? ` (עדיין יש ${open} דברים שדורשים תשומת לב)` : ''}.${openShifts.length ? ` יש ${openShifts.length} משמרות שעדיין לא הושלמו (חסרים בהן מדריכים). אחרי הפרסום הן יופיעו למדריכים כמשמרות פתוחות: רק מי שיכול לאייש אותן (לפי המנוחה, המקסימום של מי שאינם מובילים ועוד) יוכל לבקש להצטרף, וכל בקשה תגיע אלייך לאישור. מדריך ישובץ רק אחרי שתאשרי.` : ''} כל מי שיש לו משמרות החודש יקבל מייל שהסידור פורסם. שינויים שתעשי אחר כך יישלחו רק כשתלחצי על "שליחת עדכונים".`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
     const u = await sbPersonal.from('schedule').update({ status:'published', published_at:new Date().toISOString() }).eq('month', firstOf(mk));
     if(u.error){ toast('הפרסום נכשל. נסו שוב.'); return; }
     await srvReloadSafe();
@@ -220,7 +281,7 @@ const SRV_FLAG_HIDDEN = ['composition', 'min', 'pair', 'service_absent'];
 // the fixed explanations, folded away in one place
 const srvHelpFoldHtml = (m, has) => `<details class="pfold cs-help"><summary><span>ℹ️ הסברים</span></summary><div class="pfold-body">
     ${has ? '' : '<div class="pnote">עוד אין סידור לחודש הזה. כשההגשה נסגרת, לוחצים על "צור סידור אוטומטי" והמערכת בונה אותו לפי ההעדפות והחוקים. מכאן אפשר לערוך אותו ידנית.</div>'}
-    ${has ? (m.published ? '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע ולכל מי שנמצא באותה משמרת.</div>' : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, ויקבלו מייל על כל שינוי.</div>') : ''}
+    ${has ? (m.published ? (srv.pendingOn ? '<div class="pnote">הסידור פורסם. שינויים שתעשי בו נשמרים, אבל המדריכים רואים אותם ומקבלים עליהם הודעה ומייל רק אחרי "שליחת עדכונים". החלפות שאישרת ומשמרות שמדריכים מילאו נכנסות מיד.</div>' : '<div class="pnote">הסידור פורסם. כל שינוי בו שולח הודעה ומייל למי שהושפע.</div>') : '<div class="pnote">הסידור עוד לא נראה למדריכים. אחרי הפרסום הם יראו אותו, וכל מי שיש לו משמרות יקבל מייל.</div>') : ''}
     ${has ? '<div class="pnote">לחיצה על משמרת בלוח פותחת עריכה.</div>' : ''}</div></details>`;
 // ---- "צור סידור אוטומטי": the schedule is built only when the coordinator asks, after the submission closed (the hourly job builds it,
 // within an hour; a published month is never built again). (scheduling-v33.sql; the engine's monthly build is off unless sched_settings.auto_build)
@@ -348,7 +409,7 @@ function srvOpenSlot(mk, key, body){
       const row = portalLoad().rows.find(x => x.id === b.dataset.ok); if(!row) return;
       const on = !(row.flags || []).includes('ok'), flags = on ? Array.from(new Set((row.flags || []).concat('ok'))) : (row.flags || []).filter(f => f !== 'ok');
       b.disabled = true;
-      const u = await sbPersonal.from('assignment').update({ flags }).eq('id', row.id);
+      const u = await asgWrite(monthKeyOf(row.day), 'update', row.id, { flags }, false);          // (not news: no message)
       if(u.error){ b.disabled = false; toast('השינוי נכשל'); return; }
       row.flags = flags; draw(); srvRenderCoordSchedule(body); toast(on ? `${nm(row.staff)} סומן/ה כמאשר/ת ✓` : 'האישור בוטל');
     }));
@@ -358,7 +419,7 @@ function srvOpenSlot(mk, key, body){
       const w = srvWarnings(who.value, date, code, from.value, to.value);
       if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;
       const std = SRV_STD[code]; const flags = ['manual'];
-      const ins = await sbPersonal.from('assignment').insert({ month:firstOf(mk), staff_id:who.value, day:date, shift:code, from_time:from.value, to_time:to.value, flags });
+      const ins = await asgWrite(monthKeyOf(date), 'insert', null, { month:firstOf(monthKeyOf(date)), staff_id:who.value, day:date, shift:code, from_time:from.value, to_time:to.value, flags });
       if(ins.error){ toast('השיבוץ נכשל'); return; }
       srvForgetRemoved(who.value, date, code);
       await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body);
@@ -378,9 +439,9 @@ function srvOpenSlot(mk, key, body){
       const w = srvWarnings(row.staff, date, code, from, to, row.id);
       if(w.length && !(await confirmSheet({ title:'לשנות את השעות למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשנות', cancelLabel:'חזרה', danger:true }))) return;
       const flags = Array.from(new Set((row.flags || []).concat('manual')));
-      const u = await sbPersonal.from('assignment').update({ from_time:from, to_time:to, flags }).eq('id', row.id);
+      const u = await asgWrite(monthKeyOf(row.day), 'update', row.id, { from_time:from, to_time:to, flags });
       if(u.error){ toast('השינוי נכשל'); return; }
-      row.from = from; row.to = to; row.flags = flags; editing = null; draw(); toast('השעות עודכנו. מי שנוגע בעניין קיבל עדכון.');          // (the row is shown at once with its new hours; the reload follows)
+      row.from = from; row.to = to; row.flags = flags; editing = null; draw(); toast('השעות עודכנו.' + csTold(monthKeyOf(row.day)));          // (the row is shown at once with its new hours; the reload follows)
       await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body);
     }));
     wrap.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => {
@@ -389,10 +450,10 @@ function srvOpenSlot(mk, key, body){
       const w = srvShiftWarnings(date, code, after);
       if(w.length && !(await confirmSheet({ title:'להסיר למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, להסיר', cancelLabel:'חזרה', danger:true }))) return;
       b.disabled = true;
-      const d = await sbPersonal.from('assignment').delete().eq('id', r.id);
+      const d = await asgWrite(monthKeyOf(r.day), 'delete', r.id);
       if(d.error){ b.disabled = false; toast('ההסרה נכשלה'); return; }
       srvNoteRemoved(r);
-      srvDropRow(portalLoad(), r.id); draw(); srvRenderCoordSchedule(body); toast(`${nm(r.staff)} הוסר/ה מהמשמרת. מי שנוגע בעניין קיבל עדכון.`);
+      srvDropRow(portalLoad(), r.id); draw(); srvRenderCoordSchedule(body); toast(`${nm(r.staff)} הוסר/ה מהמשמרת.` + csTold(monthKeyOf(r.day)));
       srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
     }));
     // replacing: another instructor takes this row (the same hours); the list is ordered by her wish for this shift, then by the priority list
@@ -409,12 +470,12 @@ function srvOpenSlot(mk, key, body){
       const w = srvWarnings(nw, date, code, from, to, r.id);
       if(w.length && !(await confirmSheet({ title:'להחליף למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, להחליף', cancelLabel:'חזרה', danger:true }))) return;
       const flags = Array.from(new Set((r.flags || []).concat('manual')));
-      const u = await sbPersonal.from('assignment').update({ staff_id:nw, flags:flags.filter(f => f !== 'ok'), from_time:from, to_time:to }).eq('id', r.id);
+      const u = await asgWrite(monthKeyOf(r.day), 'update', r.id, { staff_id:nw, flags:flags.filter(f => f !== 'ok'), from_time:from, to_time:to });
       if(u.error){ toast('ההחלפה נכשלה'); return; }
       srvNoteRemoved(r); srvForgetRemoved(nw, r.day, r.shift);
       const st2 = portalLoad(), was = nm(r.staff);
       srvDropRow(st2, r.id); srvAddRow(st2, { id:r.id, staff_id:nw, day:r.day, shift:r.shift, from_time:from, to_time:to, flags:flags.filter(f => f !== 'ok') });
-      replacing = null; draw(); srvRenderCoordSchedule(body); toast(`${nm(nw)} במקום ${was}. מי שנוגע בעניין קיבל עדכון.`);
+      replacing = null; draw(); srvRenderCoordSchedule(body); toast(`${nm(nw)} במקום ${was}.` + csTold(monthKeyOf(r.day)));
       srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
     }));
     { const rl = wrap.querySelector('.cs-repl-list'); if(rl) rl.scrollIntoView({ block:'nearest' }); }          // (the opened list is shown, not left below the fold)
@@ -454,11 +515,11 @@ async function srvMoveToSlot(mk, key, rowId, body){
   const w = srvWarnings(r.staff, date, code, sh.start, sh.end, r.id);
   if(w.length && !(await confirmSheet({ title:'להעביר למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, להעביר', cancelLabel:'חזרה', danger:true }))) return;
   const flags = Array.from(new Set((r.flags || []).filter(f => f !== 'ok').concat('manual')));
-  const u = await sbPersonal.from('assignment').update({ month:firstOf(monthKeyOf(date)), day:date, shift:code, from_time:sh.start, to_time:sh.end, flags }).eq('id', r.id);
+  const was = monthKeyOf(r.day), u = await asgWrite(was, 'update', r.id, { month:firstOf(monthKeyOf(date)), day:date, shift:code, from_time:sh.start, to_time:sh.end, flags });
   if(u.error){ toast('ההעברה נכשלה'); return; }
   srvNoteRemoved(r); srvForgetRemoved(r.staff, date, code);
   srvDropRow(st, r.id); srvAddRow(st, { id:r.id, staff_id:r.staff, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags });
-  srvRenderCoordSchedule(body); toast(`${nm} הועבר/ה ל${sh.label} ${dayLabel(date)}. מי שנוגע בעניין קיבל עדכון.`);
+  srvRenderCoordSchedule(body); toast(`${nm} הועבר/ה ל${sh.label} ${dayLabel(date)}.` + csTold(was));
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 // a service girl or a teacher taken off one shift (the × by her name, with a question first: Guy 2026-10-26). When her hours reach two shifts
@@ -477,11 +538,11 @@ async function srvRemoveOther(rowId, sid, body){
     s2.addEventListener('click', e => { if(e.target === s2) finish('back'); });
   });
   if(choice !== 'part' && choice !== 'all') return;
-  const u = choice === 'part' ? await sbPersonal.from('assignment').update(keep).eq('id', r.id) : await sbPersonal.from('assignment').delete().eq('id', r.id);
+  const u = choice === 'part' ? await asgWrite(monthKeyOf(r.day), 'update', r.id, keep) : await asgWrite(monthKeyOf(r.day), 'delete', r.id);
   if(u.error){ toast('ההסרה נכשלה'); return; }
   srvDropRow(st, r.id);
   if(choice === 'part') srvAddRow(st, { id:r.id, staff_id:r.staff, day:r.day, shift:keep.shift, from_time:keep.from_time, to_time:keep.to_time, flags:r.flags || [] });
-  srvRenderCoordSchedule(body); toast(choice === 'part' ? `${nm} הוסרה מ${sh.label || 'המשמרת'}` : `${nm} הוסרה מהסידור ביום הזה`);
+  srvRenderCoordSchedule(body); toast((choice === 'part' ? `${nm} הוסרה מ${sh.label || 'המשמרת'}.` : `${nm} הוסרה מהסידור ביום הזה.`) + csTold(monthKeyOf(r.day)));
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 // while a name is dragged the page can still be scrolled (Guy): with the mouse wheel, and by holding the name near the top or the bottom of the screen
@@ -581,11 +642,11 @@ async function srvAddToSlot(mk, key, staffId, body){
   // no question for "yes" or "can"; for "no" and for a shift she did not mark: ask her first on WhatsApp, or place anyway
   if(!(await srvAskBeforePlacing(staffId, key))) return;
   if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;          // (a window, not only a note afterwards: Guy 2026-10-25)
-  const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
+  const ins = await asgWrite(monthKeyOf(date), 'insert', null, { month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:['manual'] });
   if(ins.error){ toast('השיבוץ נכשל'); return; }
   srvForgetRemoved(staffId, date, code);
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
-  toast(`${nm} שובץ/ה. מי שנוגע בעניין קיבל עדכון.`);
+  toast(`${nm} שובץ/ה.` + csTold(monthKeyOf(date)));
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 
@@ -607,10 +668,10 @@ async function srvAddOtherToSlot(mk, key, staffId, body){
   if(!h){ toast(`ל${nm} אין שעות קבועות ביום הזה`); return; }
   const { code, from, to } = h;
   if(st.rows.some(r => r.staff === staffId && r.day === date && r.shift === code)){ toast(`${nm} כבר בסידור במשמרת הזו`); return; }
-  const ins = await sbPersonal.from('assignment').insert({ month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:from, to_time:to, flags:['manual'] }).select('id,staff_id,day,shift,from_time,to_time,flags').single();
+  const ins = await asgWrite(monthKeyOf(date), 'insert', null, { month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:from, to_time:to, flags:['manual'] });
   if(ins.error){ toast('השיבוץ נכשל'); return; }
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);
-  toast(`${nm} נוספה לסידור, ${String(from).slice(0, 5)}–${String(to).slice(0, 5)}`);
+  toast(`${nm} נוספה לסידור, ${String(from).slice(0, 5)}–${String(to).slice(0, 5)}.` + csTold(monthKeyOf(date)));
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 

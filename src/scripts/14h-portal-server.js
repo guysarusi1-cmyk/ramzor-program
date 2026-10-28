@@ -113,8 +113,17 @@ async function srvLoad(){
   sched.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.status = r.status; m.published = r.status === 'published'; } });
   st.rows = [];
   if(sched.length){                                       // (the database shows a person only the published schedules; the coordinator sees the drafts too)
-    const rows = await srvAll(() => sbPersonal.from('assignment').select('id,staff_id,day,shift,from_time,to_time,flags').in('month', sched.map(r => r.month)).order('day'));
+    const plain = () => srvAll(() => sbPersonal.from('assignment').select('id,staff_id,day,shift,from_time,to_time,flags').in('month', sched.map(r => r.month)).order('day'));
+    let rows = null;
+    if(srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin) && sched.some(r => r.status === 'published')){          // (the coordinator: with her changes that wait for "שליחת עדכונים", scheduling-v45.sql)
+      try { rows = await srvAll(() => sbPersonal.rpc('sched_rows', { p_months:sched.map(r => r.month) })); srv.pendingOn = true; } catch(e){ rows = null; srv.pendingOn = false; }
+    }
+    if(!rows) rows = await plain();
     rows.forEach(r => srvAddRow(st, r));
+  }
+  st.pending = { waiting:0, discarded:0 };
+  if(srv.pendingOn && srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)){
+    try { const pr = await sbPersonal.from('assignment_pending').select('id,discarded_at'); if(!pr.error) (pr.data || []).forEach(x => { st.pending[x.discarded_at ? 'discarded' : 'waiting']++; }); } catch(e){}
   }
   const swapRows = await srvAll(() => sbPersonal.from('swap_requests').select('id,assignment_id,from_staff,to_staff,status,urgent,created_at').order('created_at', { ascending:false })).catch(() => []);
   st.swaps = swapRows.filter(s => st.assignmentIds[s.assignment_id]).map(s => ({ id:s.id, key:st.assignmentIds[s.assignment_id].key, aid:s.assignment_id, urgent:!!s.urgent, from:s.from_staff, to:s.to_staff, status:s.status, at:s.created_at }));
@@ -154,7 +163,7 @@ function srvDropRow(st, id){
 }
 function srvAddRow(st, r){
   const t5 = x => x ? x.slice(0, 5) : null, from = t5(r.from_time), to = t5(r.to_time);
-  st.rows.push({ id:r.id, staff:r.staff_id, day:r.day, shift:r.shift, from, to, flags:r.flags || [] });
+  st.rows.push({ id:r.id, staff:r.staff_id, day:r.day, shift:r.shift, from, to, flags:r.flags || [], pending:r.pending || null });
   const who = st.instructors.find(p => p.id === r.staff_id);
   if(who && who.role === 'service' && r.shift !== 'L'){ const key = `${r.day}|${SRV_SHIFT_UI[r.shift] || 'm'}`; st.assignmentIds[r.id] = { key, staff:r.staff_id }; st.assignmentIds[`${key}|${r.staff_id}`] = r.id; }          // (a service girl's shift can be swapped too: scheduling-v28.sql)
   if(!who || who.role !== 'instructor') return;
@@ -287,7 +296,7 @@ async function srvSwapAction(fn, args){
   await srvReload();
 }
 // ---- sign in: the personal password (chosen at the first entry), or a code by e-mail (the first entry, or a forgotten password)
-function srvLoginHtml(step, email){
+function srvLoginHtml(step, email, again){
   const staffLink = location.hash === '#portal' || !staffPasswordOn() ? '' : '<button type="button" class="plogin-staff-link" id="plogin-staff">כניסה למכשיר של המרכז (סיסמת צוות)</button>';          // (not on the first screen: a small link at the bottom)
   let inner;
   if(step === 'code') inner = `
@@ -297,11 +306,11 @@ function srvLoginHtml(step, email){
         <button type="button" class="btn" id="plogin-verify">כניסה</button>
         <div class="plogin-row"><button type="button" class="btn ghost" id="plogin-resend">שליחת קוד חדש</button><button type="button" class="btn ghost" id="plogin-back">חזרה</button></div>`;
   else if(step === 'setpw') inner = `
-        <h2>בחירת סיסמה אישית</h2>
-        <div class="pnote">מהפעם הבאה נכנסים עם המייל והסיסמה הזו, בלי לחכות לקוד. אם שוכחים אותה, אפשר תמיד לקבל קוד למייל.</div>
+        <h2>${again ? 'רוצה לבחור סיסמה חדשה?' : 'בחירת סיסמה אישית'}</h2>
+        <div class="pnote">${again ? 'נכנסת עם קוד. אפשר לבחור עכשיו סיסמה קבועה חדשה, ומהפעם הבאה להיכנס איתה בלי לחכות לקוד.' : 'מהפעם הבאה נכנסים עם המייל והסיסמה הזו, בלי לחכות לקוד. אם שוכחים אותה, אפשר תמיד לקבל קוד למייל.'}</div>
         <label class="pfield">סיסמה (לפחות 8 תווים)<input type="password" id="plogin-new" autocomplete="new-password" dir="ltr"></label>
         <label class="pfield">שוב, לאימות<input type="password" id="plogin-new2" autocomplete="new-password" dir="ltr"></label>
-        <button type="button" class="btn" id="plogin-setpw">שמירה וכניסה</button>`;
+        <button type="button" class="btn" id="plogin-setpw">שמירה וכניסה</button>${again ? '<button type="button" class="btn ghost" id="plogin-skip">לא עכשיו</button>' : ''}`;
   else inner = `
         <h2>ברוכים הבאים</h2>
         <label class="pfield">כתובת מייל<input type="email" id="plogin-email" autocomplete="username" inputmode="email" dir="ltr" value="${pEsc(email || '')}"></label>
@@ -315,10 +324,10 @@ function srvLoginHtml(step, email){
       <div id="plogin-error" class="plogin-error" role="alert"></div>
     </div></div>`;
 }
-function srvShowLogin(step, email){
+function srvShowLogin(step, email, again){
   portalActivateView('view-portal');
   const view = document.getElementById('view-portal');
-  view.innerHTML = srvLoginHtml(step || 'email', email);
+  view.innerHTML = srvLoginHtml(step || 'email', email, again);
   const $ = id => document.getElementById(id);
   const err = msg => { $('plogin-error').textContent = msg || ''; };
   const guard = async (btn, work) => { btn.disabled = true; err(''); try { await work(); } catch(e){ err('משהו קטן השתבש. אפשר לנסות שוב בעוד רגע.'); } btn.disabled = false; };
@@ -337,8 +346,7 @@ function srvShowLogin(step, email){
       const { error } = await sbPersonal.auth.verifyOtp({ email, token:code, type:'email' });
       if(error){ err('הקוד לא התאים, או שהוא כבר לא בתוקף. אפשר לבקש קוד חדש.'); return; }
       const { data:{ user } } = await sbPersonal.auth.getUser();
-      if(!(user && user.user_metadata && user.user_metadata.has_password)){ srvShowLogin('setpw', email); return; }          // (the first entry: a personal password for the next times)
-      await enter();
+      srvShowLogin('setpw', email, !!(user && user.user_metadata && user.user_metadata.has_password));          // (the first entry: a personal password for the next times; later entries with a code: a new one may be chosen, or "לא עכשיו" — Guy 2026-10-28)
     }));
     $('plogin-resend').addEventListener('click', ev => guard(ev.target, async () => { if(await sendCode(email)){ err(''); toast('נשלח קוד חדש'); } }));
     $('plogin-back').addEventListener('click', () => srvShowLogin('email', email));
@@ -353,6 +361,7 @@ function srvShowLogin(step, email){
       toast('הסיסמה נשמרה. מהפעם הבאה נכנסים איתה.'); await enter();
     }));
     onEnter('plogin-new2', 'plogin-setpw');
+    if($('plogin-skip')) $('plogin-skip').addEventListener('click', ev => guard(ev.target, enter));
   } else {
     $('plogin-pwbtn').addEventListener('click', ev => guard(ev.target, async () => {
       const mail = $('plogin-email').value.trim().toLowerCase(), pw = $('plogin-pw').value;

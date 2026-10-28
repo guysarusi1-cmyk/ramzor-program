@@ -127,6 +127,8 @@ async function srvLoadSettings(){
   try { const fx = await sbPersonal.from('staff_settings').select('fixed_no').eq('staff_id', srv.me).maybeSingle(); if(!fx.error && fx.data && Array.isArray(fx.data.fixed_no)) srv.fixedNo = fx.data.fixed_no; } catch(e){}
   srv.lang = (srv.profile && srv.profile.lang) || null;          // (the language: her own choice, else the admin's default; scheduling-v25.sql)
   try { const lg = await sbPersonal.from('staff_settings').select('lang').eq('staff_id', srv.me).maybeSingle(); if(!lg.error && lg.data && lg.data.lang) srv.lang = lg.data.lang; } catch(e){}
+  srv.mailOff = null;          // (which of her messages come to the portal only: scheduling-v45.sql; null = not on this server yet)
+  try { const mo = await sbPersonal.from('staff_settings').select('mail_off').eq('staff_id', srv.me).maybeSingle(); if(!mo.error) srv.mailOff = (mo.data && mo.data.mail_off) || []; } catch(e){}
   if(!srv.lang){ try { srv.lang = localStorage.getItem('ramzor-portal-lang') || 'he'; } catch(e){ srv.lang = 'he'; } }
   try { localStorage.setItem('ramzor-portal-lang', srv.lang); } catch(e){}
   if(typeof arApply === 'function') arApply();
@@ -174,12 +176,15 @@ function openPortalSettings(){
     <div class="pnote">${tx('long_setting')}</div>
     <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${srv.pickOne ? 'on' : ''}" data-set-pick="1">להציג "רק אחד מאלה": כן</button><button type="button" class="${srv.pickOne ? '' : 'on'}" data-set-pick="0">לא</button></div>
     <div class="pnote">${tx('pick_setting')}</div>`) : ''}
+    ${portalAsCoord(portalMe()) && Array.isArray(srv.mailOff) ? fold('mail', 'מיילים', srv.mailOff.filter(k => COORD_MAIL[k]).length ? `${srv.mailOff.filter(k => COORD_MAIL[k]).length} רק בפורטל` : 'הכל גם במייל', `<div class="pnote">ההודעות מופיעות תמיד בפורטל. כאן בוחרים מה מגיע אלייך גם במייל.</div>
+    ${Object.keys(COORD_MAIL).map(k => `<h3 class="psec">${COORD_MAIL[k]}</h3><div class="pchoice wrap"><button type="button" class="${srv.mailOff.includes(k) ? '' : 'on'}" data-mail-key="${k}" data-mail-on="1">גם במייל</button><button type="button" class="${srv.mailOff.includes(k) ? 'on' : ''}" data-mail-key="${k}" data-mail-on="0">רק בפורטל</button></div>`).join('')}`) : ''}
     ${portalAsCoord(portalMe()) ? fold('adv', 'מתקדם', [csShowOk() ? W('✓ מוצג', '✓') : '', waMode() === 'app' ? W('וואטסאפ באפליקציה', 'واتساب في التطبيق') : W('וואטסאפ בדפדפן', 'واتساب في المتصفح')].filter(Boolean).join(' · '), `<h3 class="psec">סימון ✓ ליד מי שאישר/ה ידנית</h3>
     <div class="pchoice wrap"><button type="button" class="${csShowOk() ? '' : 'on'}" data-set-ok="0">רק ירוק, בלי ✓</button><button type="button" class="${csShowOk() ? 'on' : ''}" data-set-ok="1">ירוק עם ✓</button></div>
     <h3 class="psec">שיחות וואטסאפ נפתחות</h3>
     <div class="pchoice wrap"><button type="button" class="${waMode() === 'app' ? 'on' : ''}" data-set-wa="app">באפליקציית וואטסאפ במחשב</button><button type="button" class="${waMode() === 'app' ? '' : 'on'}" data-set-wa="web">בדפדפן</button></div>
     <div class="pnote">באפליקציה לא נפתחות לשוניות בדפדפן. צריך שאפליקציית וואטסאפ תהיה מותקנת במחשב הזה. הבחירות כאן נשמרות במכשיר הזה.</div>`) : ''}
-    <button type="button" class="btn ghost" id="gear-problem" style="margin-top:14px;width:100%">משהו לא עובד? דיווח על תקלה</button>
+    ${portalServerOn ? '<button type="button" class="btn ghost" id="gear-password" style="margin-top:14px;width:100%">שינוי סיסמה</button>' : ''}
+    <button type="button" class="btn ghost" id="gear-problem" style="margin-top:${portalServerOn ? 8 : 14}px;width:100%">משהו לא עובד? דיווח על תקלה</button>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סיום</button></div>`);
   sh.querySelectorAll('[data-gfold]').forEach(d => d.addEventListener('toggle', () => { gf[d.dataset.gfold] = d.open; }));
   sh.querySelectorAll('[data-set-rem]').forEach(b => b.addEventListener('click', async () => {
@@ -198,6 +203,16 @@ function openPortalSettings(){
     if(n && portalUi.tab === 'prefs'){ const pb = document.getElementById('portal-body'); if(pb) renderInstructorPrefs(pb); }
   }));
   sh.querySelector('#gear-problem').addEventListener('click', () => { sh.close(); openProblemReport(); });
+  if(sh.querySelector('#gear-password')) sh.querySelector('#gear-password').addEventListener('click', () => { sh.close(); openChangePassword(); });
+  sh.querySelectorAll('[data-mail-key]').forEach(b => b.addEventListener('click', async () => {          // (the coordinator's e-mails, Guy 2026-10-28)
+    const k = b.dataset.mailKey, on = b.dataset.mailOn === '1', was = srv.mailOff.slice();
+    const next = on ? was.filter(x => x !== k) : Array.from(new Set(was.concat(k)));
+    sh.querySelectorAll(`[data-mail-key="${k}"]`).forEach(x => x.classList.toggle('on', x === b)); srv.mailOff = next;
+    let ok = false; try { const r = await sbPersonal.from('staff_settings').upsert({ staff_id:srv.me, mail_off:next }); ok = !r.error; } catch(e){}
+    if(!ok){ srv.mailOff = was; sh.querySelectorAll(`[data-mail-key="${k}"]`).forEach(x => x.classList.toggle('on', (x.dataset.mailOn === '1') === !was.includes(k))); toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
+    const now = sh.querySelector('[data-gfold="mail"] .gear-now'); if(now){ const n = next.filter(x => COORD_MAIL[x]).length; now.textContent = n ? `${n} רק בפורטל` : 'הכל גם במייל'; }
+    toast(on ? 'נשמר. זה יגיע אלייך גם במייל' : 'נשמר. זה יופיע רק בפורטל');
+  }));
   sh.querySelectorAll('[data-set-ok]').forEach(b => b.addEventListener('click', () => {          // ("✓ אישר/ה": by default only green; the ✓ is an advanced choice, Guy 2026-10-26)
     try { localStorage.setItem('ramzor-show-ok', b.dataset.setOk); } catch(e){}
     sh.querySelectorAll('[data-set-ok]').forEach(x => x.classList.toggle('on', x === b)); portalRefresh();
@@ -239,6 +254,31 @@ function openPortalSettings(){
     await srvSaveSetting({ pickOne:on }); sh.close(); showPortal();
   }));
   sh.querySelectorAll('[data-set-big]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-portal-big', b.dataset.setBig); } catch(e){} applyPortalSize(); sh.close(); openPortalSettings(); }));
+}
+// the coordinator's own kinds of messages (the keys of tell_key / tell_staff in scheduling-v45.sql): each may come to the portal only
+const COORD_MAIL = { swap_waiting:'בקשת החלפה שמחכה לאישור שלך', cant_coord:'מדריך/ה שלא יכול/ה להגיע למשמרת', open_req_coord:'בקשה להצטרף למשמרת פתוחה',
+  open_coord:'מישהו מילא משמרת חסרה', open_full:'יום נוסף לשיבוץ שהתמלא', not_submitted:'מי עוד לא הגיש העדפות (לקראת סוף ההגשה)' };
+// a new personal password from the gear, for everybody (Guy 2026-10-28)
+function openChangePassword(){
+  const sh = portalSheet(`<h2>שינוי סיסמה</h2>
+    <div class="pnote">מהפעם הבאה נכנסים עם המייל והסיסמה החדשה. אם שוכחים אותה, אפשר תמיד לקבל קוד למייל.</div>
+    <label class="pfield">סיסמה חדשה (לפחות 8 תווים)<input type="password" id="chpw-new" autocomplete="new-password" dir="ltr"></label>
+    <label class="pfield">שוב, לאימות<input type="password" id="chpw-new2" autocomplete="new-password" dir="ltr"></label>
+    <div id="chpw-error" class="plogin-error" role="alert"></div>
+    <div class="confirm-actions"><button type="button" class="btn" id="chpw-save">שמירה</button><button type="button" class="btn ghost" data-close>ביטול</button></div>`);
+  const err = m => { sh.querySelector('#chpw-error').textContent = m || ''; };
+  const save = sh.querySelector('#chpw-save');
+  save.addEventListener('click', async () => {
+    const a = sh.querySelector('#chpw-new').value, b = sh.querySelector('#chpw-new2').value;
+    if(a.length < 8){ err('הסיסמה צריכה להיות באורך 8 תווים לפחות.'); return; }
+    if(a !== b){ err('שתי הסיסמאות לא זהות. אפשר להקליד שוב.'); return; }
+    save.disabled = true; err('');
+    let error = null; try { ({ error } = await sbPersonal.auth.updateUser({ password:a, data:{ has_password:true } })); } catch(e){ error = e; }
+    save.disabled = false;
+    if(error){ err(/different|same/i.test(error.message || '') ? 'זו הסיסמה שכבר יש לך. אפשר לבחור אחרת.' : 'לא הצלחנו לשמור את הסיסמה כרגע. אפשר לנסות שוב בעוד רגע.'); return; }
+    sh.close(); toast('הסיסמה נשמרה. מהפעם הבאה נכנסים איתה.');
+  });
+  sh.querySelector('#chpw-new2').addEventListener('keydown', e => { if(e.key === 'Enter') save.click(); });
 }
 function applyPortalSize(){
   let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}

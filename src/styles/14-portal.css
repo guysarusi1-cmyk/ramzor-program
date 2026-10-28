@@ -317,6 +317,13 @@
   .pedit-btns{ display:inline-flex; gap:6px; margin-inline-start:auto; }
   .pedit-row.editing{ flex-wrap:wrap; } .phours-edit{ display:inline-flex; align-items:center; gap:6px; } .phours-edit select{ min-height:40px; width:auto; }
   .mcal-name.sel{ outline:2px solid #fff; outline-offset:1px; }
+  /* a published month: the coordinator's changes that wait for "שליחת עדכונים" (scheduling-v45.sql) */
+  .mcal-name.pend{ outline:2px dashed var(--p-gold, #f0c060); outline-offset:1px; }
+  .cs-pending{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 12px; padding:10px 12px; border:1px solid var(--p-gold, #f0c060); border-radius:12px; background:var(--p-panel); }
+  .cs-pending small{ flex:1 1 220px; color:var(--p-muted); line-height:1.45; }
+  .cs-send.blink{ animation:cs-send-blink 2.4s ease-in-out infinite; }
+  @keyframes cs-send-blink{ 0%, 100%{ box-shadow:0 0 0 0 rgba(240, 192, 96, 0); filter:none; } 50%{ box-shadow:0 0 0 6px rgba(240, 192, 96, .35); filter:brightness(1.18); } }
+  @media (prefers-reduced-motion: reduce){ .cs-send.blink{ animation:none; box-shadow:0 0 0 3px rgba(240, 192, 96, .45); } }
   /* the coordinator's schedule: the calendar, and at its left a panel with the instructors and their requests */
   .cs-layout{ display:flex; gap:16px; align-items:flex-start; }
   .cs-main{ flex:1; min-width:0; }

@@ -1254,6 +1254,9 @@
         check('personal sign-in: the code step has a visible way back and a new code (not stuck when the code expired)', !!document.getElementById('plogin-resend') && r.width > 0 && r.top >= card.top && r.bottom <= card.bottom + 1, JSON.stringify([r.top, card.top, r.bottom, card.bottom])); }
       srvShowLogin('setpw', 'someone@example.com');
       check('personal sign-in: after the first code, a personal password is chosen (twice)', document.querySelectorAll('.plogin input[type=password]').length === 2 && !!document.getElementById('plogin-setpw'), 'no password step');
+      check('personal sign-in: the first entry has no "לא עכשיו" (a password is chosen)', !document.getElementById('plogin-skip'), 'skip on the first entry');
+      srvShowLogin('setpw', 'someone@example.com', true);
+      check('personal sign-in: a later entry with a code offers a new password, with "לא עכשיו"', /סיסמה חדשה/.test(document.querySelector('.plogin h2').textContent) && document.querySelectorAll('.plogin input[type=password]').length === 2 && !!document.getElementById('plogin-skip'), 'no optional password step');
       showHub();
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
       const { error } = await signInRetry('instructor-test@merkaz-cherum.local', PW);
@@ -1801,6 +1804,33 @@
         document.querySelector('#cs-publish').click(); await answerSheet();
         check('portal people: publishing makes the schedule published on the server', await waitFor(async () => { const s = await sbPersonal.from('schedule').select('status').eq('month', firstOf(mkT)); return s.data && s.data[0] && s.data[0].status === 'published'; }), 'not published');
         await waitFor(() => [...document.querySelectorAll('.toast')].some(t => /הסידור פורסם/.test(t.textContent)), 400);          // (the personal messages to everybody are sent after the publishing; wait until that is over before changing the user)
+        // ---- a published month: the coordinator's change waits for "שליחת עדכונים", then the person gets one message (scheduling-v45.sql)
+        await srvReload();
+        if(!srv.pendingOn) check('(info) send updates: needs scheduling-v45.sql on the test server', true, '');
+        else {
+          const real = async () => { const q = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return (q.data || []).length; };
+          try { localStorage.removeItem('ramzor-pending-told'); } catch(e){}
+          const w = await asgWrite(mkT, 'insert', null, { month:firstOf(mkT), staff_id:i2, day, shift:'M', from_time:'07:00', to_time:'15:00', flags:['manual'] });
+          check('send updates: at the first change an explanation: saved, but not sent until "שליחת עדכונים"', /עוד לא נשלח/.test((document.querySelector('.psheet') || {}).textContent || ''), 'no explanation');
+          { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+          check('send updates: a change of a published month is kept aside (the staff do not see it yet)', !w.error && (await real()) === 0, w.error ? w.error.message : 'already in the schedule');
+          await srvReload(); showPortal('schedule'); await sleep(200);
+          const sendB = document.querySelector('#cs-send');
+          check('send updates: the coordinator sees "שליחת עדכונים" blinking, with "ביטול השינויים", and the waiting name dashed', !!sendB && sendB.classList.contains('blink') && /\(1\)/.test(sendB.textContent) && !!document.querySelector('#cs-discard') && !!document.querySelector(`.mcal-cell[data-key="${day}|m"] .mcal-name.pend`), sendB ? sendB.outerHTML.slice(0, 120) : 'no button');
+          // "ביטול השינויים" and "שחזור"
+          document.querySelector('#cs-discard').click(); await answerSheet();
+          check('send updates: "ביטול השינויים" throws the change away and offers "שחזור"', await waitFor(async () => !!document.querySelector('#cs-restore') && !document.querySelector('#cs-send'), 100), 'no restore');
+          document.querySelector('#cs-restore').click();
+          check('send updates: "שחזור" brings the change back (it still waits)', await waitFor(async () => !!document.querySelector('#cs-send'), 100) && (await real()) === 0, 'not back');
+          const since = new Date(Date.now() - 2000).toISOString();
+          document.querySelector('#cs-send').click(); await answerSheet();
+          check('send updates: after "שליחת עדכונים" the staff see the change', await waitFor(async () => (await real()) === 1, 100), 'not in the schedule');
+          { const nt = await sbPersonal.from('notices').select('text').eq('to_staff', i2).gte('created_at', since);
+            const txts = (nt.data || []).map(n => n.text);
+            check('send updates: the person got ONE message with her change', txts.filter(t => /עדכונים בסידור/.test(t)).length === 1 && txts.some(t => /נוספה לך משמרת/.test(t)), JSON.stringify(txts).slice(0, 160)); }
+          check('send updates: nothing waits any more', await waitFor(async () => !document.querySelector('#cs-send') && !document.querySelector('#cs-restore'), 60), 'still waiting');
+          await sbPersonal.from('assignment').delete().eq('day', day).eq('shift', 'M').eq('staff_id', i2); await srvReloadSafe();
+        }
         // ---- an instructor reports "I cannot come" (the shift opens at once)
         await sign('instructor'); portalUi.month = mkT; portalUi.fold = { mine:true, team:true, swap:true }; showPortal('schedule'); await sleep(200);
         const cantOk = await changeFlow('cant', day); check('portal people: "בקשת החלפה" -> cannot come -> asked which shift -> picking it asks to confirm', cantOk && /לאיזו משמרת לא תוכל[י]? להגיע\?/.test(lastQuestion), cantOk + ' / ' + lastQuestion);
@@ -2381,7 +2411,7 @@
       // the sign-in screens, in the language this device remembers
       try { localStorage.setItem('ramzor-portal-lang', 'ar'); } catch(e){}
       arMissing.clear(); document.getElementById('protected-app').style.display = '';
-      for(const stp of ['email', 'code', 'setpw']){ srvShowLogin(stp, 'someone@example.com'); arApply(); await sleep(250); arSweep(); }
+      for(const stp of ['email', 'code', 'setpw', 'again']){ srvShowLogin(stp === 'again' ? 'setpw' : stp, 'someone@example.com', stp === 'again'); arApply(); await sleep(250); arSweep(); }
       arMissing.forEach(x => all.add(x));
       try { localStorage.setItem('ramzor-portal-lang', 'he'); } catch(e){} arApply(); showHub();
       window.__arMissing = [...all];
@@ -2548,6 +2578,14 @@
           check('problems: sending the report thanks the person (it reached the database)', thanked && !document.querySelector('.psheet #prob-text'), 'no thanks'); } }
       document.getElementById('portal-gear').click(); await sleep(150);
       check('problems: the gear has the report button too', !!document.querySelector('.psheet #gear-problem'), 'missing');
+      { const pw = document.querySelector('.psheet #gear-password');
+        check('password: the gear has "שינוי סיסמה" for everybody', !!pw, 'missing');
+        if(pw){ pw.click(); await sleep(150);
+          const a = document.querySelector('.psheet #chpw-new'), b = document.querySelector('.psheet #chpw-new2');
+          if(a && b){ a.value = 'abcdefgh1'; b.value = 'abcdefgh2'; document.querySelector('.psheet #chpw-save').click(); await sleep(100); }
+          check('password: the sheet asks twice and stops when the two do not match (nothing saved)', !!a && !!b && /לא זהות/.test((document.querySelector('.psheet #chpw-error') || {}).textContent || ''), 'no check');
+          { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
+          document.getElementById('portal-gear').click(); await sleep(150); } }
       { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
       // an error on the device is written down once, with where it happened
       window.__probForce = true; const before = PROB.sent;
