@@ -198,8 +198,9 @@ function csIssuesWire(body, mk){
   body.querySelectorAll('#cs-issues-next, #cs-issues-prev').forEach(b => b.addEventListener('click', () => { portalUi.csIssueOff = +b.dataset.off || 0; srvRenderCoordSchedule(body); }));          // (three on, three back)
   body.querySelectorAll('[data-live-done]').forEach(b => b.addEventListener('click', async () => {          // (a live note she handled another way: kept as handled, also on her other devices)
     b.disabled = true; const st = portalLoad();
-    const r = await sbPersonal.from('coordinator_flags').insert({ month:firstOf(mk), day:b.dataset.liveDone.split('|')[1] || null, kind:'handled', text:b.dataset.liveDone, resolved:true }).select('month,text').single();
+    const r = await sbPersonal.from('coordinator_flags').insert({ month:firstOf(mk), day:b.dataset.liveDone.split('|')[1] || null, kind:'handled', text:b.dataset.liveDone, resolved:true }).select('id,month,text').single();
     if(r.error){ b.disabled = false; toast('העדכון נכשל'); return; }
     st.flagsDone = (st.flagsDone || []).concat(r.data); srvRenderCoordSchedule(body);
+    if(typeof csUndo === 'function') csUndo('סומן כטופל', body, async () => { const d = await sbPersonal.from('coordinator_flags').delete().eq('id', r.data.id); if(!d.error) st.flagsDone = (st.flagsDone || []).filter(f => f.id !== r.data.id); return !d.error; });
   }));
 }

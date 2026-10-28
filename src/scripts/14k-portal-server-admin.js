@@ -115,8 +115,12 @@ function srvRenderCoordVacations(body){
     ${rest.length ? rest.map(v => `<div class="pmine-row"><span>${line(v)}</span><em class="pst pst-${v.status === 'approved' ? 'approved' : 'rejected'}">${SRV_VAC_STATUS[v.status]}</em></div>`).join('') : '<div class="pnote">אין.</div>'}`;
   body.querySelectorAll('[data-vac-ok], [data-vac-no]').forEach(b => b.addEventListener('click', async () => {
     const approve = !!b.dataset.vacOk, id = b.dataset.vacOk || b.dataset.vacNo, v = (st.vacations || []).find(x => x.id === id), was = v && v.status;
+    // shifts on those days: shown before the approval; in a published month they open for a replacement at once (Guy 2026-10-28, scheduling-v45.sql)
+    const clash = approve && v ? st.rows.filter(r => r.staff === v.staff_id && r.day >= v.from_day && r.day <= v.to_day && r.day >= srvToday()).sort((a, b2) => a.day.localeCompare(b2.day)) : [];
+    const pubClash = clash.filter(r => portalMonth(monthKeyOf(r.day)).published);
+    if(clash.length && !(await confirmSheet({ title:'לאשר את החופשה?', text:`ל${nameOf(v.staff_id)} יש ${clash.length === 1 ? 'משמרת אחת' : clash.length + ' משמרות'} בימים האלה: ${clash.map(r => `${dayLabel(r.day)} ${SRV_SHIFT_WORD[r.shift] || ''}`).join(', ')}.${pubClash.length ? ' אחרי האישור הן ייפתחו להחלפה, ומי שסימן "כן" או "יכול" ופנוי באותו יום יקבל קריאה לעזרה.' : ''}${pubClash.length < clash.length ? ' בחודש שעוד לא פורסם הן יופיעו בסידור בין הדברים שדורשים תשומת לב.' : ''}`, okLabel:'כן, לאשר', cancelLabel:'חזרה' }))) return;
     if(v) v.status = approve ? 'approved' : 'rejected';          // (the answer shows at once; the server is asked right after, and the screen goes back if that fails)
-    srvRenderCoordVacations(body); toast(approve ? 'החופשה אושרה, והימים נכנסו כהיעדרות' : 'הבקשה נדחתה');
+    srvRenderCoordVacations(body); toast(approve ? `החופשה אושרה, והימים נכנסו כהיעדרות.${pubClash.length ? ' המשמרות בימים האלה נפתחו להחלפה.' : ''}` : 'הבקשה נדחתה', pubClash.length ? 5000 : 0);
     const r = await sbPersonal.rpc('decide_vacation', { p_id:id, p_approve:approve });
     if(r.error){ if(v) v.status = was; toast('הפעולה לא הצליחה, הבקשה חזרה לרשימה'); if(body.isConnected) srvRenderCoordVacations(body); return; }
     srvReloadSafe().then(() => { if(body.isConnected && portalServerOn) srvRenderCoordVacations(body); });

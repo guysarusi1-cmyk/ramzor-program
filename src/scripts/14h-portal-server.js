@@ -262,6 +262,17 @@ function srvTabs(me){
   if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (swaps: only among the service girls)
   return [['schedule', 'הסידור'], ['hours', 'שעות'], ['inbox', 'הודעות']];          // teachers
 }
+// what waits for the coordinator in a tab, as a number on it (Guy 2026-10-28): swaps to decide and urgent ones, vacation requests,
+// and while the preferences of next month are open, who has not handed them in yet
+function srvTabCount(me, t){
+  if(!portalAsCoord(me) || srvEditingFor()) return 0;
+  const st = portalLoad();
+  if(t === 'swaps') return (st.swaps || []).filter(s => s.status === 'offered' || (s.status === 'open' && s.urgent)).length + (st.openReqs || []).length;
+  if(t === 'vacations') return (st.vacations || []).filter(v => v.status === 'pending').length;
+  if(t === 'submissions'){ const mk = addMonths(monthKeyOf(srvToday()), 1), m = portalMonth(mk); if(!srvPrefsOpen(mk)) return 0;
+    return st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role) && !m.submitted[p.id]).length; }
+  return 0;
+}
 function srvRenderTab(me, body, t){
   const soon = what => { body.innerHTML = `<div class="pnote">${what} — עדיין בבנייה.</div>`; };
   if(portalAsCoord(me)){

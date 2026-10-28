@@ -100,7 +100,7 @@ function showPortal(tab){
         <select id="portal-persona">${st.instructors.filter(p => p.active).map(p => `<option value="${p.id}"${p.id === me.id ? ' selected' : ''}>${pEsc(instrName(p, st.instructors))}${p.role === 'coordinator' ? ' (רכזת)' : ''}</option>`).join('')}</select>
         <span class="portal-demo-tag">דמו</span>
       </label>`}
-      <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}</button>`).join('')}</nav>
+      <nav class="portal-tabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-ptab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}">${t[1]}${(c => c ? ` <span class="ptab-count">${c}</span>` : '')(portalServerOn && typeof srvTabCount === 'function' ? srvTabCount(me, t[0]) : 0)}</button>`).join('')}</nav>
       ${portalServerOn && portalUi.viewAs ? (portalUi.actAs ? `<div class="adm-viewas act"><span>🛠️ במסך של ${pEsc(me.first)} · שליטה מלאה, כל פעולה נרשמת על שמך</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>` : portalUi.editPrefs ? `<div class="adm-viewas edit"><span>✏️ ממלא/ת העדפות עבור ${pEsc(me.first)} · נשמר אצלו/ה</span><button type="button" class="btn small" id="viewas-end">סיום</button></div>` : `<div class="adm-viewas"><span>👁️ צפייה כמו ש${pEsc(me.first)} רואה · רק לצפייה</span><button type="button" class="btn small" id="viewas-end">חזרה לפורטל הניהול</button></div>`) : ''}
       <div id="portal-body"></div>
       ${portalServerOn && srv.meRow && !['instructor', 'coordinator'].includes(srv.meRow.role) && !srv.meRow.admin ? installLinkHtml() : ''}

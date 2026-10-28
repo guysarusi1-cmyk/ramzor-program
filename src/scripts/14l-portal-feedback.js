@@ -49,6 +49,9 @@ function fbCounts(rows, mk){
 const fbRowShiftId = r => r.shift === 'S' ? 'm' : ({ M:'m', A:'e', N:'n', L:'l' })[r.shift];
 
 // the whole picture for one person and one month
+// "חסרה משמרת אחת" / "חסרות 2 משמרות" (not "חסרות 1 משמרות": Guy 2026-10-28)
+const fbMissHe = (n, what) => n === 1 ? `חסרה משמרת${what} אחת` : `חסרות ${n} משמרות${what}`;
+const fbMissAr = (n, what) => n === 1 ? `تنقص مناوبة واحدة${what}` : `تنقص ${n} مناوبات${what}`;
 function srvFeedbackFor(p, mk, input){
   const { prefs, rows, profile, goal } = input, gx = (m, f) => fbGx(profile, m, f), V = input.voice || ((typeof arOn === 'function' && arOn()) ? 'ar' : portalVoice()), T = (key, ...a) => txFor(V, key, ...a), fem = !(profile && profile.female === false);
   const ar = V === 'ar', L = (he, a) => ar ? a : he, DL = d => ar ? arWords(dayLabel(d)) : dayLabel(d);          // (Arabic: the person's own language)
@@ -87,11 +90,11 @@ function srvFeedbackFor(p, mk, input){
   const minGaps = [];
   if(min.own){
     const m = min.own;
-    c.perWeek.forEach(w => { const all = w.mid + w.night; if(all < m.mid + m.night) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסרות ${m.mid + m.night - all} משמרות`, `في أسبوع ${DL(w.week)} تنقص ${m.mid + m.night - all} مناوبات`)); else if(w.night < m.night) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסר לילה`, `في أسبوع ${DL(w.week)} تنقص ليلة`)); });
+    c.perWeek.forEach(w => { const all = w.mid + w.night; if(all < m.mid + m.night) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} ${fbMissHe(m.mid + m.night - all, '')}`, `في أسبوع ${DL(w.week)} ${fbMissAr(m.mid + m.night - all, '')}`)); else if(w.night < m.night) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסר לילה`, `في أسبوع ${DL(w.week)} تنقص ليلة`)); });
     if(c.weekend < m.weekend) minGaps.push(L(`במשמרות סופ"ש יש ${c.weekend} מתוך ${m.weekend}`, `في مناوبات نهاية الأسبوع يوجد ${c.weekend} من ${m.weekend}`));
   } else if(min.total != null && !(profile && profile.only_long)){
     const nights = !(profile && (profile.no_nights || profile.only_long || profile.latest_end));
-    c.perWeek.forEach(w => { if(w.mid < 2) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסרות ${2 - w.mid} משמרות אמצע שבוע`, `في أسبوع ${DL(w.week)} تنقص ${2 - w.mid} مناوبات منتصف الأسبوع`)); if(nights && w.night < 1) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסרה משמרת לילה`, `في أسبوع ${DL(w.week)} تنقص مناوبة ليلية`)); });
+    c.perWeek.forEach(w => { if(w.mid < 2) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} ${fbMissHe(2 - w.mid, ' אמצע שבוע')}`, `في أسبوع ${DL(w.week)} ${fbMissAr(2 - w.mid, ' منتصف الأسبوع')}`)); if(nights && w.night < 1) minGaps.push(L(`בשבוע של ${dayLabel(w.week)} חסרה משמרת לילה`, `في أسبوع ${DL(w.week)} تنقص مناوبة ليلية`)); });
     if(c.weekend < 4) minGaps.push(L(`במשמרות סופ"ש יש ${c.weekend} מתוך 4`, `في مناوبات نهاية الأسبوع يوجد ${c.weekend} من 4`));
   } else if(profile && profile.only_long && !mine.some(r => r.shift === 'L')) minGaps.push(L('עוד לא שובצת לסופ"ש ארוך', 'لم تُجدول/ي بعد لنهاية أسبوع طويلة'));
   const asked = honored.length + unmet.length, name = p.first;

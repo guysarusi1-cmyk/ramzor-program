@@ -127,6 +127,20 @@ async function asgWrite(mk, op, id, data, news = true){
   if(op === 'update') return sbPersonal.from('assignment').update(data).eq('id', id);
   return sbPersonal.from('assignment').delete().eq('id', id);
 }
+// "ביטול" for a moment after removing, moving or "טופל" — only when she switched it on in the gear ("מתקדם"; Guy 2026-10-28). Off: as before
+const csUndoOn = () => { try { return localStorage.getItem('ramzor-cs-undo') === '1'; } catch(e){ return false; } };
+function csUndo(msg, body, undo){
+  if(!csUndoOn()) return false;
+  toastUndo(msg, async () => { let ok = false; try { ok = await undo(); } catch(e){ ok = false; } await srvReloadSafe(); await srvLoadCoord(); if(body && body.isConnected) srvRenderCoordSchedule(body); return ok; });
+  return true;
+}
+// the way back of one change (a published month: its waiting change is dropped; otherwise the old values are written again)
+async function csUndoRow(mk, r, removed){
+  if(csPendingOn(mk) && !(r.pending === 'insert' && removed)){ const x = await sbPersonal.rpc('sched_pending_write', { p_op:'revert', p_target:r.id, p_data:null }); return !x.error; }
+  const old = { month:firstOf(monthKeyOf(r.day)), staff_id:r.staff, day:r.day, shift:r.shift, from_time:r.from, to_time:r.to, flags:r.flags || [] };
+  const x = removed ? await asgWrite(mk, 'insert', null, old) : await asgWrite(mk, 'update', r.id, old);
+  return !x.error;
+}
 // at her first change of a published month: what happens to it (once on this device)
 function csFirstPendingNote(){
   try { if(localStorage.getItem('ramzor-pending-told') === '1') return; localStorage.setItem('ramzor-pending-told', '1'); } catch(e){ return; }
@@ -192,7 +206,7 @@ function srvRenderCoordSchedule(body){
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
     ${srvBuildBoxHtml(mk)}
     ${has ? `<div class="pactions">
-      <button type="button" class="btn" id="cs-publish"${m.published ? ' disabled' : ''}>${m.published ? 'הסידור פורסם' : 'פרסום הסידור'}</button>
+      ${m.published ? '' : '<button type="button" class="btn" id="cs-publish">פרסום הסידור</button>'}
       <button type="button" class="btn ghost" id="cs-xlsx">ייצוא לאקסל</button>
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
@@ -258,8 +272,8 @@ function srvRenderCoordSchedule(body){
   });
   body.querySelectorAll('[data-flag-done]').forEach(b => b.addEventListener('click', async () => {
     b.disabled = true;
-    const u = await sbPersonal.from('coordinator_flags').update({ resolved:true }).eq('id', b.dataset.flagDone);
-    if(u.error) toast('העדכון נכשל'); else { st.flags = st.flags.filter(f => f.id !== b.dataset.flagDone); }
+    const id = b.dataset.flagDone, u = await sbPersonal.from('coordinator_flags').update({ resolved:true }).eq('id', id);
+    if(u.error) toast('העדכון נכשל'); else { st.flags = st.flags.filter(f => f.id !== id); csUndo('סומן כטופל', body, async () => !(await sbPersonal.from('coordinator_flags').update({ resolved:false }).eq('id', id)).error); }
     srvRenderCoordSchedule(body);
   }));
   const pub = document.getElementById('cs-publish');
@@ -453,7 +467,8 @@ function srvOpenSlot(mk, key, body){
       const d = await asgWrite(monthKeyOf(r.day), 'delete', r.id);
       if(d.error){ b.disabled = false; toast('ההסרה נכשלה'); return; }
       srvNoteRemoved(r);
-      srvDropRow(portalLoad(), r.id); draw(); srvRenderCoordSchedule(body); toast(`${nm(r.staff)} הוסר/ה מהמשמרת.` + csTold(monthKeyOf(r.day)));
+      srvDropRow(portalLoad(), r.id); draw(); srvRenderCoordSchedule(body);
+      { const msg = `${nm(r.staff)} הוסר/ה מהמשמרת.` + csTold(monthKeyOf(r.day)); if(!csUndo(msg, body, () => csUndoRow(monthKeyOf(r.day), r, true))) toast(msg); }
       srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
     }));
     // replacing: another instructor takes this row (the same hours); the list is ordered by her wish for this shift, then by the priority list
@@ -519,7 +534,8 @@ async function srvMoveToSlot(mk, key, rowId, body){
   if(u.error){ toast('ההעברה נכשלה'); return; }
   srvNoteRemoved(r); srvForgetRemoved(r.staff, date, code);
   srvDropRow(st, r.id); srvAddRow(st, { id:r.id, staff_id:r.staff, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags });
-  srvRenderCoordSchedule(body); toast(`${nm} הועבר/ה ל${sh.label} ${dayLabel(date)}.` + csTold(was));
+  srvRenderCoordSchedule(body);
+  { const msg = `${nm} הועבר/ה ל${sh.label} ${dayLabel(date)}.` + csTold(was); if(!csUndo(msg, body, () => csUndoRow(was, r, false))) toast(msg); }
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 // a service girl or a teacher taken off one shift (the × by her name, with a question first: Guy 2026-10-26). When her hours reach two shifts
@@ -542,7 +558,8 @@ async function srvRemoveOther(rowId, sid, body){
   if(u.error){ toast('ההסרה נכשלה'); return; }
   srvDropRow(st, r.id);
   if(choice === 'part') srvAddRow(st, { id:r.id, staff_id:r.staff, day:r.day, shift:keep.shift, from_time:keep.from_time, to_time:keep.to_time, flags:r.flags || [] });
-  srvRenderCoordSchedule(body); toast((choice === 'part' ? `${nm} הוסרה מ${sh.label || 'המשמרת'}.` : `${nm} הוסרה מהסידור ביום הזה.`) + csTold(monthKeyOf(r.day)));
+  srvRenderCoordSchedule(body);
+  { const msg = (choice === 'part' ? `${nm} הוסרה מ${sh.label || 'המשמרת'}.` : `${nm} הוסרה מהסידור ביום הזה.`) + csTold(monthKeyOf(r.day)); if(!csUndo(msg, body, () => csUndoRow(monthKeyOf(r.day), r, choice !== 'part'))) toast(msg); }
   srvReloadSafe().then(() => srvLoadCoord()).then(() => { if(body.isConnected && portalServerOn) srvRenderCoordSchedule(body); }).catch(() => {});
 }
 // while a name is dragged the page can still be scrolled (Guy): with the mouse wheel, and by holding the name near the top or the bottom of the screen

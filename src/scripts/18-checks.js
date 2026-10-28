@@ -1181,7 +1181,7 @@
       check('feedback: the minimum is spelled out for the person (2 mid-week + a night a week, 4 weekend shifts)', min.total === weeks * 2 + weeks + Math.max(0, 4 - weeks) && /משמרות אמצע שבוע/.test(min.text) && /4 משמרות סופ"ש/.test(min.text), JSON.stringify(min));
       check('feedback: a person who does no nights has a different minimum, and a manual-only person has none', fbMinimum({ no_nights:true }, mk).total === weeks * 2 + 4 && fbMinimum({ manual_only:true }, mk).total === null, '');
       const gaps = srvFeedbackFor({ first:'דנה' }, mk, { prefs:{ slots:{}, absent:[], hours:{}, fixed:[] }, rows:[], profile:{ female:true }, goal:null });
-      check('feedback: when the minimum was not reached it is said gently, with an offer of help', gaps.minGaps.length > 0 && /לא קשור אלייך/.test(gaps.text) && /נמצא יחד פתרון/.test(gaps.text), gaps.text.slice(-300));
+      check('feedback: when the minimum was not reached it is said gently, with an offer of help', gaps.minGaps.length > 0 && /לא בגללך/.test(gaps.text) && /נמצא יחד פתרון/.test(gaps.text), gaps.text.slice(-300));
       const gMin = srvFeedbackFor({ first:'דנה' }, mk, { prefs:{ slots:{}, absent:[], hours:{}, fixed:[] }, rows:[rows[0]], profile:{ female:true }, goal:'min' });
       check('feedback: the goal "only the minimum" is answered in its own words', /ביקשת לעשות החודש את המינימום הנדרש/.test(gMin.text), gMin.text.slice(0, 300));
       const gWeek = srvFeedbackFor({ first:'דנה' }, mk, { prefs:{ slots:{}, absent:[], hours:{}, fixed:[] }, rows:[rows[0]], profile:{ female:true }, goal:'weekly45' });

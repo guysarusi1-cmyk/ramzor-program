@@ -256,13 +256,18 @@ create trigger schedule_published_notify after update of status on public.schedu
 
 -- ---------------------------------------------------------------- the waiting changes of a published month
 -- one change of the coordinator: 'insert' (p_data: the whole shift), 'update' (p_target + what changed) or 'delete' (p_target).
--- Returns the shift as she sees it now (null when it is gone). A change of only the flags (✓ אישר/ה) is not news: it is saved at once.
+-- 'revert' (p_target) drops the waiting change of that shift. Returns the shift as she sees it now (null when it is gone). A change of only the flags (✓ אישר/ה) is not news: it is saved at once.
 create or replace function public.sched_pending_write(p_op text, p_target uuid, p_data jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare me uuid := public.my_staff_id(); d jsonb; p public.assignment_pending; a public.assignment; n public.assignment; pub boolean; t uuid;
 begin
   if not public.is_coordinator() then raise exception 'not allowed'; end if;
-  if p_op not in ('insert', 'update', 'delete') then raise exception 'unknown change'; end if;
+  if p_op not in ('insert', 'update', 'delete', 'revert') then raise exception 'unknown change'; end if;
+  if p_op = 'revert' then          -- ("ביטול" right after a change: the shift goes back to what the staff see)
+    delete from public.assignment_pending where target = p_target and discarded_at is null;
+    select * into a from public.assignment where id = p_target;
+    return case when a.id is null then null else to_jsonb(a) end;
+  end if;
   select coalesce(jsonb_object_agg(key, value), '{}') into d from jsonb_each(coalesce(p_data, '{}')) where key in ('month', 'staff_id', 'day', 'shift', 'from_time', 'to_time', 'flags');
   if p_op = 'insert' then
     if d ->> 'day' is null or d ->> 'staff_id' is null or d ->> 'shift' is null then raise exception 'a shift needs a day, a person and a shift'; end if;
