@@ -4,3 +4,6 @@ config/*.local.json
 backups/
 *.log
 .claude/
+
+# the hand-over documents between ChatGPT and Claude (local only: the repository is public)
+coordination/
