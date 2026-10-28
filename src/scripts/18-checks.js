@@ -2734,7 +2734,7 @@
       frame.remove(); frame.src = location.pathname + '?v=learn#learn:inst-prefs'; document.body.appendChild(frame); await sleep(300);          // (a new page: only the part after # would not load it again)
       for(let i = 0; i < 100 && !(fd() && fd().querySelector('.ln-player')); i++) await sleep(200);
       const pl = fd() && fd().querySelector('.ln-player');
-      check('learn: a shared link opens the player without a sign-in (#learn:<id>)', !!pl && /בחירת העדפות/.test(pl.textContent) && !!fd().getElementById('ln-frame'), 'no player');
+      check('learn: a shared link opens the player without a sign-in (#learn:<id>)', !!pl && /מילוי העדפות/.test(pl.textContent) && !!fd().getElementById('ln-frame'), 'no player');
       frame.remove();
     });
 

@@ -33,14 +33,30 @@ $prof = [Windows.Media.MediaProperties.MediaEncodingProfile]::CreateM4a([Windows
 $prof.Audio.Bitrate = 32000; $prof.Audio.ChannelCount = 1; $prof.Audio.SampleRate = 22050          # (speech: small files)
 $sha = [Security.Cryptography.SHA1]::Create()
 $map = [ordered]@{}; $made = 0
+# words the voice tends to read wrong get their vowels (Guy 2026-10-28); only what is heard changes, the captions stay without them.
+# A word that still sounds wrong: add it here, run the tool again (only the sentences that changed are recorded again).
+$niqqud = [ordered]@{
+  'הרכזת'='הָרַכֶּזֶת'; 'לרכזת'='לָרַכֶּזֶת'; 'רכזת'='רַכֶּזֶת'
+  'בלשונית'='בִּלְשׁוֹנִית'; 'לשונית'='לְשׁוֹנִית'; 'לשוניות'='לְשׁוֹנִיּוֹת'
+  'ההעדפות'='הָהַעֲדָפוֹת'; 'העדפות'='הַעֲדָפוֹת'; 'העדפה'='הַעֲדָפָה'
+  'יכול'='יָכוֹל'; 'יכולה'='יְכוֹלָה'
+  'המשמרת'='הַמִּשְׁמֶרֶת'; 'משמרת'='מִשְׁמֶרֶת'; 'המשמרות'='הַמִּשְׁמָרוֹת'; 'משמרות'='מִשְׁמָרוֹת'; 'למשמרת'='לְמִשְׁמֶרֶת'; 'ובמשמרות'='וּבְמִשְׁמָרוֹת'
+  'הסידור'='הַסִּידּוּר'; 'סידור'='סִידּוּר'; 'בסידור'='בַּסִּידּוּר'
+  'החלפה'='הַחְלָפָה'; 'החלפות'='הַחְלָפוֹת'; 'ההחלפות'='הָהַחְלָפוֹת'; 'מחליף'='מַחְלִיף'; 'להחליף'='לְהַחְלִיף'; 'יחליף'='יַחְלִיף'
+  'המדריך'='הַמַּדְרִיךְ'; 'מדריך'='מַדְרִיךְ'; 'המדריכים'='הַמַּדְרִיכִים'; 'למדריכים'='לַמַּדְרִיכִים'
+  'הגשתם'='הֲגַשְׁתֶּם'; 'מגישים'='מַגִּישִׁים'; 'להגיש'='לְהַגִּישׁ'; 'הוגשו'='הוּגְשׁוּ'; 'הגשת'='הַגָּשַׁת'
+  'תבדקו'='תִּבְדְּקוּ'; 'מסמנים'='מְסַמְּנִים'; 'מסמן'='מְסַמֵּן'; 'לסמן'='לְסַמֵּן'; 'סימנתם'='סִימַּנְתֶּם'; 'סומן'='סוּמַּן'
+  'יעד'='יַעַד'; 'יעדים'='יְעָדִים'; 'צהריים'='צָהֳרַיִים'; 'לפרסם'='לְפַרְסֵם'; 'פורסמה'='פּוּרְסְמָה'
+}
 foreach($t in $texts){
+  # what is read differs a little from what is written: no quotes, "יכול/ה" read as one word, and the vowels above
+  $speak = $t -replace '[„”"׳]', '' -replace '/ה', '' -replace '\.\.\.', ','
+  foreach($w in $niqqud.Keys){ $speak = [regex]::Replace($speak, "(?<![֐-׿])$w(?![֐-׿])", $niqqud[$w]) }
   $rate = '+6%'          # (Guy: a little quicker)
-  $key = if($az){ "$azVoice|$rate|$t" } else { $t }          # (the voice is part of the name: another voice records everything again)
+  $key = if($az){ "$azVoice|$rate|$speak" } else { $t }          # (the voice and what is read make the name: a change records that sentence again)
   $name = (($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($key)) | Select-Object -First 6 | ForEach-Object { $_.ToString('x2') }) -join '') + $(if($az){ '.mp3' } else { '.m4a' })
   $map[$t] = $name
   if(Test-Path (Join-Path $outDir $name)){ continue }
-  # what is read differs a little from what is written: no quotes, "יכול/ה" read as one word
-  $speak = $t -replace '[„”"׳]', '' -replace '/ה', '' -replace '\.\.\.', ','
   if($az){
     $ssml = "<speak version='1.0' xml:lang='he-IL'><voice name='$azVoice'><prosody rate='$rate'>" + [Security.SecurityElement]::Escape($speak) + "</prosody></voice></speak>"
     $headers = @{ 'Ocp-Apim-Subscription-Key' = $az.key; 'X-Microsoft-OutputFormat' = 'audio-24khz-48kbitrate-mono-mp3'; 'User-Agent' = 'ramzor-learn' }
