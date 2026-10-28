@@ -2722,7 +2722,12 @@
         check('mid shift: for the coordinator she is a "yes" in that morning and afternoon, not in the night', srvWishFor('p1', `${day}|m`) === 'yes' && srvWishFor('p1', `${day}|e`) === 'yes' && srvWishFor('p1', `${day}|n`) === 'none' && srvMidKey('p1', `${day}|e`) && !srvMidKey('p1', `${day}|n`), [srvWishFor('p1', `${day}|m`), srvWishFor('p1', `${day}|n`)].join());
         const cell = document.createElement('div'); cell.className = 'mcal-cell'; cell.dataset.key = `${day}|m`; document.body.appendChild(cell);
         srvDragWho = 'p1'; srvDropShow(cell); srvDragWho = null;
-        check('mid shift: dragged over that morning the shift turns green with the tag 12–20', cell.classList.contains('drop-yes') && cell.classList.contains('drop-mid') && getComputedStyle(cell, '::after').content.includes('12–20'), cell.className);
+        check('mid shift: dragged over that morning the shift turns green with the tag 12–20', cell.classList.contains('drop-yes') && cell.classList.contains('drop-hrs') && cell.dataset.hrs === '12–20', cell.className + ' ' + cell.dataset.hrs);
+        prefs.hours[day] = [[16, 22]]; prefs.slots[`${day}|e`] = 'avoid'; cell.dataset.key = `${day}|e`;
+        srvDragWho = 'p1'; srvDropShow(cell); srvDragWho = null;
+        check('other hours too: the tag with her hours, the colour by her mark ("יכול" = blue), placed in her hours inside the shift', cell.classList.contains('drop-can') && cell.dataset.hrs === '16–22' && JSON.stringify(srvHoursPlace('p1', `${day}|e`)) === JSON.stringify({ from:'16:00', to:'22:00', code:'A', mid:false, tag:'16–22' }) && srvHoursPlace('p1', `${day}|m`) === null, cell.className + ' ' + cell.dataset.hrs);
+        delete prefs.slots[`${day}|e`]; srvDragWho = 'p1'; srvDropShow(cell); srvDragWho = null;
+        check('other hours, the shift not marked: green, as the engine (a yes inside her hours)', cell.classList.contains('drop-yes') && cell.dataset.hrs === '16–22', cell.className);
         cell.remove();
       } finally { window.portalMonth = was; }
     });

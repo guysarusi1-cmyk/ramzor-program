@@ -388,8 +388,8 @@ function srvOpenSlot(mk, key, body){
     const rows = rowsHere(), people = portalLoad().instructors.filter(p => p.active && p.role === 'instructor' && !rows.some(r => r.staff === p.id));
     // what each of them wrote for THIS shift: yes (green), can (yellow), not marked (blue), no / away (red); the list is ordered the same way
     const mprefs = portalMonth(monthKeyOf(date)).prefs || {}, LV = { yes:['yes', 'כן'], avoid:['can', 'יכול'], none:['none', 'לא סומן'], no:['no', 'לא'] }, RANK = { yes:0, avoid:1, none:2, no:3 };
-    const levelFor = id => { const pr = mprefs[id] || { slots:{}, absent:[], fixed:[] }; if((pr.absent || []).includes(date) || (pr.fixed || []).some(f => f.day === date)) return 'no'; if(srvMidKey(id, key)) return 'yes'; return (pr.slots || {})[key] || 'none'; };
-    const midTag = id => srvMidKey(id, key) ? SRV_MID_TAG : '';
+    const levelFor = id => { const pr = mprefs[id] || { slots:{}, absent:[], fixed:[] }; if((pr.absent || []).includes(date) || (pr.fixed || []).some(f => f.day === date)) return 'no'; const lv0 = (pr.slots || {})[key]; if(!lv0 && srvHoursPlace(id, key)) return 'yes'; return lv0 || 'none'; };
+    const midTag = id => srvHoursTag(id, key);
     const prio = id => (((portalLoad().priv || {})[id] || {}).leader_priority) ?? 999;
     const rankOf = list => list.map((p, i) => ({ p, lv:levelFor(p.id), i })).sort((a, b) => RANK[a.lv] - RANK[b.lv] || prio(a.p.id) - prio(b.p.id) || a.i - b.i);          // (green first, then by the priority list)
     const ranked = rankOf(people);
@@ -419,7 +419,7 @@ function srvOpenSlot(mk, key, body){
     pickList.querySelectorAll('.cs-pick-item').forEach(it => it.addEventListener('click', e => { e.stopPropagation(); who.value = it.dataset.val; pickList.hidden = true; pickBtn.setAttribute('aria-expanded', 'false'); who.dispatchEvent(new Event('change')); }));
     wrap.addEventListener('click', e => { if(!e.target.closest('.cs-pick')){ pickList.hidden = true; pickBtn.setAttribute('aria-expanded', 'false'); } });
     const goBtn = wrap.querySelector('#add-go');
-    who.addEventListener('change', () => { if(who.value && srvMidKey(who.value, key)){ from.value = '12:00'; to.value = '20:00'; } tint(); upd(); const o = who.selectedOptions[0]; wrap.querySelector('#add-hours').hidden = goBtn.hidden = !who.value; if(who.value) goBtn.textContent = `הוסף את ${o ? o.textContent : ''}`; }); from.addEventListener('change', upd); to.addEventListener('change', upd);
+    who.addEventListener('change', () => { const hp = who.value && srvHoursPlace(who.value, key); if(hp){ from.value = hp.from; to.value = hp.to; } tint(); upd(); const o = who.selectedOptions[0]; wrap.querySelector('#add-hours').hidden = goBtn.hidden = !who.value; if(who.value) goBtn.textContent = `הוסף את ${o ? o.textContent : ''}`; }); from.addEventListener('change', upd); to.addEventListener('change', upd);
     wrap.querySelectorAll('[data-ok]').forEach(b => b.addEventListener('click', async () => {          // (confirmed by hand: the name turns green; no message is sent, nothing else changes)
       const row = portalLoad().rows.find(x => x.id === b.dataset.ok); if(!row) return;
       const on = !(row.flags || []).includes('ok'), flags = on ? Array.from(new Set((row.flags || []).concat('ok'))) : (row.flags || []).filter(f => f !== 'ok');
@@ -433,7 +433,7 @@ function srvOpenSlot(mk, key, body){
       if(!(await srvAskBeforePlacing(who.value, key))) return;
       const w = srvWarnings(who.value, date, code, from.value, to.value);
       if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;
-      const mid = srvMidKey(who.value, key) && from.value === '12:00' && to.value === '20:00', flags = mid ? ['manual', 'mid'] : ['manual'];          // (12–20: one afternoon row)
+      const hp = srvHoursPlace(who.value, key), mid = !!(hp && hp.mid) && from.value === '12:00' && to.value === '20:00', flags = mid ? ['manual', 'mid'] : hp && from.value === hp.from && to.value === hp.to ? ['manual', 'partial'] : ['manual'];          // (12–20: one afternoon row)
       const ins = await asgWrite(monthKeyOf(date), 'insert', null, { month:firstOf(monthKeyOf(date)), staff_id:who.value, day:date, shift:mid ? 'A' : code, from_time:from.value, to_time:to.value, flags });
       if(ins.error){ toast('השיבוץ נכשל'); return; }
       srvForgetRemoved(who.value, date, code);
@@ -524,7 +524,7 @@ function csKeepScroll(body){
 async function srvMoveToSlot(mk, key, rowId, body){
   const st = portalLoad(), r = st.rows.find(x => x.id === rowId), { date, shiftId } = splitKey(key), sh0 = st.shiftTypes.find(x => x.id === shiftId);
   if(!r || !sh0 || r.shift === 'L') return;
-  const mid = srvMidKey(r.staff, key), code = mid ? 'A' : SRV_SHIFT_DB[shiftId], sh = mid ? Object.assign({}, sh0, { start:'12:00', end:'20:00' }) : sh0;          // (12–20 that day: there only)
+  const hp = srvHoursPlace(r.staff, key), code = hp ? hp.code : SRV_SHIFT_DB[shiftId], sh = hp ? Object.assign({}, sh0, { start:hp.from, end:hp.to }) : sh0;          // (hours of her own that day: in them)
   if(r.day === date && SRV_SHIFT_UI[r.shift === 'S' ? 'M' : r.shift] === shiftId) return;          // (dropped back where it was)
   const person = st.instructors.find(p => p.id === r.staff), nm = person ? instrName(person, st.instructors) : '';
   if(st.rows.some(x => x.id !== r.id && x.staff === r.staff && x.day === date && (x.shift === code || (code === 'M' && x.shift === 'S')))){ toast(`${nm} כבר במשמרת הזו`); return; }
@@ -640,35 +640,47 @@ function srvSidePanelHtml(mk, issues){
 let srvDragWho = null, srvDragRow = null, srvRenderAfterDrag = null;          // (srvDragRow: a name dragged from the calendar itself, the row that moves)
 // the middle shift 12:00–20:00 (Guy 2026-10-28): an instructor who chose it that day ("שעות אחרות" 12–20) is a "yes" for that day's morning
 // and afternoon, and wherever she is dropped there she is placed 12–20: one row of the afternoon, shown in the morning too (overlapExtras)
-function srvMidFor(staffId, date){ const pr = (portalMonth(monthKeyOf(date)).prefs || {})[staffId]; return !!pr && ((pr.hours || {})[date] || []).some(([a, b]) => a === 12 && b === 20); }
-const srvMidKey = (staffId, key) => /\|[me]$/.test(key) && srvMidFor(staffId, splitKey(key).date);
-const SRV_MID_TAG = '<small class="mid-tag"><bdi dir="ltr">12–20</bdi></small>';
+// her own hours that day ("שעות אחרות", all of them: Guy 2026-10-28), for a morning or an afternoon: where she would be placed and the tag with
+// her hours, or null. 12–20 is the middle shift (one afternoon row 12–20); other hours: her hours inside the shift (two hours at least)
+function srvHoursPlace(staffId, key){
+  const { date, shiftId } = splitKey(key); if(!['m', 'e'].includes(shiftId)) return null;
+  const pr = (portalMonth(monthKeyOf(date)).prefs || {})[staffId], ws = pr && (pr.hours || {})[date]; if(!ws || !ws.length) return null;
+  const tag = ws.map(([a, b]) => a + '–' + b).join(', '), hh = h => String(h).padStart(2, '0') + ':00';
+  if(ws.some(([a, b]) => a === 12 && b === 20)) return { from:'12:00', to:'20:00', code:'A', mid:true, tag };
+  const [s, e] = shiftId === 'm' ? [7, 15] : [14, 22], w = ws.map(([a, b]) => [Math.max(a, s), Math.min(b, e)]).filter(([a, b]) => b - a >= 2).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
+  return w ? { from:hh(w[0]), to:hh(w[1]), code:shiftId === 'm' ? 'M' : 'A', mid:false, tag } : null;
+}
+const srvMidKey = (staffId, key) => { const h = srvHoursPlace(staffId, key); return !!(h && h.mid); };
+const srvHoursTag = (staffId, key) => { const h = srvHoursPlace(staffId, key); return h ? `<small class="mid-tag"><bdi dir="ltr">${h.tag}</bdi></small>` : ''; };
 // what this instructor wrote for this shift (key = 'date|m/e/n'): yes / can / no (also when she is away that day) / none
 function srvWishFor(staffId, key){
   const date = splitKey(key).date, pr = (portalMonth(monthKeyOf(date)).prefs || {})[staffId] || { slots:{}, absent:[], fixed:[] };
   if((pr.absent || []).includes(date) || (pr.fixed || []).some(f => f.day === date)) return 'no';
-  if(srvMidKey(staffId, key)) return 'yes';          // (she chose 12–20 that day)
   const lv = (pr.slots || {})[key];
+  if(!lv && srvHoursPlace(staffId, key)) return 'yes';          // (hours of her own that reach this shift: a "yes", unless she marked the shift itself — as the engine)
   if(!lv && /\|n$/.test(key) && ((portalLoad().priv || {})[staffId] || {}).no_nights) return 'no';          // (somebody who does not do nights: a night she did not mark counts as "no")
   if(!lv && ((portalLoad().fixedNo || {})[staffId] || []).includes(key.split('|')[1])) return 'no';          // (her fixed preferences: "does not do mornings / afternoons / nights")
   return lv === 'yes' ? 'yes' : lv === 'avoid' ? 'can' : lv === 'no' ? 'no' : 'none';
 }
 const srvDropLevel = cell => srvDragWho && !String(srvDragWho).startsWith('other:') ? srvWishFor(srvDragWho, cell.dataset.key) : 'yes';          // (a service girl or a teacher: no wishes to colour by)
-function srvDropShow(cell){ const c = 'drop-' + srvDropLevel(cell), mid = srvDragWho && !String(srvDragWho).startsWith('other:') && srvMidKey(srvDragWho, cell.dataset.key); if(!cell.classList.contains(c) || mid !== cell.classList.contains('drop-mid')){ srvDropClear(cell); cell.classList.add('drop-ok', c); if(mid) cell.classList.add('drop-mid'); } }
-function srvDropClear(cell){ cell.classList.remove('drop-ok', 'drop-yes', 'drop-can', 'drop-no', 'drop-none', 'drop-mid'); }
+function srvDropShow(cell){
+  const c = 'drop-' + srvDropLevel(cell), hp = srvDragWho && !String(srvDragWho).startsWith('other:') ? srvHoursPlace(srvDragWho, cell.dataset.key) : null, tag = hp ? hp.tag : '';
+  if(!cell.classList.contains(c) || (cell.dataset.hrs || '') !== tag){ srvDropClear(cell); cell.classList.add('drop-ok', c); if(hp){ cell.classList.add('drop-hrs'); cell.dataset.hrs = tag; } }          // (her own hours as a tag on the shift)
+}
+function srvDropClear(cell){ cell.classList.remove('drop-ok', 'drop-yes', 'drop-can', 'drop-no', 'drop-none', 'drop-hrs'); delete cell.dataset.hrs; }
 
 // put an instructor on a shift (a name dragged from the panel and dropped on the shift): the warnings are shown first, and the coordinator may go ahead anyway
 async function srvAddToSlot(mk, key, staffId, body){
-  const st = portalLoad(), { date, shiftId } = splitKey(key), mid = srvMidKey(staffId, key), code = mid ? 'A' : SRV_SHIFT_DB[shiftId], sh0 = st.shiftTypes.find(x => x.id === shiftId), person = st.instructors.find(p => p.id === staffId);
+  const st = portalLoad(), { date, shiftId } = splitKey(key), hp = srvHoursPlace(staffId, key), mid = !!(hp && hp.mid), code = hp ? hp.code : SRV_SHIFT_DB[shiftId], sh0 = st.shiftTypes.find(x => x.id === shiftId), person = st.instructors.find(p => p.id === staffId);
   if(!person || person.role !== 'instructor' || !sh0) return;
-  const sh = mid ? Object.assign({}, sh0, { start:'12:00', end:'20:00' }) : sh0;          // (she chose 12–20 that day: placed 12–20 only, Guy 2026-10-28)
+  const sh = hp ? Object.assign({}, sh0, { start:hp.from, end:hp.to }) : sh0;          // (hours of her own that day: placed in them — 12–20 whole, others inside the shift; Guy 2026-10-28)
   const nm = instrName(person, st.instructors);
   if(st.rows.some(r => r.staff === staffId && r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S') || (mid && ['M', 'S'].includes(r.shift))))){ toast(`${nm} כבר במשמרת הזו`); return; }
   const w = srvWarnings(staffId, date, code, sh.start, sh.end);
   // no question for "yes" or "can"; for "no" and for a shift she did not mark: ask her first on WhatsApp, or place anyway
   if(!(await srvAskBeforePlacing(staffId, key))) return;
   if(w.length && !(await confirmSheet({ title:'לשבץ למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, לשבץ', cancelLabel:'חזרה', danger:true }))) return;          // (a window, not only a note afterwards: Guy 2026-10-25)
-  const ins = await asgWrite(monthKeyOf(date), 'insert', null, { month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:mid ? ['manual', 'mid'] : ['manual'] });
+  const ins = await asgWrite(monthKeyOf(date), 'insert', null, { month:firstOf(monthKeyOf(date)), staff_id:staffId, day:date, shift:code, from_time:sh.start, to_time:sh.end, flags:mid ? ['manual', 'mid'] : hp ? ['manual', 'partial'] : ['manual'] });
   if(ins.error){ toast('השיבוץ נכשל'); return; }
   srvForgetRemoved(staffId, date, code);
   srvAddRow(st, ins.data); srvRenderCoordSchedule(body);              // (it shows at once; the full reload follows in the background)
