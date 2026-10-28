@@ -143,8 +143,7 @@ const LEARN_ITEMS = [
         { say:'ומתחת, חברים מהצוות שמחפשים מחליף. מה שדחוף, מסומן.', hl:'details[data-fold="swopen"] .pfold-body' },
         { say:'רוצים לעזור? לוחצים "אני יכול/ה להחליף".', tap:'[data-swap-take]' },
         { say:'ההצעה עוברת לרכזת. כשהיא מאשרת, הסידור מתעדכן, ושניכם מקבלים הודעה.', hl:'details[data-fold="swmine"]' },
-        { say:'ובבקשה שלכם, "מי זמין/ה?" מראה מי פנוי למשמרת, ואפשר לפנות אליהם ישר.', tap:'[data-cands]' },
-        { say:'"תודה", וסוגרים.', tap:'.psheet [data-close]' }]},
+        { say:'ומתחת לבקשה שלכם, תראו מי יכול לקחת את המשמרת, עם כפתור וואטסאפ לשאול אותם ישר.', hl:'details[data-fold="swmine"] .pcands' }]},
       { title:'משמרות פתוחות', steps:[
         { scene:'schedule', say:'לפעמים חסר מישהו במשמרת. רואים את זה בלשונית "הסידור", ב"משמרות פתוחות".', tap:'details[data-fold="openshifts"] > summary' },
         { say:'הרשימה לפי ימים, וליד כל משמרת כתוב כמה חסרים.', hl:'#open-fold-body' },
@@ -218,6 +217,7 @@ function learnRpc(name, a){
   if(name === 'prefs_open') return true;
   if(name === 'open_days_for_me') return [];
   if(name === 'swap_candidates') return [{ name:'מיכל' }, { name:'עומר' }];
+  if(name === 'swap_candidates2') return [{ name:'מיכל', level:'yes', wa:'972500000000', female:true }, { name:'עומר', level:'can', wa:'972500000001', female:false }];          // (made-up numbers: the button is only shown)
   if(name === 'open_shifts'){ const mk = String(a.p_month || '').slice(0, 7), days = daysOfMonth(mk).filter(d => d > today);
     return days.length < 6 ? [] : [[days[2], 'A', 2, 1], [days[2], 'N', 1, 0], [days[5], 'M', 2, 1]].map(([day, shift, need, have]) => ({ day, shift, need, have, req:learnFx.open[day + '|' + shift] || null })); }
   if(name === 'request_open_shift'){ learnFx.open[a.p_day + '|' + a.p_shift] = 'o' + learnFx.nextId++; return null; }
