@@ -217,7 +217,7 @@ function learnRpc(name, a){
   if(name === 'cancel_swap'){ const s = st.swaps.find(x => x.id === a.p_swap); if(s) s.status = 'cancelled'; return null; }
   return null;
 }
-// the made-up month: "today" is the 10th; this month is published, the preferences of next month are open
+// the made-up month: "today" is the 1st; this month is published, the preferences of next month are open
 function learnDemoState(dense){
   const cur = monthKeyOf(srvToday()), next = addMonths(cur, 1), today = srvToday();
   const names = ['נועה', 'יוסי', 'מיכל', 'אלי', 'תמר', 'רן', 'שירה', 'עומר', 'ליאת', 'גיא'].concat(dense ? ['דנה', 'אורי', 'נוי', 'בן', 'הדר', 'עדי', 'אסף', 'מור'] : []);
@@ -245,8 +245,9 @@ function learnDemoState(dense){
 }
 function learnFrameStart(){
   learnFakeClient(sbPersonal); learnFakeClient(sbShared);
-  // the clock of the phone stands on the 10th of this month, 10:00: the preferences of next month are open, the deadline is ahead, and the shifts after it are still to come
-  const Real = Date, n = new Real(), off = new Real(n.getFullYear(), n.getMonth(), 10, 10).getTime() - Real.now();
+  // the clock of the phone stands on the 1st of next month, 10:00: the whole month on the screen is still ahead (Guy: a full month, not a half-gone one),
+  // the preferences of the month after it are open and the deadline is ahead
+  const Real = Date, n = new Real(), off = new Real(n.getFullYear(), n.getMonth() + 1, 1, 10).getTime() - Real.now();
   window.Date = class extends Real { constructor(...a){ if(a.length) super(...a); else super(Real.now() + off); } static now(){ return Real.now() + off; } };
   srvLoad = async () => true; srvReload = async () => {}; srvLoadPrefsOpen = async () => {}; srvSignOut = async () => {}; srvPrefsDeadlinePassed = () => false;
   personalEnter = async () => { document.getElementById('login-screen').style.display = 'none'; document.getElementById('protected-app').style.display = ''; showAppHome(); return true; };
