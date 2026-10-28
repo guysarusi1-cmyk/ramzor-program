@@ -276,3 +276,13 @@
 /* the simplicity checker's second round: finger-sized buttons on the plan page, the two scales in one row of five */
 .tp-acts .btn, .tp-more-acts > summary, .tp-more-acts > div .btn{ min-height:44px; padding:6px 12px; font-size:13.5px; }
 .tp-rate > div{ display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:6px; } .tp-rate > div > span{ grid-column:1 / -1; min-width:0; margin:0; } .tp-rate button{ min-width:0; width:100%; }
+
+/* the UX reviewer's first review (2026-10-28): the status bar of the plan page, the meaning of a rating, boy / girl once, the approach on a phone */
+.tp-statebar{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:8px 12px; border-radius:12px; background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.35); font-size:14px; }
+.tp-sb-build{ display:inline-flex; flex-wrap:wrap; gap:6px; align-items:center; } .tp-sb-build .btn{ min-height:36px; }
+.tp-rate-mean{ font-size:13.5px; padding:2px 2px 6px; } .tp-rate-mean.dim{ opacity:.6; }
+.tp-gender{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 12px; border-radius:12px; border:1px dashed rgba(255,255,255,.25); } .tp-gender small{ opacity:.7; flex-basis:100%; } .tp-gender .pchoice button{ min-height:44px; min-width:72px; }
+@media (max-width:480px){ .tp-int .tp-appr, .tp-sg-i .tp-appr{ flex-basis:100%; text-align:start; margin-top:-2px; } }
+
+/* the checker, round 3: thumbs the size of a finger */
+.tp-fb button{ min-width:44px; min-height:44px; } .cs-rebuild-opts .btn.danger{ border-color:#ff6b6b; color:#ff9b9b; }

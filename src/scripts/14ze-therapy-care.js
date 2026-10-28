@@ -47,7 +47,7 @@ function careTodo(c, add){
   if(!thp.v43) return;
   const st = thp.stays[c.id] || {}, row = thp.plans[c.id] || {};
   if(st.admitted && !row.published_version){ const left = thpDaysTo(st.admitted) + careFirstDays();
-    if(left <= 3) add(c.id, 'plan', '⏳', left < 0 ? 'עבר מועד התכנית הראשונה' : 'מועד התכנית הראשונה מתקרב', 2); }
+    if(left <= 3) add(c.id, 'plan', '⏳', left < 0 ? 'עבר מועד התוכנית הראשונה' : 'מועד התוכנית הראשונה מתקרב', 2); }
   if(thp.newInc[c.id]) add(c.id, 'events', '⚠️', 'אירועים חדשים מהצוות', 1);
   if(typeof tpAchievedSuggest === 'function' && tpAchievedSuggest(c.id).length) add(c.id, 'plan', '🎉', 'מטרה נראית מושגת: לסמן?', 2);
   if(thp.lettersWait[c.id]) add(c.id, 'docs', '✉️', 'משפטים לספר מחכים לאישור', 3);
@@ -227,8 +227,8 @@ async function careStaySection(id, box){
   const it = s.intake || {}, ex = s.exit || {}, tasks = (it.tasks && it.tasks.length) ? it.tasks : INTAKE_TASKS.map(t => ({ t, done:false })), prep = (ex.prep && ex.prep.length) ? ex.prep : EXIT_PREP.map(t => ({ t, done:false }));
   const due = s.admitted ? isoDate(new Date(new Date(s.admitted + 'T12:00:00').getTime() + careFirstDays() * 864e5)) : '';
   const list = (cls, l) => `<div class="cr-list" data-list="${cls}">${l.map(x => `<div class="cr-li"><input type="checkbox"${x.done ? ' checked' : ''} aria-label="בוצע"><input type="text" value="${pEsc(x.t)}" maxlength="80" aria-label="משימה"><button type="button" class="btn ghost small" data-li-x aria-label="הסרה">✕</button></div>`).join('')}<button type="button" class="btn ghost small" data-li-add>+ עוד</button></div>`;
-  box.innerHTML = `<h3 class="psec">קליטה</h3><div class="pnote">מה שכתוב ב"ממה להימנע" וב"מה מרגיע" מופיע לצוות בכרטיס הילד/ה עד שיש תכנית שפורסמה. המשימות מסומנות על ידי הצוות.</div>
-    <div class="th-ed-grid"><label class="pfield">תאריך הגעה<input type="date" id="st-adm" value="${pEsc(s.admitted || '')}"></label><div class="pfield"><span>התכנית הראשונה</span><b class="bk-band">${due ? 'עד ' + pEsc(dayLabel(due)) + ` (${careFirstDays()} יום)` : 'לפי תאריך ההגעה'}</b></div></div>
+  box.innerHTML = `<h3 class="psec">קליטה</h3><div class="pnote">מה שכתוב ב"ממה להימנע" וב"מה מרגיע" מופיע לצוות בכרטיס הילד/ה עד שיש תוכנית שפורסמה. המשימות מסומנות על ידי הצוות.</div>
+    <div class="th-ed-grid"><label class="pfield">תאריך הגעה<input type="date" id="st-adm" value="${pEsc(s.admitted || '')}"></label><div class="pfield"><span>התוכנית הראשונה</span><b class="bk-band">${due ? 'עד ' + pEsc(dayLabel(due)) + ` (${careFirstDays()} יום)` : 'לפי תאריך ההגעה'}</b></div></div>
     <label class="pfield">מה ידוע (למטפל/ת בלבד)<textarea id="st-known" rows="3">${pEsc(it.known || '')}</textarea></label>
     <label class="pfield">ממה להימנע בינתיים (לצוות)<textarea id="st-avoid" rows="2">${pEsc(it.avoid || '')}</textarea></label>
     <label class="pfield">מה מרגיע בינתיים (לצוות)<textarea id="st-calm" rows="2">${pEsc(it.calm || '')}</textarea></label>
@@ -258,7 +258,7 @@ async function careStaySection(id, box){
       careStaySection(id, box); }
   });
   const ar = box.querySelector('#st-archive'); if(ar) ar.addEventListener('click', async () => {
-    if(!(await confirmSheet({ title:'להעביר לארכיון?', text:'התכנית, התצפיות והיומנים יעברו לארכיון שרק מנהל המערכת רואה. אם הילד/ה יחזור/תחזור, אפשר להחזיר מהארכיון ולהמשיך מאותו מקום.', okLabel:'כן, לארכיון', cancelLabel:'חזרה' }))) return;
+    if(!(await confirmSheet({ title:'להעביר לארכיון?', text:'התוכנית, התצפיות והיומנים יעברו לארכיון שרק מנהל המערכת רואה. אם הילד/ה יחזור/תחזור, אפשר להחזיר מהארכיון ולהמשיך מאותו מקום.', okLabel:'כן, לארכיון', cancelLabel:'חזרה' }))) return;
     if(await careStaySave(id, { archived:true, archived_at:new Date().toISOString() })){ toast('הועבר לארכיון'); thp.editing = null; thp.wtab = null; thpRender(); }
   });
 }
@@ -274,7 +274,7 @@ async function careArchiveHtml(box){
     if(u.error){ toast('לא הצלחנו'); return; } toast('הוחזר מהארכיון'); await careLoad(); careArchiveHtml(box);
   }));
   box.querySelectorAll('[data-arc-del]').forEach(b => b.addEventListener('click', async () => {
-    if(!(await confirmSheet({ title:'למחוק לצמיתות?', text:'כל המידע הטיפולי של הילד/ה יימחק: התכנית וגרסאותיה, התצפיות, האירועים, יומן המשפחה והסרטונים. אי אפשר לשחזר.', okLabel:'כן, למחוק', cancelLabel:'חזרה', danger:true }))) return;
+    if(!(await confirmSheet({ title:'למחוק לצמיתות?', text:'כל המידע הטיפולי של הילד/ה יימחק: התוכנית וגרסאותיה, התצפיות, האירועים, יומן המשפחה והסרטונים. אי אפשר לשחזר.', okLabel:'כן, למחוק', cancelLabel:'חזרה', danger:true }))) return;
     const d = await sbPersonal.rpc('therapy_purge', { p_child:b.dataset.arcDel });
     if(d.error){ toast('המחיקה נכשלה'); return; } toast('נמחק'); careArchiveHtml(box);
   }));

@@ -76,7 +76,7 @@ function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
     t.push(['todo', 'משימות'], ['mine', 'הילדים שלי']);
-    if(thp.v32) t.push(['plans', 'תכניות טיפוליות']);          // (the plans, one goal at a time: 14zf)
+    if(thp.v32) t.push(['plans', 'תוכניות טיפוליות']);          // (the plans, one goal at a time: 14zf)
     t.push(['kids', 'כל הילדים']);          // (every child as the staff sees it, read only: Mercury decision 87)
     if(canStaffPortal() && thp.v32) t.push(['myobs', 'התצפיות שלי']);
     if(thp.v32) t.push(['library', 'ספרייה']);

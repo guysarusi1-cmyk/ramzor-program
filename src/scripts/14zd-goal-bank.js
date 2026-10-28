@@ -112,7 +112,7 @@ const bankNote = () => '<details class="pfold bk-note"><summary><span>על הב�
 // ---- choosing from the bank (a goal, a part, a whole plan) -> onPick(item, age)
 function bankPick(kind, opts){
   opts = opts || {};
-  const f = { theme:'', method:'', age:opts.age || '', q:'' }, title = { goal:'בנק המטרות', plan:'תכניות שלמות', todo:'מה הצוות עושה' }[kind] || (PLAN_KIND_WORD[kind] || 'תבניות') + ' מהבנק';
+  const f = { theme:'', method:'', age:opts.age || '', q:'' }, title = { goal:'בנק המטרות', plan:'תוכניות שלמות', todo:'מה הצוות עושה' }[kind] || (PLAN_KIND_WORD[kind] || 'תבניות') + ' מהבנק';
   const sel = (id, label, list, v) => `<select id="${id}" aria-label="${label}"><option value="">${label}</option>${list.map(o => { const [k, w] = Array.isArray(o) ? o : [o, o]; return `<option value="${pEsc(k)}"${k === v ? ' selected' : ''}>${pEsc(w)}</option>`; }).join('')}</select>`;
   const sh = portalSheet(`<h2>${pEsc(title)}</h2>${bankNote()}
     <div class="bk-filter">${sel('bk-theme', 'כל התמות', BANK_THEMES, '')}${kind === 'goal' || kind === 'plan' ? sel('bk-method', 'כל השיטות', bankMethods(), '') : ''}${kind !== 'plan' ? sel('bk-agef', 'כל הגילאים', BANK_AGES, f.age) : ''}
@@ -320,7 +320,7 @@ function bankLibraryTopHtml(){
     ${bankIsAdmin() ? `<div class="bk-admin"><button type="button" class="btn${drafts ? '' : ' ghost'}" id="bk-review">🔎 בדיקת טיוטות${drafts ? ` (${drafts})` : ''}</button>
       <label class="th-important"><input type="checkbox" id="bk-devage"${thp.mopts && thp.mopts.dev_age ? ' checked' : ''}> גיל התפתחותי: שדה בתוכנית (למטפלים בלבד), והבנק מסנן לפיו</label>
       <label class="th-important">מטרות במוקד בבת אחת: <select id="bk-focusmax">${[1, 2, 3].map(n => `<option${(+((thp.mopts || {}).focus_max) || 1) === n ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
-      <label class="th-important">תכנית ראשונה תוך <input type="number" id="bk-firstdays" min="3" max="60" value="${+((thp.mopts || {}).first_plan_days) || 14}" style="width:4.5em"> ימים מההגעה</label></div>` : ''}
+      <label class="th-important">תוכנית ראשונה תוך <input type="number" id="bk-firstdays" min="3" max="60" value="${+((thp.mopts || {}).first_plan_days) || 14}" style="width:4.5em"> ימים מההגעה</label></div>` : ''}
     <button type="button" class="btn ghost" id="bk-open" style="width:100%">📚 בנק המטרות</button>
     ${ms.length ? `<details class="pfold"><summary><span>שיטות הטיפול</span><span class="pcount">${ms.length}</span></summary><div class="pfold-body">${ms.map(m => `<details class="bk-mcard"><summary><b>${pEsc(m.title)}</b>${m.scope === 'center' ? '<span class="bk-center">המרכז</span>' : ''}${bankDraftTag(m)}</summary><div>${pEsc(m.description || '')}</div></details>`).join('')}</div></details>` : ''}`;
 }
@@ -341,7 +341,7 @@ function bankWireLibrary(body){
   const fd = body.querySelector('#bk-firstdays'); if(fd) fd.addEventListener('change', async () => {
     const n = Math.max(3, Math.min(60, +fd.value || 14)), value = Object.assign({}, thp.mopts || {}, { first_plan_days:n });
     const r = await sbPersonal.from('sched_settings').upsert({ key:'mercury_options', value });
-    if(r.error){ toast('לא נשמר'); return; } thp.mopts = value; fd.value = n; toast(`תכנית ראשונה תוך ${n} ימים`);
+    if(r.error){ toast('לא נשמר'); return; } thp.mopts = value; fd.value = n; toast(`תוכנית ראשונה תוך ${n} ימים`);
   });
   body.querySelectorAll('[data-lib-edit]').forEach(b => b.addEventListener('click', () => { const x = (thp.library || []).find(y => y.id === b.dataset.libEdit); if(x) bankEdit(x, () => thpRender()); }));
 }

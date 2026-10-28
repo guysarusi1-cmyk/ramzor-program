@@ -11,7 +11,7 @@ const PLAN_BLANK = /\[[^\]\n]{1,40}\]/;          // (a place to fill in a whole-
 // the parts of a plan besides the goals (Mercury decision 80), each with its own templates in the library; and the categories of the templates (91)
 const PLAN_PARTS = [['avoid', 'ממה להימנע', 'מצבים או מילים שמעוררים את הילד/ה'], ['signs', 'אותות מוקדמים', 'איך הילד/ה נראה/ית לפני שזה מתפרץ'],
   ['calm', 'מה עוזר להירגע', 'דרכים שעובדות ברגעי קושי'], ['routine', 'שגרה יומית מיוחדת', 'שינה, אוכל וכדומה (בלי פרטים רפואיים רגישים)']];
-const PLAN_KIND_WORD = { goal:'מטרות', todo:'מה הצוות עושה', avoid:'ממה להימנע', signs:'אותות מוקדמים', calm:'מה עוזר להירגע', routine:'שגרה יומית', strength:'חוזקות', skill:'מיומנויות', plan:'תכניות שלמות', method:'שיטות טיפול' };
+const PLAN_KIND_WORD = { goal:'מטרות', todo:'מה הצוות עושה', avoid:'ממה להימנע', signs:'אותות מוקדמים', calm:'מה עוזר להירגע', routine:'שגרה יומית', strength:'חוזקות', skill:'מיומנויות', plan:'תוכניות שלמות', method:'שיטות טיפול' };
 const PLAN_CATS = ['ביטחון ויציבות', 'ויסות רגשי', 'היקשרות וקשר עם מבוגר', 'זהות ודימוי עצמי', 'מעברים ושגרה', 'קשרים חברתיים', 'למידה ותפקוד', 'התנהגות מסכנת וגבולות', 'שינה ואכילה', 'אובדן ופרידה'];          // (the themes of the bank, trauma informed: Guy, decision 97)
 const planCanEdit = id => !!(srv.profile && (srv.profile.admin || (srv.profile.therapist && thp.mine.includes(id))));
 const thpLib = kind => (thp.library || []).filter(x => x.kind === kind && x.active);
@@ -72,7 +72,7 @@ function planEditorHtml(id){
   return `<div class="th-editor" data-plan="${pEsc(id)}" data-bank-parts="${pEsc(JSON.stringify(d.bank_parts || []))}">
     <datalist id="th-lib-goals">${thpLib('goal').map(x => `<option value="${pEsc(x.title)}">`).join('')}</datalist>
     <datalist id="th-lib-strengths">${thpLib('strength').map(x => `<option value="${pEsc(x.title)}">`).join('')}</datalist>
-    <div class="th-tpl-top"><button type="button" class="btn ghost small" id="pe-from-tpl">📋 תכנית מתבנית</button><button type="button" class="btn ghost small" id="pe-save-tpl">💾 שמירה כתבנית</button></div>
+    <div class="th-tpl-top"><button type="button" class="btn ghost small" id="pe-from-tpl">📋 תוכנית מתבנית</button><button type="button" class="btn ghost small" id="pe-save-tpl">💾 שמירה כתבנית</button></div>
     <div class="th-ed-grid bk-kid"><label class="pfield">הילד/ה (לנוסחים מהבנק)<select id="pe-gender"><option value="">לא צוין</option><option value="m"${d.gender === 'm' ? ' selected' : ''}>בן</option><option value="f"${d.gender === 'f' ? ' selected' : ''}>בת</option></select></label>
       ${devOn ? `<label class="pfield">גיל התפתחותי (למטפלים בלבד)<input type="text" id="pe-devage" inputmode="decimal" maxlength="5" value="${pEsc(d.dev_age || '')}" placeholder="למשל 6"></label>` : ''}
       <div class="pfield"><span>גיל לנוסחים</span><b class="bk-band">${band ? pEsc((BANK_AGES.find(a => a[0] === band) || [, band])[1]) : 'לא ידוע (כל הגילאים)'}</b></div></div>
@@ -130,7 +130,7 @@ function planOpenEditor(id, tab){
   body.querySelector('#pe-back').addEventListener('click', () => { thp.editing = null; thp.wtab = null; thpRender(); });
   body.querySelectorAll('[data-ws-tab]').forEach(b => b.addEventListener('click', () => planOpenEditor(id, b.dataset.wsTab)));
   const wb = body.querySelector('#th-ws-body');
-  if(thp.wtab === 'plan'){ wb.innerHTML = planChildSummaryHtml(id); const fb = wb.querySelector('#pe-full'); if(fb) fb.addEventListener('click', () => tpOpenPlan(id)); }          // (only a summary here; the whole plan in "תכניות טיפוליות": the walkthrough, note 6)
+  if(thp.wtab === 'plan'){ wb.innerHTML = planChildSummaryHtml(id); const fb = wb.querySelector('#pe-full'); if(fb) fb.addEventListener('click', () => tpOpenPlan(id)); }          // (only a summary here; the whole plan in "תוכניות טיפוליות": the walkthrough, note 6)
   else if(thp.wtab === 'obs'){ wb.innerHTML = '<div id="pe-obs"></div>'; obsSection(id, wb.querySelector('#pe-obs')).then(() => { if(thp.unseen) thp.unseen[id] = 0; }); }
   else if(thp.wtab === 'track'){ wb.innerHTML = '<div id="pe-track"><div class="pnote">טוען...</div></div>'; const tb = wb.querySelector('#pe-track'); trackSection(id, tb).then(() => careGraphs(id, tb)); }
   else if(['events', 'family', 'stay', 'docs'].includes(thp.wtab)){ wb.innerHTML = '<div id="pe-care"><div class="pnote">טוען...</div></div>'; const cb = wb.querySelector('#pe-care');
@@ -142,10 +142,10 @@ function planOpenEditor(id, tab){
 function planChildSummaryHtml(id){
   const row = thp.plans[id] || {}, d = row.draft || row.published || {}, focus = (d.goals || []).filter(g => g.title && (g.status ? g.status === 'focus' : g.focus));
   return `<div class="tp-child-sum">${focus.length ? focus.map(g => `<div class="tp-cs-goal"><span class="tp-lbl">במוקד</span><b>${pEsc(g.title)}</b>
-      ${(g.targets_list || []).length ? g.targets_list.map(t => `<div>🎯 ${pEsc(t.text)}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · יעד ' + t.target : ''}</em>` : ''}</div>`).join('') : (g.targets ? `<div>🎯 ${pEsc(g.targets)}</div>` : '')}
+      ${(g.targets_list || []).length ? g.targets_list.map(t => `<div>🎯 ${pEsc(t.text)}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · רוצים ' + t.target : ''}</em>` : ''}</div>`).join('') : (g.targets ? `<div>🎯 ${pEsc(g.targets)}</div>` : '')}
       ${(g.interventions_list || []).length ? `<div class="tp-cs-ints">${g.interventions_list.map(i => `<span class="th-chip">${pEsc(i.name)}</span>`).join('')}</div>` : ''}</div>`).join('')
-    : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>${row.published_version || row.draft ? 'אין כרגע מטרה במוקד' : 'עוד אין תכנית'}</b></div>`}
-    <button type="button" class="btn" id="pe-full">לתכנית המלאה</button></div>`;
+    : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>${row.published_version || row.draft ? 'אין כרגע מטרה במוקד' : 'עוד אין תוכנית'}</b></div>`}
+    <button type="button" class="btn" id="pe-full">לתוכנית המלאה</button></div>`;
 }
 function planWireEditor(id, root){
   const goalsBox = root.querySelector('#pe-goals');
@@ -273,7 +273,7 @@ function planLibraryHtml(){
       <input type="text" id="lib-title" maxlength="60" placeholder="שם" aria-label="שם"><textarea id="lib-desc" maxlength="600" rows="2" placeholder="הנוסח שייכנס לתוכנית (רשות במטרות ובחוזקות)" aria-label="הנוסח"></textarea>
       <select id="lib-cat-new" aria-label="תמה">${PLAN_CATS.map(c => `<option>${c}</option>`).join('')}</select>
       ${admin ? '<select id="lib-scope" aria-label="ספרייה"><option value="center">ספריית המרכז</option><option value="mercury">ספריית מרקורי</option></select>' : ''}<button type="button" class="btn" id="lib-add">הוספה</button></div>
-    <div class="pnote">תכנית שלמה נשמרת לספרייה מתוך עורך התוכנית ("💾 שמירה כתבנית").</div>
+    <div class="pnote">תוכנית שלמה נשמרת לספרייה מתוך עורך התוכנית ("💾 שמירה כתבנית").</div>
     ${Object.keys(PLAN_KIND_WORD).map(k => { const l = (thp.library || []).filter(x => x.kind === k && planLibMatch(x, q, cat)); return `<details class="pfold"${q || cat ? ' open' : ''}><summary><span>${PLAN_KIND_WORD[k]}</span><span class="pcount">${l.filter(x => x.active).length}</span></summary><div class="pfold-body">${l.map(item).join('') || '<div class="pnote">אין.</div>'}</div></details>`; }).join('')}`;
 }
 // this plan as a whole-plan template of the center (without the thinking and the file)

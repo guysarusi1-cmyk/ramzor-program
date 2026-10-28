@@ -12,7 +12,7 @@ const SIMPLE_GOAL = { id:'demo-goal', kind:'goal', scope:'mercury', active:true,
         { id:'i1', name:'קופסת הרגעה', what:'מכינים יחד קופסה עם 3–4 כלים, ומתרגלים בזמן רגוע', why:'כלי שבחר/ה עובד טוב יותר', freq:'פעמיים בשבוע', approach:'ויסות חושי', targets:['t1'], sentences:['איזה כלי יעזור לך עכשיו?', 'הקופסה שלך פה'] },
         { id:'i2', name:'מד הרגשות', what:'מד מ-1 עד 5, ומה עושים בכל מדרגה', why:'מדידה הופכת רגש למשהו שאפשר לטפל בו', freq:'פעמיים ביום', approach:'ARC', targets:['t2', 't3'], sentences:['כמה חזק זה עכשיו?', 'במדרגה 3 לוקחים הפסקה'] },
         { id:'i3', name:'נשימת בלון', what:'שואפים כמו מנפחים בלון, ונושפים לאט', why:'נשימה איטית מורידה עוררות', freq:'פעם ביום', approach:'TF-CBT', targets:['t1'], sentences:['בוא/י ננפח את הבלון', 'עוד נשימה אחת'] }] } } } };
-const SIMPLE_SCREENS = [['tasks', 'משימות'], ['list', 'תכניות טיפוליות: הרשימה'], ['plan', 'דף תכנית'], ['b-start', 'בנייה: התחלה'], ['b-pick', 'בנייה: תמה'], ['b-goal', 'בנייה: מטרה'], ['b-targets', 'בנייה: יעדים'],
+const SIMPLE_SCREENS = [['tasks', 'משימות'], ['list', 'תוכניות טיפוליות: הרשימה'], ['plan', 'דף תוכנית'], ['b-start', 'בנייה: התחלה'], ['b-pick', 'בנייה: תמה'], ['b-goal', 'בנייה: מטרה'], ['b-targets', 'בנייה: יעדים'],
   ['b-ints', 'בנייה: התערבות'], ['b-sents', 'בנייה: משפטים'], ['b-journey', 'בנייה: מסע ומקדש'], ['b-sum', 'בנייה: סיכום'], ['b-preview', 'בנייה: לצוות'], ['child', 'הילד: התוכנית'], ['spiral', 'הספירלה'], ['staff', 'כרטיס הילד אצל המדריך']];
 function simplicityOn(){ return typeof APP_ENV !== 'undefined' && APP_ENV === 'test' && location.hash.indexOf('#simplicity') === 0; }
 async function simplicityStart(){

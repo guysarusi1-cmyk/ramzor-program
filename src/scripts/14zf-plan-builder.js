@@ -32,7 +32,7 @@ async function tpSave(id, d){
   return ok;
 }
 
-// ---- the tab "תכניות טיפוליות": a row per child, filters, search; a child opens the plan page
+// ---- the tab "תוכניות טיפוליות": a row per child, filters, search; a child opens the plan page
 function tpListHtml(){
   if(thp.planChild) return '<div id="tp-page"></div>';
   const f = thp.tpFilter || 'all', q = thp.tpQ || '', kids = thpScope().filter(c => !q || displayName(c).includes(q));
@@ -40,11 +40,11 @@ function tpListHtml(){
   const list = kids.filter(c => f === 'all' || (f === 'need' && need(c)) || (f === 'review' && review(c)));
   const row = c => {
     const r = thp.plans[c.id] || {}, d = r.draft || r.published || {}, goals = d.goals || [], focus = goals.filter(g => tpStatusOf(g) === 'focus' && g.title);
-    const n = s => goals.filter(g => tpStatusOf(g) === s).length, state = r.published_version ? (r.draft && JSON.stringify(r.draft) !== JSON.stringify(r.published) ? 'יש שינויים שלא פורסמו' : 'פורסמה') : (r.draft ? 'טיוטה' : 'אין תכנית');
+    const n = s => goals.filter(g => tpStatusOf(g) === s).length, state = r.published_version ? (r.draft && JSON.stringify(r.draft) !== JSON.stringify(r.published) ? 'יש שינויים שלא פורסמו' : 'פורסמה') : (r.draft ? 'טיוטה' : 'אין תוכנית');
     return `<button type="button" class="tp-row" data-tp-kid="${pEsc(c.id)}">${thpAvatar(c)}<span class="tp-row-text"><b class="ar-keep">${pEsc(displayName(c))}</b>
       <small><span class="tp-state ${r.published_version ? 'ok' : ''}">${state}</span>${focus.length ? ` · 🎯 ${focus.map(g => pEsc(g.title)).join(' · ')}` : ''}</small>
       <small>${n('waiting') ? (n('waiting') === 1 ? 'מטרה אחת מחכה' : `${n('waiting')} מטרות מחכות`) : ''}${n('waiting') && n('achieved') ? ' · ' : ''}${n('achieved') ? (n('achieved') === 1 ? 'מטרה אחת הושגה' : `${n('achieved')} מטרות הושגו`) : ''}${r.review_date ? `${n('waiting') || n('achieved') ? ' · ' : ''}בדיקה מחדש ${pEsc(dayLabel(r.review_date))}` : ''}</small></span><span class="th-todo-go" aria-hidden="true">‹</span></button>`; };
-  return `<div class="tp-filter">${[['all', 'כולם'], ['need', 'צריכים תכנית'], ['review', 'לבדיקה מחדש']].map(([k, w]) => `<button type="button" class="th-chip${f === k ? ' on' : ''}" data-tp-f="${k}">${w}</button>`).join('')}
+  return `<div class="tp-filter">${[['all', 'כולם'], ['need', 'צריכים תוכנית'], ['review', 'לבדיקה מחדש']].map(([k, w]) => `<button type="button" class="th-chip${f === k ? ' on' : ''}" data-tp-f="${k}">${w}</button>`).join('')}
       <input type="search" id="tp-q" class="th-search" placeholder="חיפוש ילד/ה" aria-label="חיפוש ילד/ה" value="${pEsc(q)}"></div>
     <div class="tp-list">${list.map(row).join('') || `<div class="th-empty"><span aria-hidden="true">📋</span><b>${thpScope().length ? 'אין ילדים שמתאימים לסינון' : 'עוד לא שויכו אלייך ילדים'}</b><small>${thpScope().length ? 'אפשר לבחור "כולם".' : 'השיוך נעשה אצל הרכזת או מנהל המערכת.'}</small></div>`}</div>`;
 }
@@ -60,7 +60,7 @@ function tpOpenPlan(id){ thp.tab = 'plans'; thp.planChild = id; thp.editing = nu
 // ---- the plan page: read first; the focus goals, then waiting / achieved / stopped (folded); "עוד"; ONE main button
 function tpGoalCard(id, g, i, can){
   const st = tpStatusOf(g), v2 = tpIsV2(g);
-  const targets = v2 ? g.targets_list.map((t, k) => `<details class="tp-target"><summary><span>יעד ${k + 1} – ${pEsc(t.text)}</span>${t.now ? `<em class="tp-now">עכשיו ${t.now}${t.target ? ' · יעד ' + t.target : ''}</em>` : ''}</summary>
+  const targets = v2 ? g.targets_list.map((t, k) => `<details class="tp-target"><summary><span>יעד ${k + 1} – ${pEsc(t.text)}</span>${t.now ? `<em class="tp-now">עכשיו ${t.now}${t.target ? ' · רוצים ' + t.target : ''}</em>` : ''}</summary>
       <div class="tp-t-body"><div><span class="tp-lbl">לצוות:</span> ${pEsc(t.staff || '')}</div>${(t.scale || []).length ? `<ol class="tp-stations">${t.scale.map((s, j) => `<li class="${t.now === j + 1 ? 'now' : ''}${t.target === j + 1 ? ' goal' : ''}">${pEsc(s)}</li>`).join('')}</ol>` : ''}</div></details>`).join('')
     : (g.targets ? `<div class="tp-legacy"><span class="tp-lbl">יעדים:</span> ${pEsc(g.targets)}</div>` : '');
   const ints = v2 ? (g.interventions_list || []).map(x => `<div class="tp-int"><span><b>${pEsc(x.name)}</b> ${pEsc(x.what)}${x.freq ? ` <small>(${pEsc(x.freq)})</small>` : ''}${(x.sentences || []).length ? `<span class="tp-sent">${x.sentences.map(s => '💬 ' + pEsc(s)).join('<br>')}</span>` : ''}</span><em class="tp-appr">${pEsc(x.approach || '')}</em></div>`).join('')
@@ -78,22 +78,30 @@ function tpGoalCard(id, g, i, can){
 async function tpPlanPage(id, box){
   if(!box) return;
   const c = roster.find(x => x.id === id), row = thp.plans[id] || {}, d = row.draft || row.published || planEmpty(), can = planCanEdit(id), goals = (d.goals || []).filter(g => g.title || tpIsV2(g));
-  const changed = !!(row.draft && JSON.stringify(row.draft) !== JSON.stringify(row.published)), building = !!(d.builder && d.builder.step);
+  const building = !!(d.builder && d.builder.step), diff = tpDiff(row), changed = diff.length > 0;          // (the goal being built is not a change to publish: the UX reviewer, finding 1)
   const group = s => goals.map((g, i) => ({ g, i })).filter(x => tpStatusOf(x.g) === s);
   const vd = (thp.videos || {})[id], vOld = row.published_version && (!vd || vd.version < row.published_version);
-  const main = !can ? '' : building ? '<button type="button" class="btn tp-main" id="tp-resume">להמשיך את המטרה שהתחלת</button>' : changed ? '<button type="button" class="btn tp-main" id="tp-publish">פרסום</button>' : '<button type="button" class="btn tp-main" id="tp-new">+ מטרה חדשה</button>';
-  box.innerHTML = `<div class="tp-page"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התכניות</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : careName(id))}</h2></div>
-      <span class="th-status">${pEsc(planStatus(id))}</span></div>
+  const main = !can ? '' : changed ? '<button type="button" class="btn tp-main" id="tp-publish">פרסום</button>' : '<button type="button" class="btn tp-main" id="tp-new">+ מטרה חדשה</button>';          // (a goal being built: "להמשיך" in the status bar only)
+  const bar = can && (changed || building || !row.published_version) ? `<div class="tp-statebar" role="status">${!row.published_version && !changed ? '<span>עוד לא פורסמה תוכנית</span>' : changed ? `<span><b>בטיוטה:</b> ${diff.length === 1 ? 'שינוי אחד שלא פורסם' : diff.length + ' שינויים שלא פורסמו'}</span>` : '<span>הכול פורסם</span>'}
+      ${building ? `<span class="tp-sb-build">· מטרה אחת בבנייה <button type="button" class="btn ghost small" id="tp-resume2">להמשיך</button><button type="button" class="btn ghost small" id="tp-drop">לבטל</button></span>` : ''}</div>` : '';
+  box.innerHTML = `<div class="tp-page"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התוכניות</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : careName(id))}</h2></div>
+      <span class="th-status">${row.published_version ? 'פורסמה גרסה ' + row.published_version : 'עוד לא פורסמה'}</span></div>
     ${vd && vd.status === 'draft' ? `<div id="tp-video">${thpVideoPanelHtml(id)}</div>` : ''}
-    ${main}${can && (changed || building) ? `<button type="button" class="btn ghost small tp-second" id="tp-new2">+ מטרה חדשה</button>` : ''}
-    ${group('focus').length ? group('focus').map(x => tpGoalCard(id, x.g, x.i, can)).join('') : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>עוד אין מטרה במוקד</b><small>${can ? 'בונים מטרה אחת, צעד אחר צעד: "+ מטרה חדשה".' : 'איש/אשת הטיפול האחראי/ת בונה את התכנית.'}</small></div>`}
+    ${bar}${main}${can && changed ? `<button type="button" class="btn ghost small tp-second" id="tp-new2">+ מטרה חדשה</button>` : ''}
+    ${group('focus').length ? group('focus').map(x => tpGoalCard(id, x.g, x.i, can)).join('') : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>עוד אין מטרה במוקד</b><small>${can ? 'בונים מטרה אחת, צעד אחר צעד: "+ מטרה חדשה".' : 'איש/אשת הטיפול האחראי/ת בונה את התוכנית.'}</small></div>`}
     ${[['waiting', 'בהמתנה'], ['achieved', 'הושגו'], ['stopped', 'הופסקו']].map(([s, w]) => group(s).length ? `<details class="pfold"><summary><span>${w}</span><span class="pcount">${group(s).length}</span></summary><div class="pfold-body">${group(s).map(x => tpGoalCard(id, x.g, x.i, can)).join('')}</div></details>` : '').join('')}
     ${can ? tpMoreHtml(id, d) : ''}
     <div class="tp-links">${row.published_version ? '<button type="button" class="btn ghost small" id="tp-versions">גרסאות קודמות</button>' : ''}<button type="button" class="btn ghost small" id="tp-docs">מסמכים</button>
-      ${can && row.published_version ? `<button type="button" class="btn ghost small" id="tp-video-new"${vOld ? '' : ' disabled'} title="נוצר סרטון חדש מהתכנית שפורסמה">🎬 סרטון חדש</button>` : ''}</div></div>`;
+      ${can && row.published_version ? `<button type="button" class="btn ghost small" id="tp-video-new"${vOld ? '' : ' disabled'} title="נוצר סרטון חדש מהתוכנית שפורסמה">🎬 סרטון חדש</button>` : ''}</div></div>`;
   const $ = s => box.querySelector(s), on = (s, f) => { const el = $(s); if(el) el.addEventListener('click', f); };
   on('#tp-back', () => { thp.planChild = null; thpRender(); });
-  on('#tp-new', () => tpBuilder(id, null)); on('#tp-new2', () => tpBuilder(id, null)); on('#tp-resume', () => tpBuilder(id, d.builder));
+  const fresh = () => { if(!building){ tpBuilder(id, null); return; }          // (never erase a goal being built by default or by a tap outside: the checker, round 3)
+    const s2 = portalSheet(`<h2>יש מטרה שבבנייה</h2><div class="cs-rebuild-opts"><button type="button" class="btn" data-fr="keep"><b>להמשיך אותה</b><small>מהמקום שעצרת</small></button>
+      <button type="button" class="btn ghost danger" data-fr="new"><b>להתחיל מטרה חדשה</b><small>המטרה שבבנייה תימחק</small></button></div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>חזרה</button></div>`);
+    s2.querySelectorAll('[data-fr]').forEach(b => b.addEventListener('click', () => { s2.close(); tpBuilder(id, b.dataset.fr === 'keep' ? d.builder : null); })); };
+  on('#tp-new', fresh); on('#tp-new2', fresh); on('#tp-resume', () => tpBuilder(id, d.builder)); on('#tp-resume2', () => tpBuilder(id, d.builder));
+  on('#tp-drop', async () => { if(!(await confirmSheet({ title:'לבטל את המטרה שבבנייה?', text:'מה שנבחר בה עד עכשיו יימחק. שאר התוכנית לא משתנה.', okLabel:'כן, לבטל', cancelLabel:'חזרה', danger:true }))) return;
+    const dd = tpDraftOf(id); delete dd.builder; if(await tpSave(id, dd)) tpPlanPage(id, box); });
   on('#tp-publish', () => tpPublish(id));
   on('#tp-versions', () => planVersions(id));
   on('#tp-docs', () => { thp.tab = 'mine'; planOpenEditor(id, 'docs'); });
@@ -112,7 +120,10 @@ async function tpPlanPage(id, box){
     const dd = tpDraftOf(id), g = dd.goals[+b.dataset.tpAch];
     if(!(await confirmSheet({ title:`"${g.title}" הושגה?`, text:'המטרה עוברת ל"הושגו" עם התאריך, והצוות מקבל הודעה בפורטל. אחר כך אפשר להעלות מטרה מ"בהמתנה" או לבנות חדשה.', okLabel:'כן, הושגה 🎉', cancelLabel:'חזרה' }))) return;
     g.status = 'achieved'; g.achieved_at = careToday();
+    const others = tpDiff(thp.plans[id] || {}).length;
+    if(others && !(await confirmSheet({ title:'הסימון נכנס לתוקף מיד', text:`יש בטיוטה עוד ${others === 1 ? 'שינוי אחד' : others + ' שינויים'} שלא פורסמו. גם הם יפורסמו עכשיו.`, okLabel:'לפרסם הכול', cancelLabel:'חזרה' }))) return;
     if(!(await tpSave(id, dd))) return;
+    { const r = await sbPersonal.rpc('plan_publish', { p_child:id, p_important:false, p_full:false }); if(!r.error) await thpLoad(); }          // ("הושגה" is published at once, with the notice: Guy, after the UX review)
     sbPersonal.rpc('goal_achieved_notice', { p_child:id, p_goal:g.title }).then(() => {}, () => {});
     const waiting = dd.goals.filter(x => tpStatusOf(x) === 'waiting');
     toast('כל הכבוד! הצוות קיבל הודעה', 5000); tpPlanPage(id, box);
@@ -156,6 +167,17 @@ function tpWireMore(id, box, after){
     if(await tpSave(id, d)){ toast('נשמר בטיוטה'); after(); }
   });
 }
+// what the draft changes against the published plan, in words (the goal being built is not counted): the status bar and the publish window
+function tpDiff(row){
+  const d = row.draft; if(!d) return [];
+  const p = row.published || { goals:[] }, out = [], strip = g => { const x = Object.assign({}, g); delete x.status; delete x.focus; return JSON.stringify(x); };
+  const pg = {}; (p.goals || []).forEach(g => { pg[g.id] = g; });
+  (d.goals || []).filter(g => g.title || tpIsV2(g)).forEach(g => { const o = pg[g.id];
+    if(!o) out.push(`נוספה מטרה: ${g.title}`);
+    else { if(tpStatusOf(o) !== tpStatusOf(g)) out.push(`${g.title}: ${TP_STATUS[tpStatusOf(g)]}`); if(strip(o) !== strip(g)) out.push(`שונתה: ${g.title}`); } });
+  [['summary', 'התקציר'], ['avoid', 'ממה להימנע'], ['signs', 'אותות מוקדמים'], ['calm', 'מה מרגיע'], ['routine', 'השגרה']].forEach(([k, w]) => { if((d[k] || '') !== (p[k] || '')) out.push(`שונה: ${w}`); });
+  return out;
+}
 // publishing: a video when the goal in focus changed (Q13); no e-mail (decision 19)
 async function tpPublish(id){
   const row = thp.plans[id] || {}, d = row.draft; if(!d) return;
@@ -163,7 +185,8 @@ async function tpPublish(id){
   if(blank){ toast(`יש עוד מקום להשלמה: ${blank[0]}. ממלאים אותו לפני הפרסום`, 6000); return; }
   const fk = x => JSON.stringify((x && x.goals || []).filter(g => tpStatusOf(g) === 'focus').map(g => [g.id, g.title, g.targets, g.interventions]));
   const full = !row.published_version || fk(d) !== fk(row.published);
-  if(!(await confirmSheet({ title:'לפרסם את התוכנית?', text:full ? 'היא נכנסת לתוקף מיד, ונוצר סרטון מהמטרה שבמוקד. אחרי שתאשרי את הסרטון, הצוות מקבל הודעה בפורטל.' : 'השינוי נכנס לתוקף מיד. המטרה שבמוקד לא השתנתה, אז לא נוצר סרטון.', okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
+  const what = tpDiff(row).slice(0, 6).join(' · ');          // (what will change for the staff: the UX reviewer, finding 4)
+  if(!(await confirmSheet({ title:'לפרסם את התוכנית?', text:`${what ? 'מה משתנה: ' + what + '. ' : ''}${full ? 'זה נכנס לתוקף מיד, ונוצר סרטון מהמטרה שבמוקד. אחרי שתאשרי את הסרטון, הצוות מקבל הודעה בפורטל.' : 'זה נכנס לתוקף מיד. המטרה שבמוקד לא השתנתה, אז לא נוצר סרטון.'}`, okLabel:'כן, לפרסם', cancelLabel:'חזרה' }))) return;
   const r = await sbPersonal.rpc('plan_publish', { p_child:id, p_important:false, p_full:full });
   if(r.error){ toast('הפרסום נכשל. אפשר לנסות שוב בעוד רגע'); return; }
   toast(full ? 'התוכנית פורסמה. נוצר סרטון שמחכה לאישור שלך' : 'התוכנית פורסמה', 5000);
@@ -200,7 +223,7 @@ async function tpBuilder(id, state){
   const s = state ? JSON.parse(JSON.stringify(state)) : { step:'start', age:tpBankAge(id), targets:[], ints:[], strengths:[], planet:'' };
   if(!s.age) s.age = tpBankAge(id) || '5-8';
   const body = document.getElementById('therapy-body'); if(!body) return;
-  const gender = (tpDraftOf(id).gender) || '', G = t => bankGender(t || '', gender), lib = () => s.libId ? (thp.library || []).find(y => y.id === s.libId) : null, ageW = () => { const x = lib(); return x ? (x.content.ages[s.age] || x.content.ages['5-8'] || {}) : {}; };
+  let gender = (tpDraftOf(id).gender) || ''; const G = t => bankGender(t || '', gender), lib = () => s.libId ? (thp.library || []).find(y => y.id === s.libId) : null, ageW = () => { const x = lib(); return x ? (x.content.ages[s.age] || x.content.ages['5-8'] || {}) : {}; };
   const persist = async () => { const d = tpDraftOf(id); d.builder = Object.assign({}, s); await planSave(id, d, (thp.plans[id] || {}).review_date || null); };
   const go = async step => { s.step = step; await persist(); draw(); };
   const c = roster.find(x => x.id === id);
@@ -208,7 +231,8 @@ async function tpBuilder(id, state){
   function draw(){
     const i0 = TP_STEPS.findIndex(x => x[0] === s.step);
     let inner = '';
-    if(s.step === 'start') inner = `<h2>איך תרצי להתחיל?</h2><div class="tp-big">${[['theme', '🧭', 'לפי תמה', 'ויסות, ביטחון, אובדן...'], ['method', '🧩', 'לפי שיטה', 'ARC, Theraplay, סמכות חדשה...'], ['search', '🔎', 'חיפוש', 'מילה שמתארת את מה שצריך']].map(([k, e, w, sub]) => `<button type="button" class="tp-bigbtn" data-entry="${k}"><span aria-hidden="true">${e}</span><b>${w}</b><small>${sub}</small></button>`).join('')}</div>
+    if(s.step === 'start') inner = `${gender ? '' : `<div class="tp-gender"><span>${pEsc(c ? displayName(c) : '')}:</span><div class="pchoice"><button type="button" data-gender="m">בן</button><button type="button" data-gender="f">בת</button></div><small>כדי שהנוסחים ייכתבו נכון. שואלים פעם אחת.</small></div>`}
+      <h2>איך תרצי להתחיל?</h2><div class="tp-big">${[['theme', '🧭', 'לפי תמה', 'ויסות, ביטחון, אובדן...'], ['method', '🧩', 'לפי שיטה', 'ARC, Theraplay, סמכות חדשה...'], ['search', '🔎', 'חיפוש', 'מילה שמתארת את מה שצריך']].map(([k, e, w, sub]) => `<button type="button" class="tp-bigbtn" data-entry="${k}"><span aria-hidden="true">${e}</span><b>${w}</b><small>${sub}</small></button>`).join('')}</div>
       <button type="button" class="btn ghost small" id="tb-own">משהו משלי: מטרה שאני כותבת</button>`;
     else if(s.step === 'pick'){
       const nGoals = n => n === 1 ? 'מטרה אחת' : n + ' מטרות';          // (only what exists is offered: the checker, principle 10)
@@ -220,14 +244,15 @@ async function tpBuilder(id, state){
     }
     else if(s.step === 'goal'){
       const l = tpGoalsV2().filter(x => s.entry === 'theme' ? bankThemesOf(x).includes(s.theme) : s.entry === 'method' ? (x.methods || []).includes(s.method) : `${x.title} ${x.description || ''} ${JSON.stringify(x.content)}`.includes(s.q || ''));
-      inner = `<h2>איזו מטרה?</h2><div class="tp-names">${l.map(x => `<button type="button" class="tp-name${s.libId === x.id ? ' on' : ''}" data-goal="${x.id}">${pEsc(G(x.title))}${x.draft ? ' <small class="bk-draft" title="נוסח שמנהל המערכת עוד לא בדק">טיוטה</small>' : ''}</button>`).join('') || '<div class="pnote">אין מטרות כאן עדיין.</div>'}</div>
-        ${l.some(x => x.draft) ? '<div class="pnote">"טיוטה" = נוסח שעוד לא נבדק ואושר. אפשר להשתמש בו ולערוך.</div>' : ''}
+      inner = `<h2>איזו מטרה?</h2><div class="tp-names">${l.map(x => `<button type="button" class="tp-name${s.libId === x.id ? ' on' : ''}" data-goal="${x.id}">${pEsc(G(x.title))}${x.draft ? ' <small class="bk-draft" title="נוסח שמנהל המערכת עוד לא בדק">נוסח בבדיקה</small>' : ''}</button>`).join('') || '<div class="pnote">אין מטרות כאן עדיין.</div>'}</div>
+        ${l.some(x => x.draft) ? '<div class="pnote">"נוסח בבדיקה" = נוסח שעוד לא נבדק ואושר. אפשר להשתמש בו ולערוך.</div>' : ''}
         <details class="pfold"><summary><span>משהו משלי</span></summary><div class="pfold-body"><input type="text" id="tb-own-title" maxlength="80" placeholder="שם המטרה" value="${s.libId ? '' : pEsc(s.title || '')}"><button type="button" class="btn small" id="tb-own-go">המשך עם המטרה שלי</button></div></details>${nav(false)}`;
     }
     else if(s.step === 'targets'){
       const w = ageW(), sel = new Set(s.targets.map(t => t.id)), bank = (w.targets || []);
-      const ratings = t => `<div class="tp-rate"><div><span>איפה עכשיו</span>${[1, 2, 3, 4, 5].map(k => `<button type="button" class="${t.now === k ? 'on' : ''}" data-rate="${pEsc(t.id)}" data-k="now" data-v="${k}">${k}</button>`).join('')}</div>
-        <div><span>לאן רוצים להגיע</span>${[1, 2, 3, 4, 5].map(k => `<button type="button" class="${t.target === k ? 'on' : ''}" data-rate="${pEsc(t.id)}" data-k="target" data-v="${k}">${k}</button>`).join('')}</div></div>`;
+      const mean = (t, k) => t[k] ? `<div class="tp-rate-mean">${t[k]} = ${pEsc((t.scale || [])[t[k] - 1] || '')}</div>` : '<div class="tp-rate-mean dim">בוחרים מספר, ורואים כאן מה הוא אומר</div>';          // (the meaning of the number: the UX reviewer, finding 2)
+      const row = (t, k, w) => `<div role="group" aria-label="${w}"><span>${w}</span>${[1, 2, 3, 4, 5].map(v => `<button type="button" class="${t[k] === v ? 'on' : ''}" aria-pressed="${t[k] === v}" aria-label="${w} ${v}: ${pEsc((t.scale || [])[v - 1] || '')}" data-rate="${pEsc(t.id)}" data-k="${k}" data-v="${v}">${v}</button>`).join('')}</div>${mean(t, k)}`;
+      const ratings = t => `<div class="tp-rate">${row(t, 'now', 'איפה עכשיו')}${row(t, 'target', 'לאן רוצים להגיע')}</div>`;
       const scaleEd = t => `<details class="tp-scale-ed"><summary>הספירלה של היעד (5 תחנות)</summary>${[0, 1, 2, 3, 4].map(k => `<input type="text" data-scale="${pEsc(t.id)}" data-k="${k}" value="${pEsc((t.scale || [])[k] || '')}" placeholder="${k + 1}">`).join('')}</details>`;
       inner = `<h2>יעדים <small>(1–3)</small></h2>${s.age !== tpBankAge(id) || bankAgeOf(id, {}) === '8-12' ? '<div class="pnote">לילדים מעל 8: בינתיים מוצג הנוסח של גילאי 5–8.</div>' : ''}
         ${bank.map(t => { const on = sel.has(t.id), mine = s.targets.find(x => x.id === t.id) || t;
@@ -266,7 +291,7 @@ async function tpBuilder(id, state){
       const focusN = tpDraftOf(id).goals.filter(g => tpStatusOf(g) === 'focus' && g.id !== s.goalId).length;
       if(!s.status) s.status = focusN < tpFocusMax() ? 'focus' : 'waiting';          // (decided by itself; changed on the plan page)
       inner = `<h2>סיכום</h2><div class="tp-sum"><div><span class="tp-lbl">מטרה</span><b>${pEsc(G(s.title))}</b> <em class="tp-now">${s.status === 'focus' ? 'תיכנס למוקד' : 'תחכה בהמתנה'}</em></div>
-        <div><span class="tp-lbl">יעדים</span>${s.targets.map(t => `<div>• ${pEsc(G(t.text))}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · יעד ' + t.target : ''}</em>` : ''}</div>`).join('')}</div>
+        <div><span class="tp-lbl">יעדים</span>${s.targets.map(t => `<div>• ${pEsc(G(t.text))}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · רוצים ' + t.target : ''}</em>` : ''}</div>`).join('')}</div>
         <div><span class="tp-lbl">דרכי התערבות</span>${s.ints.map(x2 => `<div>• ${pEsc(x2.name)} <em class="tp-appr">${pEsc(x2.approach || '')}</em></div>`).join('')}</div>
         <div><span class="tp-lbl">משפטים</span>${s.ints.flatMap(x2 => x2.sentences || []).map(t => `<div>💬 ${pEsc(t)}</div>`).join('') || '<div class="pnote">לא נבחרו משפטים.</div>'}</div>
         <div><span class="tp-lbl">מסע ומקדש</span>${s.strengths.map(t => `<span class="th-chip">${pEsc(t)}</span>`).join(' ') || '<span class="pnote">בלי חוזקות</span>'}${s.planet ? ` · 🪐 ${pEsc(((thp.planets || []).find(p => p.id === s.planet) || {}).name || '')}` : ''}</div></div>
@@ -274,7 +299,7 @@ async function tpBuilder(id, state){
     }
     else {          // preview: exactly what the staff sees
       const g = tpGoalFromState(s, G);
-      inner = `<h2>כך הצוות יראה את זה</h2><div class="tp-preview th-kcard">${tpStaffGoalHtml(id, g, false)}</div>${nav(true, s.editIndex >= 0 ? 'שמירת השינויים' : 'הוספה לתכנית')}`;
+      inner = `<h2>כך הצוות יראה את זה</h2><div class="tp-preview th-kcard">${tpStaffGoalHtml(id, g, false)}</div>${nav(true, s.editIndex >= 0 ? 'שמירת השינויים' : 'הוספה לתוכנית')}`;
     }
     body.innerHTML = `<div class="tp-builder"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tb-out">שמירה ויציאה</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : '')}</h2></div><span></span></div>
       <div class="tp-stepno">${i0 > 0 ? `שלב ${i0} מתוך ${TP_STEPS.length - 1}: ${TP_STEPS[i0][1]}` : `${TP_STEPS.length - 1} שלבים קצרים, ואפשר לעצור ולחזור בכל רגע`}</div><ol class="tp-steps">${TP_STEPS.slice(1).map(([k, w], j) => `<li class="${j + 1 < i0 ? 'done' : j + 1 === i0 ? 'now' : ''}">${w}</li>`).join('')}</ol>${inner}</div>`;
@@ -285,6 +310,7 @@ async function tpBuilder(id, state){
     on('#tb-out', async () => { await persist(); thp.tab = 'plans'; thp.planChild = id; thpRender(); });
     on('#tb-prev', () => { const i0 = TP_STEPS.findIndex(x => x[0] === s.step); go(TP_STEPS[Math.max(0, i0 - 1)][0]); });
     body.querySelectorAll('[data-entry]').forEach(b => b.addEventListener('click', () => { s.entry = b.dataset.entry; go('pick'); }));
+    body.querySelectorAll('[data-gender]').forEach(b => b.addEventListener('click', async () => { gender = b.dataset.gender; const d = tpDraftOf(id); d.gender = gender; d.builder = Object.assign({}, s); await planSave(id, d, (thp.plans[id] || {}).review_date || null); draw(); }));          // (once per child: the UX reviewer, finding 5)
     on('#tb-own', () => { s.entry = 'own'; go('goal'); });
     body.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { s.theme = b.dataset.theme; go('goal'); }));
     body.querySelectorAll('[data-method]').forEach(b => b.addEventListener('click', () => { s.method = b.dataset.method; go('goal'); }));
@@ -411,7 +437,7 @@ async function tpSpiralSection(id, box){
   const sec = document.createElement('div'); sec.className = 'cr-graphs';
   sec.innerHTML = `<h3 class="psec">איפה ${pEsc(careName(id))} עכשיו</h3><details class="pfold"><summary><span>מה זו הספירלה?</span></summary><div class="pfold-body pnote">ההתקדמות לא בקו ישר. כל נקודה היא יום; הנקודה הגדולה היא היום. הספירלה נבנית מצעדים במסע, מתצפיות, מאירועים, מ👍/👎 של הצוות ומהדירוג שלך. נתונים, לא מסקנה.</div></details>
     ${goals.map(g => `<details class="tp-goal" open><summary><b>${pEsc(g.title)}</b> <small>${pEsc(TP_STATUS[tpStatusOf(g)])}</small></summary><div class="tp-goal-body">${g.targets_list.map(t => { const lv = tpSpiralLevels(g, t, D, since, days), r = last[g.id + ':' + t.id];
-      return `<details class="tp-target"><summary><span>${pEsc(t.text)}</span><em class="tp-now">עכשיו ${Math.round(lv[lv.length - 1].lv)}${t.target ? ' · יעד ' + t.target : ''}</em></summary><div class="tp-t-body tp-sp-row">${tpSpiralSvg(t, lv)}
+      return `<details class="tp-target"><summary><span>${pEsc(t.text)}</span><em class="tp-now">עכשיו ${Math.round(lv[lv.length - 1].lv)}${t.target ? ' · רוצים ' + t.target : ''}</em></summary><div class="tp-t-body tp-sp-row">${tpSpiralSvg(t, lv)}
         <div class="tp-sp-side"><ol class="tp-stations">${(t.scale || []).map((s2, j) => `<li class="${t.target === j + 1 ? 'goal' : ''}">${pEsc(s2)}</li>`).join('')}</ol>
           <label>הדירוג של החודש <select data-sp-rate="${pEsc(g.id + ':' + t.id)}"><option value="">—</option>${[1, 2, 3, 4, 5].map(k => `<option${r && r.rated_on.slice(0, 7) === careToday().slice(0, 7) && r.value === k ? ' selected' : ''}>${k}</option>`).join('')}</select></label></div></div></details>`; }).join('')}</div></details>`).join('')}`;
   box.appendChild(sec);
