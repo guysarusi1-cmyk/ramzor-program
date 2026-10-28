@@ -2720,7 +2720,7 @@
       const missing = [];
       for(const v of LEARN_ITEMS){
         for(const [i, st] of learnSteps(v).entries()){
-          if(st.scene) fw().learnFrame.scene(st.scene);
+          if(st.scene) await fw().learnFrame.scene(st.scene);
           if(st.act) fw().learnFrame.act(st.act);
           await sleep(60);
           [st.hl, st.type && st.type[0], st.tap].filter(Boolean).forEach(sel => { if(!find(sel)) missing.push(`${v.id} #${i + 1} ${sel}`); });

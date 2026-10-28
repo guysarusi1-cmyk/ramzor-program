@@ -34,14 +34,15 @@ $prof.Audio.Bitrate = 32000; $prof.Audio.ChannelCount = 1; $prof.Audio.SampleRat
 $sha = [Security.Cryptography.SHA1]::Create()
 $map = [ordered]@{}; $made = 0
 foreach($t in $texts){
-  $key = if($az){ "$azVoice|$t" } else { $t }          # (the voice is part of the name: another voice records everything again)
+  $rate = '+6%'          # (Guy: a little quicker)
+  $key = if($az){ "$azVoice|$rate|$t" } else { $t }          # (the voice is part of the name: another voice records everything again)
   $name = (($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($key)) | Select-Object -First 6 | ForEach-Object { $_.ToString('x2') }) -join '') + $(if($az){ '.mp3' } else { '.m4a' })
   $map[$t] = $name
   if(Test-Path (Join-Path $outDir $name)){ continue }
   # what is read differs a little from what is written: no quotes, "יכול/ה" read as one word
   $speak = $t -replace '[„”"׳]', '' -replace '/ה', '' -replace '\.\.\.', ','
   if($az){
-    $ssml = "<speak version='1.0' xml:lang='he-IL'><voice name='$azVoice'><prosody rate='-4%'>" + [Security.SecurityElement]::Escape($speak) + "</prosody></voice></speak>"
+    $ssml = "<speak version='1.0' xml:lang='he-IL'><voice name='$azVoice'><prosody rate='$rate'>" + [Security.SecurityElement]::Escape($speak) + "</prosody></voice></speak>"
     $headers = @{ 'Ocp-Apim-Subscription-Key' = $az.key; 'X-Microsoft-OutputFormat' = 'audio-24khz-48kbitrate-mono-mp3'; 'User-Agent' = 'ramzor-learn' }
     Invoke-WebRequest -Uri "https://$($az.region).tts.speech.microsoft.com/cognitiveservices/v1" -Method Post -Headers $headers -ContentType 'application/ssml+xml; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($ssml)) -OutFile (Join-Path $outDir $name) -UseBasicParsing
     $made++; continue

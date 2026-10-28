@@ -15,7 +15,8 @@ const SIMPLE_GOAL = { id:'demo-goal', kind:'goal', scope:'mercury', active:true,
 const SIMPLE_SCREENS = [['tasks', 'משימות'], ['list', 'תוכניות טיפוליות: הרשימה'], ['plan', 'דף תוכנית'], ['b-start', 'בנייה: התחלה'], ['b-pick', 'בנייה: תמה'], ['b-goal', 'בנייה: מטרה'], ['b-targets', 'בנייה: יעדים'],
   ['b-ints', 'בנייה: התערבות'], ['b-sents', 'בנייה: משפטים'], ['b-journey', 'בנייה: מסע ומקדש'], ['b-sum', 'בנייה: סיכום'], ['b-preview', 'בנייה: לצוות'], ['child', 'הילד: התוכנית'], ['spiral', 'הספירלה'], ['staff', 'כרטיס הילד אצל המדריך']];
 function simplicityOn(){ return typeof APP_ENV !== 'undefined' && APP_ENV === 'test' && location.hash.indexOf('#simplicity') === 0; }
-async function simplicityStart(){
+// the made-up therapy portal (also the phone of the overview video, 14zh-learn.js)
+function simplicityData(){
   roster.length = 0; roster.push({ id:'d1', firstName:'נועם', lastInitial:'כ', age:'7' }, { id:'d2', firstName:'מאיה', lastInitial:'ל', age:'4' });
   srv.profile = { therapist:true, admin:false, kind:'therapist' }; srv.me = 'demo-me';
   const goal = tpSync({ id:'g1', title:SIMPLE_GOAL.title, theme:'ויסות רגשי', library_id:SIMPLE_GOAL.id, status:'focus', why_staff:SIMPLE_GOAL.description, review_date:isoDate(new Date(Date.now() + 80 * 864e5)),
@@ -25,6 +26,9 @@ async function simplicityStart(){
   Object.assign(thp, { loaded:true, ok:true, v32:true, v42:true, v43:true, mode:'therapist', mine:['d1', 'd2'], library:[SIMPLE_GOAL], plans:{ d1:{ child_id:'d1', draft:plan, published:plan, published_version:2, review_date:goal.review_date } },
     guidance:{ d1:{ child_id:'d1', version:2, content:plan } }, planets:[], videos:{}, unseen:{ d1:2 }, questions:{ d2:1 }, journeys:{}, risen:[], stays:{ d2:{ admitted:isoDate(new Date(Date.now() - 12 * 864e5)) } }, newInc:{ d1:1 }, lettersWait:{}, mopts:{ focus_max:1 }, favs:new Set(), useN:{} });
   thpLoad = async () => {};          // (no server here)
+}
+async function simplicityStart(){
+  simplicityData();
   portalActivateView('view-therapy');
   document.getElementById('login-screen').style.display = 'none'; document.getElementById('protected-app').style.display = '';
   simplicityShow((location.hash.split(':')[1]) || 'tasks');
@@ -50,6 +54,7 @@ function simplicityShow(screen){
   else if(screen === 'child'){ thp.tab = 'mine'; thpRender(); planOpenEditor('d1', 'plan'); }
   else if(screen === 'spiral'){ thp.tab = 'mine'; thpRender(); planOpenEditor('d1', 'track'); }          // (the real tracking screen; here without data, only today's dot)
   else if(screen === 'staff'){ thp.tab = 'kids'; thpRender(); }
+  if(!simplicityOn()) return;
   let bar = document.getElementById('simplicity-bar');
   if(!bar){ bar = document.createElement('nav'); bar.id = 'simplicity-bar'; document.body.appendChild(bar); }
   bar.innerHTML = SIMPLE_SCREENS.map(([k, w]) => `<a href="#simplicity:${k}"${k === screen ? ' aria-current="page"' : ''}>${w}</a>`).join('');

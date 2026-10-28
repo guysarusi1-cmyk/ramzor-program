@@ -34,6 +34,11 @@
   .ln-scr{ position:relative; width:100%; height:100%; border-radius:35px; overflow:hidden; background:var(--bg); }
   .ln-status{ height:34px; background:var(--bg); }
   .ln-scr iframe{ display:block; width:100%; height:calc(100% - 34px); border:0; background:var(--bg); }
+  .ln-phone.wide{ border-radius:20px; }          /* a wide screen: the kids' TV, the coordinator's computer */
+  .ln-phone.wide::before, .ln-phone.wide .ln-status{ display:none; }
+  .ln-phone.wide .ln-scr{ border-radius:10px; }
+  .ln-phone.wide iframe{ height:100%; }
+  .ln-phone.wide .ln-layer{ top:0; }
   .ln-layer{ position:absolute; top:34px; left:0; right:0; bottom:0; z-index:20; overflow:hidden; cursor:pointer; }
   .ln-cardover, .ln-cover{ position:absolute; inset:0; z-index:40; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:30px; background:radial-gradient(ellipse at 50% 20%, #26315e 0%, var(--bg) 70%); }
   .ln-cover{ z-index:45; }

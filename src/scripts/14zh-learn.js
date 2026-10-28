@@ -11,7 +11,25 @@ const learnFrameOn = () => /^#learnframe/.test(location.hash) && !!sbPersonal;
 // A step: scene (a fresh screen in the phone: a new chapter starts with one), card (a title over the phone), say (the caption and the voice),
 // hl (a selector to light up), type [selector, text], tap (a selector the finger presses: a real click in the phone), act (a change in the phone first)
 const LEARN_ITEMS = [
-  { id:'inst-schedule', icon:'📅', title:'כניסה לפורטל והסידור שלי', sub:'כניסה ראשונה, ההודעות, המשמרת הבאה, המשמרות שלי וסידור הצוות', who:'מדריכים',
+  { id:'overview', group:'מבט על', icon:'🚦', title:'המערכת במבט על', sub:'הרמזור, מסך הילדים, מערכת הסידור ופורטל הטיפול, בפחות מדקה', who:'הצגה',
+    end:'הכל במקום אחד: מהטלפון, מהמחשב ועל המסך בחדר.',
+    chapters:[
+      { title:'פתיחה', steps:[
+        { scene:'ramzor', card:{ ic:'🚦', title:'מרכז החירום<br>המערכת במבט על', sub:'הרמזור · מסך הילדים · הסידור · הטיפול' }, say:'המערכת של מרכז החירום: כלי אחד לצוות, לילדים ולטיפול.' }]},
+      { title:'הרמזור ומסך הילדים', steps:[
+        { scene:'ramzor', say:'הרמזור: לכל התנהגות צבע, ולכל צבע פרוטוקול ברור, צעד אחרי צעד.', hl:'#quick-light-rows' },
+        { scene:'tv', device:'wide', say:'במסך שבחדר, הילדים רואים כוכבים, בונוסים ואת המסע בחלל, בזמן אמת.' }]},
+      { title:'מערכת הסידור', steps:[
+        { scene:'prefs-filled', say:'בסידור העבודה, כל מדריך מסמן מהטלפון מתי נוח לו לעבוד.', hl:'.pcal' },
+        { scene:'coord', device:'wide', say:'הרכזת בונה בלחיצה סידור חודשי, לפי ההעדפות, המנוחה וכללי הבטיחות.', hl:'#portal-body .cs-layout' },
+        { scene:'swaps', say:'החלפות ומשמרות פתוחות מתנהלות במערכת, והרכזת רק מאשרת.', hl:'details[data-fold="swopen"] .pfold-body' }]},
+      { title:'פורטל הטיפול', steps:[
+        { scene:'therapy-plan', say:'בפורטל הטיפול בונים לכל ילד תוכנית: מטרות, יעדים ודרכי התערבות.' },
+        { scene:'therapy-staff', say:'והמדריכים רואים לכל ילד מה עושים, וממה להימנע.' }]},
+      { title:'סיום', steps:[
+        { card:{ ic:'✨', title:'הכל במקום אחד', sub:'מהטלפון, מהמחשב ועל המסך בחדר' }, say:'הכל במקום אחד: בטלפון, במחשב ועל המסך בחדר.' }]}
+    ]},
+  { id:'inst-schedule', group:'פורטל המדריך', icon:'📅', title:'כניסה לפורטל והסידור שלי', sub:'כניסה ראשונה, ההודעות, המשמרת הבאה, המשמרות שלי וסידור הצוות', who:'מדריכים',
     end:'עכשיו אתם יודעים להיכנס ולראות את הסידור. בסרטון הבא: בחירת העדפות.',
     chapters:[
       { title:'פתיחה', steps:[
@@ -41,7 +59,7 @@ const LEARN_ITEMS = [
       { title:'סיום', steps:[
         { card:{ ic:'✅', title:'זהו!', sub:'בסרטון הבא: בחירת העדפות לחודש הבא' }, say:'זהו. בסרטון הבא נלמד איך בוחרים העדפות לחודש הבא.' }]}
     ]},
-  { id:'inst-prefs', icon:'🗓️', title:'בחירת העדפות', sub:'סימון כן, יכול ולא, יעד חודשי, שתי השאלות והגשה', who:'מדריכים',
+  { id:'inst-prefs', group:'פורטל המדריך', icon:'🗓️', title:'בחירת העדפות', sub:'סימון כן, יכול ולא, יעד חודשי, שתי השאלות והגשה', who:'מדריכים',
     end:'עכשיו אתם יודעים למלא ולהגיש העדפות. בסרטון הבא: החלפות ומשמרות פתוחות.',
     chapters:[
       { title:'פתיחה', steps:[
@@ -79,7 +97,7 @@ const LEARN_ITEMS = [
       { title:'סיום', steps:[
         { card:{ ic:'✅', title:'זהו!', sub:'בסרטון הבא: החלפות ומשמרות פתוחות' }, say:'זהו. בסרטון הבא נלמד על החלפות ועל משמרות פתוחות.' }]}
     ]},
-  { id:'inst-swaps', icon:'🔄', title:'החלפות ומשמרות פתוחות', sub:'בקשת החלפה, לא יכול/ה להגיע, עזרה לחברי הצוות והצטרפות למשמרת חסרה', who:'מדריכים',
+  { id:'inst-swaps', group:'פורטל המדריך', icon:'🔄', title:'החלפות ומשמרות פתוחות', sub:'בקשת החלפה, לא יכול/ה להגיע, עזרה לחברי הצוות והצטרפות למשמרת חסרה', who:'מדריכים',
     end:'עכשיו אתם יודעים לבקש החלפה, לעזור לאחרים ולהצטרף למשמרות פתוחות.',
     chapters:[
       { title:'פתיחה', steps:[
@@ -122,9 +140,8 @@ const learnUrl = id => location.origin + location.pathname + '#learn:' + id;
 // ---------------------------------------------------------------- the admin's tab: the list, watch, share
 function learnAdminRender(body){
   body.innerHTML = `<div class="pnote">סרטוני הדרכה קצרים. כל סרטון נפתח מקישור, בלי כניסה לפורטל, אז אפשר לשלוח אותו בוואטסאפ לקבוצה או למדריך מסוים. אין בסרטונים שמות אמיתיים.</div>
-    <h2 class="psec">פורטל המדריך</h2>
-    ${LEARN_ITEMS.map(v => `<div class="learn-row"><span class="learn-ic" aria-hidden="true">${v.icon}</span><span class="learn-txt"><b>${pEsc(v.title)}</b><small>${pEsc(v.sub)} · כ-${learnMinutes(v)} דק'</small></span>
-      <span class="learn-acts"><a class="btn ghost small" href="#learn:${v.id}" target="_blank" rel="noopener">▶ צפייה</a><a class="btn small" href="${pEsc(waUrl('', `סרטון הדרכה: ${v.title}\n${learnUrl(v.id)}`))}"${waTarget()}>שיתוף בוואטסאפ</a></span></div>`).join('')}
+    ${[...new Set(LEARN_ITEMS.map(v => v.group))].map(g => `<h2 class="psec">${pEsc(g)}</h2>${LEARN_ITEMS.filter(v => v.group === g).map(v => `<div class="learn-row"><span class="learn-ic" aria-hidden="true">${v.icon}</span><span class="learn-txt"><b>${pEsc(v.title)}</b><small>${pEsc(v.sub)} · כ-${learnMinutes(v)} דק'</small></span>
+      <span class="learn-acts"><a class="btn ghost small" href="#learn:${v.id}" target="_blank" rel="noopener">▶ צפייה</a><a class="btn small" href="${pEsc(waUrl('', `סרטון הדרכה: ${v.title}\n${learnUrl(v.id)}`))}"${waTarget()}>שיתוף בוואטסאפ</a></span></div>`).join('')}`).join('')}
     <div class="pnote pnote-soft">בוואטסאפ בוחרים למי לשלוח: קבוצה או אדם אחד.</div>`;
 }
 
@@ -132,10 +149,16 @@ function learnAdminRender(body){
 const learnFx = { open:{}, nextId:1 };
 function learnFakeClient(client){
   const ok = v => ({ data:v, error:null });
-  const chain = v => { const p = Promise.resolve(ok(v)); const q = new Proxy(function(){}, { get:(t, k) => k === 'then' ? p.then.bind(p) : k === 'catch' ? p.catch.bind(p) : k === 'finally' ? p.finally.bind(p) : () => q, apply:() => q }); return q; };
-  client.from = () => chain([]);
+  // a query of a table: the made-up rows of that table, filtered by eq / in; single / maybeSingle give one row (a write simply succeeds)
+  const chain = (v, table) => { const f = [], st = { one:false }; let p = null;
+    const run = () => p || (p = Promise.resolve(ok((() => { if(typeof v !== 'function') return v; let rows = v();
+      f.forEach(([op, c, x]) => { rows = rows.filter(r => op === 'eq' ? r[c] === x : (x || []).includes(r[c])); }); return st.one ? rows[0] || null : rows; })())));
+    const q = new Proxy(function(){}, { apply:() => q, get:(t, k) => k === 'then' ? (a, b) => run().then(a, b) : k === 'catch' ? e => run().catch(e) : k === 'finally' ? e => run().finally(e)
+      : (...a) => { if(k === 'eq' || k === 'in') f.push([k, a[0], a[1]]); if(k === 'single' || k === 'maybeSingle') st.one = true; if(['insert', 'update', 'upsert', 'delete'].includes(k)) v = null; return q; } });
+    return q; };
+  client.from = table => chain(() => (LEARN_TABLES[table] || (() => []))(), table);
   client.rpc = (name, args) => chain(learnRpc(name, args || {}));
-  client.channel = () => { const c = { on:() => c, subscribe:() => c, unsubscribe:() => {} }; return c; };
+  client.channel = () => { const c = new Proxy({}, { get:(t, k) => k === 'then' ? undefined : () => c }); return c; };          // (realtime: every call answers quietly)
   client.removeChannel = () => Promise.resolve();
   if(client.auth){
     try { client.auth.stopAutoRefresh(); } catch(e){}
@@ -144,6 +167,16 @@ function learnFakeClient(client){
       signInWithOtp:none, verifyOtp:none, updateUser:none, signInWithPassword:none, signOut:none, onAuthStateChange:() => ({ data:{ subscription:{ unsubscribe(){} } } }) });
   }
 }
+// the Ramzor's made-up data: children, their stars and journey, the bonus lists (for the overview video)
+const LEARN_KIDS = ['נועם', 'מאיה', 'איתן', 'שירה', 'עידו', 'ליה', 'יואב', 'תמר'];
+const LEARN_TABLES = {
+  roster:() => LEARN_KIDS.map((n, i) => ({ id:'k' + i, first_name:n, last_initial:'', age:String(5 + i % 6), sw_name:'', sw_phone:'' })),
+  child_state:() => LEARN_KIDS.map((n, i) => ({ child_id:'k' + i, stars:[3, 5, 1, 4, 2, 6, 0, 3][i], moon_steps:[4, 2, 6, 1, 5, 3, 2, 8][i], moon_gifts:0, mercury_steps:i === 7 ? 1 : 0, bricks:0 })),
+  mini_lists:() => [
+    { key:'bonusesDaily', items:[{ id:'bd1', text:'סבב מיץ פטל, למי שעשה תורנות חצר', startTime:'13:30', endTime:'15:30' }, { id:'bd2', text:'בארוחת ארבע: משהו מתוק קטן', startTime:'15:30', endTime:'17:00' }, { id:'bd3', text:'אחרי ארוחת הערב: זמן טלוויזיה', startTime:'18:00', endTime:'20:00' }] },
+    { key:'bonusesWeekly', items:[{ id:'bw1', text:'תורנויות מהנות, לפי הלוח' }, { id:'bw2', text:'בשישי: עוזרי אפייה', days:[5] }] },
+    { key:'dutyRoster', items:[] }, { key:'childSettings', items:[] }]
+};
 // what the made-up database answers; a request changes the made-up portal, so the screen shows what really happens
 function learnRpc(name, a){
   const st = portalState, today = srvToday();
@@ -161,17 +194,21 @@ function learnRpc(name, a){
   return null;
 }
 // the made-up month: "today" is the 10th; this month is published, the preferences of next month are open
-function learnDemoState(){
+function learnDemoState(dense){
   const cur = monthKeyOf(srvToday()), next = addMonths(cur, 1), today = srvToday();
-  const names = ['נועה', 'יוסי', 'מיכל', 'אלי', 'תמר', 'רן', 'שירה', 'עומר', 'ליאת', 'גיא'];
+  const names = ['נועה', 'יוסי', 'מיכל', 'אלי', 'תמר', 'רן', 'שירה', 'עומר', 'ליאת', 'גיא'].concat(dense ? ['דנה', 'אורי', 'נוי', 'בן', 'הדר', 'עדי', 'אסף', 'מור'] : []);
   const people = names.map((n, i) => ({ id:i ? 'p' + i : 'me', first:n, last:'', role:'instructor', admin:false, active:true, photo:samplePhoto(i + 1) }));
   people.push({ id:'c1', first:'רותם', last:'', role:'coordinator', admin:false, active:true, photo:samplePhoto(20) });
   const st = { version:2, serverMode:true, instructors:people, shiftTypes:JSON.parse(JSON.stringify(SRV_SHIFTS)), rules:Object.assign({}, RULES_DEFAULT), months:{}, swaps:[], assignmentIds:{}, announcements:[], timetable:{}, birthdays:{}, outbox:[], rows:[],
     notices:[{ id:'n1', to:'me', at:new Date().toISOString(), text:`הסידור של ${monthLabel(cur)} פורסם. אפשר לראות את המשמרות שלך כאן, בלשונית "הסידור".`, kind:'info', seen:false, sent:true, fromServer:false }],
     settings:{ theme:'dark' }, pending:{ waiting:0, discarded:0 } };
   [-1, 0, 1].forEach(n => { const mk = addMonths(cur, n); st.months[mk] = { deadline:addMonths(mk, -1) + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, goals:{}, assignments:{}, annot:{}, approvals:{}, published:n < 1, status:n < 1 ? 'published' : null }; });
-  let k = 0;
-  daysOfMonth(cur).forEach((d, di) => [['M', '07:00', '15:00'], ['A', '14:00', '22:00'], ['N', '22:00', '08:00']].forEach(([s, f, t], si) => {
+  let k = 0, at = 0;
+  if(dense) daysOfMonth(cur).forEach(d => [['M', '07:00', '15:00'], ['A', '14:00', '22:00'], ['N', '22:00', '08:00']].forEach(([s, f, t]) => {          // (the coordinator's month: as many as the standard numbers ask for)
+    const n = s === 'M' ? ([5, 6].includes(dowOf(d)) ? 5 : 1) : s === 'A' ? ([4, 5, 6].includes(dowOf(d)) ? 5 : 4) : 2;
+    for(let i = 0; i < n; i++){ const id = people[at++ % names.length].id; srvAddRow(st, { id:'a' + k++, staff_id:id, day:d, shift:s, from_time:f, to_time:t, flags:[] }); }
+  }));
+  else daysOfMonth(cur).forEach((d, di) => [['M', '07:00', '15:00'], ['A', '14:00', '22:00'], ['N', '22:00', '08:00']].forEach(([s, f, t], si) => {
     const mine = di % 3 === 1 && si === Math.floor(di / 3) % 3 % 2;          // (about every third day, a morning or an afternoon)
     srvAddRow(st, { id:'a' + k++, staff_id:mine ? 'me' : 'p' + (1 + (di * 3 + si) % 9), day:d, shift:s, from_time:f, to_time:t, flags:[] });
   }));
@@ -194,16 +231,27 @@ function learnFrameStart(){
   document.body.classList.add('learn-frame'); document.documentElement.classList.add('learn-frame');
   window.learnFrame = { scene:learnScene, act:learnAct, ready:true };
 }
-function learnScene(name){
+async function learnScene(name){
   document.querySelectorAll('.sheet, .toast').forEach(x => x.remove());
   learnFx.open = {};
-  portalState = learnDemoState(); portalServerOn = true;
+  try { stopCarousel(); } catch(e){}
+  document.getElementById('protected-app').style.display = ''; document.getElementById('view-display').classList.remove('active');
+  document.body.classList.remove('leopard-bg');
+  if(name === 'ramzor' || name === 'tv'){          // (the Ramzor and the kids' screen: the made-up children)
+    portalServerOn = false; await initRoster(); await initMiniLists();
+    if(name === 'ramzor'){ showHub(); document.getElementById('hub-daily-btn').click(); window.scrollTo(0, 0); return; }
+    roster.forEach((c, i) => { childSettings[c.id] = Object.assign({}, childSettings[c.id], { id:c.id, character:CHARACTER_KEYS[i % CHARACTER_KEYS.length] }); });          // (every child with a character, like the real screen)
+    document.getElementById('protected-app').style.display = 'none'; activateDisplayView(); pauseRotation(); await showSlide(5); return;
+  }
+  if(/^therapy/.test(name)){ simplicityData(); portalActivateView('view-therapy'); simplicityShow(name === 'therapy-staff' ? 'staff' : 'plan'); window.scrollTo(0, 0); return; }
+  portalState = learnDemoState(name === 'coord'); portalServerOn = true;
   Object.assign(srv, { me:'me', meRow:portalState.instructors[0], profile:{ kind:'instructor', female:true, manual_only:false, admin:false }, profileFor:'me', ahmash:{ p1:1, p4:2 }, photos:{},
     prefsOpenSrv:{ [prefsMonthNow()]:true }, showLong:false, pickOne:false, fixedNo:[], failed:false, busy:false, portalTheme:null });
   srvResnap();
   Object.assign(portalUi, { persona:'me', tab:null, month:monthKeyOf(srvToday()), pmonth:null, level:'yes', viewAs:null, actAs:false, editPrefs:false, manager:false, prefsPast:false, fold:{ mine:false, team:true, swap:false } });
   if(name === 'login'){ srvShowLogin('email'); window.scrollTo(0, 0); return; }
   if(name === 'home'){ showAppHome(); return; }
+  if(name === 'coord'){ const c = portalState.instructors.find(p => p.id === 'c1'); Object.assign(srv, { me:'c1', meRow:c, profile:{ kind:'coordinator', female:true, admin:false } }); portalUi.persona = 'c1'; await srvLoadCoord(); showPortal('schedule'); window.scrollTo(0, 0); return; }
   if(name === 'schedule-mine') portalUi.fold = { mine:true, team:false, swap:false };
   if(name === 'swaps'){ portalUi.fold = { mine:false, team:true, swap:false, swmine:true, swopen:true };          // (one request of "me" that still waits for somebody)
     const r = portalState.rows.filter(x => x.staff === 'me' && x.day > srvToday())[2]; if(r) learnRpc('request_swap', { p_assignment:r.id }); }
@@ -239,6 +287,15 @@ function learnAct(name){
 }
 
 // ---------------------------------------------------------------- the player page (no sign-in)
+// the device the video shows: a phone, or a wide screen (the kids' TV, the coordinator's computer). A chapter's scene step says which one.
+const LEARN_DEV = { phone:{ w:380, h:780 }, wide:{ w:1040, h:640 } };
+const learnDevAt = i => { for(let k = i; k >= 0; k--){ const s = LP.steps[k]; if(s.device) return s.device; if(s.scene) return 'phone'; } return 'phone'; };
+function learnSetDevice(d){
+  if(LP.dev === d) return false; LP.dev = d;
+  const ph = document.getElementById('ln-phone'); if(!ph) return false;
+  ph.classList.toggle('wide', d === 'wide'); ph.style.width = LEARN_DEV[d].w + 'px'; ph.style.height = LEARN_DEV[d].h + 'px'; learnFit(); return true;
+}
+const learnRateGet = () => { try { const r = parseFloat(localStorage.getItem('ramzor-learn-rate')); return [1, 1.25, 1.5].includes(r) ? r : 1; } catch(e){ return 1; } };
 const LP = { v:null, steps:[], idx:0, playing:false, run:0, voice:null, voiceOn:true, scale:1, frame:null, finger:null, hl:null };
 function learnStart(){
   document.getElementById('login-screen').style.display = 'none'; document.getElementById('protected-app').style.display = 'none';
@@ -259,10 +316,11 @@ function learnRoute(){
     <div class="ln-grid">${LEARN_ITEMS.map(v => `<a class="ln-card-btn" href="#learn:${v.id}"><span class="ln-ic">${v.icon}</span><b>${pEsc(v.title)}</b><small>${pEsc(v.sub)}</small><em>⏱ כ-${learnMinutes(v)} דקות · ${pEsc(v.who)}</em></a>`).join('')}</div></section>`;
 }
 function learnOpen(v){
-  LP.v = v; LP.steps = learnSteps(v); LP.idx = 0; LP.lastDone = -1; document.title = v.title + ' · סרטון הדרכה';
+  LP.v = v; LP.steps = learnSteps(v); LP.idx = 0; LP.lastDone = -1; LP.dev = null; document.title = v.title + ' · סרטון הדרכה';
   const voiceOk = learnCanSpeak();
   learnRoot().innerHTML = `<section class="ln-player">
     <header class="ln-top"><span class="ln-title"><b>${pEsc(v.title)}</b><small>סרטון הדרכה · ${pEsc(v.who)}</small></span>
+      <button type="button" class="ln-ibtn" id="ln-rate" aria-label="מהירות">⏩ ×${learnRateGet()}</button>
       <button type="button" class="ln-ibtn" id="ln-voice" aria-pressed="${LP.voiceOn && voiceOk}"${voiceOk ? '' : ' disabled title="אין קול עברי בדפדפן הזה. הכתוביות מספרות הכל"'}>🔊 קריינות</button></header>
     <div class="ln-main"><div class="ln-stage" id="ln-stage">
       <div class="ln-slot" id="ln-slot"><div class="ln-phone" id="ln-phone"><div class="ln-scr">
@@ -281,12 +339,14 @@ function learnOpen(v){
     <aside class="ln-chaps"><h3>פרקים</h3>${v.chapters.map((c, k) => `<button type="button" class="ln-chap" data-ci="${k}"><span class="n">${k + 1}</span><span>${pEsc(c.title)}</span></button>`).join('')}</aside></div></section>`;
   const $ = id => document.getElementById(id);
   LP.frame = $('ln-frame'); LP.finger = null; LP.hl = null;
-  learnFit();
+  learnSetDevice('phone');
   const ready = () => { const w = LP.frame.contentWindow; return w && w.learnFrame && w.learnFrame.ready; };
-  const wait = setInterval(() => { if(!document.body.contains(LP.frame)){ clearInterval(wait); return; } if(ready()){ clearInterval(wait); learnFW().learnFrame.scene(LP.steps[0].scene || 'schedule'); $('ln-start').disabled = false; $('ln-start').textContent = '▶ הפעלה'; } }, 200);
+  const wait = setInterval(() => { if(!document.body.contains(LP.frame)){ clearInterval(wait); return; } if(ready()){ clearInterval(wait); learnSetDevice(learnDevAt(0)); learnFW().learnFrame.scene(LP.steps[0].scene || 'schedule'); $('ln-start').disabled = false; $('ln-start').textContent = '▶ הפעלה'; } }, 200);
   $('ln-start').addEventListener('click', () => { learnUnlock(); $('ln-cover').classList.remove('on'); LP.playing = true; learnGo(0); });
   $('ln-replay').addEventListener('click', () => { learnUnlock(); $('ln-end').classList.remove('on'); LP.playing = true; learnGo(0); });
   $('ln-play').addEventListener('click', learnToggle);
+  LP.rate = learnRateGet();
+  $('ln-rate').addEventListener('click', () => { LP.rate = LP.rate === 1 ? 1.25 : LP.rate === 1.25 ? 1.5 : 1; $('ln-rate').textContent = '⏩ ×' + LP.rate; if(LP.audio) LP.audio.playbackRate = LP.rate; try { localStorage.setItem('ramzor-learn-rate', String(LP.rate)); } catch(e){} });
   $('ln-prev').addEventListener('click', () => learnGo(Math.max(0, LP.idx - 1)));
   $('ln-next').addEventListener('click', () => learnGo(Math.min(LP.steps.length - 1, LP.idx + 1)));
   $('ln-bar').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); learnGo(Math.round((r.right - e.clientX) / r.width * (LP.steps.length - 1))); });
@@ -317,11 +377,13 @@ function learnStopSound(){ if(LP.audio) try { LP.audio.pause(); } catch(e){} try
 function learnFit(){
   const stage = document.getElementById('ln-stage'), phone = document.getElementById('ln-phone'), slot = document.getElementById('ln-slot'); if(!stage) return;
   const narrow = innerWidth <= 860, availH = narrow ? innerHeight - 250 : stage.clientHeight - 170, availW = stage.clientWidth - 24;          // (on a phone: the phone fills the screen, the chapters are below)
-  LP.scale = Math.max(.42, Math.min(1, availH / 780, availW / 380));
-  phone.style.transform = `scale(${LP.scale})`; slot.style.width = 380 * LP.scale + 'px'; slot.style.height = 780 * LP.scale + 'px';
+  const dv = LEARN_DEV[LP.dev || 'phone'];
+  LP.scale = Math.max(.25, Math.min(1, availH / dv.h, availW / dv.w));
+  phone.style.transform = `scale(${LP.scale})`; slot.style.width = dv.w * LP.scale + 'px'; slot.style.height = dv.h * LP.scale + 'px';
 }
 // waits ms of playing time; false when another step started meanwhile
 function learnWait(ms, my){
+  ms = ms / (LP.rate || 1);
   return new Promise(res => { let el = 0, last = performance.now();
     (function tick(){ const now = performance.now(); if(my !== LP.run) return res(false); if(LP.playing) el += now - last; last = now; if(el >= ms) return res(true); setTimeout(tick, 40); })(); });          // (a timer, not animation frames: those stop when the page is not on the screen)
 }
@@ -333,7 +395,7 @@ function learnSpeak(text, my){
     await new Promise(res => { let iv, t; const done = () => { clearInterval(iv); clearTimeout(t); a.onended = a.onerror = null; res(); };
       a.onended = done; a.onerror = done; t = setTimeout(done, learnReadMs(text) * 4);
       iv = setInterval(() => { if(my !== LP.run){ a.pause(); done(); } }, 200);
-      a.muted = false; a.src = clip; const p = a.play(); if(p && p.catch) p.catch(done); });
+      a.muted = false; a.src = clip; a.playbackRate = LP.rate || 1; const p = a.play(); if(p && p.catch) p.catch(done); });
   })();
   if(!LP.voiceOn || !('speechSynthesis' in window) || !(LP.voice || LP.byLang) || !text) return Promise.resolve();
   let busy = false; try { busy = speechSynthesis.speaking || speechSynthesis.pending; if(busy) speechSynthesis.cancel(); } catch(e){ return Promise.resolve(); }
@@ -353,7 +415,7 @@ async function learnScrollTo(sel, my, fast){
   const h = LP.frame.clientHeight, r = el.getBoundingClientRect();
   if(r.top >= 50 && r.bottom <= h - 70) return;
   el.scrollIntoView({ block:'center', behavior:fast ? 'auto' : 'smooth' });
-  if(!fast) await learnWait(600, my);
+  if(!fast) await learnWait(420, my);
 }
 function learnHighlight(sel){
   const el = learnFind(sel); if(!el) return;
@@ -368,26 +430,27 @@ async function learnTap(sel, my, fast){
     const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
     if(!LP.finger){ LP.finger = document.createElement('div'); LP.finger.className = 'ln-finger'; LP.finger.style.left = x + 60 + 'px'; LP.finger.style.top = y + 120 + 'px'; learnLayer().appendChild(LP.finger); void LP.finger.offsetWidth; }
     LP.finger.style.opacity = 1; LP.finger.style.left = x + 'px'; LP.finger.style.top = y + 'px';
-    if(!await learnWait(750, my)) return;
+    if(!await learnWait(520, my)) return;
     LP.finger.classList.add('press'); const rp = document.createElement('div'); rp.className = 'ln-ripple'; rp.style.left = x + 'px'; rp.style.top = y + 'px'; learnLayer().appendChild(rp); setTimeout(() => rp.remove(), 700);
     await learnWait(180, my); LP.finger.classList.remove('press');
   }
   if(my !== LP.run) return;
   el.click();
-  await learnWait(fast ? 0 : 450, my); if(fast) await new Promise(r => setTimeout(r, 120));          // (the screen answers: a sheet opens, a list draws)
+  await learnWait(fast ? 0 : 300, my); if(fast) await new Promise(r => setTimeout(r, 120));          // (the screen answers: a sheet opens, a list draws)
 }
 async function learnType(sel, text, my, fast){
   const el = learnFind(sel); if(!el) return;
   await learnScrollTo(sel, my, fast);
   el.classList.add('ln-typing');
-  for(let k = fast ? text.length : 1; k <= text.length; k++){ el.value = text.slice(0, k); if(!fast && !await learnWait(85, my)) return; }
+  for(let k = fast ? text.length : 1; k <= text.length; k++){ el.value = text.slice(0, k); if(!fast && !await learnWait(55, my)) return; }
   el.dispatchEvent(new Event('input', { bubbles:true })); el.classList.remove('ln-typing');
 }
 // a step's screen: a fresh scene at its chapter start; jumping into the middle of a chapter replays the steps before it quickly
 async function learnPrepare(i, my){
   let s = i; while(s > 0 && !LP.steps[s].scene) s--;
   const fw = learnFW(); if(!fw || !fw.learnFrame) return;
-  fw.learnFrame.scene(LP.steps[s].scene || 'schedule');
+  if(learnSetDevice(learnDevAt(i))) await new Promise(r => setTimeout(r, 150));          // (the page in the frame takes the new size first)
+  await fw.learnFrame.scene(LP.steps[s].scene || 'schedule');
   for(let k = s; k < i; k++){ const st = LP.steps[k]; if(my !== LP.run) return;
     if(st.act) fw.learnFrame.act(st.act); if(st.type) await learnType(st.type[0], st.type[1], my, true); if(st.tap) await learnTap(st.tap, my, true); }
 }
@@ -405,18 +468,19 @@ async function learnGo(i){
   document.getElementById('ln-end').classList.remove('on'); document.getElementById('ln-cover').classList.remove('on');
   learnClear(); learnShow(i);
   const st = LP.steps[i], fw = learnFW();
-  if(st.scene || i === 0 || !LP.lastDone || LP.lastDone !== i - 1) await learnPrepare(i, my);
+  if(st.scene || i === 0 || !LP.lastDone || LP.lastDone !== i - 1){ try { await learnPrepare(i, my); } catch(e){ console.warn('learn scene', e); } }          // (a screen that fails to draw must not stop the video)
   if(my !== LP.run) return;
   if(st.act && fw && fw.learnFrame) fw.learnFrame.act(st.act);
   const target = st.hl || (st.type && st.type[0]) || st.tap;
-  if(st.hl && fw && fw.document.querySelector('.toast')){ if(!await learnWait(1800, my)) return; fw.document.querySelectorAll('.toast').forEach(t => t.remove()); }          // (the message of the last tap is read first, then it leaves the light free)
+  if(st.hl && fw && fw.document.querySelector('.toast')){ if(!await learnWait(1200, my)) return; fw.document.querySelectorAll('.toast').forEach(t => t.remove()); }          // (the message of the last tap is read first, then it leaves the light free)
   if(target) await learnScrollTo(target, my);
   if(my !== LP.run) return;
   if(st.hl) learnHighlight(st.hl);
   const spoken = learnSpeak(st.say, my);
   if(st.type) await learnType(st.type[0], st.type[1], my);
   if(my !== LP.run) return;
-  await Promise.all([learnWait(learnReadMs(st.say) - (st.type ? st.type[1].length * 85 : 0), my), spoken]);
+  const recorded = LP.voiceOn && !!learnClip(st.say) && !!LP.audio;          // (with a recording: on as soon as it ends; without: the time to read the caption)
+  await Promise.all([learnWait(recorded ? 250 : learnReadMs(st.say) - (st.type ? st.type[1].length * 85 : 0), my), spoken]);
   if(my !== LP.run) return;
   while(!LP.playing){ if(!await learnWait(100, my)) return; }
   if(st.tap){ learnClear(); await learnTap(st.tap, my); }
