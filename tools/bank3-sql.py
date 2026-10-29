@@ -5,6 +5,7 @@
 # The goals of the first bank (bank2) are archived (active = false) when these go in. Everything Claude writes is a draft until the admin approves it.
 # Run: python tools/bank3-sql.py
 import io, json, glob, os, re, sys
+import test_guard          # (TEST only: the SQL stops on any other database)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AGES = ['2-5', '6-9', '10-12', '13-15']
@@ -71,5 +72,5 @@ for t in themes:
 out.append(""); out.append("-- the goals of the first bank (bank2) leave the list: kept in the library, not offered any more")
 out.append("update public.mercury_library set active = false where scope = 'mercury' and kind = 'goal' and content ->> 'v' = '2' and coalesce(content ->> 'bank', '') <> '3';")
 out.append(""); out.append("select 'scheduling_v47_bank' as part, 'ok' as result, (select count(*) from public.mercury_library where kind = 'goal' and content ->> 'bank' = '3' and active) as goals_v3;")
-with io.open(os.path.join(ROOT, 'supabase', 'scheduling-v47-bank.sql'), 'w', encoding='utf-8', newline='\n') as h: h.write('\n'.join(out) + '\n')
+with io.open(os.path.join(ROOT, 'supabase', 'scheduling-v47-bank.sql'), 'w', encoding='utf-8', newline='\n') as h: h.write('\n'.join(test_guard.add(out)) + '\n')
 print('ok: %d goals' % n)

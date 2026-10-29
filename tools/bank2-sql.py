@@ -4,6 +4,7 @@
 # The old bank (version 1 goals and the whole-plan templates) goes to the archive (active = false), kept as raw material.
 # Run: python tools/bank2-sql.py
 import io, json, glob, os, sys
+import test_guard          # (TEST only: the SQL stops on any other database)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AGES = ['2-5', '5-8']
@@ -86,5 +87,5 @@ for t in themes:
         out.append("insert into public.mercury_library (scope, kind, title, description, themes, category, methods, content, draft) values ('mercury', 'goal', %s, %s, %s, %s, %s, %s, true) %s"
                    % (q(g['title']), q(g['line']), arr([t['theme']]), q(t['theme']), arr(g['methods']), js(content), up)); n += 1
 out.append(""); out.append("select 'scheduling_v44_bank' as part, 'ok' as result, (select count(*) from public.mercury_library where kind = 'goal' and content ->> 'v' = '2' and active) as goals_v2, (select count(*) from public.mercury_library where kind = 'method' and active) as methods;")
-with io.open(os.path.join(ROOT, 'supabase', 'scheduling-v44-bank.sql'), 'w', encoding='utf-8', newline='\n') as h: h.write('\n'.join(out) + '\n')
+with io.open(os.path.join(ROOT, 'supabase', 'scheduling-v44-bank.sql'), 'w', encoding='utf-8', newline='\n') as h: h.write('\n'.join(test_guard.add(out)) + '\n')
 print('ok: %d goals, %d methods' % (n, len(METHODS)))

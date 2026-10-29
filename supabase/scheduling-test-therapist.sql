@@ -2,6 +2,13 @@
 -- Before running: Authentication -> Users -> Add user -> Create new user (tick "Auto Confirm User"), the same password as the other test accounts:
 --     therapist-test@merkaz-cherum.local    therapist2-test@merkaz-cherum.local
 -- Safe to run again. (The automatic checks use c1, c2, c15 for their own therapist; these are c6-c9 and c10-c13.)
+-- safety: TEST only. On any other database this stops here, before any change (the marker: supabase/test-marker.sql, run once on TEST)
+do $$ begin
+  if to_regclass('ops.environment') is null or not exists (select 1 from ops.environment where name = 'test') then
+    raise exception 'עצירה: זה לא מסד הבדיקות (TEST). לא שונה דבר.';
+  end if;
+end $$;
+
 do $$
 declare t record; sid uuid; uid uuid; author uuid;
 begin
