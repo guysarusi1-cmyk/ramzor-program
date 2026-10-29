@@ -1,7 +1,7 @@
 # The goal bank, version 3 (Guy 2026-10-29, after the Perplexity research report): supabase/bank3/*.json -> supabase/scheduling-v47-bank.sql
 # Every goal is written for ONE age group (2-5, 6-9, 10-12, 13-15: "main"), may be marked fit for adjacent ones ("also"), and says how well it
 # is grounded ("evidence": tested / derived / new, with a note). Per age: 5 targets worded by opportunity (professional + plain for the staff +
-# 5 spiral stations) and 8 interventions (name, what, why, frequency, approach, the targets it fits, 2-3 sentences, what NOT to do).
+# 5 spiral stations) and 8 interventions (name, what, why, frequency, approach, the targets it fits, 2-3 sentences, and what NOT to do only where there is a real trap).
 # The goals of the first bank (bank2) stay until these replace them. Everything Claude writes is a draft until the admin approves it.
 # Run: python tools/bank3-sql.py
 import io, json, glob, os, sys
@@ -35,7 +35,7 @@ for t in themes:
                 if x['approach'] not in APPROACHES: errors.append('%s %s: approach %s' % (T, x['id'], x['approach']))
                 if not all(k in ids for k in x['targets']): errors.append('%s %s: target ids' % (T, x['id']))
                 if not (2 <= len(x['sentences']) <= 3): errors.append('%s %s: sentences' % (T, x['id']))
-                for k in ['name', 'what', 'why', 'freq', 'avoid']:
+                for k in ['name', 'what', 'why', 'freq']:          # ("avoid" only where there is a real trap of this very intervention: Guy 2026-10-29)
                     if not x.get(k): errors.append('%s %s: no %s' % (T, x['id'], k))
 if errors: print('\n'.join(errors)); sys.exit(1)
 
