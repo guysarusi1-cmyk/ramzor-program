@@ -12,7 +12,10 @@ const BANK_AGE_WORD = Object.assign({ '5-8':'גילאי 5–8', '8-12':'גילא
 const BANK_LEGACY = { '6-9':'5-8', '10-12':'5-8', '13-15':'5-8' };          // (the first bank had 2-5 and 5-8, and older children got 5-8)
 // how well a goal is grounded in research (the therapist only): tested / derived from a supported approach / a new adaptation not tested yet
 const BANK_EVIDENCE = { tested:'נבדק מחקרית', derived:'נגזר מגישה מבוססת', new:'התאמה חדשה, טרם נבדקה' };
-const bankEvidenceTag = ev => ev && BANK_EVIDENCE[ev.level] ? `<span class="bk-ev bk-ev-${pEsc(ev.level)}" title="${pEsc(ev.note || '')}">${BANK_EVIDENCE[ev.level]}</span>` : '';
+// the label opens a small dark bubble in its own colour with the reason (hover, or a tap / focus on a phone) — not the browser's white box
+const bankEvidenceTag = ev => ev && BANK_EVIDENCE[ev.level] ? `<span class="bk-ev bk-ev-${pEsc(ev.level)}" tabindex="0">${BANK_EVIDENCE[ev.level]}${ev.note ? `<span class="bk-ev-pop" role="tooltip">${pEsc(ev.note)}</span>` : ''}</span>` : '';
+// a sentence to say to the child: a round speech bubble in the portal's gold
+const SAY = '<svg class="say-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.2c-5.1 0-9.2 3.4-9.2 7.7 0 2.3 1.2 4.4 3.1 5.8-.2 1.5-1 2.9-2.2 3.9 2.1 0 4.1-.8 5.6-2 .9.2 1.8.3 2.7.3 5.1 0 9.2-3.4 9.2-7.9S17.1 3.2 12 3.2z"/></svg>';
 const BANK_METHODS0 = ['ARC', 'DDP/PACE', 'TF-CBT', 'Theraplay', 'ויסות חושי', 'NMT'];
 const BANK_PART_KINDS = ['avoid', 'signs', 'calm', 'routine'];
 const bankIsAdmin = () => !!(srv.profile && srv.profile.admin);
@@ -100,7 +103,7 @@ function bankPreviewHtml(x, age){
   if(c.v === 2){          // (the bank of the walkthrough: targets and interventions per age)
     const w = bankWording(x, age) || {};
     return `${c.evidence ? `<div class="bk-pv-row"><b>ביסוס</b><span>${bankEvidenceTag(c.evidence)}${c.evidence.note ? ` <small>${pEsc(c.evidence.note)}</small>` : ''}</span></div>` : ''}<div class="bk-pv-row"><b>יעדים</b><span>${(w.targets || []).map(t => `<span class="bk-line">• ${pEsc(t.text)} <small>(לצוות: ${pEsc(t.staff)})</small></span>`).join('')}</span></div>
-      <div class="bk-pv-row"><b>דרכי התערבות</b><span>${(w.interventions || []).map(i => `<span class="bk-line"><b>${pEsc(i.name)}</b> ${pEsc(i.what)} <em class="tp-appr">${pEsc(i.approach)}</em><br><small>${pEsc(i.freq || '')} · ${(i.sentences || []).map(s => '💬 ' + pEsc(s)).join(' ')}</small>${i.avoid ? `<small class="tp-avoid">🚫 ${pEsc(i.avoid)}</small>` : ''}</span>`).join('')}</span></div>
+      <div class="bk-pv-row"><b>דרכי התערבות</b><span>${(w.interventions || []).map(i => `<span class="bk-line"><b>${pEsc(i.name)}</b> ${pEsc(i.what)} <em class="tp-appr">${pEsc(i.approach)}</em><br><small>${pEsc(i.freq || '')} · ${(i.sentences || []).map(s => SAY + pEsc(s)).join(' ')}</small>${i.avoid ? `<small class="tp-avoid">🚫 ${pEsc(i.avoid)}</small>` : ''}</span>`).join('')}</span></div>
       ${(c.strengths || []).length ? `<div class="bk-pv-row"><b>חוזקות</b><span>${c.strengths.map(pEsc).join(' · ')}</span></div>` : ''}`;
   }
   if(x.kind !== 'goal' && x.kind !== 'plan') return `<div class="bk-pv-text">${pEsc(bankHasAges(x) ? (bankWording(x, age) || '') : (x.description || ''))}</div>`;

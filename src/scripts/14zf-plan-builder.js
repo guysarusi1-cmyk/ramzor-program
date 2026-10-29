@@ -63,7 +63,7 @@ function tpGoalCard(id, g, i, can){
   const targets = v2 ? g.targets_list.map((t, k) => `<details class="tp-target"><summary><span>יעד ${k + 1} – ${pEsc(t.text)}</span>${t.now ? `<em class="tp-now">עכשיו ${t.now}${t.target ? ' · רוצים ' + t.target : ''}</em>` : ''}</summary>
       <div class="tp-t-body"><div><span class="tp-lbl">לצוות:</span> ${pEsc(t.staff || '')}</div>${(t.scale || []).length ? `<ol class="tp-stations">${t.scale.map((s, j) => `<li class="${t.now === j + 1 ? 'now' : ''}${t.target === j + 1 ? ' goal' : ''}">${pEsc(s)}</li>`).join('')}</ol>` : ''}</div></details>`).join('')
     : (g.targets ? `<div class="tp-legacy"><span class="tp-lbl">יעדים:</span> ${pEsc(g.targets)}</div>` : '');
-  const ints = v2 ? (g.interventions_list || []).map(x => `<div class="tp-int"><span><b>${pEsc(x.name)}</b> ${pEsc(x.what)}${x.freq ? ` <small>(${pEsc(x.freq)})</small>` : ''}${(x.sentences || []).length ? `<span class="tp-sent">${x.sentences.map(s => '💬 ' + pEsc(s)).join('<br>')}</span>` : ''}${x.avoid ? `<small class="tp-avoid">🚫 ${pEsc(x.avoid)}</small>` : ''}</span><em class="tp-appr">${pEsc(x.approach || '')}</em></div>`).join('')
+  const ints = v2 ? (g.interventions_list || []).map(x => `<div class="tp-int"><span><b>${pEsc(x.name)}</b> ${pEsc(x.what)}${x.freq ? ` <small>(${pEsc(x.freq)})</small>` : ''}${(x.sentences || []).length ? `<span class="tp-sent">${x.sentences.map(s => SAY + pEsc(s)).join('<br>')}</span>` : ''}${x.avoid ? `<small class="tp-avoid">🚫 ${pEsc(x.avoid)}</small>` : ''}</span><em class="tp-appr">${pEsc(x.approach || '')}</em></div>`).join('')
     : (g.interventions ? `<div class="tp-legacy"><span class="tp-lbl">מה עושים:</span> ${pEsc(g.interventions)}</div>` : '');
   const acts = can ? `<div class="tp-acts">${v2 ? `<button type="button" class="btn ghost small" data-tp-edit="${i}">עריכה</button>` : ''}
       <details class="tp-more-acts"><summary aria-label="עוד פעולות">⋯</summary><div>${v2 ? `<button type="button" class="btn ghost small" data-tp-route="${i}">פתיחה במסלול</button>` : ''}
@@ -276,8 +276,8 @@ async function tpBuilder(id, state){
     }
     else if(s.step === 'sents'){
       inner = `<h2>משפטים לומר לילד/ה</h2><div class="pnote">בוחרים אחד אחד. רק מה שבחרת יגיע לצוות.</div>
-        ${s.ints.map(x => `<div class="tp-sent-block"><b>${pEsc(x.name)}</b><div class="tp-chips">${(x.sentencesAll || []).map((t, k) => `<button type="button" class="th-chip${(x.sentences || []).includes(G(t)) ? ' on' : ''}" data-sent="${pEsc(x.id)}" data-k="${k}">💬 ${pEsc(G(t))}</button>`).join('')}</div>
-          ${(x.sentences || []).filter(t => !(x.sentencesAll || []).map(G).includes(t)).map(t => `<span class="th-chip on">💬 ${pEsc(t)}</span>`).join('')}
+        ${s.ints.map(x => `<div class="tp-sent-block"><b>${pEsc(x.name)}</b><div class="tp-chips">${(x.sentencesAll || []).map((t, k) => `<button type="button" class="th-chip${(x.sentences || []).includes(G(t)) ? ' on' : ''}" data-sent="${pEsc(x.id)}" data-k="${k}">${SAY}${pEsc(G(t))}</button>`).join('')}</div>
+          ${(x.sentences || []).filter(t => !(x.sentencesAll || []).map(G).includes(t)).map(t => `<span class="th-chip on">${SAY}${pEsc(t)}</span>`).join('')}
           <div class="th-add-row"><input type="text" data-own-sent="${pEsc(x.id)}" placeholder="משפט משלי"><button type="button" class="btn ghost small" data-own-sent-add="${pEsc(x.id)}">הוספה</button></div></div>`).join('')}${nav(true)}`;
     }
     else if(s.step === 'journey'){          // (its own step: Guy, after the simplicity checker)
@@ -295,7 +295,7 @@ async function tpBuilder(id, state){
       inner = `<h2>סיכום</h2><div class="tp-sum"><div><span class="tp-lbl">מטרה</span><b>${pEsc(G(s.title))}</b> <em class="tp-now">${s.status === 'focus' ? 'תיכנס למוקד' : 'תחכה בהמתנה'}</em></div>
         <div><span class="tp-lbl">יעדים</span>${s.targets.map(t => `<div>• ${pEsc(G(t.text))}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · רוצים ' + t.target : ''}</em>` : ''}</div>`).join('')}</div>
         <div><span class="tp-lbl">דרכי התערבות</span>${s.ints.map(x2 => `<div>• ${pEsc(x2.name)} <em class="tp-appr">${pEsc(x2.approach || '')}</em></div>`).join('')}</div>
-        <div><span class="tp-lbl">משפטים</span>${s.ints.flatMap(x2 => x2.sentences || []).map(t => `<div>💬 ${pEsc(t)}</div>`).join('') || '<div class="pnote">לא נבחרו משפטים.</div>'}</div>
+        <div><span class="tp-lbl">משפטים</span>${s.ints.flatMap(x2 => x2.sentences || []).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('') || '<div class="pnote">לא נבחרו משפטים.</div>'}</div>
         <div><span class="tp-lbl">מסע ומקדש</span>${s.strengths.map(t => `<span class="th-chip">${pEsc(t)}</span>`).join(' ') || '<span class="pnote">בלי חוזקות</span>'}${s.planet ? ` · 🪐 ${pEsc(((thp.planets || []).find(p => p.id === s.planet) || {}).name || '')}` : ''}</div></div>
         ${nav(true, 'לתצוגה של הצוות ←')}`;
     }
@@ -388,7 +388,7 @@ function tpStaffGoalHtml(childId, g, withFeedback){
     ${(g.targets_list || []).length ? `<div class="tp-sg-t">${g.targets_list.map(t => `<div class="ar-keep">🎯 ${pEsc(t.staff || '')}</div>`).join('')}</div>` : ''}
     ${(g.interventions_list || []).map(i => `<div class="tp-sg-i"><span class="ar-keep"><b>${pEsc(i.name)}</b> ${pEsc(i.what)}${i.freq ? ` <small>(${pEsc(i.freq)})</small>` : ''}${i.avoid ? `<small class="tp-avoid">🚫 ${pEsc(i.avoid)}</small>` : ''}</span><em class="tp-appr">${pEsc(i.approach || '')}</em>
       ${withFeedback ? `<span class="tp-fb"><button type="button" data-fb="${pEsc(childId)}|${pEsc(g.id)}|${pEsc(i.id)}|up" aria-label="עבד">👍</button><button type="button" data-fb="${pEsc(childId)}|${pEsc(g.id)}|${pEsc(i.id)}|down" aria-label="לא עבד">👎</button></span>` : ''}</div>`).join('')}
-    ${sents.length ? `<div class="tp-sg-s ar-keep">${sents.slice(0, 2).map(t => `<div>💬 ${pEsc(t)}</div>`).join('')}${sents.length > 2 ? `<details><summary>עוד</summary>${sents.slice(2).map(t => `<div>💬 ${pEsc(t)}</div>`).join('')}</details>` : ''}</div>` : ''}</div>`;
+    ${sents.length ? `<div class="tp-sg-s ar-keep">${sents.slice(0, 2).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('')}${sents.length > 2 ? `<details><summary>עוד</summary>${sents.slice(2).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('')}</details>` : ''}</div>` : ''}</div>`;
 }
 function tpWireFeedback(box){
   box.querySelectorAll('[data-fb]').forEach(b => b.addEventListener('click', () => {
