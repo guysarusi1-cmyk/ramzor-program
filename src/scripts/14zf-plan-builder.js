@@ -254,7 +254,7 @@ async function tpBuilder(id, state){
       const w = ageW(), sel = new Set(s.targets.map(t => t.id)), bank = (w.targets || []);
       const mean = (t, k) => t[k] ? `<div class="tp-rate-mean">${t[k]} = ${pEsc((t.scale || [])[t[k] - 1] || '')}</div>` : '<div class="tp-rate-mean dim">בוחרים מספר, ורואים כאן מה הוא אומר</div>';          // (the meaning of the number: the UX reviewer, finding 2)
       const row = (t, k, w) => `<div role="group" aria-label="${w}"><span>${w}</span>${[1, 2, 3, 4, 5].map(v => `<button type="button" class="${t[k] === v ? 'on' : ''}" aria-pressed="${t[k] === v}" aria-label="${w} ${v}: ${pEsc((t.scale || [])[v - 1] || '')}" data-rate="${pEsc(t.id)}" data-k="${k}" data-v="${v}">${v}</button>`).join('')}</div>${mean(t, k)}`;
-      const ratings = t => `<div class="tp-rate">${row(t, 'now', 'איפה עכשיו')}${row(t, 'target', 'לאן רוצים להגיע')}</div>`;
+      const ratings = t => tpSpiralPick(t);          // (a real spiral to tap, instead of two rows of 1-5: Guy 2026-10-29)
       const scaleEd = t => `<details class="tp-scale-ed"><summary>הספירלה של היעד (5 תחנות)</summary>${[0, 1, 2, 3, 4].map(k => `<input type="text" data-scale="${pEsc(t.id)}" data-k="${k}" value="${pEsc((t.scale || [])[k] || '')}" placeholder="${k + 1}">`).join('')}</details>`;
       inner = `<h2>יעדים <small>(1–3)</small></h2>${lib() && !lib().content.ages[s.age] ? `<div class="pnote">המטרה נכתבה ל${pEsc(BANK_AGE_WORD[Object.keys(lib().content.ages)[0]] || '')}, ומוצג הנוסח שלה.</div>` : ''}
         ${bank.map(t => { const on = sel.has(t.id), mine = s.targets.find(x => x.id === t.id) || t;
@@ -327,6 +327,10 @@ async function tpBuilder(id, state){
       else s.targets = s.targets.filter(x => x.id !== t.id);
       draw(); }));
     body.querySelectorAll('[data-rate]').forEach(b => b.addEventListener('click', () => { const t = s.targets.find(x => x.id === b.dataset.rate); if(t){ t[b.dataset.k] = +b.dataset.v; draw(); } }));
+    body.querySelectorAll('[data-spmode]').forEach(b => b.addEventListener('click', () => { const [tid, k] = b.dataset.spmode.split('|'); TP_SP_MODE[tid] = k; draw(); }));
+    body.querySelectorAll('[data-spst]').forEach(b => b.addEventListener('click', () => {          // (a station of the spiral: "now" first, then "where to", then the chosen one)
+      const [tid, v] = b.dataset.spst.split('|'), t = s.targets.find(x => x.id === tid); if(!t) return;
+      const k = tpSpMode(t); t[k] = +v; if(k === 'now' && !t.target) TP_SP_MODE[tid] = 'target'; draw(); }));
     body.querySelectorAll('[data-scale]').forEach(i => i.addEventListener('change', () => { const t = s.targets.find(x => x.id === i.dataset.scale); if(t){ t.scale = t.scale || []; t.scale[+i.dataset.k] = i.value.trim(); } }));
     on('#tb-t-add', () => { const text = $('#tb-t-text').value.trim(), staff = $('#tb-t-staff').value.trim(); if(!text){ toast('כותבים את היעד'); return; } if(s.targets.length >= 3){ toast('אפשר עד 3 יעדים'); return; }
       s.targets.push({ id:tpUid('t'), own:true, text, staff:staff || text, scale:['', '', '', '', ''], now:null, target:null }); draw(); });
@@ -380,6 +384,23 @@ function tpGoalFromState(s, G){
     methods:[...new Set(s.ints.map(i => i.approach).filter(Boolean))], bank:x ? { id:x.id, age:s.age, evidence:(x.content || {}).evidence || null } : null });          // (the evidence stays with the therapist: plan_guidance leaves "bank" out)
 }
 
+// ---- the spiral of a target, to tap (Guy 2026-10-29): 5 stations from the centre outwards; ● "איפה עכשיו", ★ "לאן רוצים להגיע",
+// and the way between them in gold. Two small switches choose which mark a tap sets; the meaning of both stations is written under it
+const TP_SP_MODE = {};
+const tpSpMode = t => TP_SP_MODE[t.id] || (!t.now ? 'now' : !t.target ? 'target' : 'now');
+function tpSpiralPick(t){
+  const C = 110, A = 9, B = 6.4, TH = [0.9, 1.75, 2.6, 3.45, 4.3].map(x => x * Math.PI), at = th => { const r = A + B * th; return [C + r * Math.cos(th), C + r * Math.sin(th)]; };
+  const path = (a, b) => { const pts = []; for(let th = a; th <= b + 1e-6; th += 0.06) pts.push(at(th).map(n => n.toFixed(1)).join(',')); return 'M' + pts.join(' L'); };
+  const mode = tpSpMode(t), lo = t.now && t.target ? Math.min(t.now, t.target) : 0, hi = t.now && t.target ? Math.max(t.now, t.target) : 0;
+  const sc = t.scale || [], mean = v => v ? `${v} = ${pEsc(sc[v - 1] || '')}` : '—';
+  const st = TH.map((th, i) => { const [x, y] = at(th), v = i + 1, cls = `${t.now === v ? ' now' : ''}${t.target === v ? ' goal' : ''}`;
+    return `<button type="button" class="tp-sp-st${cls}" style="left:${(x / 2.2).toFixed(1)}%;top:${(y / 2.2).toFixed(1)}%" data-spst="${pEsc(t.id)}|${v}" aria-label="תחנה ${v}: ${pEsc(sc[i] || '')}">${t.target === v ? '★' : v}</button>`; }).join('');
+  return `<div class="tp-sp">
+    <div class="tp-sp-modes" role="group" aria-label="מה מסמנים"><button type="button" class="${mode === 'now' ? 'on' : ''}" data-spmode="${pEsc(t.id)}|now" aria-pressed="${mode === 'now'}">● איפה עכשיו</button><button type="button" class="${mode === 'target' ? 'on' : ''}" data-spmode="${pEsc(t.id)}|target" aria-pressed="${mode === 'target'}">★ לאן רוצים להגיע</button></div>
+    <div class="tp-sp-box"><svg viewBox="0 0 220 220" aria-hidden="true"><path class="tp-sp-line" d="${path(0.25 * Math.PI, 4.45 * Math.PI)}"/>${lo ? `<path class="tp-sp-way" d="${path(TH[lo - 1], TH[hi - 1])}"/>` : ''}</svg>${st}</div>
+    <div class="tp-sp-mean"><div><b>● עכשיו:</b> ${mean(t.now)}</div><div><b>★ רוצים:</b> ${mean(t.target)}</div></div>
+  </div>`;
+}
 // ---- the staff's view of one goal (Q21, Q25-27): the plain targets, the interventions with their approach, 2 sentences + "עוד", 👍/👎
 function tpStaffGoalHtml(childId, g, withFeedback){
   if(!tpIsV2(g)) return '';
