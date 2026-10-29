@@ -297,3 +297,9 @@
   .say-ico{ width:1.05em; height:1.05em; vertical-align:-.18em; margin-inline-end:5px; color:var(--gold, #d4a83a); flex:none; }
   .bk-ev-tested{ color:#4caf7d; } .bk-ev-derived{ color:#5b8def; } .bk-ev-new{ color:#c9932b; }
   .bk-age-also{ font-size:12px; opacity:.75; margin-inline-start:6px; }
+  /* the method tiles: the card of the method in a dark bubble while the mouse rests on the tile (Guy 2026-10-29); touch screens keep "מה זו?" */
+  .tp-tile-wrap{ position:relative; }
+  .tp-mpop{ display:none; position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); z-index:40; width:min(320px, 86vw); padding:10px 13px; border-radius:14px;
+    border:1px solid var(--gold, #d4a83a); background:var(--p-panel2, var(--panel-2, #1c2130)); color:var(--p-text, var(--text, #eef0f4)); font-size:12.5px; line-height:1.55; white-space:pre-line; text-align:start; box-shadow:0 10px 26px rgba(0, 0, 0, .4); pointer-events:none; }
+  .tp-mpop::before{ content:''; position:absolute; bottom:100%; left:50%; margin-left:-7px; border:7px solid transparent; border-bottom-color:var(--gold, #d4a83a); }
+  @media (hover:hover){ .tp-tile-wrap:hover .tp-mpop, .tp-tile:focus-visible ~ .tp-mpop{ display:block; } .tp-mcard{ display:none; } }
