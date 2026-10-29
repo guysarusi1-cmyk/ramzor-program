@@ -1,15 +1,29 @@
 # The goal bank, version 3 (Guy 2026-10-29, after the Perplexity research report): supabase/bank3/*.json -> supabase/scheduling-v47-bank.sql
 # Every goal is written for ONE age group (2-5, 6-9, 10-12, 13-15: "main"), may be marked fit for adjacent ones ("also"), and says how well it
 # is grounded ("evidence": tested / derived / new, with a note). Per age: 5 targets worded by opportunity (professional + plain for the staff +
-# 5 spiral stations) and 8 interventions (name, what, why, frequency, approach, the targets it fits, 2-3 sentences, and what NOT to do only where there is a real trap).
-# The goals of the first bank (bank2) stay until these replace them. Everything Claude writes is a draft until the admin approves it.
+# 5 spiral stations) and 8 interventions (name, what, why, frequency, approach, the targets it fits, 3 sentences, and what NOT to do only where there is a real trap).
+# The goals of the first bank (bank2) are archived (active = false) when these go in. Everything Claude writes is a draft until the admin approves it.
 # Run: python tools/bank3-sql.py
-import io, json, glob, os, sys
+import io, json, glob, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AGES = ['2-5', '6-9', '10-12', '13-15']
 LEVELS = ['tested', 'derived', 'new']
 APPROACHES = ['ARC', 'DDP/PACE', 'TF-CBT', 'Theraplay', 'ויסות חושי', 'NMT', 'סמכות חדשה', 'TBRI', 'CPS', 'מעגל הביטחון', 'טיפול נרטיבי']
+
+# the child's-gender slashes that bankGender (14zd) turns into a wrong word: "את/ה", and "/י" or "/ית" after a word that ends in ה (תרצה/י -> תרצהי)
+def slash_traps(text):
+    bad = []
+    for m in re.finditer(r'([א-ת"\']+)/([א-ת]+)', text):
+        a, b = m.group(1), m.group(2)
+        if a == 'את' or (b in ('י', 'ית') and a.endswith('ה')): bad.append(m.group(0))
+    return bad
+def strings(o):
+    if isinstance(o, str): yield o
+    elif isinstance(o, dict):
+        for v in o.values(): yield from strings(v)
+    elif isinstance(o, list):
+        for v in o: yield from strings(v)
 
 def q(s): return "'" + str(s).replace("'", "''") + "'"
 def arr(l): return "array[" + ", ".join(q(x) for x in l) + "]::text[]" if l else "'{}'::text[]"
@@ -34,9 +48,11 @@ for t in themes:
             for x in w['interventions']:
                 if x['approach'] not in APPROACHES: errors.append('%s %s: approach %s' % (T, x['id'], x['approach']))
                 if not all(k in ids for k in x['targets']): errors.append('%s %s: target ids' % (T, x['id']))
-                if not (2 <= len(x['sentences']) <= 3): errors.append('%s %s: sentences' % (T, x['id']))
+                if len(x['sentences']) != 3: errors.append('%s %s: 3 sentences' % (T, x['id']))          # (Guy 2026-10-29)
                 for k in ['name', 'what', 'why', 'freq']:          # ("avoid" only where there is a real trap of this very intervention: Guy 2026-10-29)
                     if not x.get(k): errors.append('%s %s: no %s' % (T, x['id'], k))
+        for txt in strings(g):
+            for b in slash_traps(txt): errors.append('%s: the slash "%s" turns into a wrong word' % (T, b))
 if errors: print('\n'.join(errors)); sys.exit(1)
 
 up = ("on conflict (scope, institution, kind, title) do update set description = excluded.description, themes = excluded.themes, category = excluded.category, "
@@ -52,6 +68,8 @@ for t in themes:
                    'main': g['main'], 'also': g.get('also', []), 'evidence': g['evidence'], 'ages': g['ages']}
         out.append("insert into public.mercury_library (scope, kind, title, description, themes, category, methods, content, draft) values ('mercury', 'goal', %s, %s, %s, %s, %s, %s, true) %s;"
                    % (q(g['title']), q(g['line']), arr([t['theme']]), q(t['theme']), arr(g['methods']), js(content), up)); n += 1
+out.append(""); out.append("-- the goals of the first bank (bank2) leave the list: kept in the library, not offered any more")
+out.append("update public.mercury_library set active = false where scope = 'mercury' and kind = 'goal' and content ->> 'v' = '2' and coalesce(content ->> 'bank', '') <> '3';")
 out.append(""); out.append("select 'scheduling_v47_bank' as part, 'ok' as result, (select count(*) from public.mercury_library where kind = 'goal' and content ->> 'bank' = '3' and active) as goals_v3;")
 with io.open(os.path.join(ROOT, 'supabase', 'scheduling-v47-bank.sql'), 'w', encoding='utf-8', newline='\n') as h: h.write('\n'.join(out) + '\n')
 print('ok: %d goals' % n)
