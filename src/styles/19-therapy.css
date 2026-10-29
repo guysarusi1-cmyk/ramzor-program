@@ -286,3 +286,9 @@
 
 /* the checker, round 3: thumbs the size of a finger */
 .tp-fb button{ min-width:44px; min-height:44px; } .cs-rebuild-opts .btn.danger{ border-color:#ff6b6b; color:#ff9b9b; }
+  /* from the research report (Guy 2026-10-29): what not to do by every intervention, the age of a goal, how well it is grounded (the therapist only) */
+  .tp-avoid{ display:block; margin-top:3px; color:var(--p-muted, #9aa3b2); }
+  .tp-age-tag{ margin-inline-start:6px; font-size:11px; opacity:.75; }
+  .bk-ev{ display:inline-block; margin-inline-start:6px; padding:0 7px; border-radius:8px; font-size:11px; line-height:17px; font-weight:600; border:1px solid currentColor; opacity:.85; }
+  .bk-ev-tested{ color:#4caf7d; } .bk-ev-derived{ color:#5b8def; } .bk-ev-new{ color:#c9932b; }
+  .bk-age-also{ font-size:12px; opacity:.75; margin-inline-start:6px; }
