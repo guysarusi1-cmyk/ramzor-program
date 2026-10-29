@@ -321,3 +321,4 @@
   .tp-sp-mean{ grid-area:mean; display:flex; flex-direction:column; gap:8px; font-size:14px; line-height:1.5; min-width:0; }
   .tp-sp-mean b{ color:var(--p-muted, var(--muted)); font-weight:700; }
   @media (max-width:520px){ .tp-sp{ grid-template-columns:1fr; grid-template-areas:"modes" "box" "mean"; } .tp-sp-box{ margin:0 auto; } }
+  .tp-builder h2{ text-align:center; text-wrap:balance; }          /* (the title of every step in the middle: Guy 2026-10-29) */
