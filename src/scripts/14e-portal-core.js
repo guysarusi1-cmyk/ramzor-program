@@ -199,7 +199,7 @@ function portalCtx(mk){
 function portalSheet(html){
   const wrap = document.createElement('div');
   wrap.className = 'sheet psheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn).active .portal-shell[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
+  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
   wrap.innerHTML = `<div class="sheet-card">${html}</div>`;
   const close = () => wrap.remove();
   wrap.addEventListener('click', e => { if(e.target === wrap || e.target.closest('[data-close]')) close(); });
