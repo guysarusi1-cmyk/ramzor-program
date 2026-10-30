@@ -1,0 +1,239 @@
+/* ---------- Mercury's design system, first on the therapy portal (Guy 2026-10-30; his "מרקורי — הנחיות מפתחים למערכת העיצוב" v1.0) ----------
+   Calm, secure, curious: warm natural minimalism. Two themes here (light / dark; no leopard in this portal). Headings Rubik (Guy's choice), body Assistant.
+   Tokens: raw values live only in the two theme blocks below; everything else reads the semantic ones. The older --p-* and base variables
+   are bridged to them, so the existing rules of the portal take the new look at once; the rules after the bridge refine the components.
+   Scope: the therapy portal (.therapy-shell) and the sheets opened from it (.mx-sheet, set in portalSheet). Class names stay (the checks use them). */
+.therapy-shell, .mx-sheet{
+  --font-heading:'Rubik', Arial, sans-serif; --font-body:'Assistant', Arial, sans-serif;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:9999px;
+  --motion-instant:100ms; --motion-fast:200ms; --motion-base:300ms;
+  --ease-enter:cubic-bezier(0, 0, .2, 1); --ease-exit:cubic-bezier(.4, 0, 1, 1); --ease-standard:cubic-bezier(.4, 0, .2, 1);
+  /* dark ("לילה חם"): the default of this portal, as before */
+  --color-bg:#1C1A17; --color-surface:#24211D; --color-surface-alt:#211E1B; --color-surface-inset:#191714; --color-surface-raised:#2C2925;
+  --color-border:#3A362F; --color-border-strong:#4A453C; --color-text:#E9E4DA; --color-text-secondary:#A8A196;
+  --color-primary:#9DB08F; --color-primary-hover:#AEC0A1; --color-primary-soft:#2D3328; --color-on-primary:#1C1A17;
+  --color-success:#8FBF8A; --color-success-soft:#263126; --color-warning:#D2A05E; --color-warning-soft:#3A3122; --color-danger:#D98B85; --color-danger-soft:#3A2826;
+  --color-info:#8AACCB; --color-info-soft:#25303A; --color-link:#AEC0A1;
+  --shadow-card:none; --shadow-modal:none; --scrim:rgba(0, 0, 0, .55);
+}
+.therapy-shell[data-ptheme=light], .mx-sheet[data-ptheme=light]{
+  /* light ("בוקר בהיר") */
+  --color-bg:#FAF7F2; --color-surface:#FFFFFF; --color-surface-alt:#F4EFE7; --color-surface-inset:#F0EBE2; --color-surface-raised:#FFFFFF;
+  --color-border:#E7E0D3; --color-border-strong:#D6CCB9; --color-text:#2D2A24; --color-text-secondary:#6E675C;
+  --color-primary:#5C6F52; --color-primary-hover:#4C5E43; --color-primary-soft:#E7ECE2; --color-on-primary:#FFFFFF;
+  --color-success:#4F7A4C; --color-success-soft:#E6EFE4; --color-warning:#9A6B2F; --color-warning-soft:#F6EEDF; --color-danger:#A9504A; --color-danger-soft:#F7E9E6;
+  --color-info:#4A6E8C; --color-info-soft:#E6EDF3; --color-link:#4F6B48;
+  --shadow-card:0 1px 3px rgba(45, 42, 36, .05), 0 4px 12px rgba(45, 42, 36, .06); --shadow-modal:0 8px 24px rgba(45, 42, 36, .12); --scrim:rgba(45, 42, 36, .35);
+}
+/* the bridge: the base and portal variables the existing rules read */
+.therapy-shell, .mx-sheet{
+  --bg:var(--color-bg); --panel:var(--color-surface); --panel-2:var(--color-surface-alt); --line:var(--color-border); --text:var(--color-text); --muted:var(--color-text-secondary); --gold:var(--color-primary);
+  --p-bg:var(--color-bg); --p-panel:var(--color-surface); --p-panel2:var(--color-surface-alt); --p-line:var(--color-border); --p-text:var(--color-text); --p-muted:var(--color-text-secondary);
+  --p-yes:var(--color-success); --p-yes-bg:var(--color-success-soft); --p-no:var(--color-danger); --p-no-bg:var(--color-danger-soft);
+  --p-avoid:var(--color-warning); --p-avoid-bg:var(--color-warning-soft); --p-can:var(--color-info); --p-can-bg:var(--color-info-soft);
+  color:var(--color-text); font-family:var(--font-body); font-size:16px; line-height:1.65;
+}
+body:has(#view-therapy.active .therapy-shell){ background:#1C1A17; transition:background-color var(--motion-fast, 200ms) cubic-bezier(.4, 0, .2, 1); }
+body:has(#view-therapy.active .therapy-shell[data-ptheme=light]){ background:#FAF7F2; }
+.therapy-shell[data-ptheme=light]{ background:transparent; border-radius:0; padding:0 0 90px; margin:0; }
+#view-therapy .portal-shell{ max-width:1200px; }
+
+/* type */
+.therapy-shell[data-ptheme] h1, .therapy-shell[data-ptheme] h2, .therapy-shell[data-ptheme] h3, .mx-sheet h1, .mx-sheet h2, .mx-sheet h3{ font-family:var(--font-heading); font-weight:600; line-height:1.25; color:var(--color-text); }
+.therapy-shell[data-ptheme] .portal-title{ font-size:24px; font-weight:600; }
+.therapy-shell[data-ptheme] .portal-hello{ font-weight:400; color:var(--color-text-secondary); font-size:15px; }
+.therapy-shell[data-ptheme] .psec, .mx-sheet .psec{ font-family:var(--font-heading); font-weight:600; font-size:18px; margin:var(--space-6) 0 var(--space-3); }
+.therapy-shell[data-ptheme] .pnote, .mx-sheet .pnote{ color:var(--color-text-secondary); font-size:15px; line-height:1.6; }
+.therapy-shell[data-ptheme] .pnote-soft, .mx-sheet .pnote-soft{ border:0; padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] :focus-visible, .mx-sheet :focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
+
+/* buttons: primary (one per screen), secondary, text */
+.therapy-shell[data-ptheme] .btn, .mx-sheet .btn{ background:var(--color-primary); color:var(--color-on-primary); border:1px solid transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-weight:600; font-size:16px;
+  min-height:40px; min-width:44px; padding:0 var(--space-6); display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2);
+  transition:background-color var(--motion-instant) var(--ease-standard), border-color var(--motion-instant) var(--ease-standard), transform var(--motion-instant) var(--ease-standard); }
+.therapy-shell[data-ptheme] .btn:hover, .mx-sheet .btn:hover{ background:var(--color-primary-hover); }
+.therapy-shell[data-ptheme] .btn:active, .mx-sheet .btn:active{ transform:scale(.98); }
+.therapy-shell[data-ptheme] .btn.ghost, .mx-sheet .btn.ghost, .therapy-shell[data-ptheme] .back-btn{ background:transparent; color:var(--color-text); border-color:var(--color-border-strong); }
+.therapy-shell[data-ptheme] .btn.ghost:hover, .mx-sheet .btn.ghost:hover, .therapy-shell[data-ptheme] .back-btn:hover{ background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:36px; padding:0 var(--space-4); font-size:15px; }
+.therapy-shell[data-ptheme] .btn.danger, .mx-sheet .btn.danger{ background:transparent; color:var(--color-danger); border-color:transparent; }
+.therapy-shell[data-ptheme] .btn.danger:hover, .mx-sheet .btn.danger:hover{ background:var(--color-danger-soft); }
+.therapy-shell[data-ptheme] .btn:disabled, .mx-sheet .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+.therapy-shell[data-ptheme] .back-btn{ font-family:var(--font-body); font-weight:600; font-size:15px; border-radius:var(--radius-sm); padding:0 var(--space-4); min-height:40px; margin:0; }
+@media (max-width:767px){ .therapy-shell[data-ptheme] .btn, .mx-sheet .btn{ min-height:44px; font-size:17px; } .therapy-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:44px; } }
+
+/* the tabs: quiet words, an underline under the one that is open */
+.therapy-shell[data-ptheme] .portal-tabs{ background:transparent; border:0; border-bottom:1px solid var(--color-border); border-radius:0; padding:0; gap:var(--space-1); margin:0 0 var(--space-6); }
+.therapy-shell[data-ptheme] .portal-tabs button, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary{ position:relative; flex:0 1 auto; background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:16px;
+  border-radius:var(--radius-sm) var(--radius-sm) 0 0; padding:var(--space-3) var(--space-4); min-height:44px; box-shadow:none; opacity:1; transition:color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
+.therapy-shell[data-ptheme] .portal-tabs button:hover, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary:hover{ color:var(--color-text); background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] .portal-tabs button.active, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary.active{ color:var(--color-text); background:transparent; box-shadow:none; }
+.therapy-shell[data-ptheme] .portal-tabs button.active::after, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary.active::after{ content:''; position:absolute; inset-inline:var(--space-4); bottom:-1px; height:2px; border-radius:2px; background:var(--color-primary); }
+.therapy-shell[data-ptheme] .tab-more-list{ background:var(--color-surface-raised); border-color:var(--color-border); box-shadow:var(--shadow-modal); border-radius:var(--radius-md); }
+.therapy-shell[data-ptheme] .tab-more-list button{ border-radius:var(--radius-sm); }
+.therapy-shell[data-ptheme] .tab-more-list button.active::after{ display:none; }
+.therapy-shell[data-ptheme] .tab-more-list button.active{ background:var(--color-primary-soft); }
+.therapy-shell[data-ptheme] .pcount, .mx-sheet .pcount{ background:var(--color-primary-soft); color:var(--color-text); font-weight:700; font-size:12px; border-radius:var(--radius-pill); }
+.therapy-shell[data-ptheme] .th-stat .pcount, .therapy-shell[data-ptheme] .th-ws-tabs .pcount{ background:var(--color-primary); color:var(--color-on-primary); }
+
+/* cards and folds */
+.therapy-shell[data-ptheme] .pfold, .mx-sheet .pfold, .therapy-shell[data-ptheme] .th-kid, .therapy-shell[data-ptheme] .th-todo, .therapy-shell[data-ptheme] .tp-row, .therapy-shell[data-ptheme] .tp-goal, .therapy-shell[data-ptheme] .th-kcard, .therapy-shell[data-ptheme] .th-g, .therapy-shell[data-ptheme] .th-goal,
+.therapy-shell[data-ptheme] .obs-item, .mx-sheet .obs-item, .therapy-shell[data-ptheme] .cr-goal, .therapy-shell[data-ptheme] .cr-report, .therapy-shell[data-ptheme] .th-assign-row{
+  background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.therapy-shell[data-ptheme] .pfold > summary, .mx-sheet .pfold > summary{ font-family:var(--font-heading); font-weight:600; font-size:17px; padding:var(--space-4) var(--space-6); min-height:56px; color:var(--color-text); }
+.therapy-shell[data-ptheme] .pfold > summary small{ font-family:var(--font-body); font-weight:400; font-size:14px; color:var(--color-text-secondary); }
+.therapy-shell[data-ptheme] .pfold > summary::after, .mx-sheet .pfold > summary::after{ color:var(--color-text-secondary); transition:transform var(--motion-fast) var(--ease-standard); }
+.therapy-shell[data-ptheme] .pfold-body, .mx-sheet .pfold-body{ padding:0 var(--space-6) var(--space-6); }
+.therapy-shell[data-ptheme] details[open] > .pfold-body, .therapy-shell[data-ptheme] details[open] > .tp-goal-body, .therapy-shell[data-ptheme] details[open] > .tp-t-body, .mx-sheet details[open] > .pfold-body{ animation:mx-reveal var(--motion-base) var(--ease-enter); }
+@keyframes mx-reveal{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+.therapy-shell[data-ptheme] .th-kid:hover, .therapy-shell[data-ptheme] .th-kid:focus-visible, .therapy-shell[data-ptheme] .th-todo:hover, .therapy-shell[data-ptheme] .tp-row:hover{ border-color:var(--color-border-strong); background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] .th-todo{ border-inline-start:1px solid var(--color-border); }
+.therapy-shell[data-ptheme] .th-kid.has-plan{ border-color:var(--color-border); }
+.therapy-shell[data-ptheme] .th-av, .mx-sheet .th-av{ background:var(--color-primary-soft); border-color:var(--color-border); }
+
+/* chips and small marks */
+.therapy-shell[data-ptheme] .th-chip, .mx-sheet .th-chip, .therapy-shell[data-ptheme] .tp-now, .therapy-shell[data-ptheme] .bk-theme, .mx-sheet .bk-theme, .therapy-shell[data-ptheme] .bk-method, .mx-sheet .bk-method, .therapy-shell[data-ptheme] .th-lib-cat, .therapy-shell[data-ptheme] .th-lib-scope{
+  background:var(--color-surface-alt); color:var(--color-text-secondary); border:1px solid var(--color-border); border-radius:var(--radius-pill); font-weight:600; }
+.therapy-shell[data-ptheme] .th-chip.on, .mx-sheet .th-chip.on, .therapy-shell[data-ptheme] .tp-builder .th-chip.on, .therapy-shell[data-ptheme] .tp-builder .pchoice button.on, .mx-sheet .bk-age.on, .therapy-shell[data-ptheme] .cr-chips button.on{
+  background:var(--color-primary-soft); color:var(--color-text); border-color:var(--color-primary); }
+.therapy-shell[data-ptheme] .tp-now{ background:var(--color-primary-soft); color:var(--color-text); border-color:transparent; }
+.therapy-shell[data-ptheme] .bk-draft, .mx-sheet .bk-draft{ background:var(--color-warning-soft); color:var(--color-warning); }
+.therapy-shell[data-ptheme] .say-ico, .mx-sheet .say-ico{ color:var(--color-primary); }
+.therapy-shell[data-ptheme] .tp-appr{ opacity:1; color:var(--color-text-secondary); }
+
+/* fields */
+.therapy-shell[data-ptheme] input:not([type=checkbox]):not([type=radio]):not([type=file]), .therapy-shell[data-ptheme] textarea, .therapy-shell[data-ptheme] select,
+.mx-sheet input:not([type=checkbox]):not([type=radio]):not([type=file]), .mx-sheet textarea, .mx-sheet select{
+  background:var(--color-surface-inset); color:var(--color-text); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); font-family:var(--font-body); font-size:16px; min-height:44px;
+  transition:border-color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
+.therapy-shell[data-ptheme] textarea, .mx-sheet textarea{ line-height:1.6; padding:10px 12px; }
+.therapy-shell[data-ptheme] input:focus, .therapy-shell[data-ptheme] textarea:focus, .therapy-shell[data-ptheme] select:focus, .mx-sheet input:focus, .mx-sheet textarea:focus, .mx-sheet select:focus{ outline:2px solid var(--color-primary); outline-offset:1px; background:var(--color-surface); }
+.therapy-shell[data-ptheme] ::placeholder, .mx-sheet ::placeholder{ color:var(--color-text-secondary); }
+.therapy-shell[data-ptheme] .pfield, .mx-sheet .pfield{ font-weight:600; font-size:15px; color:var(--color-text); gap:var(--space-2); }
+.therapy-shell[data-ptheme] input[type=checkbox], .mx-sheet input[type=checkbox]{ accent-color:var(--color-primary); }
+.therapy-shell[data-ptheme] .th-avoid-field textarea{ border:1px solid var(--color-danger) !important; background:var(--color-danger-soft); }
+.therapy-shell[data-ptheme] .th-avoid, .mx-sheet .th-avoid{ border:1px solid var(--color-danger); background:var(--color-danger-soft); }
+.therapy-shell[data-ptheme] .th-avoid b, .mx-sheet .th-avoid b{ color:var(--color-danger); }
+
+/* the plan page: the side card (the child, the one main button, the links) and the goals */
+.therapy-shell[data-ptheme] .tp-page{ gap:var(--space-6); }
+.therapy-shell[data-ptheme] .tp-side{ display:flex; flex-direction:column; gap:var(--space-4); }
+.therapy-shell[data-ptheme] .tp-main-col{ display:flex; flex-direction:column; gap:var(--space-4); min-width:0; }
+.therapy-shell[data-ptheme] .th-ed-head h2{ font-size:24px; }
+.therapy-shell[data-ptheme] .th-status{ font-size:14px; color:var(--color-text-secondary); }
+.therapy-shell[data-ptheme] .tp-statebar{ background:var(--color-warning-soft); border:1px solid transparent; border-radius:var(--radius-md); font-size:15px; padding:var(--space-3) var(--space-4); }
+.therapy-shell[data-ptheme] .tp-goal{ overflow:hidden; } .therapy-shell[data-ptheme] .tp-goal.st-focus{ border-color:var(--color-border-strong); }
+.therapy-shell[data-ptheme] .tp-goal > summary{ padding:var(--space-4) var(--space-6); font-family:var(--font-heading); font-size:19px; }
+.therapy-shell[data-ptheme] .tp-goal > summary b{ font-weight:600; }
+.therapy-shell[data-ptheme] .tp-goal-body{ padding:0 var(--space-6) var(--space-6); gap:var(--space-4); }
+.therapy-shell[data-ptheme] .tp-target{ border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface-alt); padding:var(--space-3) var(--space-4); }
+.therapy-shell[data-ptheme] .tp-target > summary{ font-weight:600; align-items:center; }
+.therapy-shell[data-ptheme] .tp-stations li.goal{ color:var(--color-primary); font-weight:700; }
+.therapy-shell[data-ptheme] .tp-lbl{ font-size:13px; font-weight:600; color:var(--color-text-secondary); opacity:1; letter-spacing:.2px; }
+.therapy-shell[data-ptheme] .tp-int, .therapy-shell[data-ptheme] .tp-sg-i{ padding:var(--space-3) var(--space-4); border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:15px; }
+.therapy-shell[data-ptheme] .tp-sent{ display:flex; gap:6px; align-items:flex-start; margin-top:var(--space-2); padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); background:var(--color-primary-soft); opacity:1; font-size:15px; }
+.therapy-shell[data-ptheme] .tp-links{ justify-content:flex-start; }
+.therapy-shell[data-ptheme] .tp-links .btn.ghost{ border-color:transparent; color:var(--color-link); }
+.therapy-shell[data-ptheme] .tp-links .btn.ghost:hover{ background:var(--color-primary-soft); }
+.therapy-shell[data-ptheme] .tp-more-acts > summary{ border-color:var(--color-border-strong); border-radius:var(--radius-sm); }
+.therapy-shell[data-ptheme] .th-empty{ color:var(--color-text-secondary); }
+@media (min-width:1280px){
+  .therapy-shell[data-ptheme] .tp-page{ display:grid; grid-template-columns:280px minmax(0, 1fr); align-items:start; gap:var(--space-8); }
+  .therapy-shell[data-ptheme] .tp-side{ position:sticky; top:var(--space-6); padding:var(--space-6); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+  .therapy-shell[data-ptheme] .tp-side .th-ed-head{ flex-direction:column; align-items:flex-start; gap:var(--space-3); }
+  .therapy-shell[data-ptheme] .tp-side .th-status{ margin:0; }
+  .therapy-shell[data-ptheme] .tp-side .tp-links{ flex-direction:column; align-items:stretch; padding-top:var(--space-4); border-top:1px solid var(--color-border); }
+  .therapy-shell[data-ptheme] .tp-side .tp-links .btn{ justify-content:flex-start; }
+}
+
+/* the builder */
+.therapy-shell[data-ptheme] .tp-steps li{ border-bottom-color:var(--color-border); color:var(--color-text-secondary); opacity:1; }
+.therapy-shell[data-ptheme] .tp-steps li.done{ border-color:var(--color-primary); }
+.therapy-shell[data-ptheme] .tp-steps li.now{ border-color:var(--color-primary); color:var(--color-text); }
+.therapy-shell[data-ptheme] .tp-bigbtn, .therapy-shell[data-ptheme] .tp-tile, .therapy-shell[data-ptheme] .tp-name, .therapy-shell[data-ptheme] .tp-pick, .therapy-shell[data-ptheme] .tp-int-pick{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); }
+.therapy-shell[data-ptheme] .tp-bigbtn:hover, .therapy-shell[data-ptheme] .tp-tile:hover, .therapy-shell[data-ptheme] .tp-name:hover{ border-color:var(--color-border-strong); background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] .tp-name.on, .therapy-shell[data-ptheme] .tp-pick.on, .therapy-shell[data-ptheme] .tp-int-pick.on{ border-color:var(--color-primary); background:var(--color-primary-soft); }
+.therapy-shell[data-ptheme] .tp-rate button.on{ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
+.therapy-shell[data-ptheme] .tp-nav{ background:linear-gradient(transparent, var(--color-bg) 30%); }
+.therapy-shell[data-ptheme] .tp-gender{ border-color:var(--color-border-strong); }
+
+/* sheets opened from this portal */
+.mx-sheet{ background:var(--scrim); }
+.mx-sheet .sheet-card{ background:var(--color-surface-raised); border:1px solid var(--color-border); box-shadow:var(--shadow-modal); color:var(--color-text); animation:mx-sheet-in var(--motion-slow, 400ms) var(--ease-enter); }
+@keyframes mx-sheet-in{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+.mx-sheet .sheet-card h2{ font-size:20px; }
+
+/* the autosave line of "עוד" */
+.therapy-shell[data-ptheme] .tm-state{ display:inline-flex; align-items:center; gap:6px; font-size:14px; color:var(--color-text-secondary); min-height:24px; }
+.therapy-shell[data-ptheme] .tm-state.bad{ color:var(--color-warning); }
+
+/* the "עבודה | סקירה" switch, and the review */
+.therapy-shell[data-ptheme] .mx-seg{ display:inline-flex; padding:3px; gap:2px; border-radius:var(--radius-pill); background:var(--color-surface-alt); border:1px solid var(--color-border); align-self:flex-start; }
+.therapy-shell[data-ptheme] .mx-seg button{ min-height:36px; padding:0 var(--space-4); border:0; border-radius:var(--radius-pill); background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-size:15px; font-weight:600; cursor:pointer;
+  transition:background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard); }
+.therapy-shell[data-ptheme] .mx-seg button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
+.therapy-shell[data-ptheme] .tp-review{ display:flex; flex-direction:column; gap:var(--space-12); max-width:820px; }
+.therapy-shell[data-ptheme] .tp-review section{ display:flex; flex-direction:column; gap:var(--space-4); }
+.therapy-shell[data-ptheme] .tp-review h2{ font-size:22px; margin:0; } .therapy-shell[data-ptheme] .tp-review h3{ font-size:18px; margin:0; }
+.therapy-shell[data-ptheme] .tp-rv-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); }
+.therapy-shell[data-ptheme] .tp-rv-meta{ color:var(--color-text-secondary); font-size:15px; }
+.therapy-shell[data-ptheme] .tp-rv-goal{ display:flex; flex-direction:column; gap:var(--space-4); padding:var(--space-6); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.therapy-shell[data-ptheme] .tp-rv-list{ display:flex; flex-direction:column; gap:var(--space-2); margin:0; padding:0; list-style:none; }
+.therapy-shell[data-ptheme] .tp-rv-list li{ padding:var(--space-3) var(--space-4); border-radius:var(--radius-sm); background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] .tp-rv-part{ padding:var(--space-4); border-radius:var(--radius-md); background:var(--color-surface-alt); white-space:pre-line; }
+.therapy-shell[data-ptheme] .tp-rv-part.avoid{ background:var(--color-danger-soft); }
+.therapy-shell[data-ptheme] .tp-rv-part b{ display:block; margin-bottom:var(--space-1); }
+.therapy-shell[data-ptheme] .tp-rv-draft{ padding:var(--space-3) var(--space-4); border-radius:var(--radius-md); background:var(--color-warning-soft); font-size:15px; }
+
+/* the side menu on a computer (Guy 2026-10-30): the portal's title above, the areas in two groups, "מסך ראשי" and the look below */
+@media (min-width:1024px){          /* (the app sits in a phone-wide column; on a computer this portal takes the width, as the coordinator's does, and its own menu replaces the site's header) */
+  #protected-app:has(#view-therapy.active .therapy-shell){ max-width:none; padding-inline:24px; }
+  #protected-app:has(#view-therapy.active .therapy-shell) > #shared-header, #protected-app:has(#view-therapy.active .therapy-shell) > #shared-logout-row{ display:none; }
+}
+.therapy-shell[data-ptheme] .th-side-foot{ display:none; }
+.therapy-shell[data-ptheme] .th-nav-sep, .therapy-shell[data-ptheme] .th-nav-ico{ display:none; }
+@media (min-width:1024px){
+  .therapy-shell[data-ptheme] .th-frame{ display:grid; grid-template-columns:232px minmax(0, 1fr); gap:var(--space-8); align-items:start; }
+  .therapy-shell[data-ptheme] .th-side{ position:sticky; top:var(--space-4); display:flex; flex-direction:column; gap:var(--space-2); min-height:calc(100vh - 48px); padding:var(--space-4) 0; }
+  .therapy-shell[data-ptheme] .th-side .portal-top{ display:contents; }
+  .therapy-shell[data-ptheme] .th-side .portal-title{ order:1; text-align:start; font-size:22px; padding:0 var(--space-3); }
+  .therapy-shell[data-ptheme] .th-side .portal-hello{ order:2; padding:0 var(--space-3); margin:0 0 var(--space-4); }
+  .therapy-shell[data-ptheme] .th-side .portal-top > span{ display:none; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs{ order:3; flex-direction:column; flex-wrap:nowrap; border:0; margin:0; gap:2px; overflow:visible; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button{ display:flex; align-items:center; gap:var(--space-3); width:100%; text-align:start; border-radius:var(--radius-sm); padding:var(--space-2) var(--space-3); font-size:16px; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button.active{ background:var(--color-primary-soft); }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button.active::after{ display:none; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs .pcount{ margin-inline-start:auto; margin-inline-end:0; }
+  .therapy-shell[data-ptheme] .th-nav-ico{ display:inline-flex; flex:none; width:20px; height:20px; color:var(--color-text-secondary); }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button.active .th-nav-ico{ color:var(--color-primary); }
+  .therapy-shell[data-ptheme] .th-nav-sep{ display:block; height:1px; margin:var(--space-3) var(--space-3); background:var(--color-border); }
+  .therapy-shell[data-ptheme] .th-side-foot{ order:5; margin-top:auto; display:flex; flex-direction:column; gap:var(--space-3); padding:var(--space-4) var(--space-3) 0; border-top:1px solid var(--color-border); }
+  .therapy-shell[data-ptheme] .th-side .back-btn{ order:4; }
+  .therapy-shell[data-ptheme] .th-side-foot .back-btn{ align-self:stretch; justify-content:flex-start; }
+  .therapy-shell[data-ptheme] .th-side > .portal-top .back-btn{ display:none; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .therapy-shell[data-ptheme] *, .therapy-shell[data-ptheme] *::before, .therapy-shell[data-ptheme] *::after, .mx-sheet *, .mx-sheet *::before, .mx-sheet *::after{ animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+}
+@media print{
+  body.printing #print-sheet .tp-review{ max-width:none; gap:8mm; color:#000; }
+  body.printing #print-sheet .tp-rv-goal, body.printing #print-sheet .tp-rv-part, body.printing #print-sheet .tp-rv-list li{ border:1px solid #bbb; box-shadow:none; background:#fff; break-inside:avoid; }
+  body.printing #print-sheet .mx-seg, body.printing #print-sheet .tp-rv-print{ display:none !important; }
+}
+/* the simplicity checker's round on the new look (2026-10-30) */
+.therapy-shell[data-ptheme] .th-page-title{ font-size:24px; margin:0 0 var(--space-6); }
+.therapy-shell[data-ptheme] .tp-more > summary{ flex-wrap:wrap; }
+.therapy-shell[data-ptheme] .tp-more .tm-state{ flex-basis:100%; font-family:var(--font-body); font-weight:400; }
+.therapy-shell[data-ptheme] .tp-more .tm-state:empty{ display:none; }
+.therapy-shell[data-ptheme] .pfield > .th-tpl-btn, .therapy-shell[data-ptheme] .pfield > #tm-suggest{ align-self:flex-start; width:auto; min-height:36px; margin:0; }
+.therapy-shell[data-ptheme] .tp-rv-print{ align-self:flex-start; }
+@media (min-width:1024px){ .therapy-shell[data-ptheme] .th-todo-list, .therapy-shell[data-ptheme] .tp-list{ max-width:840px; } }
+@media (max-width:767px){
+  .therapy-shell[data-ptheme] .mx-seg button, .therapy-shell[data-ptheme] .tp-filter .th-chip, .therapy-shell[data-ptheme] .pfield > .th-tpl-btn, .therapy-shell[data-ptheme] .pfield > #tm-suggest{ min-height:44px; }
+  .therapy-shell[data-ptheme] .tp-steps li{ min-width:0; flex:1 1 0; font-size:0; padding:8px 0 0; }          /* (a phone: a progress bar, the name only on the step that is open) */
+  .therapy-shell[data-ptheme] .tp-steps li.now{ flex:3 1 0; font-size:12px; }
+}
+/* the look on a phone (Guy 2026-10-30): the same switch, small, in the top row */
+.therapy-shell[data-ptheme] .th-look-sm{ justify-self:end; } .therapy-shell[data-ptheme] .th-look-sm button{ padding:0 10px; font-size:14px; }

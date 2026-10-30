@@ -94,8 +94,18 @@ function thpTabs(){
   return t;
 }
 // a row of tabs: 4 visible, the rest under "עוד" (Guy, after the simplicity checker: tabs must fit a phone). tabs = [[key, word, badge]]
-function thpTabsRow(tabs, active, attr, cls){
-  const btn = ([k, w, n]) => `<button type="button" role="tab" ${attr}="${k}" class="${k === active ? 'active' : ''}">${w}${n ? ` <span class="pcount">${n}</span>` : ''}</button>`;
+// the side menu on a computer (Guy 2026-10-30): every area shown, an icon by each word, the daily work first and the rest after a quiet line
+const thpWide = () => { try { return matchMedia('(min-width:1024px)').matches; } catch(e){ return false; } };
+const THP_DAILY = ['todo', 'mine', 'plans', 'kids', 'myobs'];
+const THP_ICO = { todo:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>', mine:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/>',
+  plans:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6v2.5H9zM8.5 11h7M8.5 15h5"/>', kids:'<circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19.5c.9-3.1 3-4.8 5.5-4.8s4.6 1.7 5.5 4.8M15 14.8c2.6-.3 4.6 1.2 5.4 4"/>',
+  myobs:'<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>', library:'<path d="M5 4.5h5.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H5zM19 4.5h-5.5a2 2 0 0 0-1 .3"/><path d="M19 4.5v13.9h-5.4a1.6 1.6 0 0 0-1.1.5"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>', assign:'<path d="M10 14a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
+  videos:'<rect x="3.5" y="6" width="12" height="12" rx="2"/><path d="M15.5 10.5l5-3v9l-5-3"/>', overview:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>', archive:'<rect x="3.5" y="4.5" width="17" height="4.5" rx="1"/><path d="M5 9v10.5h14V9M10 13h4"/>' };
+function thpTabsRow(tabs, active, attr, cls, side){
+  const ico = k => side && THP_ICO[k] ? `<svg class="th-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${THP_ICO[k]}</svg>` : '';
+  const btn = ([k, w, n]) => `<button type="button" role="tab" ${attr}="${k}" class="${k === active ? 'active' : ''}">${ico(k)}${w}${n ? ` <span class="pcount">${n}</span>` : ''}</button>`;
+  if(side){ const sep = tabs.findIndex(t => !THP_DAILY.includes(t[0])); return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist" aria-orientation="vertical">${tabs.map((t, i) => (i === sep && i > 0 ? '<span class="th-nav-sep" role="separator"></span>' : '') + btn(t)).join('')}</nav>`; }
   if(tabs.length <= 5) return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist">${tabs.map(btn).join('')}</nav>`;
   const rest = tabs.slice(4), hidden = rest.find(t => t[0] === active), n = rest.reduce((s, t) => s + (+t[2] || 0), 0);
   return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist">${tabs.slice(0, 4).map(btn).join('')}
@@ -215,13 +225,23 @@ function thpRender(){
       ${thp.subs ? thpSubsHtml() : ''}`;
   }
   const todoN = ther && thp.v32 ? thpTodo().length : 0;
-  view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}" data-thmode="${thp.mode}">
-      <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1><span></span></div>
+  const side = thpWide(), look = portalLoad().settings.theme === 'light' ? 'light' : 'dark';          // (no leopard in this portal: Guy 2026-10-30)
+  view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${look}" data-thmode="${thp.mode}"><div class="th-frame">
+      <aside class="th-side" aria-label="פורטל הטיפול">
+      <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1>${side ? '<span></span>' : `<div class="mx-seg th-look-sm" role="group" aria-label="מראה">${[['light', 'בהיר'], ['dark', 'כהה']].map(([k, w]) => `<button type="button" data-th-look="${k}" aria-pressed="${look === k}">${w}</button>`).join('')}</div>`}</div>
       <div class="portal-hello">שלום ${pEsc(me.first || '')}</div>
-      ${tabs.length > 1 ? thpTabsRow(tabs.map(t => [t[0], t[1], t[0] === 'todo' ? todoN : 0]), thp.tab, 'data-th-tab') : ''}
-      <div id="therapy-body">${inner}</div>
-    </div>`;
-  view.querySelector('#therapy-home').addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); });
+      ${tabs.length > 1 ? thpTabsRow(tabs.map(t => [t[0], t[1], t[0] === 'todo' ? todoN : 0]), thp.tab, 'data-th-tab', '', side) : ''}
+      ${side ? `<div class="th-side-foot"><div class="mx-seg" role="group" aria-label="מראה">${[['light', 'בהיר'], ['dark', 'כהה']].map(([k, w]) => `<button type="button" data-th-look="${k}" aria-pressed="${look === k}">${w}</button>`).join('')}</div>
+        <button type="button" class="back-btn" id="therapy-home2">→ מסך ראשי</button></div>` : ''}
+      </aside>
+      <div id="therapy-body">${side && !thp.planChild && (tabs.find(t => t[0] === thp.tab) || [])[1] ? `<h2 class="th-page-title">${pEsc(tabs.find(t => t[0] === thp.tab)[1])}</h2>` : ''}${inner}</div>
+    </div></div>`;          // (on a computer the tabs row is gone, so every screen says its name: the simplicity checker)
+  view.querySelectorAll('#therapy-home, #therapy-home2').forEach(b => b.addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); }));
+  view.querySelectorAll('[data-th-look]').forEach(b => b.addEventListener('click', () => {          // (kept on this device; the other portals' own choice, the leopard included, is not touched)
+    portalLoad().settings.theme = b.dataset.thLook; try { localStorage.setItem('ramzor-portal-theme', b.dataset.thLook); } catch(e){}
+    const sh = view.querySelector('.therapy-shell'); sh.dataset.ptheme = b.dataset.thLook;          // (only the colours change: an open builder or sheet stays where it is — the simplicity checker)
+    view.querySelectorAll('[data-th-look]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); document.querySelectorAll('.mx-sheet').forEach(s => { s.dataset.ptheme = b.dataset.thLook; }); }));
+  if(!thp.mqOn){ thp.mqOn = true; try { matchMedia('(min-width:1024px)').addEventListener('change', () => { if(document.querySelector('#view-therapy.active')) thpRender(); }); } catch(e){} }          // (a window made wider or narrower: the menu follows)
   view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thp.planChild = null; thpRender(); }));
   const body = view.querySelector('#therapy-body');
   const wireKids = box => box.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(ther && thp.tab !== 'kids' && thp.v32 && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid, 'plan'); else thpOpenChild(b.dataset.thKid); }));          // (in "כל הילדים": the staff's view of the child)

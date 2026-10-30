@@ -24,11 +24,11 @@ function tpSync(g){
   }
   return g;
 }
-async function tpSave(id, d){
+async function tpSave(id, d, quiet){          // (quiet: the autosave of "עוד" says it on its own line)
   (d.goals || []).forEach(tpSync);
   const dates = (d.goals || []).filter(g => tpStatusOf(g) === 'focus' && g.review_date).map(g => g.review_date).sort();
   const ok = await planSave(id, d, dates[0] || (thp.plans[id] || {}).review_date || null);
-  if(!ok) toast('השמירה נכשלה. אפשר לנסות שוב בעוד רגע');
+  if(!ok && !quiet) toast('השמירה נכשלה. אפשר לנסות שוב בעוד רגע');
   return ok;
 }
 
@@ -55,7 +55,7 @@ function tpWireList(body){
   body.querySelectorAll('[data-tp-kid]').forEach(b => b.addEventListener('click', () => { thp.planChild = b.dataset.tpKid; thpRender(); }));
 }
 // open a child's plan from anywhere (the child's workspace, "משימות")
-function tpOpenPlan(id){ thp.tab = 'plans'; thp.planChild = id; thp.editing = null; thp.wtab = null; thpRender(); }
+function tpOpenPlan(id){ thp.tab = 'plans'; thp.planChild = id; thp.editing = null; thp.wtab = null; thp.planView = 'work'; thpRender(); }
 
 // ---- the plan page: read first; the focus goals, then waiting / achieved / stopped (folded); "עוד"; ONE main button
 function tpGoalCard(id, g, i, can){
@@ -84,17 +84,21 @@ async function tpPlanPage(id, box){
   const main = !can ? '' : changed ? '<button type="button" class="btn tp-main" id="tp-publish">פרסום</button>' : '<button type="button" class="btn tp-main" id="tp-new">+ מטרה חדשה</button>';          // (a goal being built: "להמשיך" in the status bar only)
   const bar = can && (changed || building || !row.published_version) ? `<div class="tp-statebar" role="status">${!row.published_version && !changed ? '<span>עוד לא פורסמה תוכנית</span>' : changed ? `<span><b>בטיוטה:</b> ${diff.length === 1 ? 'שינוי אחד שלא פורסם' : diff.length + ' שינויים שלא פורסמו'}</span>` : '<span>הכול פורסם</span>'}
       ${building ? `<span class="tp-sb-build">· מטרה אחת בבנייה <button type="button" class="btn ghost small" id="tp-resume2">להמשיך</button><button type="button" class="btn ghost small" id="tp-drop">לבטל</button></span>` : ''}</div>` : '';
-  box.innerHTML = `<div class="tp-page"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התוכניות</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : careName(id))}</h2></div>
+  if(can && thp.planView === 'review'){ tpReviewPage(id, box); return; }          // ("סקירה": a clean reading view, Guy 2026-10-30)
+  box.innerHTML = `<div class="tp-page"><div class="tp-side"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התוכניות</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : careName(id))}</h2></div>
       <span class="th-status">${row.published_version ? 'פורסמה גרסה ' + row.published_version : 'עוד לא פורסמה'}</span></div>
-    ${vd && vd.status === 'draft' ? `<div id="tp-video">${thpVideoPanelHtml(id)}</div>` : ''}
+    ${can ? tpViewSwitchHtml('work') : ''}
     ${bar}${main}${can && changed ? `<button type="button" class="btn ghost small tp-second" id="tp-new2">+ מטרה חדשה</button>` : ''}
+    <div class="tp-links">${row.published_version ? '<button type="button" class="btn ghost small" id="tp-versions">גרסאות קודמות</button>' : ''}<button type="button" class="btn ghost small" id="tp-docs">מסמכים</button>
+      ${can && row.published_version ? `<button type="button" class="btn ghost small" id="tp-video-new"${vOld ? '' : ' disabled'} title="נוצר סרטון חדש מהתוכנית שפורסמה">🎬 סרטון חדש</button>` : ''}</div></div>
+    <div class="tp-main-col">
+    ${vd && vd.status === 'draft' ? `<div id="tp-video">${thpVideoPanelHtml(id)}</div>` : ''}
     ${group('focus').length ? group('focus').map(x => tpGoalCard(id, x.g, x.i, can)).join('') : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>עוד אין מטרה במוקד</b><small>${can ? 'בונים מטרה אחת, צעד אחר צעד: "+ מטרה חדשה".' : 'איש/אשת הטיפול האחראי/ת בונה את התוכנית.'}</small></div>`}
     ${[['waiting', 'בהמתנה'], ['achieved', 'הושגו'], ['stopped', 'הופסקו']].map(([s, w]) => group(s).length ? `<details class="pfold"><summary><span>${w}</span><span class="pcount">${group(s).length}</span></summary><div class="pfold-body">${group(s).map(x => tpGoalCard(id, x.g, x.i, can)).join('')}</div></details>` : '').join('')}
-    ${can ? tpMoreHtml(id, d) : ''}
-    <div class="tp-links">${row.published_version ? '<button type="button" class="btn ghost small" id="tp-versions">גרסאות קודמות</button>' : ''}<button type="button" class="btn ghost small" id="tp-docs">מסמכים</button>
-      ${can && row.published_version ? `<button type="button" class="btn ghost small" id="tp-video-new"${vOld ? '' : ' disabled'} title="נוצר סרטון חדש מהתוכנית שפורסמה">🎬 סרטון חדש</button>` : ''}</div></div>`;
+    ${can ? tpMoreHtml(id, d) : ''}</div></div>`;
   const $ = s => box.querySelector(s), on = (s, f) => { const el = $(s); if(el) el.addEventListener('click', f); };
   on('#tp-back', () => { thp.planChild = null; thpRender(); });
+  tpWireViewSwitch(id, box);
   const fresh = () => { if(!building){ tpBuilder(id, null); return; }          // (never erase a goal being built by default or by a tap outside: the checker, round 3)
     const s2 = portalSheet(`<h2>יש מטרה שבבנייה</h2><div class="cs-rebuild-opts"><button type="button" class="btn" data-fr="keep"><b>להמשיך אותה</b><small>מהמקום שעצרת</small></button>
       <button type="button" class="btn ghost danger" data-fr="new"><b>להתחיל מטרה חדשה</b><small>המטרה שבבנייה תימחק</small></button></div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>חזרה</button></div>`);
@@ -137,34 +141,100 @@ async function tpPlanPage(id, box){
   box.querySelectorAll('[data-tp-route]').forEach(b => b.addEventListener('click', () => { const g = tpDraftOf(id).goals[+b.dataset.tpRoute]; tpBuilder(id, tpStateFromGoal(id, g)); }));
   tpWireMore(id, box, () => tpPlanPage(id, box));
 }
+// ---- "עבודה | סקירה" (Guy 2026-10-30): the review is a clean reading view for a team meeting or supervision: the PUBLISHED plan, everything
+// by importance (the focus goals in full, what the staff needs to know, then a line for every other goal), no buttons, the thinking helper hidden
+function tpViewSwitchHtml(v){ return `<div class="mx-seg" role="group" aria-label="תצוגה">${[['work', 'עבודה'], ['review', 'סקירה']].map(([k, w]) => `<button type="button" data-tp-view="${k}" aria-pressed="${v === k}">${w}</button>`).join('')}</div>`; }
+function tpWireViewSwitch(id, box){ box.querySelectorAll('[data-tp-view]').forEach(b => b.addEventListener('click', () => { if(thp.planView === b.dataset.tpView || (!thp.planView && b.dataset.tpView === 'work')) return; thp.planView = b.dataset.tpView; tpPlanPage(id, box); })); }
+function tpReviewBody(id){
+  const c = roster.find(x => x.id === id), row = thp.plans[id] || {}, p = row.published, name = c ? displayName(c) : careName(id);
+  const head = `<div class="tp-rv-title"><h2 class="ar-keep">תוכנית טיפולית · ${pEsc(name)}</h2><div class="tp-rv-meta">${row.published_version ? 'גרסה ' + row.published_version : 'עוד לא פורסמה'}${row.review_date ? ' · בדיקה מחדש ' + pEsc(dayLabel(row.review_date)) : ''}</div></div>`;
+  if(!p) return `${head}<div class="pnote">עוד אין תוכנית שפורסמה. הסקירה מציגה את מה שהצוות רואה, אחרי "פרסום".</div>`;
+  const goals = (p.goals || []).filter(g => g.title || tpIsV2(g)), num = g => goals.indexOf(g) + 1;
+  const goalHtml = g => {
+    const targets = tpIsV2(g) ? `<div><span class="tp-lbl">יעדים</span><ul class="tp-rv-list">${g.targets_list.map(t => `<li><b>${pEsc(t.text)}</b>${t.now ? `<div class="tp-rv-meta">עכשיו: ${pEsc((t.scale || [])[t.now - 1] || String(t.now))}${t.target ? ` ← רוצים: ${pEsc((t.scale || [])[t.target - 1] || String(t.target))}` : ''}</div>` : ''}${t.staff ? `<div class="tp-rv-meta">לצוות: ${pEsc(t.staff)}</div>` : ''}</li>`).join('')}</ul></div>`
+      : g.targets ? `<div><span class="tp-lbl">יעדים</span><div class="tp-rv-part">${pEsc(g.targets)}</div></div>` : '';
+    const ints = tpIsV2(g) ? ((g.interventions_list || []).length ? `<div><span class="tp-lbl">דרכי התערבות</span><ul class="tp-rv-list">${g.interventions_list.map(x => `<li><b>${pEsc(x.name)}</b> ${pEsc(x.what || '')}${x.freq ? ` <span class="tp-rv-meta">(${pEsc(x.freq)})</span>` : ''}${x.approach ? ` <em class="tp-appr">${pEsc(x.approach)}</em>` : ''}${(x.sentences || []).map(s => `<div class="tp-sent">${SAY}${pEsc(s)}</div>`).join('')}${x.avoid ? `<div class="tp-avoid">🚫 ${pEsc(x.avoid)}</div>` : ''}</li>`).join('')}</ul></div>` : '')
+      : g.interventions ? `<div><span class="tp-lbl">מה עושים</span><div class="tp-rv-part">${pEsc(g.interventions)}</div></div>` : '';
+    return `<article class="tp-rv-goal"><h3>מטרה ${num(g)} – ${pEsc(g.title || 'בלי שם')}${g.bank && g.bank.evidence ? bankEvidenceTag(g.bank.evidence) : ''}</h3>${g.why_staff ? `<div class="tp-rv-meta">${pEsc(g.why_staff)}</div>` : ''}${targets}${ints}
+      ${(g.strengths || []).length ? `<div class="th-chips">${g.strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}${g.review_date ? `<div class="tp-rv-meta">בדיקה מחדש של המטרה: ${pEsc(dayLabel(g.review_date))}</div>` : ''}</article>`;
+  };
+  const focus = goals.filter(g => tpStatusOf(g) === 'focus'), rest = goals.filter(g => tpStatusOf(g) !== 'focus');
+  const parts = [['summary', 'תקציר לצוות']].concat(PLAN_PARTS.map(([k, w]) => [k, w])).filter(([k]) => p[k]);
+  const restLine = g => { const s = tpStatusOf(g); return `<li>${s === 'achieved' ? `הושגה${g.achieved_at ? ' ' + pEsc(dayLabel(g.achieved_at)) : ''}` : s === 'stopped' ? 'הופסקה' : 'בהמתנה'} · <b>${pEsc(g.title || 'בלי שם')}</b>${s === 'stopped' && g.stop_reason ? ` · ${pEsc(g.stop_reason)}` : ''}</li>`; };
+  return `${head}
+    <section><h2>במוקד</h2>${focus.length ? focus.map(goalHtml).join('') : '<div class="pnote">אין עכשיו מטרה במוקד.</div>'}</section>
+    ${parts.length ? `<section><h2>מה חשוב לדעת</h2>${parts.map(([k, w]) => `<div class="tp-rv-part${k === 'avoid' ? ' avoid' : ''}"><b>${w}</b>${pEsc(p[k])}</div>`).join('')}</section>` : ''}
+    ${rest.length ? `<section><h2>מטרות נוספות</h2><ul class="tp-rv-list">${rest.map(restLine).join('')}</ul></section>` : ''}`;
+}
+function tpReviewPage(id, box){
+  const changed = tpDiff(thp.plans[id] || {}).length > 0;
+  box.innerHTML = `<div class="tp-review"><div class="tp-rv-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התוכניות</button>${tpViewSwitchHtml('review')}</div>
+    ${changed ? '<div class="tp-rv-draft" role="status">יש בטיוטה שינויים שעוד לא פורסמו. הסקירה מציגה את מה שהצוות רואה עכשיו.</div>' : ''}
+    ${tpReviewBody(id)}<button type="button" class="btn ghost small tp-rv-print" id="tp-rv-print">הדפסה / PDF</button></div>`;
+  box.querySelector('#tp-back').addEventListener('click', () => { thp.planChild = null; thp.planView = 'work'; thpRender(); });
+  tpWireViewSwitch(id, box);
+  box.querySelector('#tp-rv-print').addEventListener('click', () => {          // (prints exactly the review)
+    let el = document.getElementById('print-sheet'); if(!el){ el = document.createElement('div'); el.id = 'print-sheet'; document.body.appendChild(el); }
+    el.innerHTML = `<div class="th-print tp-review">${tpReviewBody(id)}<div class="th-print-meta">הודפס ${pEsc(dayLabel(isoDate(new Date())))}</div></div>`;
+    document.body.classList.add('printing');
+    const done = () => { document.body.classList.remove('printing'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done); try { window.print(); } catch(e){ done(); } setTimeout(done, 60000);
+  });
+}
 // "עוד": the summary (with a suggestion), "ברגעים קשים" (what to avoid stands out, signs, what calms), routine, the child's gender, a file
 function tpMoreHtml(id, d){
-  const part = (k, w, cls) => `<label class="pfield${cls ? ' ' + cls : ''}">${w} <button type="button" class="btn ghost small th-tpl-btn" data-tpl="${k}">📚</button><textarea id="tm-${k}" rows="2">${pEsc(d[k] || '')}</textarea></label>`;
-  return `<details class="pfold tp-more"><summary><span>עוד</span><small>תקציר, ברגעים קשים, שגרה ועוד</small></summary><div class="pfold-body">
+  const part = (k, w, cls) => `<label class="pfield${cls ? ' ' + cls : ''}">${w} <button type="button" class="btn ghost small th-tpl-btn" data-tpl="${k}">📚 נוסחים מוכנים</button><textarea id="tm-${k}" rows="2">${pEsc(d[k] || '')}</textarea></label>`;
+  return `<details class="pfold tp-more"><summary><span>עוד</span><small>תקציר, ברגעים קשים, שגרה ועוד</small><span class="tm-state" id="tm-state" role="status" aria-live="polite"></span></summary><div class="pfold-body">
     <label class="pfield">תקציר לצוות <button type="button" class="btn ghost small" id="tm-suggest">הצעה</button><textarea id="tm-summary" rows="3" placeholder="כמה משפטים: מה חשוב לדעת עכשיו">${pEsc(d.summary || '')}</textarea></label>
     <h3 class="psec">ברגעים קשים</h3>${part('avoid', 'ממה להימנע', 'th-avoid-field')}${part('signs', 'אותות מוקדמים')}${part('calm', 'מה עוזר להירגע')}
     ${part('routine', 'שגרה יומית מיוחדת')}
     <label class="pfield">הילד/ה (לנוסחים)<select id="tm-gender"><option value="">לא צוין</option><option value="m"${d.gender === 'm' ? ' selected' : ''}>בן</option><option value="f"${d.gender === 'f' ? ' selected' : ''}>בת</option></select></label>
     <details class="pfold"><summary><span>עוזר חשיבה (לא מוצג לצוות)</span></summary><div class="pfold-body"><textarea id="tm-think" rows="3">${pEsc(d.thinking || '')}</textarea></div></details>
-    <div class="pfield"><span>קובץ מצורף</span>${d.file ? `<span class="pnote">📎 ${pEsc(d.file.name)}</span>` : ''}<input type="file" id="tm-file" accept=".pdf,.doc,.docx"></div>
-    <button type="button" class="btn" id="tm-save">שמירה</button></div></details>`;
+    <div class="pfield"><span>קובץ מצורף</span><span class="pnote" id="tm-file-name">${d.file ? '📎 ' + pEsc(d.file.name) : ''}</span><input type="file" id="tm-file" accept=".pdf,.doc,.docx"></div></div></details>`;          // (no "שמירה": everything here saves by itself, Guy 2026-10-30)
 }
+// "עוד" saves by itself (Guy 2026-10-30): a second after the typing stops and on leaving a field; still a draft until "פרסום".
+// No connection: what was written is kept on this device and tried again every few seconds (and when the connection is back); a file is uploaded as soon as it is chosen.
 function tpWireMore(id, box, after){
-  const s = box.querySelector('#tm-save'); if(!s) return;
-  box.querySelectorAll('.tp-more .th-tpl-btn').forEach(b => b.addEventListener('click', () => { const ta = box.querySelector('#tm-' + b.dataset.tpl);
-    bankPick(b.dataset.tpl, { age:tpBankAge(id), onPick:(x, age) => { ta.value = bankJoin(ta.value, bankPartText(x, age, box.querySelector('#tm-gender').value)); } }); }));
-  box.querySelector('#tm-suggest').addEventListener('click', async () => { const d = tpDraftOf(id), f = (d.goals || []).filter(g => tpStatusOf(g) === 'focus'), nm = careName(id);
-    const t = box.querySelector('#tm-summary');
+  const st = box.querySelector('#tm-state'); if(!st) return;
+  const KEY = 'ramzor-tm-' + id, el = k => box.querySelector('#tm-' + k);
+  const vals = () => { const v = k => el(k).value.trim(); return { summary:v('summary'), avoid:v('avoid'), signs:v('signs'), calm:v('calm'), routine:v('routine'), gender:el('gender').value, thinking:v('think') }; };
+  const show = (t, bad) => { st.textContent = t; st.classList.toggle('bad', !!bad); };
+  let timer = null, busy = false, again = false, retry = null;
+  const publishNow = () => {          // (the first unpublished change: the main button becomes "פרסום", as after a save before)
+    const nb = box.querySelector('#tp-new'); if(!nb || box.querySelector('#tp-publish') || !tpDiff(thp.plans[id] || {}).length) return;
+    nb.insertAdjacentHTML('afterend', '<button type="button" class="btn tp-main" id="tp-publish">פרסום</button>'); nb.classList.remove('tp-main'); nb.classList.add('ghost', 'small', 'tp-second');
+    box.querySelector('#tp-publish').addEventListener('click', () => tpPublish(id));
+  };
+  const save = async () => {
+    clearTimeout(timer); timer = null; if(!document.body.contains(st)) return;
+    if(busy){ again = true; return; }
+    const v = vals(); busy = true; show('שומר...');
+    let ok = false; try { ok = await tpSave(id, Object.assign(tpDraftOf(id), v), true); } catch(e){}
+    busy = false;
+    if(ok){ try { localStorage.removeItem(KEY); } catch(e){} clearInterval(retry); retry = null; show('✓ נשמר אוטומטית · בטיוטה, עד "פרסום"'); publishNow(); }
+    else { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} show('לא נשמר עדיין, אין חיבור. נשמר במכשיר, וננסה שוב', true);
+      if(!retry) retry = setInterval(() => { if(!document.body.contains(st)){ clearInterval(retry); return; } save(); }, 8000); }
+    if(again){ again = false; save(); }
+  };
+  const queue = () => { clearTimeout(timer); timer = setTimeout(save, 1000); };
+  box.querySelectorAll('.tp-more textarea, .tp-more select').forEach(f => { f.addEventListener('input', queue); f.addEventListener('change', save); f.addEventListener('blur', () => { if(timer) save(); }); });
+  window.addEventListener('online', () => { if(retry) save(); });
+  { let pend = null; try { pend = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){}          // (written here before without a connection: back in the fields, and saved)
+    if(pend){ ['summary', 'avoid', 'signs', 'calm', 'routine'].forEach(k => { if(typeof pend[k] === 'string') el(k).value = pend[k]; }); if(typeof pend.thinking === 'string') el('think').value = pend.thinking; if(pend.gender != null) el('gender').value = pend.gender; save(); } }
+  box.querySelectorAll('.tp-more .th-tpl-btn').forEach(b => b.addEventListener('click', () => { const ta = el(b.dataset.tpl);
+    bankPick(b.dataset.tpl, { age:tpBankAge(id), onPick:(x, age) => { ta.value = bankJoin(ta.value, bankPartText(x, age, el('gender').value)); save(); } }); }));
+  el('suggest').addEventListener('click', async () => { const d = tpDraftOf(id), f = (d.goals || []).filter(g => tpStatusOf(g) === 'focus'), nm = careName(id);
+    const t = el('summary');
     if(t.value.trim() && !(await confirmSheet({ title:'להחליף את התקציר בהצעה?', text:'ההצעה נבנית מהמטרה שבמוקד. אפשר לערוך אותה אחר כך.', okLabel:'כן, להחליף', cancelLabel:'חזרה' }))) return;
-    t.value = f.length ? `כרגע במוקד: ${f.map(g => g.title).join(', ')}. ${f.map(g => g.why_staff || '').filter(Boolean).join(' ')} ${d.avoid ? 'חשוב לזכור ממה להימנע.' : ''}`.replace(/\s+/g, ' ').trim() : `${nm}: [מה חשוב לדעת עכשיו].`; });
-  s.addEventListener('click', async () => {
-    const d = tpDraftOf(id), v = k => box.querySelector('#tm-' + k).value.trim();
-    Object.assign(d, { summary:v('summary'), avoid:v('avoid'), signs:v('signs'), calm:v('calm'), routine:v('routine'), gender:box.querySelector('#tm-gender').value, thinking:v('think') });
-    const fin = box.querySelector('#tm-file'), f = fin.files && fin.files[0];
-    if(f){ if(f.size > 20 * 1024 * 1024){ toast('הקובץ גדול מדי (עד 20MB)'); return; }
-      const path = `plans/${id}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-60)}`, up = await sbPersonal.storage.from('mercury').upload(path, f, { upsert:false, contentType:f.type || undefined });
-      if(up.error){ toast('ההעלאה נכשלה'); return; } d.file = { path, name:f.name }; }
-    if(await tpSave(id, d)){ toast('נשמר בטיוטה'); after(); }
+    t.value = f.length ? `כרגע במוקד: ${f.map(g => g.title).join(', ')}. ${f.map(g => g.why_staff || '').filter(Boolean).join(' ')} ${d.avoid ? 'חשוב לזכור ממה להימנע.' : ''}`.replace(/\s+/g, ' ').trim() : `${nm}: [מה חשוב לדעת עכשיו].`; save(); });
+  el('file').addEventListener('change', async () => {
+    const f = el('file').files && el('file').files[0]; if(!f) return;
+    if(f.size > 20 * 1024 * 1024){ show('הקובץ גדול מדי (עד 20MB). אפשר לבחור קובץ קטן יותר', true); el('file').value = ''; return; }
+    show('מעלה את הקובץ...');
+    const path = `plans/${id}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-60)}`;
+    let up = null; try { up = await sbPersonal.storage.from('mercury').upload(path, f, { upsert:false, contentType:f.type || undefined }); } catch(e){ up = { error:e }; }
+    if(up.error){ show('ההעלאה נכשלה. אפשר לבחור את הקובץ שוב', true); el('file').value = ''; return; }
+    tpDraftOf(id).file = { path, name:f.name }; el('file-name').textContent = '📎 ' + f.name; el('file').value = ''; save();
   });
 }
 // what the draft changes against the published plan, in words (the goal being built is not counted): the status bar and the publish window
