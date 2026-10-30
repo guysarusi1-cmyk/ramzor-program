@@ -1,0 +1,84 @@
+
+/* ---------- the Ramzor's staff screens on the new look (Guy 2026-10-30; the look is chosen in 14zk-ramzor-look.js) ----------
+   body[data-rlook] is set only while a staff screen of the Ramzor is open (never the kids' TV). The base variables every Ramzor rule reads are
+   given the new colours; the traffic-light colours (red, orange, yellow, green, gold) keep their professional meaning and stay as they are,
+   only their soft backgrounds follow the look. */
+body[data-rlook]{
+  --font-heading:'Rubik', Arial, sans-serif; --font-body:'Assistant', Arial, sans-serif;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:9999px;
+  --motion-instant:100ms; --motion-fast:200ms; --ease-standard:cubic-bezier(.4, 0, .2, 1);
+}
+body[data-rlook=dark]{
+  --color-bg:#1C1A17; --color-surface:#24211D; --color-surface-alt:#2C2925; --color-surface-inset:#191714; --color-border:#3A362F; --color-border-strong:#4A453C;
+  --color-text:#E9E4DA; --color-text-secondary:#A8A196; --color-heading:#E9E4DA; --color-primary:#9DB08F; --color-primary-soft:#2D3328; --color-on-primary:#1C1A17;
+  --color-shadow:none;
+  --bg:#1C1A17; --panel:#24211D; --panel-2:#2C2925; --line:#3A362F; --text:#E9E4DA; --muted:#A8A196;
+  background:#1C1A17;
+}
+body[data-rlook=light]{
+  --color-bg:#FAF7F2; --color-surface:#FFFFFF; --color-surface-alt:#F4EFE7; --color-surface-inset:#F0EBE2; --color-border:#E7E0D3; --color-border-strong:#D6CCB9;
+  --color-text:#2D2A24; --color-text-secondary:#6E675C; --color-heading:#2D2A24; --color-primary:#5C6F52; --color-primary-soft:#E7ECE2; --color-on-primary:#FFFFFF;
+  --color-shadow:0 1px 3px rgba(45, 42, 36, .05), 0 4px 12px rgba(45, 42, 36, .06);
+  --bg:#FAF7F2; --panel:#FFFFFF; --panel-2:#F4EFE7; --line:#E7E0D3; --text:#2D2A24; --muted:#6E675C;
+  --red-dim:#F7E3E0; --orange-dim:#FBEBDD; --yellow-dim:#F8EFD0; --green-dim:#E2F0E5; --gold-dim:#F6EEDF;
+  background:#FAF7F2;
+}
+body[data-rlook=leopard]{
+  --color-bg:#17100A; --color-surface:#22170E; --color-surface-alt:#2E2014; --color-surface-inset:#130D07; --color-border:#4A3420; --color-border-strong:#6A4B2C;
+  --color-text:#F7ECD8; --color-text-secondary:#D3BD97; --color-heading:#E9C77A; --color-primary:#E2B65C; --color-primary-soft:#352612; --color-on-primary:#24140A;
+  --color-shadow:none;
+  --bg:#17100A; --panel:#22170E; --panel-2:#2E2014; --line:#4A3420; --text:#F7ECD8; --muted:#D3BD97;
+}
+body[data-rlook]{ color:var(--color-text); font-family:var(--font-body); }
+
+/* the site's header above the screens, and the main screen's own top */
+body[data-rlook] header.top .eyebrow{ color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; letter-spacing:0; }
+body[data-rlook] header.top h1, body[data-rlook] .home-title{ font-family:var(--font-heading); font-weight:600; color:var(--color-heading); }
+body[data-rlook] header.top .sub, body[data-rlook] .home-slogan{ color:var(--color-text-secondary); }
+body[data-rlook] .home-icon-btn, body[data-rlook] .home-text-btn{ color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; }
+body[data-rlook] .home-icon-btn:hover, body[data-rlook] .home-text-btn:hover{ color:var(--color-text); }
+.home-look{ right:92px; }
+
+/* the main screen's cards and links */
+body[data-rlook] .home-card, body[data-rlook] .home-secondary{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--color-shadow); color:var(--color-text); font-family:var(--font-body); }
+body[data-rlook] .home-card:hover, body[data-rlook] .home-secondary:hover{ border-color:var(--color-border-strong); background:var(--color-surface); }
+body[data-rlook] .home-card-icon, body[data-rlook] .home-secondary-icon{ color:var(--color-primary); }
+body[data-rlook] .home-card:hover .home-card-icon{ color:var(--color-primary); }
+body[data-rlook] .home-card-title, body[data-rlook] .home-secondary-title{ font-family:var(--font-heading); font-weight:600; }
+body[data-rlook] .home-card-sub, body[data-rlook] .home-secondary-sub{ color:var(--color-text-secondary); }
+body[data-rlook] :is(.home-card, .home-secondary, .home-icon-btn, .home-text-btn):focus-visible{ outline:2px solid var(--color-primary); outline-offset:3px; }
+
+/* cards, tabs, buttons and fields on every staff screen */
+body[data-rlook] .card{ background:var(--color-surface); border-color:var(--color-border); box-shadow:var(--color-shadow); }
+body[data-rlook] .card h2{ color:var(--color-text-secondary); font-family:var(--font-heading); font-weight:600; letter-spacing:0; }
+body[data-rlook] nav.tabs{ background:transparent; border:0; border-bottom:1px solid var(--color-border); border-radius:0; padding:0; }
+body[data-rlook] nav.tabs button{ position:relative; border-radius:var(--radius-sm) var(--radius-sm) 0 0; font-family:var(--font-body); font-weight:600; font-size:15px; color:var(--color-text-secondary); }
+body[data-rlook] nav.tabs button.active{ background:transparent; color:var(--color-text); box-shadow:inset 0 -2px 0 var(--color-primary); }
+body[data-rlook] .chip.selected, body[data-rlook] .view .btn:not(.ghost):not(.danger){ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); font-family:var(--font-body); }
+body[data-rlook] .view .btn.ghost{ background:transparent; color:var(--color-text); border:1px solid var(--color-border-strong); font-family:var(--font-body); }
+body[data-rlook] .back-btn{ background:transparent; color:var(--color-text); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); font-family:var(--font-body); font-weight:600; }
+body[data-rlook] :is(.view) input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), body[data-rlook] :is(.view) select, body[data-rlook] :is(.view) textarea{
+  background:var(--color-surface-inset); color:var(--color-text); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); font-family:var(--font-body); }
+body[data-rlook] .home-problem, body[data-rlook] .home-link{ color:var(--color-text-secondary); }
+body[data-rlook] .home-control{ background:var(--color-surface); color:var(--color-text); border:1px solid var(--color-border); border-radius:var(--radius-md); font-family:var(--font-body); font-weight:600; }
+
+/* the guided protocols (daily work) */
+body[data-rlook] .guided-tab:hover, body[data-rlook] .guided-action:hover, body[data-rlook] .guided-secondary:hover{ border-color:var(--color-border-strong); }
+body[data-rlook] .guided-tab[aria-expanded="true"]{ background:var(--color-surface-alt); border-color:var(--color-border-strong); }
+body[data-rlook] :is(.guided-action, .guided-secondary, .quick-light-row):focus-visible{ outline:2px solid var(--color-primary); }
+body[data-rlook] .quick-light-row:hover{ background:var(--color-surface-alt); }
+
+/* light look: the light text written for the dark look becomes dark text on the soft traffic colours */
+body[data-rlook=light] .response-headline{ color:var(--color-text); }
+body[data-rlook=light] .bulb.selected.red, body[data-rlook=light] .bulb.selected.orange, body[data-rlook=light] .bulb.selected.yellow, body[data-rlook=light] .bulb.selected.green, body[data-rlook=light] .bulb.selected.gold{ outline:2px solid var(--color-text); outline-offset:2px; }
+
+/* the sheets, the short messages and the bottom bar over the Ramzor's staff screens */
+body[data-rlook] .sheet .sheet-card{ background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text); }
+body[data-rlook] .sheet .sheet-card h2{ font-family:var(--font-heading); font-weight:600; color:var(--color-heading); }
+body[data-rlook] .sheet .btn:not(.ghost){ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
+body[data-rlook] .sheet .btn.ghost{ background:transparent; color:var(--color-text); border-color:var(--color-border-strong); }
+body[data-rlook] .toast{ background:var(--color-surface-alt); border-color:var(--color-border-strong); color:var(--color-text); font-family:var(--font-body); }
+body[data-rlook=light] .toast{ background:#2D2A24; border-color:#2D2A24; color:#FAF7F2; }
+body[data-rlook] :is(.bottom-nav, .nav-back-float){ background:var(--color-surface); border-color:var(--color-border); color:var(--color-text-secondary); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:none; }
+body[data-rlook] :is(.bottom-nav-btn, .nav-back-float){ color:inherit; font-family:var(--font-body); font-weight:600; }
+body[data-rlook] .bottom-nav-btn.active{ background:var(--color-primary-soft); color:var(--color-text); }
