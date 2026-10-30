@@ -2181,6 +2181,10 @@
         await showTherapyPortal();
         const tabs = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         check('therapy portal: the coordinator has the children, her observations, "assign therapists" and who watched the videos (Mercury 86)', tabs.join(',') === (thp.v32 ? 'kids,myobs,assign,videos' : 'kids,assign') && document.querySelectorAll('#view-therapy [data-th-card]').length === roster.length, tabs.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-card]').length);
+        { const sh = () => document.querySelector('#view-therapy .therapy-shell').dataset.thmenu;
+          const m0 = sh(); document.querySelector('#view-therapy [data-th-tab="assign"]').click(); await sleep(150); const m1 = sh(), back = document.querySelector('#th-to-menu');
+          if(back){ back.click(); await sleep(120); } const m2 = sh();
+          check('therapy portal: it opens on the menu of areas (shown on a phone), an area replaces it and "→ כל האזורים" goes back (Guy 2026-10-30)', m0 === '1' && m1 === '0' && (thpWide() ? true : !!back && m2 === '1'), JSON.stringify([m0, m1, m2, !!back])); }
         document.querySelector('#view-therapy [data-th-tab="assign"]').click(); await sleep(150);
         const sel = document.querySelector('#view-therapy [data-th-assign="c1"]');
         check('therapy portal: the assign tab has a choice for every child, with the therapist already chosen', document.querySelectorAll('#view-therapy [data-th-assign]').length === roster.length && !!sel && sel.value === th, sel ? sel.value : 'none');

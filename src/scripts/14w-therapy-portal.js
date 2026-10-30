@@ -116,7 +116,7 @@ async function showTherapyPortal(){
   thp.mode = canTherapistPortal() ? 'therapist' : 'staff';
   portalActivateView('view-therapy');
   const view = document.getElementById('view-therapy');
-  thp.tab = null; thp.editing = null; thp.wtab = null; thp.q = ''; thp.planChild = null;          // (every entry starts on the first tab of this portal)
+  thp.tab = null; thp.editing = null; thp.wtab = null; thp.q = ''; thp.planChild = null; thp.navMenu = true;          // (every entry starts on the first tab of this portal; on a phone, on the menu of areas: Guy 2026-10-30)
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}"><div class="pnote">טוען...</div></div>`;
   if(typeof roster !== 'undefined' && !roster.length && typeof initRoster === 'function'){ try { await initRoster(); } catch(e){} }          // (a therapist who came in by a refresh: the children were not loaded yet)
   await thpLoad();
@@ -226,7 +226,7 @@ function thpRender(){
   }
   const todoN = ther && thp.v32 ? thpTodo().length : 0;
   const side = thpWide(), look = portalLoad().settings.theme === 'light' ? 'light' : 'dark';          // (no leopard in this portal: Guy 2026-10-30)
-  view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${look}" data-thmode="${thp.mode}"><div class="th-frame">
+  view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${look}" data-thmode="${thp.mode}" data-thmenu="${thp.navMenu && !thp.planChild && !thp.editing ? 1 : 0}"><div class="th-frame">
       <aside class="th-side" aria-label="פורטל הטיפול">
       <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1>${side ? '<span></span>' : `<div class="mx-seg th-look-sm" role="group" aria-label="מראה">${[['light', 'בהיר'], ['dark', 'כהה']].map(([k, w]) => `<button type="button" data-th-look="${k}" aria-pressed="${look === k}">${w}</button>`).join('')}</div>`}</div>
       <div class="portal-hello">שלום ${pEsc(me.first || '')}</div>
@@ -234,7 +234,7 @@ function thpRender(){
       ${side ? `<div class="th-side-foot"><div class="mx-seg" role="group" aria-label="מראה">${[['light', 'בהיר'], ['dark', 'כהה']].map(([k, w]) => `<button type="button" data-th-look="${k}" aria-pressed="${look === k}">${w}</button>`).join('')}</div>
         <button type="button" class="back-btn" id="therapy-home2">→ מסך ראשי</button></div>` : ''}
       </aside>
-      <div id="therapy-body">${side && !thp.planChild && (tabs.find(t => t[0] === thp.tab) || [])[1] ? `<h2 class="th-page-title">${pEsc(tabs.find(t => t[0] === thp.tab)[1])}</h2>` : ''}${inner}</div>
+      <div id="therapy-body">${!side && tabs.length > 1 ? '<button type="button" class="btn ghost small th-to-menu" id="th-to-menu">→ כל האזורים</button>' : ''}${!thp.planChild && (tabs.find(t => t[0] === thp.tab) || [])[1] ? `<h2 class="th-page-title">${pEsc(tabs.find(t => t[0] === thp.tab)[1])}</h2>` : ''}${inner}</div>
     </div></div>`;          // (on a computer the tabs row is gone, so every screen says its name: the simplicity checker)
   view.querySelectorAll('#therapy-home, #therapy-home2').forEach(b => b.addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); }));
   view.querySelectorAll('[data-th-look]').forEach(b => b.addEventListener('click', () => {          // (kept on this device; the other portals' own choice, the leopard included, is not touched)
@@ -242,7 +242,8 @@ function thpRender(){
     const sh = view.querySelector('.therapy-shell'); sh.dataset.ptheme = b.dataset.thLook;          // (only the colours change: an open builder or sheet stays where it is — the simplicity checker)
     view.querySelectorAll('[data-th-look]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); document.querySelectorAll('.mx-sheet').forEach(s => { s.dataset.ptheme = b.dataset.thLook; }); }));
   if(!thp.mqOn){ thp.mqOn = true; try { matchMedia('(min-width:1024px)').addEventListener('change', () => { if(document.querySelector('#view-therapy.active')) thpRender(); }); } catch(e){} }          // (a window made wider or narrower: the menu follows)
-  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thp.planChild = null; thpRender(); }));
+  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thp.planChild = null; thp.navMenu = false; thpRender(); window.scrollTo(0, 0); }));
+  { const tm = view.querySelector('#th-to-menu'); if(tm) tm.addEventListener('click', () => { thp.navMenu = true; thp.planChild = null; thp.editing = null; thpRender(); window.scrollTo(0, 0); }); }          // (a phone: back to the menu of areas)
   const body = view.querySelector('#therapy-body');
   const wireKids = box => box.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(ther && thp.tab !== 'kids' && thp.v32 && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid, 'plan'); else thpOpenChild(b.dataset.thKid); }));          // (in "כל הילדים": the staff's view of the child)
   wireKids(body);

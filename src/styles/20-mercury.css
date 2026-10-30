@@ -262,3 +262,16 @@ body:has(#view-therapy.active .therapy-shell[data-ptheme=light]){ background:#FA
 .therapy-shell[data-ptheme] .tp-sp-st.now.goal{ color:var(--color-on-primary); }
 .therapy-shell[data-ptheme] .tp-fb button, .mx-sheet .tp-fb button{ color:var(--color-text); border-color:var(--color-border-strong); }
 .therapy-shell[data-ptheme] .cr-mk-row .pchoice button.on, .mx-sheet .cr-mk-row .pchoice button.on{ background:var(--color-primary-soft); color:var(--color-text); border-color:var(--color-primary); }
+/* a phone: the portal opens on the menu of areas only; an area fills the screen, with "→ כל האזורים" back to the menu (Guy 2026-10-30) */
+.therapy-shell[data-ptheme] .th-page-title{ font-size:22px; margin:0 0 var(--space-4); }
+@media (max-width:1023px){
+  .therapy-shell[data-ptheme][data-thmenu="1"] #therapy-body{ display:none; }
+  .therapy-shell[data-ptheme][data-thmenu="0"] .th-nav-grid{ display:none; }
+  .therapy-shell[data-ptheme][data-thmenu="0"] .portal-hello{ display:none; }
+  .therapy-shell[data-ptheme] .th-to-menu{ margin:0 0 var(--space-3); }
+  .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--space-3); }
+  .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button{ min-height:96px; font-size:16px; }
+  .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid .th-nav-ico{ width:28px; height:28px; }
+}
+@media (min-width:1024px){ .therapy-shell[data-ptheme] .th-to-menu{ display:none; } }
+@media (max-width:1023px){ .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button.active{ background:var(--color-surface); border-color:var(--color-border); } .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button.active .th-nav-ico{ color:var(--color-text-secondary); } }
