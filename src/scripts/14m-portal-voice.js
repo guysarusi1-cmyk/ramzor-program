@@ -125,6 +125,7 @@ async function srvLoadSettings(){
   try { const pr = await sbPersonal.from('staff_settings').select('pref_start').eq('staff_id', srv.me).maybeSingle(); if(!pr.error && pr.data) srv.prefStart = pr.data.pref_start || null; } catch(e){}
   srv.fixedNo = [];          // (fixed preferences: scheduling-v27.sql)
   try { const fx = await sbPersonal.from('staff_settings').select('fixed_no').eq('staff_id', srv.me).maybeSingle(); if(!fx.error && fx.data && Array.isArray(fx.data.fixed_no)) srv.fixedNo = fx.data.fixed_no; } catch(e){}
+  srvLoadSimplePrefs((await (async () => { try { const r = await sbPersonal.from('staff_settings').select('pref_weekly,pref_plain,fixed_no_days').eq('staff_id', srv.me).maybeSingle(); return r.error ? null : (r.data || {}); } catch(e){ return null; } })()));          // (scheduling-v48.sql)
   srv.lang = (srv.profile && srv.profile.lang) || null;          // (the language: her own choice, else the admin's default; scheduling-v25.sql)
   try { const lg = await sbPersonal.from('staff_settings').select('lang').eq('staff_id', srv.me).maybeSingle(); if(!lg.error && lg.data && lg.data.lang) srv.lang = lg.data.lang; } catch(e){}
   srv.mailOff = null;          // (which of her messages come to the portal only: scheduling-v45.sql; null = not on this server yet)
@@ -143,6 +144,22 @@ async function srvSaveSetting(patch){
     const row = { staff_id:srv.me }; if('voice' in patch) row.voice = patch.voice; if('reminders' in patch) row.reminders = patch.reminders; if('pickOne' in patch) row.pick_one = !!patch.pickOne; if('showLong' in patch) row.show_long = !!patch.showLong; if('portalTheme' in patch) row.portal_theme = patch.portalTheme;
     const r = await sbPersonal.from('staff_settings').upsert(row);
     return !r.error;
+  } catch(e){ return false; }
+}
+// "שבוע אחרי שבוע", "בלי צבעים" and the weekdays she never comes (scheduling-v48.sql); until the columns exist, kept on this device
+const SIMPLE_LOCAL = { prefWeekly:'ramzor-pref-weekly', prefPlain:'ramzor-pref-plain', fixedDays:'ramzor-fixed-days' };
+function srvLoadSimplePrefs(row){
+  srv.simpleCols = !!row;
+  if(row){ srv.prefWeekly = !!row.pref_weekly; srv.prefPlain = !!row.pref_plain; srv.fixedDays = Array.isArray(row.fixed_no_days) ? row.fixed_no_days : []; return; }
+  try { srv.prefWeekly = localStorage.getItem(SIMPLE_LOCAL.prefWeekly + '-' + srv.me) === '1'; srv.prefPlain = localStorage.getItem(SIMPLE_LOCAL.prefPlain + '-' + srv.me) === '1'; srv.fixedDays = JSON.parse(localStorage.getItem(SIMPLE_LOCAL.fixedDays + '-' + srv.me) || '[]'); } catch(e){ srv.prefWeekly = srv.prefPlain = false; srv.fixedDays = []; }
+}
+async function srvSaveSimplePrefs(patch){
+  Object.assign(srv, patch);
+  try { Object.keys(patch).forEach(k => localStorage.setItem(SIMPLE_LOCAL[k] + '-' + srv.me, k === 'fixedDays' ? JSON.stringify(patch[k]) : patch[k] ? '1' : '0')); } catch(e){}
+  if(!srv.simpleCols) return true;
+  try {
+    const row = { staff_id:srv.me }; if('prefWeekly' in patch) row.pref_weekly = patch.prefWeekly; if('prefPlain' in patch) row.pref_plain = patch.prefPlain; if('fixedDays' in patch) row.fixed_no_days = patch.fixedDays;
+    const r = await sbPersonal.from('staff_settings').upsert(row); return !r.error;
   } catch(e){ return false; }
 }
 function openPortalSettings(){
@@ -171,6 +188,13 @@ function openPortalSettings(){
     <h3 class="psec">העדפות קבועות</h3>
     <div class="pnote">מה שמסמנים כאן מופיע אצלך "לא" בכל חודש. אפשר לבחור יותר מאחד, ואפשר תמיד לשנות משמרת מסוימת בלחיצה עליה.</div>
     <div class="pchoice wrap fixed-no">${[['m', 'לא עושה בקרים'], ['e', 'לא עושה צהריים'], ['n', 'לא עושה לילות']].map(([k, w]) => { const admin = k === 'n' && srv.profile && srv.profile.no_nights; return `<button type="button" class="${admin || (srv.fixedNo || []).includes(k) ? 'on' : ''}" data-fixed-no="${k}"${admin ? ' disabled title="הוגדר בפורטל הניהול"' : ''}>${w}</button>`; }).join('')}</div>
+    <h3 class="psec">ימים שאני לא באה בהם</h3>
+    <div class="pnote">הימים שמסמנים כאן מסומנים אצלך "לא" בתחילת כל חודש.</div>
+    <div class="pchoice wrap fixed-days">${DOW_SHORT.map((d, i) => `<button type="button" class="${(srv.fixedDays || []).includes(i) ? 'on' : ''}" data-fixed-day="${i}">${pEsc(d)}</button>`).join('')}</div>
+    <h3 class="psec">איך ממלאים את ההעדפות</h3>
+    <div class="pchoice wrap"><button type="button" class="${srv.prefWeekly ? 'on' : ''}" data-set-weekly="1">שבוע אחרי שבוע</button><button type="button" class="${srv.prefWeekly ? '' : 'on'}" data-set-weekly="0">כל החודש יחד</button></div>
+    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${srv.prefPlain ? 'on' : ''}" data-set-plain="1">בלי צבעים</button><button type="button" class="${srv.prefPlain ? '' : 'on'}" data-set-plain="0">עם צבעים</button></div>
+    <div class="pnote">"בלי צבעים": לחיצה = כן, עוד לחיצה = לא, לחיצה ארוכה מחזירה לנקודה.</div>
     <h3 class="psec">סופי שבוע</h3>
     <div class="pchoice wrap"><button type="button" class="${srv.showLong ? 'on' : ''}" data-set-long="1">להציג סופ"ש ארוך: כן</button><button type="button" class="${srv.showLong ? '' : 'on'}" data-set-long="0">לא</button></div>
     <div class="pnote">${tx('long_setting')}</div>
@@ -235,6 +259,15 @@ function openPortalSettings(){
     if(!ok){ srv.fixedNo = was; b.classList.toggle('on', (was || []).includes(k)); toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
     toast('נשמר. ההעדפה תופיע בכל חודש');
     if(portalUi.tab === 'prefs'){ const body = document.getElementById('portal-body'); if(body) renderInstructorPrefs(body); }
+  }));
+  sh.querySelectorAll('[data-set-weekly], [data-set-plain]').forEach(b => b.addEventListener('click', async () => {          // (the two ways of filling the preferences, Guy 2026-10-30)
+    const patch = 'setWeekly' in b.dataset ? { prefWeekly:b.dataset.setWeekly === '1' } : { prefPlain:b.dataset.setPlain === '1' };
+    await srvSaveSimplePrefs(patch); sh.close(); showPortal();
+  }));
+  sh.querySelectorAll('[data-fixed-day]').forEach(b => b.addEventListener('click', async () => {
+    const d = Number(b.dataset.fixedDay), cur = new Set(srv.fixedDays || []); if(cur.has(d)) cur.delete(d); else cur.add(d);
+    b.classList.toggle('on', cur.has(d));
+    await srvSaveSimplePrefs({ fixedDays:[0, 1, 2, 3, 4, 5, 6].filter(x => cur.has(x)) }); toast('נשמר. הימים האלה יסומנו "לא" בתחילת כל חודש');
   }));
   sh.querySelectorAll('[data-set-lang]').forEach(b => b.addEventListener('click', async () => {
     const lang = b.dataset.setLang; if(lang === srv.lang) return;

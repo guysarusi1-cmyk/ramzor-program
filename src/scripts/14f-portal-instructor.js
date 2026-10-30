@@ -144,6 +144,8 @@ function renderInstructorPrefs(body){
   const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
   if(portalServerOn && me.role === 'instructor' && !locked && !submitted && prefStartFill(mk, me.id, prefs, days))
     toast(srv.prefStart === 'yes' ? 'כל המשמרות סומנו "כן", לפי ההגדרות שלך. משנים רק את מה שצריך' : 'כל המשמרות סומנו "לא", לפי ההגדרות שלך. משנים רק את מה שצריך');
+  if(portalServerOn && me.role === 'instructor' && !locked && !submitted) prefFixedDaysFill(mk, prefs, days);          // (the weekdays she never comes: her settings, Guy 2026-10-30)
+  if(prefWeekOn(me, locked, submitted)) return renderWeekPrefs(body, mk, m, prefs);          // ("שבוע אחרי שבוע": 14zj)
   const dl = m.deadline ? parseIso(m.deadline) : null;
   const fixedOn = date => portalServerOn ? prefs.fixed.find(f => f.day === date) : null;
   // the long weekend: one button under the Friday and the Saturday of a weekend (and, when the person switched it on in the settings, the small "only one of these" next to it)
@@ -230,7 +232,7 @@ function renderInstructorPrefs(body){
     const [name, v] = b.dataset.consent.split(':'); prefs.consent[name] = v === 'ask' ? 'ask' : v === '1'; portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-pslot]').forEach(b => b.addEventListener('click', () => {
-    if(locked) return;
+    if(locked || prefPlainOn()) return;          // (without colours the taps are 14zj's)
     const shown = b.dataset.pslot.split('|')[0], key = prefKeyOf(b.dataset.pslot), date = key.split('|')[0], lv = portalUi.level;
     if(fixedOn(date) || fixedOn(shown)) return;
     if(prefInsideLong(prefs, key) && lv !== 'absent'){ toast(tx('long_inside')); return; }
@@ -241,7 +243,7 @@ function renderInstructorPrefs(body){
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-plong]').forEach(b => b.addEventListener('click', () => {          // the long weekend: kept on the Friday, independent of the other shifts
-    if(locked) return;
+    if(locked || prefPlainOn()) return;
     const fri = b.dataset.plong, key = `${fri}|l`, lv = portalUi.level;
     if(fixedOn(fri) || prefs.absent.includes(fri)) return;
     if(lv === 'hours' || lv === 'absent'){ toast(tx('long_levels')); return; }
@@ -258,7 +260,7 @@ function renderInstructorPrefs(body){
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-pday]').forEach(b => b.addEventListener('click', () => {
-    if(locked) return;
+    if(locked || prefPlainOn()) return;
     const date = b.dataset.pday, lv = portalUi.level, keys = prefShiftsFor(date).map(s => prefKeyOf(`${date}|${s.id}`)).filter(k => !prefFixedNo(k) && !prefInsideLong(prefs, k));          // (a shift of a fixed preference changes only when it is pressed by itself)
     if(fixedOn(date)) return;
     if(lv === 'hours'){ openHoursSheet(date, prefs, () => renderInstructorPrefs(body)); return; }
@@ -288,6 +290,7 @@ function renderInstructorPrefs(body){
     }
     m.submitted[me.id] = true; portalSave(); toast(tx('submit_ok')); renderInstructorPrefs(body);
   });
+  prefMonthExtras(body, mk, prefs, locked, submitted);
 }
 // custom hours for one day: up to two ranges (whole hours); used only when they complete a full shift
 function openHoursSheet(date, prefs, done){

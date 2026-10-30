@@ -91,8 +91,8 @@ async function srvLoadCoord(){
   rows(ph).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; });
   rows(pm).forEach(r => { if(st.priv[r.staff_id]) Object.assign(st.priv[r.staff_id], r); });
   st.waMsg = (wm && !wm.error && wm.data && wm.data.value) || {};
-  st.voices = {}; st.fixedNo = {}; st.langs = {};
-  rows(sv).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; if((r.fixed_no || []).length) st.fixedNo[r.staff_id] = r.fixed_no; if(r.lang) st.langs[r.staff_id] = r.lang; });
+  st.voices = {}; st.fixedNo = {}; st.langs = {}; st.simple = {};
+  rows(sv).forEach(r => { if(r.pref_weekly || r.pref_plain) st.simple[r.staff_id] = { w:!!r.pref_weekly, p:!!r.pref_plain }; if(r.voice) st.voices[r.staff_id] = r.voice; if((r.fixed_no || []).length) st.fixedNo[r.staff_id] = r.fixed_no; if(r.lang) st.langs[r.staff_id] = r.lang; });
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; rows(sr).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; });
   st.buildReqs = rows(br); st.openReqs = rows(orq);

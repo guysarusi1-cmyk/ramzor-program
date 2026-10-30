@@ -143,7 +143,7 @@ function srvRenderCoordSettings(body){
       ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
-        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
+        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${srv.meRow && srv.meRow.admin ? `<button type="button" class="btn ghost small" data-simple="${p.id}">${(st.simple || {})[p.id] ? 'הגשה פשוטה ✓' : 'הגשה פשוטה'}</button>` : ''}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
       ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${p.admin ? 'מנהל' : p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : KIND_WORD[p.role]}</small></span>
         ${p.role === 'teacher' && p.active ? `<button type="button" class="btn ghost small" data-fixed-hours="${p.id}">שעות קבועות</button>` : ''}
@@ -152,6 +152,7 @@ function srvRenderCoordSettings(body){
       <h3 class="psec">הוספת איש צוות</h3>
       <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${mercuryOn() && srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
+        box.querySelectorAll('[data-simple]').forEach(b => b.addEventListener('click', () => simplePrefsSheet(b.dataset.simple, again)));          // (the admin only: "שבוע אחרי שבוע" / "בלי צבעים" for somebody, Guy 2026-10-30)
         box.querySelectorAll('[data-fixed-hours]').forEach(b => b.addEventListener('click', () => teacherHoursSheet(b.dataset.fixedHours)));
         box.querySelectorAll('[data-left], [data-back]').forEach(b => b.addEventListener('click', async () => {
           const id = b.dataset.left || b.dataset.back, on = !!b.dataset.back, p = st.instructors.find(x => x.id === id), nm = p ? instrName(p, st.instructors) : '';
@@ -382,5 +383,22 @@ function resizePhoto(file, size){
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('not an image')); };
     img.src = url;
+  });
+}
+// the admin switches the simpler preferences screen on or off for an instructor (scheduling-v48.sql: set_simple_prefs)
+function simplePrefsSheet(id, again){
+  const st = portalLoad(), p = st.instructors.find(x => x.id === id), cur = Object.assign({ w:false, p:false }, (st.simple || {})[id]);
+  const row = (k, on, off) => `<div class="pchoice wrap"><button type="button" class="${cur[k] ? 'on' : ''}" data-sp="${k}:1">${on}</button><button type="button" class="${cur[k] ? '' : 'on'}" data-sp="${k}:0">${off}</button></div>`;
+  const sh = portalSheet(`<h2>הגשת העדפות פשוטה: ${pEsc(p ? instrName(p, st.instructors) : '')}</h2>
+    <h3 class="psec">איך ממלאים</h3>${row('w', 'שבוע אחרי שבוע', 'כל החודש יחד')}
+    <h3 class="psec">סימון</h3>${row('p', 'בלי צבעים', 'עם צבעים')}
+    <div class="pnote">רק המסך שלה משתנה. ההעדפות מגיעות לרכזת כמו מכולם. היא יכולה לשנות את זה בעצמה בהגדרות.</div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="sp-save">שמירה</button></div>`);
+  sh.querySelectorAll('[data-sp]').forEach(b => b.addEventListener('click', () => { const [k, v] = b.dataset.sp.split(':'); cur[k] = v === '1'; sh.querySelectorAll(`[data-sp^="${k}:"]`).forEach(x => x.classList.toggle('on', x === b)); }));
+  sh.querySelector('#sp-save').addEventListener('click', async () => {
+    const r = await sbPersonal.rpc('set_simple_prefs', { p_staff:id, p_weekly:cur.w, p_plain:cur.p });
+    if(r.error){ toast(/set_simple_prefs/.test(r.error.message || '') ? 'צריך קודם להריץ את scheduling-v48.sql' : 'השינוי נכשל'); return; }
+    st.simple = st.simple || {}; if(cur.w || cur.p) st.simple[id] = { w:cur.w, p:cur.p }; else delete st.simple[id];
+    sh.close(); toast('נשמר'); if(again) again();
   });
 }

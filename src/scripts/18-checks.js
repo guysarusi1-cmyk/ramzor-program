@@ -2528,6 +2528,54 @@
         await personalLeave(); showHub();
       }
     });
+    // ---- the simpler preferences screen: week by week, without colours, guided other hours (Guy 2026-10-30, for רעות; 14zj)
+    await step('simple preferences', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('simple preferences: the instructor signs in', false, error ? error.message : 'no'); return; }
+      const mk = prefsMonthNow(), realOpen = srvPrefsOpen, realSave = portalSave, sim = !srvPrefsOpen(mk);
+      if(sim){ srvPrefsOpen = () => true; portalSave = () => {}; }          // (no month open on the test server now: the screen is tried as if it were, nothing is saved)
+      const m = portalMonth(mk), pr = srvPrefsOf(m, srv.me), saved = JSON.stringify(pr.slots), savedHours = JSON.stringify(pr.hours), wasSub = m.submitted[srv.me], was = [srv.prefWeekly, srv.prefPlain];
+      try {
+        const wks = prefWeeksOf(mk);
+        check('simple preferences: the weeks of the month run Sunday to Saturday, the first holds the 1st and the last the last day', wks.every(w => w.length === 7 && dowOf(w[0]) === 0) && wks[0].includes(daysOfMonth(mk)[0]) && wks[wks.length - 1].includes(daysOfMonth(mk).slice(-1)[0]), JSON.stringify(wks.map(w => w[0])));
+        const k0 = 'x|m', t = { slots:{} };
+        prefPlainTap(t, k0); const a = t.slots[k0]; prefPlainTap(t, k0); const b = t.slots[k0]; prefPlainTap(t, k0); const c = t.slots[k0]; prefPlainReset(t, k0);
+        check('simple preferences: without colours a tap = כן, another = לא, another = כן again, a long press = the dot again', a === 'yes' && b === 'no' && c === 'yes' && !(k0 in t.slots), JSON.stringify([a, b, c]));
+        delete m.submitted[srv.me]; srv.prefWeekly = true; srv.prefPlain = true; portalUi.prefsWholeMonth = false; portalUi.prefsPast = false;
+        try { localStorage.removeItem(pwPosKey(mk)); localStorage.setItem('ramzor-plain-help', '1'); } catch(e){}
+        portalUi.pmonth = mk; showPortal('prefs'); await sleep(300);
+        const pb = () => document.getElementById('portal-body');
+        check('simple preferences: week by week opens with "the shifts you do not do this month": morning, afternoon, night, and "דלג"', [...pb().querySelectorAll('[data-pwopt]')].map(x => x.textContent.replace(/קבוע בהגדרות/, '').trim()).join('|') === 'בוקר|צהריים|לילה' && !!pb().querySelector('#pw-skip'), pb().textContent.slice(0, 120));
+        pb().querySelector('#pw-skip').click(); await sleep(150);
+        check('... then the weekdays (7, may be skipped)', pb().querySelectorAll('[data-pwopt]').length === 7 && !!pb().querySelector('#pw-skip'), '');
+        pb().querySelector('#pw-skip').click(); await sleep(150);
+        const days = pb().querySelectorAll('.pwday'), dotsLeft = prefDotsOf(mk, pr, wks[0]).length, next = pb().querySelector('#pw-next');
+        check('... then week 1: seven days, the days of another month faded, and "השבוע הבא" closed while dots are left', days.length === 7 && pb().querySelectorAll('.pwday.out').length === wks[0].filter(d => !daysOfMonth(mk).includes(d)).length && (dotsLeft ? next.disabled && /עוד \d+ נקוד/.test(pb().textContent) : !next.disabled), JSON.stringify([days.length, dotsLeft, next.disabled]));
+        const sb = pb().querySelector('.pwshift.lv-neutral');
+        if(sb){
+          const key = sb.dataset.pslot; sb.click(); await sleep(120);
+          const y = pr.slots[key], yb = pb().querySelector(`[data-pslot="${key}"]`).classList.contains('lv-yes');
+          pb().querySelector(`[data-pslot="${key}"]`).click(); await sleep(120); const n = pr.slots[key];
+          const lb = pb().querySelector(`[data-pslot="${key}"]`); lb.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true })); await sleep(700); lb.dispatchEvent(new PointerEvent('pointerup', { bubbles:true }));
+          check('... on the screen: a tap = כן (bold), another = לא, a long press brings the dot back; stored as everybody\'s marks', y === 'yes' && yb && n === 'no' && !pr.slots[key] && !!pb().querySelector(`[data-pslot="${key}"].lv-neutral`), JSON.stringify([y, yb, n, pr.slots[key]]));
+        } else check('(info) simple preferences: week 1 has no shift waiting for a mark, the taps were not exercised on the screen', true, '');
+        pb().querySelector('#pplain-hours').click(); await sleep(150);
+        const dayBtn = document.querySelector('.psheet [data-hgday]');
+        if(dayBtn){ const d = dayBtn.dataset.hgday; dayBtn.click(); await sleep(80); document.querySelector('.psheet [data-hg="other"]').click(); await sleep(80);
+          const q1 = document.querySelector('.psheet h2').textContent; document.querySelector('.psheet #phg-t').value = '09:00'; document.querySelector('.psheet [data-hg="next"]').click(); await sleep(80);
+          const q2 = document.querySelector('.psheet h2').textContent; document.querySelector('.psheet #phg-t').value = '15:00'; document.querySelector('.psheet [data-hg="save"]').click(); await sleep(120);
+          check('"שעות אחרות" guided: which day, then "מתי תוכלי להתחיל ב<day>?" and "מתי תרצי לסיים ב<day>?" on the time wheel; kept as other hours', /^מתי תוכל.? להתחיל ביום /.test(q1) && /^מתי תרצ.? לסיים ביום /.test(q2) && JSON.stringify(pr.hours[d]) === '[[9,15]]', JSON.stringify([q1, q2, pr.hours[d]]));
+        } else check('(info) simple preferences: no day of week 1 for other hours', true, '');
+        pb().querySelector('#pw-month').click(); await sleep(200);
+        check('"לראות את כל החודש": the month without colours, with "שעות אחרות" and "?" instead of the colour buttons, and the way back to the weeks', !!pb().querySelector('.pcal.plain') && !!pb().querySelector('.pplain-bar #pplain-hours') && !pb().querySelector('[data-plevel]') && !!pb().querySelector('#pw-back-week'), '');
+      } finally {
+        pr.slots = JSON.parse(saved); pr.hours = JSON.parse(savedHours); if(wasSub) m.submitted[srv.me] = wasSub; srv.prefWeekly = was[0]; srv.prefPlain = was[1]; portalUi.prefsWholeMonth = false;
+        try { localStorage.removeItem(pwPosKey(mk)); } catch(e){}
+        if(sim){ srvPrefsOpen = realOpen; portalSave = realSave; } else { portalSave(); await srvFlush(); } await personalLeave(); showHub();
+      }
+    });
     // ---- swaps of the service girls, only among themselves (scheduling-v28.sql)
     await step('service swaps', async () => {
       if(!PORTAL_ENABLED) return;
