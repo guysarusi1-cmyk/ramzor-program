@@ -303,6 +303,13 @@
     border:1px solid var(--gold, #d4a83a); background:var(--p-panel2, var(--panel-2, #1c2130)); color:var(--p-text, var(--text, #eef0f4)); font-size:12.5px; line-height:1.55; white-space:pre-line; text-align:start; box-shadow:0 10px 26px rgba(0, 0, 0, .4); pointer-events:none; }
   .tp-mpop::before{ content:''; position:absolute; bottom:100%; left:50%; margin-left:-7px; border:7px solid transparent; border-bottom-color:var(--gold, #d4a83a); }
   @media (hover:hover){ .tp-tile-wrap:hover .tp-mpop, .tp-tile:focus-visible ~ .tp-mpop{ display:block; } .tp-mcard{ display:none; } }
+  /* the approach in the staff's view of a goal: what it is under the mouse; on a touch screen a small, half-transparent "מה זה?" (Guy 2026-10-30) */
+  .tp-apx{ position:relative; margin-inline-start:auto; display:inline-flex; flex-direction:column; align-items:flex-end; } .tp-apx .tp-appr{ margin-inline-start:0; }
+  .tp-apop{ top:calc(100% + 6px); left:0; transform:none; } .tp-apop::before{ left:14px; margin-left:0; }
+  .tp-awhat{ font-size:11px; opacity:.45; } .tp-awhat summary{ cursor:pointer; list-style:none; } .tp-awhat summary::-webkit-details-marker{ display:none; }
+  .tp-awhat[open]{ opacity:.85; } .tp-awhat div{ max-width:240px; line-height:1.5; padding-top:2px; }
+  @media (hover:hover){ .tp-apx:hover .tp-apop, .tp-apx .tp-appr:focus-visible ~ .tp-apop{ display:block; } .tp-awhat{ display:none; } }
+  @media (max-width:480px){ .tp-sg-i .tp-apx{ flex-basis:100%; align-items:flex-start; margin-inline-start:0; margin-top:-2px; } }
   /* the spiral of a target, to tap (Guy 2026-10-29) */
   .tp-sp{ display:grid; grid-template-columns:minmax(0, 230px) minmax(0, 1fr); grid-template-areas:"modes modes" "box mean"; gap:10px 16px; align-items:center; margin:8px 0 4px; }
   .tp-sp-modes{ grid-area:modes; display:flex; flex-wrap:wrap; gap:6px; }

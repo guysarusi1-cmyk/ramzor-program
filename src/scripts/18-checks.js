@@ -2237,6 +2237,9 @@
             check('plans: a goal of the new kind keeps the old fields in sync for the older screens', g.focus === true && g.targets === 'פשוט' && /נשימה: נושמים יחד/.test(g.interventions) && g.sentences === 'אחת\nשתיים\nשלוש', JSON.stringify(g).slice(0, 160));
             const h = tpStaffGoalHtml('c1', g, true);
             check('plans: the staff sees the plain target, the intervention with its approach (faint), 2 sentences and "עוד", and 👍/👎 (Q21, Q25-27)', /פשוט/.test(h) && !/מקצועי/.test(h) && /tp-appr/.test(h) && (h.match(/say-ico/g) || []).length === 3 && /<details><summary>עוד/.test(h) && /data-fb=/.test(h), '');
+            { const keep = thp.library; thp.library = [{ kind:'method', active:true, title:'ARC', description:'מה היא: מסגרת לעבודה אחרי טראומה. (Attachment, Regulation and Competency)\nלמי מתאימה: ...' }];
+              const a = tpApprHtml('ARC'), none = tpApprHtml('אחרת'); thp.library = keep;
+              check('plans: the approach tells the staff what it is in one line (a bubble under the mouse, a faint "מה זה?" on a phone), without the English name (Guy 2026-10-30)', /tp-apop[^>]*>מסגרת לעבודה אחרי טראומה\.</.test(a) && /tp-awhat"><summary>מה זה\?/.test(a) && !/Attachment|מה היא/.test(a) && /tp-appr/.test(none) && !/tp-awhat/.test(none), a.slice(0, 200)); }
             const since = new Date(2026, 0, 1), lv = tpSpiralLevels(g, g.targets_list[0], { steps:[], obs:[{ target_id:'t1', valence:'success', created_at:'2026-01-02T10:00:00' }], inc:[], fb:[], scale:[{ goal_id:'gx:t1', rated_on:'2026-01-04', value:4 }] }, since, 5);
             check('plans: the spiral: a success moves the target forward, the therapist\'s rating sets it (Q23)', lv[0].lv === 2 && lv[1].lv > 2 && lv[3].lv === 4 && lv.length === 5, JSON.stringify(lv)); }
           // a plain instructor: the guidance, without the thinking of the therapist

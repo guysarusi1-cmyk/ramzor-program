@@ -402,12 +402,19 @@ function tpSpiralPick(t){
   </div>`;
 }
 // ---- the staff's view of one goal (Q21, Q25-27): the plain targets, the interventions with their approach, 2 sentences + "עוד", 👍/👎
+// the approach of an intervention, faint; what it is in one line from the method's card: a bubble under the mouse, "מה זה?" (very secondary) on a touch screen (Guy 2026-10-30)
+function tpApprHtml(a){
+  if(!a) return '';
+  const card = (thp.library || []).find(x => x.kind === 'method' && x.active && x.title === a);
+  const what = card ? ((card.description || '').split('\n')[0] || '').replace(/^מה היא:\s*/, '').replace(/\s*\([^()]*[A-Za-z][^()]*\)\s*$/, '').trim() : '';
+  return `<span class="tp-apx"><em class="tp-appr"${what ? ' tabindex="0"' : ''}>${pEsc(a)}</em>${what ? `<span class="tp-mpop tp-apop" role="tooltip">${pEsc(what)}</span><details class="tp-awhat"><summary>מה זה?</summary><div>${pEsc(what)}</div></details>` : ''}</span>`;
+}
 function tpStaffGoalHtml(childId, g, withFeedback){
   if(!tpIsV2(g)) return '';
   const sents = (g.interventions_list || []).flatMap(i => i.sentences || []);
   return `<div class="tp-sg"><b class="ar-keep">${pEsc(g.title)}</b>${g.why_staff ? `<div class="tp-sg-why ar-keep">${pEsc(g.why_staff)}</div>` : ''}
     ${(g.targets_list || []).length ? `<div class="tp-sg-t">${g.targets_list.map(t => `<div class="ar-keep">🎯 ${pEsc(t.staff || '')}</div>`).join('')}</div>` : ''}
-    ${(g.interventions_list || []).map(i => `<div class="tp-sg-i"><span class="ar-keep"><b>${pEsc(i.name)}</b> ${pEsc(i.what)}${i.freq ? ` <small>(${pEsc(i.freq)})</small>` : ''}${i.avoid ? `<small class="tp-avoid">🚫 ${pEsc(i.avoid)}</small>` : ''}</span><em class="tp-appr">${pEsc(i.approach || '')}</em>
+    ${(g.interventions_list || []).map(i => `<div class="tp-sg-i"><span class="ar-keep"><b>${pEsc(i.name)}</b> ${pEsc(i.what)}${i.freq ? ` <small>(${pEsc(i.freq)})</small>` : ''}${i.avoid ? `<small class="tp-avoid">🚫 ${pEsc(i.avoid)}</small>` : ''}</span>${tpApprHtml(i.approach)}
       ${withFeedback ? `<span class="tp-fb"><button type="button" data-fb="${pEsc(childId)}|${pEsc(g.id)}|${pEsc(i.id)}|up" aria-label="עבד">👍</button><button type="button" data-fb="${pEsc(childId)}|${pEsc(g.id)}|${pEsc(i.id)}|down" aria-label="לא עבד">👎</button></span>` : ''}</div>`).join('')}
     ${sents.length ? `<div class="tp-sg-s ar-keep">${sents.slice(0, 2).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('')}${sents.length > 2 ? `<details><summary>עוד</summary>${sents.slice(2).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('')}</details>` : ''}</div>` : ''}</div>`;
 }
