@@ -82,3 +82,18 @@ body[data-rlook=light] .toast{ background:#2D2A24; border-color:#2D2A24; color:#
 body[data-rlook] :is(.bottom-nav, .nav-back-float){ background:var(--color-surface); border-color:var(--color-border); color:var(--color-text-secondary); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:none; }
 body[data-rlook] :is(.bottom-nav-btn, .nav-back-float){ color:inherit; font-family:var(--font-body); font-weight:600; }
 body[data-rlook] .bottom-nav-btn.active{ background:var(--color-primary-soft); color:var(--color-text); }
+
+/* the structure (Guy's choices 2026-10-30): one tidy top row on the main screen; the ahmash control as a third card; a short header on the inner screens;
+   one way out (the bottom bar on a phone, "חזרה לתפריט הראשי" on a computer, "יציאה" only on the main screen) */
+.home-top{ padding-top:0; }
+.home-bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 22px; }
+.home-bar-icons, .home-bar-words{ display:flex; align-items:center; gap:8px; }
+.home-bar .home-icon-btn, .home-bar .home-text-btn{ position:static; margin:0; }
+.home-bar .home-icon-btn{ width:44px; height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; border:1px solid var(--line); background:var(--panel); }
+.home-bar .home-text-btn{ min-height:44px; padding:0 10px; font-size:15px; }
+.home-control-card[hidden]{ display:none; }
+@media (min-width:701px){ .home-primary:has(> .home-control-card:not([hidden])){ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+#protected-app:has(:is(#view-staff, #view-control, #view-kids-quick, #view-manage).active) > #shared-header{ padding:6px 0 4px; }
+#protected-app:has(:is(#view-staff, #view-control, #view-kids-quick, #view-manage).active) > #shared-header :is(.eyebrow, .sub){ display:none; }
+#protected-app:has(:is(#view-staff, #view-control, #view-kids-quick, #view-manage).active) > #shared-header h1{ font-size:18px; margin:0; }
+#protected-app:has(:is(#view-staff, #view-control, #view-kids-quick, #view-manage).active) > #shared-logout-row{ display:none; }

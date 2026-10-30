@@ -82,6 +82,8 @@
   <!-- ============ HUB (post-login landing page) ============ -->
   <section class="view active" id="view-hub">
     <div class="home-top">
+      <div class="home-bar">
+        <div class="home-bar-icons">
       <button type="button" class="home-icon-btn home-gear" id="hub-manage-gear" aria-label="הגדרות וניהול">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -91,8 +93,12 @@
       <button type="button" class="home-icon-btn home-look" id="hub-look-btn" aria-label="מראה: בהיר, כהה או נמר" title="מראה">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
       </button>
-      <button type="button" class="home-text-btn home-logout" id="hub-logout-link">יציאה</button>
+        </div>
+        <div class="home-bar-words">
       <button type="button" class="home-text-btn home-portal" id="hub-portal-link" hidden>👥 לפורטל</button>
+      <button type="button" class="home-text-btn home-logout" id="hub-logout-link">יציאה</button>
+        </div>
+      </div>
       <h1 class="home-title">תכנית הרמזור</h1>
       <p class="home-slogan">"אני יכול לחשוב מה שאני רוצה, אני יכול להרגיש מה שאני רוצה, אבל לא תמיד כדאי שאתנהג איך שאני רוצה"</p>
     </div>
@@ -108,6 +114,11 @@
         <span class="home-card-title">שליטה במסך הילדים</span>
         <span class="home-card-sub">ניהול התצוגה והפידבקים לילדים</span>
       </button>
+      <button type="button" class="home-card home-control-card" id="hub-control-btn" hidden>
+        <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>
+        <span class="home-card-title">בקרת אחמ"ש</span>
+        <span class="home-card-sub">מי מוצג היום, בונוסים ולו"ז</span>
+      </button>
     </div>
 
     <button type="button" class="home-secondary" id="hub-learn-btn">
@@ -117,7 +128,6 @@
         <span class="home-secondary-sub">לומדים את העקרונות והכלים של התכנית</span>
       </span>
     </button>
-    <button type="button" class="home-control" id="hub-control-btn" hidden>🎛️ בקרת אחמ"ש</button>
     <button type="button" class="home-problem" id="hub-problem">משהו לא עובד? דיווח על תקלה</button>
     <button type="button" class="home-link" id="hub-install-link" hidden>התקנה כאפליקציה על מסך הבית</button>
   </section>
