@@ -337,7 +337,8 @@ function srvLoginHtml(step, email, again){
         <div class="login-or"><span>כניסה ראשונה, או ששכחתם את הסיסמה?</span></div>
         <button type="button" class="btn ghost" id="plogin-send">שלחו לי קוד למייל</button>
         ${staffLink}`;
-  return `<div class="plogin"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">כניסה אישית</h1>
+  let look = 'dark'; try { if(localStorage.getItem('ramzor-portal-theme') === 'light') look = 'light'; } catch(e){}          // (the sign-in wears the new look, light or dark as last chosen on this device)
+  return `<div class="plogin mx-home mx-login" data-ptheme="${look}"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">כניסה אישית</h1>
     <div class="card">${inner}
       <div id="plogin-error" class="plogin-error" role="alert"></div>
     </div></div>`;

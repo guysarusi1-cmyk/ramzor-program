@@ -33,35 +33,38 @@ function showAppHome(){
   stopCarousel(); document.body.classList.remove('leopard-bg');
   if(portalUi.viewAs){ const was = portalUi.editPrefs; portalUi.viewAs = null; portalUi.editPrefs = false; portalUi.actAs = false; if(typeof srv !== 'undefined' && srv.me) portalUi.persona = srv.me; if(was && typeof srvResnap === 'function') srvResnap(); }          // (leaving "looking as somebody" by any way: back to being oneself)
   portalActivateView('view-apphome');
+  let look = 'dark';          // (the first screen wears the person's own look too: light, dark, or the leopard where it is allowed — Guy 2026-10-30)
+  try { look = portalServerOn && leopardAllowed() && portalThemeNow() === 'leopard' ? 'leopard' : (portalServerOn && srv.portalTheme && srv.portalTheme !== 'leopard' ? srv.portalTheme : portalLoad().settings.theme) || 'dark'; } catch(e){}
+  document.body.classList.toggle('leopard-bg', look === 'leopard');
   document.getElementById('view-apphome').innerHTML = `
-    <div class="apphome">
+    <div class="apphome mx-home" data-ptheme="${look}">
       <div class="apphome-top"><button type="button" class="home-text-btn" id="apphome-logout">יציאה</button></div>
       <div class="eyebrow-gold">מרכז חירום</div>
       <h1 class="apphome-title">מה תרצו לפתוח?</h1>
       <div class="apphome-cards">
         ${portalServerOn ? `<div class="apphome-hello">שלום ${pEsc((portalMe() || {}).first || '')}</div>` : ''}
         <button type="button" class="home-card" id="apphome-ramzor">
-          <span class="apphome-emoji" aria-hidden="true">🚦</span>
+          <span class="apphome-emoji apphome-ico">${psIco('light')}</span>
           <span class="home-card-title">הרמזור</span>
           <span class="home-card-sub">תפעול יומיומי ומסך הילדים</span>
         </button>
         ${(portalMe() || {}).role === 'therapist' ? '' : `<button type="button" class="home-card" id="apphome-portal">
-          <span class="apphome-emoji" aria-hidden="true">👥</span>
+          <span class="apphome-emoji apphome-ico">${psIco('people')}</span>
           <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
           <span class="home-card-sub">משמרות, העדפות והודעות</span>
         </button>`}
         ${typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
-          <span class="apphome-emoji" aria-hidden="true">🌱</span>
+          <span class="apphome-emoji apphome-ico">${psIco('leaf')}</span>
           <span class="home-card-title">פורטל הטיפול</span>
           <span class="home-card-sub">${canTherapistPortal() ? 'מה מחכה לך, התוכניות, התצפיות והמעקב' : 'מה עושים עם כל ילד, וממה להימנע'}</span>
         </button>` : ''}
         ${portalServerOn && (portalMe() || {}).admin ? `<button type="button" class="home-card" id="apphome-learn">
-          <span class="apphome-emoji" aria-hidden="true">🎬</span>
+          <span class="apphome-emoji apphome-ico">${psIco('play')}</span>
           <span class="home-card-title">לומדה</span>
           <span class="home-card-sub">סרטוני הדרכה, ושיתוף שלהם לצוות</span>
         </button>` : ''}
         ${portalServerOn && (portalMe() || {}).admin && (portalMe() || {}).role !== 'coordinator' ? `<button type="button" class="home-card" id="apphome-manage">
-          <span class="apphome-emoji" aria-hidden="true">🛠️</span>
+          <span class="apphome-emoji apphome-ico">${psIco('admin')}</span>
           <span class="home-card-title">פורטל ניהול</span>
           <span class="home-card-sub">כל מה שהרכזת רואה ועושה, ועוד</span>
         </button>` : ''}
@@ -84,6 +87,31 @@ function portalTabsFor(me){
     ? [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['timetable', 'לו"ז'], ['settings', 'הגדרות']]
     : [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['inbox', 'הודעות']];
 }
+// the side menu on a computer (Guy 2026-10-30: the instructors' and the coordinator's portals, like the therapy portal): the portal's title and hello above,
+// the same areas as the tabs (data-pstab buttons beside the tabs' data-ptab), then the gear, the way home and the look. On a phone the tabs stay (20-mercury.css shows one or the other)
+const PS_ICON = { schedule:'M4 6.5h16v13H4zM8 3.5v4M16 3.5v4M4 10.5h16', prefs:'M5 12l4 4 10-10', swaps:'M7 7h12l-3-3M17 17H5l3 3', vacation:'M3 20h18M6 20c1-6 4-10 9-11M15 9c-2-3-6-4-9-2 3 0 5 1 6 3M15 9c3-1 6 0 7 3-2-1-4-1-6 0',
+  vacations:'M3 20h18M6 20c1-6 4-10 9-11M15 9c-2-3-6-4-9-2 3 0 5 1 6 3M15 9c3-1 6 0 7 3-2-1-4-1-6 0', inbox:'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4', submissions:'M4 13l2.5-7h11l2.5 7v5H4zM4 13h5l1 2h4l1-2h5',
+  open:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v8M8 12h8', avail:'M4 6.5h16v13H4zM4 10.5h16M9 15l2 2 4-4', hours:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2', timetable:'M4 5h16M4 10h16M4 15h10M4 20h7',
+  settings:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1',
+  admin:'M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z', home:'M3 11l9-7 9 7M5 10v10h14V10', gear:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12h2M3 12h2M12 3v2M12 19v2M17 7l1.4-1.4M5.6 18.4L7 17M17 17l1.4 1.4M5.6 5.6L7 7',
+  leaf:'M5 19c0-8 5-14 15-15-1 10-7 15-15 15zM5 19c3-4 6-6 9-8', play:'M3 5h18v14H3zM10.5 9.5v5l4-2.5z',
+  light:'M10 2.5h4a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM12 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 15.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z',
+  people:'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.6-3.5 3.3-5.5 6.5-5.5s5.9 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.5c2 .6 3.2 2.6 3.5 5.5' };
+const psIco = k => `<svg class="ps-ico" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${PS_ICON[k] || PS_ICON.schedule}"></path></svg>`;
+function portalSideHtml(me, tabs, title, theme, leopardOk){
+  const count = k => portalServerOn && typeof srvTabCount === 'function' ? srvTabCount(me, k) : 0;
+  const look = (v, w) => `<button type="button" data-plook="${v}" aria-pressed="${theme === v}">${w}</button>`;
+  return `<aside class="ps-side" aria-label="אזורי הפורטל">
+      <div class="ps-side-head"><b>${title}</b>${portalServerOn ? `<span>שלום ${pEsc(me.first)}</span>` : ''}</div>
+      <nav class="ps-side-nav">${tabs.map(t => `<button type="button" data-pstab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}"${t[0] === portalUi.tab ? ' aria-current="page"' : ''}>${psIco(t[0])}<span class="ps-word">${t[1]}</span>${count(t[0]) ? `<span class="ptab-count">${count(t[0])}</span>` : ''}</button>`).join('')}</nav>
+      <div class="ps-side-foot">
+        ${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="ps-link" data-ps-go="therapy">${psIco('leaf')}<span>פורטל הטיפול</span></button>` : ''}
+        ${portalServerOn ? `<button type="button" class="ps-link" data-ps-go="gear">${psIco('gear')}<span>העדפות מערכת</span></button>` : ''}
+        <button type="button" class="ps-link" data-ps-go="home">${psIco('home')}<span>${portalServerOn && !ramzorPersonal ? 'יציאה' : 'מסך ראשי'}</span></button>
+        <div class="mx-seg ps-look" role="group" aria-label="מראה">${look('light', 'בהיר')}${look('dark', 'כהה')}${leopardOk ? look('leopard', 'נמר') : ''}</div>
+      </div>
+    </aside>`;
+}
 function showPortal(tab){
   const st = portalLoad(), me = portalMe();
   portalActivateView('view-portal');
@@ -95,11 +123,13 @@ function showPortal(tab){
   const view = document.getElementById('view-portal');
   const leopard = portalServerOn && !portalUi.viewAs && leopardAllowed() && portalThemeNow() === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
   document.body.classList.toggle('leopard-bg', leopard);
+  const pTitle = portalServerOn && portalAsCoord(me) ? (me.admin ? 'פורטל ניהול' : 'פורטל הרכזת') : portalServerOn && me.role === 'service' ? 'פורטל בנות השירות' : 'פורטל המדריך';
   view.innerHTML = `
     <div class="portal-shell${portalServerOn && portalAsCoord(me) ? ' wide' : ''}" data-ptheme="${theme}">
+      ${portalSideHtml(me, tabs, pTitle, theme, portalServerOn && !portalUi.viewAs && leopardAllowed())}
       <div class="portal-top">
         <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
-        <h1 class="portal-title">${portalServerOn && portalAsCoord(me) ? (me.admin ? 'פורטל ניהול' : 'פורטל הרכזת') : portalServerOn && me.role === 'service' ? 'פורטל בנות השירות' : 'פורטל המדריך'}</h1>
+        <h1 class="portal-title">${pTitle}</h1>
         <span class="portal-top-actions">${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof therapyAvailable === 'function' && therapyAvailable() ? '<button type="button" class="portal-theme" id="portal-therapy" aria-label="פורטל הטיפול" title="פורטל הטיפול">🌱</button>' : ''}${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
       ${portalServerOn ? `<div class="portal-hello">שלום ${pEsc(me.first)}</div>` : `<label class="portal-as">צפייה כ:
@@ -127,6 +157,14 @@ function showPortal(tab){
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
   if(!portalServerOn) document.getElementById('portal-persona').addEventListener('change', e => { portalUi.persona = e.target.value; portalUi.tab = null; showPortal(); });
   view.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.ptab; portalUi.prefsPast = false; showPortal(); }));
+  view.querySelectorAll('[data-pstab]').forEach(b => b.addEventListener('click', () => { portalUi.tab = b.dataset.pstab; portalUi.prefsPast = false; showPortal(); }));          // (the side menu: the same areas as the tabs)
+  view.querySelectorAll('[data-ps-go]').forEach(b => b.addEventListener('click', () => { const id = ({ home:'portal-home', gear:'portal-gear', therapy:'portal-therapy' })[b.dataset.psGo]; const t = document.getElementById(id); if(t) t.click(); }));          // (the side menu's links do what the top row's buttons do)
+  view.querySelectorAll('[data-plook]').forEach(b => b.addEventListener('click', async () => {          // (the look, straight from the side menu: the same as the gear's choice)
+    const th = b.dataset.plook;
+    if(th === 'leopard'){ srv.portalTheme = 'leopard'; showPortal(); if(portalServerOn) await srvSaveSetting({ portalTheme:'leopard' }); return; }
+    st.settings.theme = th; try { localStorage.setItem('ramzor-portal-theme', th); } catch(e){}
+    if(portalServerOn){ srv.portalTheme = th; showPortal(); await srvSaveSetting({ portalTheme:th }); } else { portalSave(); showPortal(); }
+  }));
   portalRenderTab();
 }
 function portalRenderTab(){
@@ -161,7 +199,7 @@ function portalCtx(mk){
 function portalSheet(html){
   const wrap = document.createElement('div');
   wrap.className = 'sheet psheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-  { const mx = document.querySelector('#view-therapy.active .therapy-shell'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of the therapy portal takes Mercury's look: 20-mercury.css)
+  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn).active .portal-shell[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
   wrap.innerHTML = `<div class="sheet-card">${html}</div>`;
   const close = () => wrap.remove();
   wrap.addEventListener('click', e => { if(e.target === wrap || e.target.closest('[data-close]')) close(); });

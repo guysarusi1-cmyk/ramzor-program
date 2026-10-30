@@ -105,6 +105,7 @@ function prefPlainBarHtml(){ return `<div class="plevelbar pplain-bar"><button t
 function renderWeekPrefs(body, mk, m, prefs){
   const me = portalMe(), weeks = prefWeeksOf(mk), inMonth = new Set(daysOfMonth(mk)), plain = prefPlainOn();
   let pos = pwGet(pwPosKey(mk), 'kinds'); if(typeof pos === 'number' && (pos < 0 || pos >= weeks.length)) pos = 0;
+  if((pos === 'end' || (typeof pos === 'number' && pos > 0)) && !Object.keys(prefs.slots || {}).length && !(prefs.absent || []).length && !Object.keys(prefs.hours || {}).length){ pos = 'kinds'; pwSet(pwPosKey(mk), pos); }          // (nothing is marked for this month any more, e.g. cleared on TEST: start again from the first question)
   const go = p => { pwSet(pwPosKey(mk), p); renderInstructorPrefs(body); };
   const head = `<div class="pweek-head"><b>ההעדפות ל${pEsc(monthLabel(mk))}</b><span class="pweek-steps" aria-hidden="true">${['kinds', 'days'].concat(weeks.map((_, i) => i)).concat(['end']).map(p => `<i class="${p === pos ? 'on' : ''}"></i>`).join('')}</span></div>`;
   // the opening questions: the kinds of shifts and the weekdays she does not do this month (both may be skipped)

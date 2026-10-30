@@ -2,8 +2,10 @@
    Calm, secure, curious: warm natural minimalism. Two themes here (light / dark; no leopard in this portal). Headings Rubik (Guy's choice), body Assistant.
    Tokens: raw values live only in the two theme blocks below; everything else reads the semantic ones. The older --p-* and base variables
    are bridged to them, so the existing rules of the portal take the new look at once; the rules after the bridge refine the components.
-   Scope: the therapy portal (.therapy-shell) and the sheets opened from it (.mx-sheet, set in portalSheet). Class names stay (the checks use them). */
-.therapy-shell, .mx-sheet{
+   Scope: every staff portal (.portal-shell: the instructors', the coordinator's, the admin's, the therapy portal, the לומדה) and the sheets opened from them
+   (.mx-sheet, set in portalSheet). Three looks for staff: light, dark, leopard (Guy 2026-10-30: "מתחילים לעצב את כל האתר והאפליקציה"); the therapy portal
+   offers light and dark only. Class names stay (the checks use them). */
+.portal-shell, .mx-sheet, .mx-home{
   --font-heading:'Rubik', Arial, sans-serif; --font-body:'Assistant', Arial, sans-serif;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
   --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:9999px;
@@ -14,107 +16,117 @@
   --color-border:#3A362F; --color-border-strong:#4A453C; --color-text:#E9E4DA; --color-text-secondary:#A8A196;
   --color-primary:#9DB08F; --color-primary-hover:#AEC0A1; --color-primary-soft:#2D3328; --color-on-primary:#1C1A17;
   --color-success:#8FBF8A; --color-success-soft:#263126; --color-warning:#D2A05E; --color-warning-soft:#3A3122; --color-danger:#D98B85; --color-danger-soft:#3A2826;
-  --color-info:#8AACCB; --color-info-soft:#25303A; --color-link:#AEC0A1;
+  --color-info:#8AACCB; --color-info-soft:#25303A; --color-link:#AEC0A1; --color-heading:#E9E4DA;
   --shadow-card:none; --shadow-modal:none; --scrim:rgba(0, 0, 0, .55);
 }
-.therapy-shell[data-ptheme=light], .mx-sheet[data-ptheme=light]{
+.portal-shell[data-ptheme=light], .mx-sheet[data-ptheme=light], .mx-home[data-ptheme=light]{
   /* light ("בוקר בהיר") */
   --color-bg:#FAF7F2; --color-surface:#FFFFFF; --color-surface-alt:#F4EFE7; --color-surface-inset:#F0EBE2; --color-surface-raised:#FFFFFF;
   --color-border:#E7E0D3; --color-border-strong:#D6CCB9; --color-text:#2D2A24; --color-text-secondary:#6E675C;
   --color-primary:#5C6F52; --color-primary-hover:#4C5E43; --color-primary-soft:#E7ECE2; --color-on-primary:#FFFFFF;
   --color-success:#4F7A4C; --color-success-soft:#E6EFE4; --color-warning:#9A6B2F; --color-warning-soft:#F6EEDF; --color-danger:#A9504A; --color-danger-soft:#F7E9E6;
-  --color-info:#4A6E8C; --color-info-soft:#E6EDF3; --color-link:#4F6B48;
+  --color-info:#4A6E8C; --color-info-soft:#E6EDF3; --color-link:#4F6B48; --color-heading:#2D2A24;
   --shadow-card:0 1px 3px rgba(45, 42, 36, .05), 0 4px 12px rgba(45, 42, 36, .06); --shadow-modal:0 8px 24px rgba(45, 42, 36, .12); --scrim:rgba(45, 42, 36, .35);
 }
-/* the bridge: the base and portal variables the existing rules read */
-.therapy-shell, .mx-sheet{
+.portal-shell[data-ptheme=leopard], .mx-sheet[data-ptheme=leopard], .mx-home[data-ptheme=leopard]{
+  /* leopard: today's dark gold, redone on the new principles — a deep brown ground with faint rosettes (on the page behind, body.leopard-bg),
+     opaque cards so the text reads clearly, gold for the one main button and the headings */
+  --color-bg:#17100A; --color-surface:#22170E; --color-surface-alt:#2E2014; --color-surface-inset:#130D07; --color-surface-raised:#2A1C10;
+  --color-border:#4A3420; --color-border-strong:#6A4B2C; --color-text:#F7ECD8; --color-text-secondary:#D3BD97;
+  --color-primary:#E2B65C; --color-primary-hover:#ECC676; --color-primary-soft:#352612; --color-on-primary:#24140A;
+  --color-success:#A9C98B; --color-success-soft:#26301A; --color-warning:#EBB06A; --color-warning-soft:#3B2615; --color-danger:#E59A8C; --color-danger-soft:#3C2119;
+  --color-info:#9CC0DE; --color-info-soft:#1F2A33; --color-link:#ECC676; --color-heading:#E9C77A;
+  --shadow-card:none; --shadow-modal:0 8px 24px rgba(0, 0, 0, .45); --scrim:rgba(0, 0, 0, .6);
+}
+/* the bridge: the base and portal variables the existing rules read (as specific as the old light and leopard blocks, and after them, so it wins) */
+.portal-shell[data-ptheme], .mx-sheet, .mx-home{
   --bg:var(--color-bg); --panel:var(--color-surface); --panel-2:var(--color-surface-alt); --line:var(--color-border); --text:var(--color-text); --muted:var(--color-text-secondary); --gold:var(--color-primary);
   --p-bg:var(--color-bg); --p-panel:var(--color-surface); --p-panel2:var(--color-surface-alt); --p-line:var(--color-border); --p-text:var(--color-text); --p-muted:var(--color-text-secondary);
   --p-yes:var(--color-success); --p-yes-bg:var(--color-success-soft); --p-no:var(--color-danger); --p-no-bg:var(--color-danger-soft);
   --p-avoid:var(--color-warning); --p-avoid-bg:var(--color-warning-soft); --p-can:var(--color-info); --p-can-bg:var(--color-info-soft);
   color:var(--color-text); font-family:var(--font-body); font-size:16px; line-height:1.65;
 }
-body:has(#view-therapy.active .therapy-shell){ background:#1C1A17; transition:background-color var(--motion-fast, 200ms) cubic-bezier(.4, 0, .2, 1); }
-body:has(#view-therapy.active .therapy-shell[data-ptheme=light]){ background:#FAF7F2; }
-.therapy-shell[data-ptheme=light]{ background:transparent; border-radius:0; padding:0 0 90px; margin:0; }
+body:has(:is(#view-portal, #view-therapy, #view-learn).active .portal-shell[data-ptheme=dark]){ background:#1C1A17; transition:background-color var(--motion-fast, 200ms) cubic-bezier(.4, 0, .2, 1); }
+body:has(:is(#view-portal, #view-therapy, #view-learn).active .portal-shell[data-ptheme=light]){ background:#FAF7F2; }
+.portal-shell[data-ptheme]{ background:transparent; border-radius:0; padding:0 0 90px; margin:0; }
 #view-therapy .portal-shell{ max-width:1200px; }
 
 /* type */
-.therapy-shell[data-ptheme] h1, .therapy-shell[data-ptheme] h2, .therapy-shell[data-ptheme] h3, .mx-sheet h1, .mx-sheet h2, .mx-sheet h3{ font-family:var(--font-heading); font-weight:600; line-height:1.25; color:var(--color-text); }
-.therapy-shell[data-ptheme] .portal-title{ font-size:24px; font-weight:600; }
-.therapy-shell[data-ptheme] .portal-hello{ font-weight:400; color:var(--color-text-secondary); font-size:15px; }
-.therapy-shell[data-ptheme] .psec, .mx-sheet .psec{ font-family:var(--font-heading); font-weight:600; font-size:18px; margin:var(--space-6) 0 var(--space-3); }
-.therapy-shell[data-ptheme] .pnote, .mx-sheet .pnote{ color:var(--color-text-secondary); font-size:15px; line-height:1.6; }
-.therapy-shell[data-ptheme] .pnote-soft, .mx-sheet .pnote-soft{ border:0; padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); background:var(--color-surface-alt); }
-.therapy-shell[data-ptheme] :focus-visible, .mx-sheet :focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
+.portal-shell[data-ptheme] h1, .portal-shell[data-ptheme] h2, .portal-shell[data-ptheme] h3, .mx-sheet h1, .mx-sheet h2, .mx-sheet h3{ font-family:var(--font-heading); font-weight:600; line-height:1.25; color:var(--color-heading); }
+.portal-shell[data-ptheme] .portal-title{ font-size:24px; font-weight:600; color:var(--color-heading); }
+.portal-shell[data-ptheme] .portal-hello{ font-weight:400; color:var(--color-text-secondary); font-size:15px; }
+.portal-shell[data-ptheme] .psec, .mx-sheet .psec{ font-family:var(--font-heading); font-weight:600; font-size:18px; color:var(--color-heading); margin:var(--space-6) 0 var(--space-3); }
+.portal-shell[data-ptheme] .pnote, .mx-sheet .pnote{ color:var(--color-text-secondary); font-size:15px; line-height:1.6; }
+.portal-shell[data-ptheme] .pnote-soft, .mx-sheet .pnote-soft{ border:0; padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] :focus-visible, .mx-sheet :focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
 
 /* buttons: primary (one per screen), secondary, text */
-.therapy-shell[data-ptheme] .btn, .mx-sheet .btn{ background:var(--color-primary); color:var(--color-on-primary); border:1px solid transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-weight:600; font-size:16px;
+.portal-shell[data-ptheme] .btn, .mx-sheet .btn{ background:var(--color-primary); color:var(--color-on-primary); border:1px solid transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-weight:600; font-size:16px;
   min-height:40px; min-width:44px; padding:0 var(--space-6); display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2);
   transition:background-color var(--motion-instant) var(--ease-standard), border-color var(--motion-instant) var(--ease-standard), transform var(--motion-instant) var(--ease-standard); }
-.therapy-shell[data-ptheme] .btn:hover, .mx-sheet .btn:hover{ background:var(--color-primary-hover); }
-.therapy-shell[data-ptheme] .btn:active, .mx-sheet .btn:active{ transform:scale(.98); }
-.therapy-shell[data-ptheme] .btn.ghost, .mx-sheet .btn.ghost, .therapy-shell[data-ptheme] .back-btn{ background:transparent; color:var(--color-text); border-color:var(--color-border-strong); }
-.therapy-shell[data-ptheme] .btn.ghost:hover, .mx-sheet .btn.ghost:hover, .therapy-shell[data-ptheme] .back-btn:hover{ background:var(--color-surface-alt); }
-.therapy-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:36px; padding:0 var(--space-4); font-size:15px; }
-.therapy-shell[data-ptheme] .btn.danger, .mx-sheet .btn.danger{ background:transparent; color:var(--color-danger); border-color:transparent; }
-.therapy-shell[data-ptheme] .btn.danger:hover, .mx-sheet .btn.danger:hover{ background:var(--color-danger-soft); }
-.therapy-shell[data-ptheme] .btn:disabled, .mx-sheet .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
-.therapy-shell[data-ptheme] .back-btn{ font-family:var(--font-body); font-weight:600; font-size:15px; border-radius:var(--radius-sm); padding:0 var(--space-4); min-height:40px; margin:0; }
-@media (max-width:767px){ .therapy-shell[data-ptheme] .btn, .mx-sheet .btn{ min-height:44px; font-size:17px; } .therapy-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:44px; } }
+.portal-shell[data-ptheme] .btn:hover, .mx-sheet .btn:hover{ background:var(--color-primary-hover); }
+.portal-shell[data-ptheme] .btn:active, .mx-sheet .btn:active{ transform:scale(.98); }
+.portal-shell[data-ptheme] .btn.ghost, .mx-sheet .btn.ghost, .portal-shell[data-ptheme] .back-btn{ background:transparent; color:var(--color-text); border-color:var(--color-border-strong); }
+.portal-shell[data-ptheme] .btn.ghost:hover, .mx-sheet .btn.ghost:hover, .portal-shell[data-ptheme] .back-btn:hover{ background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:36px; padding:0 var(--space-4); font-size:15px; }
+.portal-shell[data-ptheme] .btn.danger, .mx-sheet .btn.danger{ background:transparent; color:var(--color-danger); border-color:transparent; }
+.portal-shell[data-ptheme] .btn.danger:hover, .mx-sheet .btn.danger:hover{ background:var(--color-danger-soft); }
+.portal-shell[data-ptheme] .btn:disabled, .mx-sheet .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+.portal-shell[data-ptheme] .back-btn{ font-family:var(--font-body); font-weight:600; font-size:15px; border-radius:var(--radius-sm); padding:0 var(--space-4); min-height:40px; margin:0; }
+@media (max-width:767px){ .portal-shell[data-ptheme] .btn, .mx-sheet .btn{ min-height:44px; font-size:17px; } .portal-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:44px; } }
 
 /* the tabs: quiet words, an underline under the one that is open */
-.therapy-shell[data-ptheme] .portal-tabs{ background:transparent; border:0; border-bottom:1px solid var(--color-border); border-radius:0; padding:0; gap:var(--space-1); margin:0 0 var(--space-6); }
-.therapy-shell[data-ptheme] .portal-tabs button, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary{ position:relative; flex:0 1 auto; background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:16px;
+.portal-shell[data-ptheme] .portal-tabs{ background:transparent; border:0; border-bottom:1px solid var(--color-border); border-radius:0; padding:0; gap:var(--space-1); margin:0 0 var(--space-6); }
+.portal-shell[data-ptheme] .portal-tabs button, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary{ position:relative; flex:0 1 auto; background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:16px;
   border-radius:var(--radius-sm) var(--radius-sm) 0 0; padding:var(--space-3) var(--space-4); min-height:44px; box-shadow:none; opacity:1; transition:color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
-.therapy-shell[data-ptheme] .portal-tabs button:hover, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary:hover{ color:var(--color-text); background:var(--color-surface-alt); }
-.therapy-shell[data-ptheme] .portal-tabs button.active, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary.active{ color:var(--color-text); background:transparent; box-shadow:none; }
-.therapy-shell[data-ptheme] .portal-tabs button.active::after, .therapy-shell[data-ptheme] .portal-tabs .tab-more > summary.active::after{ content:''; position:absolute; inset-inline:var(--space-4); bottom:-1px; height:2px; border-radius:2px; background:var(--color-primary); }
-.therapy-shell[data-ptheme] .tab-more-list{ background:var(--color-surface-raised); border-color:var(--color-border); box-shadow:var(--shadow-modal); border-radius:var(--radius-md); }
-.therapy-shell[data-ptheme] .tab-more-list button{ border-radius:var(--radius-sm); }
-.therapy-shell[data-ptheme] .tab-more-list button.active::after{ display:none; }
-.therapy-shell[data-ptheme] .tab-more-list button.active{ background:var(--color-primary-soft); }
-.therapy-shell[data-ptheme] .pcount, .mx-sheet .pcount{ background:var(--color-primary-soft); color:var(--color-text); font-weight:700; font-size:12px; border-radius:var(--radius-pill); }
-.therapy-shell[data-ptheme] .th-stat .pcount, .therapy-shell[data-ptheme] .th-ws-tabs .pcount{ background:var(--color-primary); color:var(--color-on-primary); }
+.portal-shell[data-ptheme] .portal-tabs button:hover, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary:hover{ color:var(--color-text); background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] .portal-tabs button.active, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary.active{ color:var(--color-text); background:transparent; box-shadow:none; }
+.portal-shell[data-ptheme] .portal-tabs button.active::after, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary.active::after{ content:''; position:absolute; inset-inline:var(--space-4); bottom:-1px; height:2px; border-radius:2px; background:var(--color-primary); }
+.portal-shell[data-ptheme] .tab-more-list{ background:var(--color-surface-raised); border-color:var(--color-border); box-shadow:var(--shadow-modal); border-radius:var(--radius-md); }
+.portal-shell[data-ptheme] .tab-more-list button{ border-radius:var(--radius-sm); }
+.portal-shell[data-ptheme] .tab-more-list button.active::after{ display:none; }
+.portal-shell[data-ptheme] .tab-more-list button.active{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .pcount, .mx-sheet .pcount{ background:var(--color-primary-soft); color:var(--color-text); font-weight:700; font-size:12px; border-radius:var(--radius-pill); }
+.portal-shell[data-ptheme] .th-stat .pcount, .portal-shell[data-ptheme] .th-ws-tabs .pcount{ background:var(--color-primary); color:var(--color-on-primary); }
 
 /* cards and folds */
-.therapy-shell[data-ptheme] .pfold, .mx-sheet .pfold, .therapy-shell[data-ptheme] .th-kid, .therapy-shell[data-ptheme] .th-todo, .therapy-shell[data-ptheme] .tp-row, .therapy-shell[data-ptheme] .tp-goal, .therapy-shell[data-ptheme] .th-kcard, .therapy-shell[data-ptheme] .th-g, .therapy-shell[data-ptheme] .th-goal,
-.therapy-shell[data-ptheme] .obs-item, .mx-sheet .obs-item, .therapy-shell[data-ptheme] .cr-goal, .therapy-shell[data-ptheme] .cr-report, .therapy-shell[data-ptheme] .th-assign-row{
+.portal-shell[data-ptheme] .pfold, .mx-sheet .pfold, .portal-shell[data-ptheme] .th-kid, .portal-shell[data-ptheme] .th-todo, .portal-shell[data-ptheme] .tp-row, .portal-shell[data-ptheme] .tp-goal, .portal-shell[data-ptheme] .th-kcard, .portal-shell[data-ptheme] .th-g, .portal-shell[data-ptheme] .th-goal,
+.portal-shell[data-ptheme] .obs-item, .mx-sheet .obs-item, .portal-shell[data-ptheme] .cr-goal, .portal-shell[data-ptheme] .cr-report, .portal-shell[data-ptheme] .th-assign-row{
   background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
-.therapy-shell[data-ptheme] .pfold > summary, .mx-sheet .pfold > summary{ font-family:var(--font-heading); font-weight:600; font-size:17px; padding:var(--space-4) var(--space-6); min-height:56px; color:var(--color-text); }
-.therapy-shell[data-ptheme] .pfold > summary small{ font-family:var(--font-body); font-weight:400; font-size:14px; color:var(--color-text-secondary); }
-.therapy-shell[data-ptheme] .pfold > summary::after, .mx-sheet .pfold > summary::after{ color:var(--color-text-secondary); transition:transform var(--motion-fast) var(--ease-standard); }
-.therapy-shell[data-ptheme] .pfold-body, .mx-sheet .pfold-body{ padding:0 var(--space-6) var(--space-6); }
-.therapy-shell[data-ptheme] details[open] > .pfold-body, .therapy-shell[data-ptheme] details[open] > .tp-goal-body, .therapy-shell[data-ptheme] details[open] > .tp-t-body, .mx-sheet details[open] > .pfold-body{ animation:mx-reveal var(--motion-base) var(--ease-enter); }
+.portal-shell[data-ptheme] .pfold > summary, .mx-sheet .pfold > summary{ font-family:var(--font-heading); font-weight:600; font-size:17px; padding:var(--space-4) var(--space-6); min-height:56px; color:var(--color-text); }
+.portal-shell[data-ptheme] .pfold > summary small{ font-family:var(--font-body); font-weight:400; font-size:14px; color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .pfold > summary::after, .mx-sheet .pfold > summary::after{ color:var(--color-text-secondary); transition:transform var(--motion-fast) var(--ease-standard); }
+.portal-shell[data-ptheme] .pfold-body, .mx-sheet .pfold-body{ padding:0 var(--space-6) var(--space-6); }
+.portal-shell[data-ptheme] details[open] > .pfold-body, .portal-shell[data-ptheme] details[open] > .tp-goal-body, .portal-shell[data-ptheme] details[open] > .tp-t-body, .mx-sheet details[open] > .pfold-body{ animation:mx-reveal var(--motion-base) var(--ease-enter); }
 @keyframes mx-reveal{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
-.therapy-shell[data-ptheme] .th-kid:hover, .therapy-shell[data-ptheme] .th-kid:focus-visible, .therapy-shell[data-ptheme] .th-todo:hover, .therapy-shell[data-ptheme] .tp-row:hover{ border-color:var(--color-border-strong); background:var(--color-surface-alt); }
-.therapy-shell[data-ptheme] .th-todo{ border-inline-start:1px solid var(--color-border); }
-.therapy-shell[data-ptheme] .th-kid.has-plan{ border-color:var(--color-border); }
-.therapy-shell[data-ptheme] .th-av, .mx-sheet .th-av{ background:var(--color-primary-soft); border-color:var(--color-border); }
+.portal-shell[data-ptheme] .th-kid:hover, .portal-shell[data-ptheme] .th-kid:focus-visible, .portal-shell[data-ptheme] .th-todo:hover, .portal-shell[data-ptheme] .tp-row:hover{ border-color:var(--color-border-strong); background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] .th-todo{ border-inline-start:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .th-kid.has-plan{ border-color:var(--color-border); }
+.portal-shell[data-ptheme] .th-av, .mx-sheet .th-av{ background:var(--color-primary-soft); border-color:var(--color-border); }
 
 /* chips and small marks */
-.therapy-shell[data-ptheme] .th-chip, .mx-sheet .th-chip, .therapy-shell[data-ptheme] .tp-now, .therapy-shell[data-ptheme] .bk-theme, .mx-sheet .bk-theme, .therapy-shell[data-ptheme] .bk-method, .mx-sheet .bk-method, .therapy-shell[data-ptheme] .th-lib-cat, .therapy-shell[data-ptheme] .th-lib-scope{
+.portal-shell[data-ptheme] .th-chip, .mx-sheet .th-chip, .portal-shell[data-ptheme] .tp-now, .portal-shell[data-ptheme] .bk-theme, .mx-sheet .bk-theme, .portal-shell[data-ptheme] .bk-method, .mx-sheet .bk-method, .portal-shell[data-ptheme] .th-lib-cat, .portal-shell[data-ptheme] .th-lib-scope{
   background:var(--color-surface-alt); color:var(--color-text-secondary); border:1px solid var(--color-border); border-radius:var(--radius-pill); font-weight:600; }
-.therapy-shell[data-ptheme] .th-chip.on, .mx-sheet .th-chip.on, .therapy-shell[data-ptheme] .tp-builder .th-chip.on, .therapy-shell[data-ptheme] .tp-builder .pchoice button.on, .mx-sheet .bk-age.on, .therapy-shell[data-ptheme] .cr-chips button.on{
+.portal-shell[data-ptheme] .th-chip.on, .mx-sheet .th-chip.on, .portal-shell[data-ptheme] .tp-builder .th-chip.on, .portal-shell[data-ptheme] .tp-builder .pchoice button.on, .mx-sheet .bk-age.on, .portal-shell[data-ptheme] .cr-chips button.on{
   background:var(--color-primary-soft); color:var(--color-text); border-color:var(--color-primary); }
-.therapy-shell[data-ptheme] .tp-now{ background:var(--color-primary-soft); color:var(--color-text); border-color:transparent; }
-.therapy-shell[data-ptheme] .bk-draft, .mx-sheet .bk-draft{ background:var(--color-warning-soft); color:var(--color-warning); }
-.therapy-shell[data-ptheme] .say-ico, .mx-sheet .say-ico{ color:var(--color-primary); }
-.therapy-shell[data-ptheme] .tp-appr{ opacity:1; color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .tp-now{ background:var(--color-primary-soft); color:var(--color-text); border-color:transparent; }
+.portal-shell[data-ptheme] .bk-draft, .mx-sheet .bk-draft{ background:var(--color-warning-soft); color:var(--color-warning); }
+.portal-shell[data-ptheme] .say-ico, .mx-sheet .say-ico{ color:var(--color-primary); }
+.portal-shell[data-ptheme] .tp-appr{ opacity:1; color:var(--color-text-secondary); }
 
 /* fields */
-.therapy-shell[data-ptheme] input:not([type=checkbox]):not([type=radio]):not([type=file]), .therapy-shell[data-ptheme] textarea, .therapy-shell[data-ptheme] select,
+.portal-shell[data-ptheme] input:not([type=checkbox]):not([type=radio]):not([type=file]), .portal-shell[data-ptheme] textarea, .portal-shell[data-ptheme] select,
 .mx-sheet input:not([type=checkbox]):not([type=radio]):not([type=file]), .mx-sheet textarea, .mx-sheet select{
   background:var(--color-surface-inset); color:var(--color-text); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); font-family:var(--font-body); font-size:16px; min-height:44px;
   transition:border-color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
-.therapy-shell[data-ptheme] textarea, .mx-sheet textarea{ line-height:1.6; padding:10px 12px; }
-.therapy-shell[data-ptheme] input:focus, .therapy-shell[data-ptheme] textarea:focus, .therapy-shell[data-ptheme] select:focus, .mx-sheet input:focus, .mx-sheet textarea:focus, .mx-sheet select:focus{ outline:2px solid var(--color-primary); outline-offset:1px; background:var(--color-surface); }
-.therapy-shell[data-ptheme] ::placeholder, .mx-sheet ::placeholder{ color:var(--color-text-secondary); }
-.therapy-shell[data-ptheme] .pfield, .mx-sheet .pfield{ font-weight:600; font-size:15px; color:var(--color-text); gap:var(--space-2); }
-.therapy-shell[data-ptheme] input[type=checkbox], .mx-sheet input[type=checkbox]{ accent-color:var(--color-primary); }
-.therapy-shell[data-ptheme] .th-avoid-field textarea{ border:1px solid var(--color-danger) !important; background:var(--color-danger-soft); }
-.therapy-shell[data-ptheme] .th-avoid, .mx-sheet .th-avoid{ border:1px solid var(--color-danger); background:var(--color-danger-soft); }
-.therapy-shell[data-ptheme] .th-avoid b, .mx-sheet .th-avoid b{ color:var(--color-danger); }
+.portal-shell[data-ptheme] textarea, .mx-sheet textarea{ line-height:1.6; padding:10px 12px; }
+.portal-shell[data-ptheme] input:focus, .portal-shell[data-ptheme] textarea:focus, .portal-shell[data-ptheme] select:focus, .mx-sheet input:focus, .mx-sheet textarea:focus, .mx-sheet select:focus{ outline:2px solid var(--color-primary); outline-offset:1px; background:var(--color-surface); }
+.portal-shell[data-ptheme] ::placeholder, .mx-sheet ::placeholder{ color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .pfield, .mx-sheet .pfield{ font-weight:600; font-size:15px; color:var(--color-text); gap:var(--space-2); }
+.portal-shell[data-ptheme] input[type=checkbox], .mx-sheet input[type=checkbox]{ accent-color:var(--color-primary); }
+.portal-shell[data-ptheme] .th-avoid-field textarea{ border:1px solid var(--color-danger) !important; background:var(--color-danger-soft); }
+.portal-shell[data-ptheme] .th-avoid, .mx-sheet .th-avoid{ border:1px solid var(--color-danger); background:var(--color-danger-soft); }
+.portal-shell[data-ptheme] .th-avoid b, .mx-sheet .th-avoid b{ color:var(--color-danger); }
 
 /* the plan page: the side card (the child, the one main button, the links) and the goals */
 .therapy-shell[data-ptheme] .tp-page{ gap:var(--space-6); }
@@ -252,7 +264,7 @@ body:has(#view-therapy.active .therapy-shell[data-ptheme=light]){ background:#FA
 }
 @media (max-width:480px){ .therapy-shell[data-ptheme] .portal-title{ font-size:19px; white-space:nowrap; } .therapy-shell[data-ptheme] .portal-top .back-btn{ padding:0 var(--space-3); font-size:14px; } }
 /* the second line inside a filled (primary) button takes the button's own text colour, never the grey of secondary text (Guy 2026-10-30: "מהמקום שעצרת" was almost invisible on the green) */
-.therapy-shell[data-ptheme] .btn:not(.ghost):not(.danger) :is(small, .pnote, em, span:not(.pcount)), .mx-sheet .btn:not(.ghost):not(.danger) :is(small, .pnote, em, span:not(.pcount)){ color:var(--color-on-primary); opacity:.92; }
+.portal-shell[data-ptheme] .btn:not(.ghost):not(.danger) :is(small, .pnote, em, span:not(.pcount)), .mx-sheet .btn:not(.ghost):not(.danger) :is(small, .pnote, em, span:not(.pcount)){ color:var(--color-on-primary); opacity:.92; }
 /* the spiral's stations and the staff's thumbs on the new colours (a contrast check, 2026-10-30: white on the old green was 3.4:1) */
 .therapy-shell[data-ptheme] .tp-sp-st{ background:var(--color-surface); border-color:var(--color-border-strong); color:var(--color-text); }
 .therapy-shell[data-ptheme] .tp-sp-st:hover{ border-color:var(--color-primary); }
@@ -275,3 +287,134 @@ body:has(#view-therapy.active .therapy-shell[data-ptheme=light]){ background:#FA
 }
 @media (min-width:1024px){ .therapy-shell[data-ptheme] .th-to-menu{ display:none; } }
 @media (max-width:1023px){ .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button.active{ background:var(--color-surface); border-color:var(--color-border); } .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button.active .th-nav-ico{ color:var(--color-text-secondary); } }
+
+/* ---------- the staff portals on the new look (Guy 2026-10-30: the instructors', the coordinator's, the admin's and the לומדה, in light, dark and leopard) ----------
+   The older rules of 14-portal.css read the bridged --p-* variables; these replace their fixed colours (gold on dark) with the tokens. */
+.portal-shell[data-ptheme], .mx-sheet{ --p-gold:var(--color-primary); --p-accent:var(--color-warning); }
+.portal-shell[data-ptheme] .portal-top{ margin:var(--space-4) 0 var(--space-1); }
+.portal-shell[data-ptheme] .portal-theme{ width:44px; height:44px; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); font-size:19px; }
+.portal-shell[data-ptheme] .portal-theme:hover{ border-color:var(--color-border-strong); }
+.portal-shell[data-ptheme] .portal-hello{ margin:0 0 var(--space-4); }
+.portal-shell[data-ptheme] .ptab-count, .mx-sheet .ptab-count{ background:var(--color-primary); color:var(--color-on-primary); font-family:var(--font-body); min-width:20px; line-height:20px; border-radius:var(--radius-pill); font-size:12px; }
+.portal-shell[data-ptheme] .card, .portal-shell[data-ptheme] .pmine-row, .portal-shell[data-ptheme] .preq, .portal-shell[data-ptheme] .pnext-line, .portal-shell[data-ptheme] .cs-side, .mx-sheet .card, .mx-sheet .preq{
+  background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.portal-shell[data-ptheme] .pnext-line{ background:var(--color-primary-soft); border-color:transparent; box-shadow:none; padding:var(--space-3) var(--space-4); gap:var(--space-1) var(--space-3); }
+.portal-shell[data-ptheme] .pnext-line b{ font-family:var(--font-heading); font-weight:600; }
+.portal-shell[data-ptheme] .pnext-badge, .mx-sheet .pnext-badge{ background:var(--color-surface); color:var(--color-text); font-family:var(--font-body); font-weight:700; font-size:12px; box-shadow:none; border-radius:var(--radius-pill); padding:2px 10px; }
+.portal-shell[data-ptheme] .pmine-row.next{ border-color:var(--color-primary); animation:none; }
+.portal-shell[data-ptheme] .pmonth{ font-family:var(--font-heading); font-weight:600; }
+.portal-shell[data-ptheme] .pmonth button{ border-radius:var(--radius-md); border-color:var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .od-card{ border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface); box-shadow:var(--shadow-card); padding:var(--space-4); }
+.portal-shell[data-ptheme] .od-card.mine{ border-color:var(--color-success); background:var(--color-success-soft); box-shadow:none; }
+.portal-shell[data-ptheme] .od-card b{ font-family:var(--font-heading); font-weight:600; font-size:17px; }
+/* chosen things: the one I picked, my name, the open day: the primary colour with its own text colour (never dark text on the green) */
+.portal-shell[data-ptheme] .pchoice button.on, .mx-sheet .pchoice button.on, .portal-shell[data-ptheme] .ppick.on, .mx-sheet .ppick.on, .portal-shell[data-ptheme] .cs-name.on, .mx-sheet .cs-name.on,
+.portal-shell[data-ptheme] .pdays button.active, .mx-sheet .pdays button.active, .portal-shell[data-ptheme] .mcal-name.me{ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .mcal-name.me small{ color:var(--color-on-primary); opacity:.85; }
+.portal-shell[data-ptheme] .pgoal-opt.on, .mx-sheet .pgoal-opt.on{ border-color:var(--color-primary); background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .pchip.me{ outline-color:var(--color-primary); box-shadow:none; }
+.portal-shell[data-ptheme] .mcal-name.sel{ outline-color:var(--color-text); }
+.portal-shell[data-ptheme] .cs-pick-item:hover, .portal-shell[data-ptheme] .cs-pick-item:focus-visible{ border-color:var(--color-text); }
+.portal-shell[data-ptheme] .mcal-others.today, .portal-shell[data-ptheme] .mcal-num.today{ border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .mcal-cell.editable:hover, .portal-shell[data-ptheme] .mcal-cell.editable:focus-visible, .portal-shell[data-ptheme] .pboard td.editable:hover{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .pboard tr.today th, .portal-shell[data-ptheme] .pboard tr.today td{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .cs-tab:hover{ background:var(--color-primary-soft); }
+/* the wishes: the same four colours everywhere, from the tokens */
+.portal-shell[data-ptheme] .cs-pick-btn.sel-yes, .portal-shell[data-ptheme] .cs-pick-item.opt-yes{ background:var(--color-success-soft); color:var(--color-success); }
+.portal-shell[data-ptheme] .cs-pick-btn.sel-no, .portal-shell[data-ptheme] .cs-pick-item.opt-no{ background:var(--color-danger-soft); color:var(--color-danger); }
+.portal-shell[data-ptheme] .tab-key .wish-yes, .portal-shell[data-ptheme] .mcal-key.compact .wish-yes{ color:var(--color-success); }
+.portal-shell[data-ptheme] .tab-key .wish-no, .portal-shell[data-ptheme] .mcal-key.compact .wish-no{ color:var(--color-danger); }
+.portal-shell[data-ptheme] .lvbtn.lv-yes.active, .portal-shell[data-ptheme] .lvbtn.lv-avoid.active, .portal-shell[data-ptheme] .lvbtn.lv-no.active, .portal-shell[data-ptheme] .lvbtn.lv-hours.active{ color:var(--color-bg); }
+.portal-shell[data-ptheme] .lv-absent{ background:var(--color-surface-alt); color:var(--color-text-secondary); }
+/* notes across the top: viewing as somebody, filling for somebody, acting as the coordinator, last month's preferences */
+.portal-shell[data-ptheme] .adm-viewas{ background:var(--color-warning-soft); border:1px solid var(--color-warning); border-radius:var(--radius-md); }
+.portal-shell[data-ptheme] .adm-viewas.edit, .portal-shell[data-ptheme] .pprefs-past{ background:var(--color-info-soft); border:1px solid var(--color-info); border-radius:var(--radius-md); }
+.portal-shell[data-ptheme] .adm-viewas.act{ background:var(--color-danger-soft); border-color:var(--color-danger); }
+.portal-shell[data-ptheme] .cs-req.cs-long{ border-inline-start-color:var(--color-warning); }
+.portal-shell[data-ptheme] .cs-ask, .portal-shell[data-ptheme] button.cs-issue-kind{ color:var(--color-warning); }
+.portal-shell[data-ptheme] .duty-card{ border:1px solid var(--color-border); background:var(--color-surface); }
+.portal-shell[data-ptheme] .duty-card.mine{ border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .duty-kid.me{ color:var(--color-primary); }
+.portal-shell[data-ptheme] .adm-weight.changed{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .portal-problem{ color:var(--color-text-secondary); }
+/* the month calendar: morning, evening and night as three calm shades of the look (the old white and navy overlays were made for the dark look only) */
+.portal-shell[data-ptheme] .mcal-cell[data-shift=m]{ background:color-mix(in srgb, var(--color-warning-soft) 55%, var(--color-surface)); }
+.portal-shell[data-ptheme] .mcal-cell[data-shift=e]{ background:var(--color-surface-alt); border-top:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .mcal-cell[data-shift=n]{ background:var(--color-info-soft); border-top:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .mcal-cell.weekend[data-shift=m]{ background:color-mix(in srgb, var(--color-warning-soft) 85%, var(--color-border)); }
+.portal-shell[data-ptheme] .mcal-cell.weekend[data-shift=e]{ background:color-mix(in srgb, var(--color-surface-alt) 80%, var(--color-border)); }
+.portal-shell[data-ptheme] .mcal-cell.weekend[data-shift=n]{ background:color-mix(in srgb, var(--color-info-soft) 80%, var(--color-border)); }
+.portal-shell[data-ptheme] .mcal-num.weekend, .portal-shell[data-ptheme] .mcal-others.weekend{ background:color-mix(in srgb, var(--color-surface-alt) 80%, var(--color-border)); }
+/* the side menu of the instructors' and the coordinator's portals (14e portalSideHtml): on a computer it replaces the top row and the tabs; on a phone the tabs stay */
+.portal-shell[data-ptheme] > .ps-side{ display:none; }
+@media (min-width:1024px){
+  #protected-app:has(#view-portal.active .portal-shell > .ps-side){ max-width:none; padding-inline:24px; }
+  #protected-app:has(#view-portal.active .portal-shell > .ps-side) > #shared-header, #protected-app:has(#view-portal.active .portal-shell > .ps-side) > #shared-logout-row{ display:none; }
+  .portal-shell[data-ptheme]:has(> .ps-side){ display:grid; grid-template-columns:248px minmax(0, 1fr); column-gap:var(--space-8); align-items:start; max-width:1240px; margin-inline:auto; padding-top:var(--space-6); }
+  .portal-shell[data-ptheme].wide:has(> .ps-side){ max-width:1700px; }
+  .portal-shell[data-ptheme]:has(> .ps-side) > *{ grid-column:2; min-width:0; }
+  .portal-shell[data-ptheme]:has(> .ps-side) > .portal-top, .portal-shell[data-ptheme]:has(> .ps-side) > .portal-hello, .portal-shell[data-ptheme]:has(> .ps-side) > .portal-tabs{ display:none; }
+  .portal-shell[data-ptheme] > .ps-side{ grid-column:1; grid-row:1 / span 40; position:sticky; top:var(--space-4); display:flex; flex-direction:column; gap:var(--space-2); min-height:calc(100vh - 64px); box-sizing:border-box;
+    padding:var(--space-6) var(--space-4); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); }
+}
+.portal-shell[data-ptheme] .ps-side-head{ display:flex; flex-direction:column; gap:2px; padding:0 var(--space-3) var(--space-4); }
+.portal-shell[data-ptheme] .ps-side-head b{ font-family:var(--font-heading); font-weight:600; font-size:20px; color:var(--color-heading); }
+.portal-shell[data-ptheme] .ps-side-head span{ font-size:14px; color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .ps-side-nav{ display:flex; flex-direction:column; gap:2px; }
+.portal-shell[data-ptheme] .ps-side-nav button, .portal-shell[data-ptheme] .ps-link{ display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:44px; padding:0 var(--space-3); border:0; border-radius:var(--radius-sm);
+  background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:15px; text-align:start; cursor:pointer; transition:background-color var(--motion-instant) var(--ease-standard), color var(--motion-instant) var(--ease-standard); }
+.portal-shell[data-ptheme] .ps-side-nav button:hover, .portal-shell[data-ptheme] .ps-link:hover{ background:var(--color-surface-alt); color:var(--color-text); }
+.portal-shell[data-ptheme] .ps-side-nav button.active{ background:var(--color-primary-soft); color:var(--color-text); }
+.portal-shell[data-ptheme] .ps-side-nav button.active .ps-ico{ color:var(--color-primary); }
+.portal-shell[data-ptheme] .ps-side-nav .ps-word{ flex-grow:1; }
+.portal-shell[data-ptheme] .ps-ico{ flex:none; }
+.portal-shell[data-ptheme] .ps-side-foot{ margin-top:auto; padding-top:var(--space-6); display:flex; flex-direction:column; gap:2px; }
+.portal-shell[data-ptheme] .ps-look{ display:flex; margin-top:var(--space-3); padding:3px; gap:2px; border-radius:var(--radius-sm); background:var(--color-surface-alt); border:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .ps-look button{ flex:1; min-height:36px; border:0; border-radius:6px; background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:14px; cursor:pointer; }
+.portal-shell[data-ptheme] .ps-look button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
+
+/* the app's first screen (14e showAppHome): the person's look, a quiet title, the places as tiles with a line icon (Guy 2026-10-30) */
+body:has(#view-apphome.active .mx-home[data-ptheme=dark]){ background:#1C1A17; }
+body:has(#view-apphome.active .mx-home[data-ptheme=light]){ background:#FAF7F2; }
+.mx-home{ color:var(--color-text); text-align:start; padding-top:var(--space-6); padding-bottom:var(--space-12); }
+.mx-home .apphome-top{ display:flex; justify-content:flex-end; min-height:44px; }
+.mx-home .home-text-btn{ position:static; min-height:44px; padding:0 var(--space-2); color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:15px; }
+.mx-home .eyebrow-gold{ color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:14px; letter-spacing:0; }
+.mx-home .apphome-title{ font-family:var(--font-heading); font-weight:600; font-size:26px; line-height:1.25; color:var(--color-heading); margin:var(--space-1) 0 var(--space-6); }
+.mx-home .apphome-cards{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--space-3); }
+.mx-home .apphome-hello{ grid-column:1 / -1; color:var(--color-text-secondary); font-size:15px; margin:0 0 var(--space-1); }
+.mx-home .home-card{ display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-2); min-height:132px; padding:var(--space-4); text-align:start; background:var(--color-surface); color:var(--color-text);
+  border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); font-family:var(--font-body); transition:border-color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
+.mx-home .home-card:hover{ border-color:var(--color-border-strong); background:var(--color-surface); }
+.mx-home .home-card:focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
+.mx-home .home-card:last-child:nth-child(odd of .home-card){ grid-column:1 / -1; min-height:0; }          /* (an odd tile out takes the whole row) */
+.mx-home .apphome-ico{ display:flex; align-items:center; justify-content:center; width:40px; height:40px; margin-bottom:var(--space-1); border-radius:var(--radius-md); background:var(--color-surface-alt); color:var(--color-primary); font-size:0; }
+.mx-home .home-card-title{ font-family:var(--font-heading); font-weight:600; font-size:17px; }
+.mx-home .home-card-sub{ font-size:14px; color:var(--color-text-secondary); line-height:1.45; }
+.mx-home .apphome-demo{ color:var(--color-text-secondary); }
+/* the bottom bar ("בית", "חזור") and the floating "חזור" on a computer: the colours of the look that is open (Guy 2026-10-30) */
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme=dark]) :is(.bottom-nav, .nav-back-float){ background:#24211D; border-color:#3A362F; color:#A8A196; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme=light]) :is(.bottom-nav, .nav-back-float){ background:#FFFFFF; border-color:#E7E0D3; color:#6E675C; box-shadow:none; }
+body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) :is(.bottom-nav, .nav-back-float){ background:#22170E; border-color:#4A3420; color:#D3BD97; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme]) .bottom-nav{ -webkit-backdrop-filter:none; backdrop-filter:none; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme]) :is(.bottom-nav-btn, .nav-back-float){ font-family:'Assistant', Arial, sans-serif; font-weight:600; font-size:13px; color:inherit; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme]) .nav-back-float{ font-size:15px; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme=dark]) .bottom-nav-btn.active{ background:#2D3328; color:#E9E4DA; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme=light]) .bottom-nav-btn.active{ background:#E7ECE2; color:#2D2A24; }
+body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) .bottom-nav-btn.active{ background:#352612; color:#F7ECD8; }
+/* the personal sign-in (14h srvLoginHtml): the same calm card, fields and one main button */
+body:has(#view-portal.active .mx-home[data-ptheme=dark]){ background:#1C1A17; }
+body:has(#view-portal.active .mx-home[data-ptheme=light]){ background:#FAF7F2; }
+.mx-login{ max-width:440px; margin-inline:auto; }
+.mx-login .card{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:var(--space-6); display:flex; flex-direction:column; gap:var(--space-3); color:var(--color-text); }
+.mx-login .pfield{ display:flex; flex-direction:column; gap:var(--space-2); font-weight:600; font-size:15px; }
+.mx-login input{ background:var(--color-surface-inset); color:var(--color-text); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); font-family:var(--font-body); font-size:16px; min-height:44px; padding:0 12px; }
+.mx-login input:focus{ outline:2px solid var(--color-primary); outline-offset:1px; }
+.mx-login .btn{ background:var(--color-primary); color:var(--color-on-primary); border:1px solid transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-weight:700; font-size:16px; min-height:48px; }
+.mx-login .btn.ghost{ background:transparent; color:var(--color-text); border-color:var(--color-border-strong); font-weight:600; }
+.mx-login .plogin-staff-link{ color:var(--color-link); }
+.mx-login .plogin-error{ color:var(--color-danger); }
+/* the לומדה's list (14zh): its own title row replaces the site's header, like the portals; the chosen buttons on the primary colour */
+#protected-app:has(#view-learn.active .portal-shell[data-ptheme]) > #shared-header, #protected-app:has(#view-learn.active .portal-shell[data-ptheme]) > #shared-logout-row{ display:none; }
+.portal-shell[data-ptheme] .ln-ibtn[aria-pressed="true"]{ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .ln-card-btn:hover{ border-color:var(--color-border-strong); background:var(--color-surface); }
