@@ -76,7 +76,8 @@ async function renderOncall(box){
   const dirHtml = (r, dir) => { const t = tripOf(r, dir), k = `${r.staff_id}|${r.day}|${r.shift}|${dir}`, w = dir === 'in' ? 'הגעה' : 'חזרה';
     return `<details class="oc-d${t.need === 'need' ? ' need' : ''}" data-oc-trip="${k}"${portalUi.fold['oc:' + k] ? ' open' : ''}><summary><span class="oc-d-lbl">${w}</span>
         <span class="mx-seg oc-need" role="group" aria-label="${w}: מונית">${OC_NEED.map(([v, x]) => `<button type="button" data-oc-need="${v}" aria-pressed="${t.need === v}">${x}</button>`).join('')}</span>
-        ${t.need === 'need' ? `<button type="button" class="oc-ordered-btn" data-oc-ordered aria-pressed="${!!t.ordered}">${t.ordered ? '✓ ' : ''}המונית הוזמנה</button>` : ''}</summary>
+        ${t.need === 'need' ? `<button type="button" class="oc-ordered-btn" data-oc-ordered aria-pressed="${!!t.ordered}">${t.ordered ? '✓ ' : ''}המונית הוזמנה</button>` : ''}
+        <span class="oc-d-more">${(() => { const pl = t.place || d.addr[r.staff_id] || '', x = [t.at_time, pl].filter(Boolean).join(' · '); return x ? pEsc(x.length > 28 ? x.slice(0, 27) + '…' : x) : 'שעה וכתובת'; })()} <i aria-hidden="true">▾</i></span></summary>
       <div class="oc-d-body"><label class="oc-field"><span>שעה</span><input type="text" inputmode="numeric" maxlength="20" data-oc-time value="${pEsc(t.at_time || '')}" placeholder="למשל 06:30"></label>
         <label class="oc-field"><span>כתובת</span><input type="text" maxlength="120" data-oc-place value="${pEsc(t.place || d.addr[r.staff_id] || '')}"></label></div></details>`; };
   // the schedule: the month, a week at first (the weekend's week)

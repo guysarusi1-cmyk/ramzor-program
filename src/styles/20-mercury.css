@@ -632,3 +632,7 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 /* the small switch of the preferences: "שבועי, בלי צבעים | חודשי, עם צבעים" */
 .pview-row{ display:flex; justify-content:center; margin:4px 0 10px; }
 .pview-seg button{ font-size:.85em; padding:4px 12px; min-height:34px; }
+/* the folded time and address: a visible little button (what is filled, in short, or "שעה וכתובת"), not only an arrow (Guy 2026-11-03) */
+.oc-d-lbl::after{ content:none !important; }
+.oc-d-more{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:4px; min-height:34px; padding:4px 10px; border-radius:999px; border:1px dashed var(--color-border-strong, var(--p-line)); color:var(--color-text-secondary, var(--p-muted)); font-size:.85em; max-width:100%; }
+.oc-d[open] .oc-d-more i{ display:inline-block; transform:rotate(180deg); }
