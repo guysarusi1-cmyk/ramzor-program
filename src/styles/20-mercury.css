@@ -550,3 +550,11 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 }
 /* many tabs on a phone (the coordinator's, the manager's): two rows rather than a tab cut at the edge */
 @media (max-width:700px){ .portal-shell[data-ptheme] .portal-tabs{ flex-wrap:wrap; overflow-x:visible; } .portal-shell[data-ptheme] .portal-tabs button{ padding:var(--space-2) var(--space-3); } }
+/* a demo for Guy (2026-11-03), the shift window of the coordinator only: on a computer it opens in the middle of the screen, not stuck to the bottom,
+   and its buttons stay in sight at the bottom of the window while its content scrolls (inside the window only; nothing covers the site) */
+@media (min-width:900px){
+  .sheet.psheet-center{ align-items:center; }
+  .sheet.psheet-center .sheet-card{ border-radius:18px; max-height:85vh; max-height:85dvh; }
+  body:has(.view.active .portal-shell.wide) .sheet.psheet-center .sheet-card{ max-height:calc(85dvh / 1.2); }
+  .sheet.psheet-center .confirm-actions{ position:sticky; bottom:-20px; margin-bottom:-20px; padding:10px 0 20px; background:var(--color-surface-raised, var(--panel)); z-index:1; border-top:1px solid var(--color-border, var(--line)); }
+}

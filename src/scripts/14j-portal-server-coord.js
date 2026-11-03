@@ -422,6 +422,7 @@ function srvOpenSlot(mk, key, body){
   const others = () => portalLoad().rows.filter(r => r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')) && ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role !== 'instructor'));
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
   const wrap = portalSheet('<div id="slot-body"></div>');
+  wrap.classList.add('psheet-center');          // (a demo for Guy, this window only: on a computer in the middle of the screen, its buttons always in sight — 20-mercury.css)
   let editing = null, replacing = null;                          // (the row whose hours are being changed by hand; the row whose person is being replaced)
   const timeOpts = sel => Array.from({ length:48 }, (_, i) => { const v = String(Math.floor(i / 2)).padStart(2, '0') + (i % 2 ? ':30' : ':00'); return `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`; }).join('');
   const draw = () => {

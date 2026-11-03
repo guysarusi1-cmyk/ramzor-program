@@ -2432,6 +2432,7 @@
         if(activeView() === 'view-apphome'){ await sleep(300); document.getElementById('apphome-portal').click(); }
         await waitFor(() => activeView() === 'view-portal' && !/טוען|جارٍ/.test(document.getElementById('portal-body').textContent), 60); await sleep(300);
         showPortal(); await sleep(400);          // (drawn again now that the language is Arabic: a real Arabic speaker has it from the first drawing)
+        document.querySelectorAll('.psheet').forEach(x => x.remove());          // (a window an earlier step left open, drawn in Hebrew before the switch)
         arMissing.clear(); arSweep();          // (only what this person's portal shows: not the screen of the step before, which was still in the page)
         check(`arabic (${kind}): the portal is in Arabic (title, tabs, greeting)`, /بوابة/.test(document.querySelector('.portal-title').textContent) && /الجدول/.test(document.querySelector('.portal-tabs').textContent) && /مرحبًا/.test(document.querySelector('.portal-hello').textContent), document.querySelector('.portal-title').textContent + ' / ' + document.querySelector('.portal-tabs').textContent);
         check(`arabic (${kind}): the sentences of the system are in Arabic`, /[؀-ۿ]/.test(tx('sch_unpub')) && !/[֐-׿]/.test(tx('sch_unpub')), tx('sch_unpub'));
