@@ -2724,6 +2724,11 @@
       // the quiet hours
       tvQuietTick(); const q = document.getElementById('tv-quiet');
       check('tv today: the quiet screen ("good night" / "good morning") is shown exactly in the quiet hours', !!q && q.hidden === !tvQuietNow(), String(tvQuietNow()));
+      { const real = israelNow, at = (m, d) => { israelNow = () => ({ minutes:m, date:d || '2026-11-04' }); return tvQuietNow(); };          // (MORNING-NIGHT-SPEC: by the framework's clock)
+        const r = [at(329), at(330), at(449), at(450), at(1169), at(1170), at(0), at(330, '2026-11-07')];
+        israelNow = real;
+        check('tv today: morning 05:30–07:30, the day 07:30–19:30, good night 19:30–05:30, the same on Saturday', JSON.stringify(r) === JSON.stringify(['night', 'morning', 'morning', null, null, 'night', 'night', 'morning']), JSON.stringify(r));
+        check('tv today: the morning shows the three steps and then breakfast apart — a sandwich, cornflakes on Saturday', /מתלבשים[\s\S]*מצחצחים שיניים[\s\S]*נועלים נעליים[\s\S]*ואז[\s\S]*ארוחת בוקר/.test(TV_QUIET_HTML.morning(false)) && /סנדוויץ/.test(TV_QUIET_HTML.morning(false)) && /קורנפלקס/.test(TV_QUIET_HTML.morning(true)) && !/קורנפלקס/.test(TV_QUIET_HTML.morning(false)), ''); }
       stopCarousel(); showHub(); PORTAL_TV_LIVE = liveWas; refreshPortalSlides();
       if(q){ q.hidden = true; q.innerHTML = ''; } tvQuietShown = null;
     });

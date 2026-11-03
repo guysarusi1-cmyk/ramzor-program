@@ -54,18 +54,26 @@ function renderTimetableLive(){
 // the picture of an activity (the drawings of 14p-timetable-art.js when there is one, else the emoji)
 const ttArt = id => (typeof TT_ART !== 'undefined' && TT_ART[id]) || `<span class="tvt2-emoji">${ttIcon(id)[2]}</span>`;
 
-// ---- the quiet hours: after bedtime a "good night" screen until 05:00, then the morning routine until 07:30
+// ---- the quiet hours (Guy's spec of 31.10, Mercury-Work-Manager plans/MORNING-NIGHT-SPEC.md): every day of the week 05:30–07:30 the morning,
+// 07:30–19:30 the day's timetable, 19:30–05:30 "good night" — by the framework's own clock (Israel), not the server's
+const tvClock = () => typeof israelNow === 'function' ? israelNow() : { minutes:nowMin(), date:isoDate(new Date()) };
 function tvQuietNow(){
-  const n = nowMin(), bed = ((tvTimetable && tvTimetable.items) || []).filter(a => a.i === 'bedtime').map(a => hm(a.t)).sort((a, b) => b - a)[0];
-  if(n >= hm('05:00') && n < hm('07:30')) return 'morning';
-  if(n < hm('05:00') || (bed != null && n >= bed + 15)) return 'night';
+  const n = tvClock().minutes;
+  if(n >= hm('05:30') && n < hm('07:30')) return 'morning';
+  if(n >= hm('19:30') || n < hm('05:30')) return 'night';
   return null;
 }
+// the morning: the whole sequence at once — getting ready (three steps), and only then breakfast, apart (a sandwich; cornflakes on Saturday).
+// An order to see, without reading: no tracking, no locking, nothing to press.
 const TV_QUIET_HTML = {
-  night:`<div class="tvq tvq-night"><div class="tvq-stars" aria-hidden="true">${Array.from({ length:40 }, (_, i) => `<i style="left:${(i * 47) % 100}%; top:${(i * 29) % 100}%; animation-delay:${(i % 7) * -0.6}s"></i>`).join('')}</div>
+  night:() => `<div class="tvq tvq-night"><div class="tvq-stars" aria-hidden="true">${Array.from({ length:40 }, (_, i) => `<i style="left:${(i * 47) % 100}%; top:${(i * 29) % 100}%; animation-delay:${(i % 7) * -0.6}s"></i>`).join('')}</div>
       <div class="tvq-moon" aria-hidden="true">🌙</div><div class="tvq-title">לילה טוב</div><div class="tvq-row" aria-hidden="true">😴 🧸 ⭐ 💤</div></div>`,
-  morning:`<div class="tvq tvq-morning"><div class="tvq-sun" aria-hidden="true">🌞</div><div class="tvq-title">בוקר טוב!</div>
-      <div class="tvq-steps"><div><span>💦</span>שוטפים פנים</div><div><span>🦷</span>מצחצחים שיניים</div><div><span>👕</span>מחליפים בגדים</div><div><span>👟</span>נועלים נעליים</div></div></div>`
+  morning:sat => `<div class="tvq tvq-morning"><div class="tvq-sun" aria-hidden="true">🌞</div><div class="tvq-title">בוקר טוב!</div>
+      <div class="tvq-flow">
+        <div class="tvq-steps tvq-ready"><div><b>1</b><span>👕</span>מתלבשים</div><div><b>2</b><span>🦷</span>מצחצחים שיניים</div><div><b>3</b><span>👟</span>נועלים נעליים</div></div>
+        <div class="tvq-then"><span aria-hidden="true">⬅</span>ואז</div>
+        <div class="tvq-steps tvq-eat"><div><span>${sat ? '🥣' : '🥪'}</span>ארוחת בוקר<small>${sat ? 'קורנפלקס' : 'סנדוויץ\''}</small></div></div>
+      </div></div>`
 };
 let tvQuietTimer = null, tvQuietShown = null;
 function tvQuietTick(){
@@ -73,8 +81,8 @@ function tvQuietTick(){
   const view = document.getElementById('view-display'); if(!view) return;
   let el = document.getElementById('tv-quiet');
   if(!el){ el = document.createElement('div'); el.id = 'tv-quiet'; el.hidden = true; view.appendChild(el); }
-  const mode = tvQuietNow();
-  if(mode !== tvQuietShown){ tvQuietShown = mode; el.innerHTML = mode ? TV_QUIET_HTML[mode] : ''; el.hidden = !mode; }
+  const mode = tvQuietNow(), sat = dowOf(tvClock().date) === 6, key = mode && mode + (sat ? ':sat' : '');
+  if(key !== tvQuietShown){ tvQuietShown = key; el.innerHTML = mode ? TV_QUIET_HTML[mode](sat) : ''; el.hidden = !mode; }
 }
 function startTvQuiet(){ stopTvQuiet(); if(!PORTAL_TV_LIVE) return; loadTvToday(true).then(tvQuietTick); tvQuietTimer = setInterval(() => { loadTvToday().then(tvQuietTick); }, 60 * 1000); }
 function stopTvQuiet(){ clearInterval(tvQuietTimer); tvQuietTimer = null; }

@@ -105,7 +105,7 @@
     else if(what === 'quiet-night' || what === 'quiet-morning'){          // (the "good night" / "good morning" screens, whatever the hour)
       const view = document.getElementById('view-display'); let el = document.getElementById('tv-quiet');
       if(!el){ el = document.createElement('div'); el.id = 'tv-quiet'; view.appendChild(el); }
-      const md = what.slice(6); tvQuietNow = () => md; el.innerHTML = TV_QUIET_HTML[md]; el.hidden = false; tvQuietShown = md;          // (the hour is pretended, so the minute check keeps it)
+      const md = what.slice(6); tvQuietNow = () => md; el.innerHTML = TV_QUIET_HTML[md](/sat/.test(location.search)); el.hidden = false; tvQuietShown = md;          // (the hour is pretended, so the minute check keeps it)
     }
   });
 })();
