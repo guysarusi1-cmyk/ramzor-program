@@ -154,8 +154,8 @@ function thpTodoHtml(){
     return `<div class="th-todo th-todo-card">${c ? thpAvatar(c) : ''}<span class="th-kid-text"><b class="ar-keep">${pEsc(x.name)}</b>${l.map(y => `<button type="button" class="th-todo-line" data-todo-kid="${pEsc(y.id)}" data-todo-tab="${y.tab}"><span aria-hidden="true">${y.emoji}</span> ${pEsc(y.text)}<span class="th-todo-go" aria-hidden="true">‹</span></button>`).join('')}</span></div>`; };
   const byKid = l => { const m = new Map(); l.forEach(x => { if(!m.has(x.id)) m.set(x.id, []); m.get(x.id).push(x); }); return [...m.values()]; };
   const groups = [['דחוף', items.filter(x => x.order <= 1)], ['השבוע', items.filter(x => x.order >= 2 && x.order <= 3)], ['לידיעה', items.filter(x => x.order >= 4)]];          // (by urgency, in groups: Q44)
-  // the three are always there and open, an empty one says so (Guy 2026-11-03)
-  return groups.map(([w, l]) => `<details class="pfold th-todo-group" open><summary><span>${w}</span>${l.length ? `<span class="pcount">${l.length}</span>` : ''}</summary><div class="pfold-body th-todo-list">${l.length ? byKid(l).map(card).join('') : '<div class="pnote">אין כרגע.</div>'}</div></details>`).join('');
+  // the three are always there, folded at first; an empty one says so (Guy 2026-11-03)
+  return groups.map(([w, l]) => `<details class="pfold th-todo-group"><summary><span>${w}</span>${l.length ? `<span class="pcount">${l.length}</span>` : ''}</summary><div class="pfold-body th-todo-list">${l.length ? byKid(l).map(card).join('') : '<div class="pnote">אין כרגע.</div>'}</div></details>`).join('');
 }
 // ---- "הילדים שלי": the status of every child, at a glance
 function thpStatusCard(c){
