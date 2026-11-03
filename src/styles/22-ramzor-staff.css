@@ -97,3 +97,23 @@ body[data-rlook] .bottom-nav-btn.active{ background:var(--color-primary-soft); c
 #protected-app:has(:is(#view-staff, #view-control, #view-kids-quick, #view-manage).active) > #shared-header :is(.eyebrow, .sub){ display:none; }
 #protected-app:has(:is(#view-staff, #view-control, #view-kids-quick, #view-manage).active) > #shared-header h1{ font-size:18px; margin:0; }
 #protected-app:has(:is(#view-staff, #view-control, #view-kids-quick, #view-manage).active) > #shared-logout-row{ display:none; }
+
+/* phone navigation in the Ramzor (Guy 2026-11-03): חזור | בית | הבא in the bottom bar; the protocol's own buttons and the top "back" buttons go */
+@media (max-width:700px){
+  .bottom-nav.has-next{ grid-template-columns:1fr 1fr; }
+  .bottom-nav.has-back.has-next{ grid-template-columns:1fr 1fr 1fr; }
+  #bnav-next{ order:3; } #bnav-home{ order:2; } #bnav-back{ order:1; }
+  #staff-screen-guided .guided-prev, #staff-screen-guided .guided-next{ display:none; }
+  #view-staff .back-btn, #view-kids-quick .back-btn{ display:none; }
+}
+/* "כל השלבים" open beside the step: nothing runs off the left edge on a phone */
+#staff-screen-guided.legend-open .guided-layout{ grid-template-columns:230px minmax(0, 1fr); }
+#staff-screen-guided .guided-main, #staff-screen-guided .guided-legend{ min-width:0; }
+#guided-step-body{ overflow-wrap:break-word; }
+@media (max-width:700px){ #staff-screen-guided.legend-open .guided-layout{ grid-template-columns:minmax(104px, 34%) minmax(0, 1fr); } #view-staff, #staff-screen-guided{ overflow-x:clip; } }
+/* the yellow light's reminder above the children, folded */
+.kq-yellow-reminder{ margin:0 0 14px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+.kq-yellow-reminder > summary{ min-height:44px; display:flex; align-items:center; padding:0 14px; cursor:pointer; font-weight:700; }
+.kq-yellow-reminder-body{ padding:0 14px 12px; }
+/* during a protocol the bar stays on a phone: it carries "הבא" now (Guy 2026-11-03) */
+@media (max-width:700px){ #protected-app.guided-focus:has(#view-staff.active) > .bottom-nav{ display:grid; } }

@@ -148,10 +148,10 @@ async function srvSaveSetting(patch){
 }
 // "שבוע אחרי שבוע", "בלי צבעים" and the weekdays she never comes (scheduling-v48.sql); until the columns exist, kept on this device
 const SIMPLE_LOCAL = { prefWeekly:'ramzor-pref-weekly', prefPlain:'ramzor-pref-plain', fixedDays:'ramzor-fixed-days' };
-function srvLoadSimplePrefs(row){
+function srvLoadSimplePrefs(row){          // (week by week and without colours unless chosen otherwise: Guy 2026-11-03, scheduling-v49.sql)
   srv.simpleCols = !!row;
-  if(row){ srv.prefWeekly = !!row.pref_weekly; srv.prefPlain = !!row.pref_plain; srv.fixedDays = Array.isArray(row.fixed_no_days) ? row.fixed_no_days : []; return; }
-  try { srv.prefWeekly = localStorage.getItem(SIMPLE_LOCAL.prefWeekly + '-' + srv.me) === '1'; srv.prefPlain = localStorage.getItem(SIMPLE_LOCAL.prefPlain + '-' + srv.me) === '1'; srv.fixedDays = JSON.parse(localStorage.getItem(SIMPLE_LOCAL.fixedDays + '-' + srv.me) || '[]'); } catch(e){ srv.prefWeekly = srv.prefPlain = false; srv.fixedDays = []; }
+  if(row){ srv.prefWeekly = row.pref_weekly == null ? true : !!row.pref_weekly; srv.prefPlain = row.pref_plain == null ? true : !!row.pref_plain; srv.fixedDays = Array.isArray(row.fixed_no_days) ? row.fixed_no_days : []; return; }
+  try { srv.prefWeekly = localStorage.getItem(SIMPLE_LOCAL.prefWeekly + '-' + srv.me) !== '0'; srv.prefPlain = localStorage.getItem(SIMPLE_LOCAL.prefPlain + '-' + srv.me) !== '0'; srv.fixedDays = JSON.parse(localStorage.getItem(SIMPLE_LOCAL.fixedDays + '-' + srv.me) || '[]'); } catch(e){ srv.prefWeekly = srv.prefPlain = false; srv.fixedDays = []; }
 }
 async function srvSaveSimplePrefs(patch){
   Object.assign(srv, patch);
@@ -159,6 +159,7 @@ async function srvSaveSimplePrefs(patch){
   if(!srv.simpleCols) return true;
   try {
     const row = { staff_id:srv.me }; if('prefWeekly' in patch) row.pref_weekly = patch.prefWeekly; if('prefPlain' in patch) row.pref_plain = patch.prefPlain; if('fixedDays' in patch) row.fixed_no_days = patch.fixedDays;
+    if('prefWeekly' in patch || 'prefPlain' in patch){ const r1 = await sbPersonal.from('staff_settings').upsert(Object.assign({ pref_view_set:true }, row)); if(!r1.error) return true; }          // (her own choice is kept: scheduling-v49.sql; before it, without the mark)
     const r = await sbPersonal.from('staff_settings').upsert(row); return !r.error;
   } catch(e){ return false; }
 }
@@ -191,10 +192,6 @@ function openPortalSettings(){
     <h3 class="psec">ימים שאני לא באה בהם</h3>
     <div class="pnote">הימים שמסמנים כאן מסומנים אצלך "לא" בתחילת כל חודש.</div>
     <div class="pchoice wrap fixed-days">${DOW_SHORT.map((d, i) => `<button type="button" class="${(srv.fixedDays || []).includes(i) ? 'on' : ''}" data-fixed-day="${i}">${pEsc(d)}</button>`).join('')}</div>
-    <h3 class="psec">איך ממלאים את ההעדפות</h3>
-    <div class="pchoice wrap"><button type="button" class="${srv.prefWeekly ? 'on' : ''}" data-set-weekly="1">שבוע אחרי שבוע</button><button type="button" class="${srv.prefWeekly ? '' : 'on'}" data-set-weekly="0">כל החודש יחד</button></div>
-    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${srv.prefPlain ? 'on' : ''}" data-set-plain="1">בלי צבעים</button><button type="button" class="${srv.prefPlain ? '' : 'on'}" data-set-plain="0">עם צבעים</button></div>
-    <div class="pnote">"בלי צבעים": לחיצה = כן, עוד לחיצה = לא, לחיצה ארוכה מחזירה לנקודה.</div>
     <h3 class="psec">סופי שבוע</h3>
     <div class="pchoice wrap"><button type="button" class="${srv.showLong ? 'on' : ''}" data-set-long="1">להציג סופ"ש ארוך: כן</button><button type="button" class="${srv.showLong ? '' : 'on'}" data-set-long="0">לא</button></div>
     <div class="pnote">${tx('long_setting')}</div>

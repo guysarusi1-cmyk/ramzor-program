@@ -40,6 +40,7 @@ function srvRenderSchedule(body){
   const next = st.rows.filter(r => r.staff === me.id && r.day >= today).sort((a, b) => (a.day + (a.from || '')).localeCompare(b.day + (b.from || '')))[0];
   const notices = st.notices.filter(n => !n.seen);
   const openByAid = {}; st.swaps.filter(s => s.from === me.id && ['open', 'offered'].includes(s.status)).forEach(s => { openByAid[s.aid] = s; });
+  const wk = portalUi.ischMonthView ? null : portalUi.ischWeekMk === mk ? portalUi.ischWeek : mk === monthKeyOf(today) ? mcalWeekOfDay(mk, today) : 0;          // (a week at first, the month by "חודש": Guy 2026-11-03)
   const fb = (isInstr && m.published && !(srv.profile && srv.profile.manual_only)) ? srvFeedbackFor(me, mk, { prefs:srvPrefsOf(m, me.id), rows:st.rows.filter(r => r.staff === me.id), profile:srv.profile, goal:(m.goals || {})[me.id] || null }) : null;
   body.innerHTML = `
     ${notices.length ? `<details class="pfold pnotices" data-fold="notices"${openFold('notices') ? ' open' : ''}><summary><span>הודעות חדשות</span><span class="pcount">${notices.length}</span></summary><div class="pfold-body">
@@ -62,7 +63,7 @@ function srvRenderSchedule(body){
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
-      <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}${monthCalHtml(me.role === 'service' ? Object.assign({}, ctx, { shiftTypes:ctx.shiftTypes.filter(s => s.id !== 'n') }) : ctx, m.assignments, { me:me.id, ahmash:srv.ahmash, othersInCells:true, labelsCenter:me.role === 'service' })}</div>
+      <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}${mcalViewBarHtml(mk, wk, 'isch-viewbar')}${monthCalHtml(me.role === 'service' ? Object.assign({}, ctx, { shiftTypes:ctx.shiftTypes.filter(s => s.id !== 'n') }) : ctx, m.assignments, { week:wk === null ? undefined : wk, rows:true, me:me.id, ahmash:srv.ahmash, othersInCells:true, labelsCenter:me.role === 'service' })}</div>
     </details>
     ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
     ${isInstr ? `<details class="pfold" data-fold="openshifts"${openFold('openshifts') ? ' open' : ''}>
@@ -70,6 +71,7 @@ function srvRenderSchedule(body){
       <div class="pfold-body" id="open-fold-body"><div class="pnote">רק רגע...</div></div>
     </details>` : ''}`}`;
   wireMonthNav(body); wireFolds(body);
+  if(m.published) mcalViewBarWire(body, 'isch-viewbar', mk, () => wk, (mm, w) => { portalUi.ischMonthView = w === null; portalUi.ischWeek = w; portalUi.ischWeekMk = mm; portalUi.month = mm; portalUi.fold.team = true; }, () => portalRefresh());
   if(isInstr && !portalUi.viewAs) srvFillOpenDays(body);          // (a new day for sign-up, at the top)
   if(isInstr && m.published) srvFillOpenFold(body, mk); else { const ob = document.getElementById('open-fold-body'); if(ob) ob.innerHTML = `<div class="pnote">${tx('open_none')}</div>`; }
   body.querySelectorAll('[data-notice-ok]').forEach(b => b.addEventListener('click', () => { const n = st.notices.find(x => x.id === b.dataset.noticeOk); if(n) n.seen = true; portalSave(); srvRenderSchedule(body); }));

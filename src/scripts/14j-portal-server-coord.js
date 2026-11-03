@@ -202,6 +202,9 @@ function srvRenderCoordSchedule(body){
   const keep = csKeepScroll(body);          // (after a change the screen stays where it was: Guy 2026-10-25)
   const group = String((st.waMsg || {}).group || '').trim();
   const pend = {}; st.rows.forEach(r => { const a = r.pending && (st.assignmentIds || {})[r.id]; if(a) pend[a.key + '|' + r.staff] = true; });
+  const csPhone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
+  if(portalUi.csWeekOn === undefined && csPhone){ const t = srvToday(); portalUi.csWeekOn = true; portalUi.csWeekMk = mk; portalUi.csWeek = monthKeyOf(t) === mk ? mcalWeekOfDay(mk, t) : 0; }          // (a phone: one week, the current one — Guy 2026-11-03)
+  const wk = portalUi.csWeekOn ? (portalUi.csWeekMk === mk ? portalUi.csWeek : 0) : null;          // (the month is her default on a computer; "שבוע" shows one week, Guy 2026-11-03)
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
     ${srvBuildBoxHtml(mk)}
@@ -211,18 +214,20 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
       ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת המדריכים</span></a>` : ''}
+      ${m.published ? `<button type="button" class="btn ghost" id="cs-share">${WA_SVG}<span>שיתוף תמונת סידור</span></button>` : ''}
     </div>
     ${csPendingBarHtml(mk)}
     ${issues.length ? `<details class="pissues" id="cs-issues"${portalUi.csIssuesOpen ? ' open' : ''}><summary>${issues.length} דברים שדורשים תשומת לב</summary>${issues.map(csIssueHtml).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
     <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">הסתר מורות/בנות שירות${csHiddenMode() ? ` · <small>${({ teacher:'המורות מוסתרות', service:'בנות השירות מוסתרות', both:'שתיהן מוסתרות' })[csHiddenMode()]}</small>` : ''}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, pend, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
+    ${mcalViewBarHtml(mk, wk, 'cs-viewbar')}<div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { week:wk === null ? undefined : wk, rows:csPhone && wk !== null, edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, pend, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   keep();
   wireMonthNav(body);
   srvBuildWire(body, mk);
   if(!has) return;
+  mcalViewBarWire(body, 'cs-viewbar', mk, () => wk, (mm, w) => { portalUi.csWeekOn = w !== null; portalUi.csWeek = w; portalUi.csWeekMk = mm; portalUi.month = mm; }, () => portalRefresh());
   { const iss = body.querySelector('#cs-issues'); if(iss) iss.addEventListener('toggle', () => { portalUi.csIssuesOpen = iss.open; }); }          // (stays open after "טופל": Guy)
   csIssuesWire(body, mk);
   { const cf = body.querySelector('#cs-count'); if(cf) cf.addEventListener('toggle', () => { portalUi.csCount = cf.open; }); }
@@ -287,7 +292,43 @@ function srvRenderCoordSchedule(body){
     toast(openShifts.length ? `הסידור פורסם. ${openShifts.length} משמרות פתוחות הופיעו למדריכים, ובקשות להצטרף יגיעו אלייך לאישור` : 'הסידור פורסם', openShifts.length ? 6000 : 0); srvRenderCoordSchedule(body);          // (each person sees how her requests went in her own schedule screen, so no separate message is sent)
   });
   document.getElementById('cs-xlsx').addEventListener('click', () => { downloadScheduleXlsx(ctx, m.assignments); toast('קובץ האקסל נוצר'); });
+  { const shb = document.getElementById('cs-share'); if(shb) shb.addEventListener('click', () => csShareSheet(mk, wk)); }          // (a picture of the week or the month for WhatsApp: Guy 2026-11-03)
   document.getElementById('cs-print').addEventListener('click', () => printSchedule(ctx, m.assignments));
+}
+
+// ---- a picture of the published schedule — the week or the month — to send in WhatsApp (Guy 2026-11-03). Only what the staff already see:
+// with changes waiting for "שליחת עדכונים" it asks to send them first. No private details: names and hours only. She chooses the recipient.
+function csShareSheet(mk, wk){
+  const st = portalLoad(), m = portalMonth(mk);
+  if(!m.published){ toast('אפשר לשתף רק סידור שפורסם'); return; }
+  if((st.rows || []).some(r => r.pending && monthKeyOf(r.day) === mk)){ toast('יש שינויים שעוד לא נשלחו. קודם "שליחת עדכונים", ואז שיתוף.', 5000); return; }
+  const t = srvToday(), w = Number.isInteger(wk) ? wk : monthKeyOf(t) === mk ? mcalWeekOfDay(mk, t) : 0;
+  const sh = portalSheet(`<h2>שיתוף תמונת סידור</h2><div class="pnote">התמונה נפתחת לשיתוף. בוחרים את הנמען בוואטסאפ.</div>
+    <div class="pchoice wrap"><button type="button" data-cs-img="week">השבוע ${pEsc(mcalWeekLabel(mk, w))}</button><button type="button" data-cs-img="month">כל ${pEsc(monthLabel(mk))}</button></div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+  sh.querySelectorAll('[data-cs-img]').forEach(b => b.addEventListener('click', async () => { sh.close(); await csShareImage(mk, b.dataset.csImg === 'week' ? w : null); }));
+}
+async function csShareImage(mk, week){
+  const st = portalLoad(), days = daysOfMonth(mk), lead = dowOf(days[0]), list = week === null ? days : days.filter((_, i) => Math.floor((lead + i) / 7) === week);
+  const nm = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
+  const cols = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה']];
+  const rowsOf = (d, code) => (st.rows || []).filter(r => r.day === d && (r.shift === code || (code === 'M' && r.shift === 'S') || (code === 'A' && r.shift === 'L')) && ((st.instructors.find(x => x.id === r.staff) || {}).role === 'instructor'));
+  const W = 1080, rowH = 74, headH = 150, H = headH + list.length * rowH + 30, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'); g.direction = 'rtl'; g.fillStyle = '#FAF7F2'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#2D2A24'; g.textAlign = 'right'; g.font = '600 44px Rubik, Assistant, Arial'; g.fillText(`סידור העבודה · ${monthLabel(mk)}`, W - 40, 64);
+  g.font = '400 30px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(week === null ? 'כל החודש' : `שבוע ${mcalWeekLabel(mk, week)}`, W - 40, 108);
+  const colW = (W - 80 - 170) / 3;
+  g.font = '700 28px Assistant, Arial'; g.fillStyle = '#5C6F52'; cols.forEach(([, w], i) => g.fillText(w, W - 40 - 170 - i * colW, headH - 8));
+  list.forEach((d, i) => {
+    const y = headH + i * rowH; g.fillStyle = i % 2 ? '#FFFFFF' : '#F4EFE7'; g.fillRect(30, y + 4, W - 60, rowH - 6);
+    g.fillStyle = '#2D2A24'; g.font = '700 28px Assistant, Arial'; g.fillText(`${DOW_SHORT[dowOf(d)]} ${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`, W - 44, y + 46);
+    g.font = '400 25px Assistant, Arial';
+    cols.forEach(([code], ci) => { const txt = rowsOf(d, code).map(r => nm(r.staff)).join(', '); let t2 = txt; while(t2 && g.measureText(t2).width > colW - 16) t2 = t2.slice(0, -2) + '…'; g.fillText(t2 || '—', W - 40 - 170 - ci * colW, y + 46); });
+  });
+  const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+  const file = new File([blob], `schedule-${mk}${week === null ? '' : '-w' + (week + 1)}.png`, { type:'image/png' });
+  try { if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'סידור העבודה' }); return; } } catch(e){ if(e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); toast('התמונה נשמרה. אפשר לצרף אותה בוואטסאפ.');
 }
 
 // what Guy took off the coordinator's screen (2026-10-23): composition, personal minimums, the day colleague, a service girl's day off

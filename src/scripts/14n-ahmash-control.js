@@ -4,7 +4,7 @@
 // Nothing here changes the real schedule: the people changes are for the kids' TV of today only.
 const ctl = { fold:{ shifts:true }, shifts:null, tt:null, ttEdit:null, ttFixedDay:null, log:null };
 const canControl = () => typeof ramzorPersonal !== 'undefined' && ramzorPersonal && !!(srv.profile && srv.profile.control);
-const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.admin));
+const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.kind === 'manager' || srv.profile.admin));          // (the manager edits the fixed timetable too: scheduling-v52.sql)
 const CTL_SHIFTS = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה']];
 const WEEKDAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const ctlToday = () => isoDate(new Date());

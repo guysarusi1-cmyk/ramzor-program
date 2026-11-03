@@ -318,7 +318,15 @@ function canTakeShift(pid, key){
   const slot = buildSlots(mk, ctx.shiftTypes).find(s => s.key === key);
   if(!slot || slot.end <= Date.now()) return false;
   if(Object.keys(m.assignments).some(k => k.startsWith(date + '|') && (m.assignments[k] || []).includes(pid))) return false;      // already working that day
-  return portalServerOn || levelOf(ctx.prefs, pid, slot) !== 'no';          // (on the real system any instructor may offer to take a shift)
+  if(!portalServerOn) return levelOf(ctx.prefs, pid, slot) !== 'no';
+  if((portalPerson(pid) || {}).role !== 'instructor') return true;          // (the service girls: their own availability, checked by the database)
+  // an instructor: only who marked "כן" or "יכול" for this very shift, and no night next to a morning (= public.swap_ok, scheduling-v53.sql; Guy 2026-11-03)
+  const sid = slot.shift || splitKey(key).shiftId, lv = (((ctx.prefs || {})[pid] || {}).slots || {})[key];
+  if(!['yes', 'avoid'].includes(lv)) return false;
+  const on = (d, ids) => ids.some(id => ((portalMonth(monthKeyOf(d)).assignments || {})[`${d}|${id}`] || []).includes(pid));
+  if(['m', 's'].includes(sid) && on(addDays(date, -1), ['n'])) return false;
+  if(sid === 'n' && on(addDays(date, 1), ['m', 's'])) return false;
+  return true;
 }
 function renderInstructorSwaps(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)

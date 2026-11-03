@@ -256,10 +256,11 @@ async function srvSubmit(mk, note, goal){
 // ---- the screens in server mode
 function srvTabs(me){
   if(srvEditingFor()) return me.role === 'service' ? [['avail', 'זמינות']] : [['prefs', 'העדפות']];          // (filling for somebody: only that tab — a service girl's availability, an instructor's preferences)
-  if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
-  if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
-  if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
-  if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (swaps: only among the service girls)
+  if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
+  if(me.role === 'manager') return MGR_TABS;          // (the manager of the framework: 14zn)
+  if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
+  if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps and the vacation in one tab: Guy 2026-11-03)
+  if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps: only among the service girls)
   return [['schedule', 'הסידור'], ['hours', 'שעות'], ['inbox', 'הודעות']];          // teachers
 }
 // what waits for the coordinator in a tab, as a number on it (Guy 2026-10-28): swaps to decide and urgent ones, vacation requests,
@@ -280,9 +281,11 @@ function srvRenderTab(me, body, t){
     if(t === 'submissions') return srvRenderSubmissions(body);
     if(t === 'swaps') return srvRenderCoordSwaps(body);
     if(t === 'vacations') return srvRenderCoordVacations(body);
+    if(t === 'oncall') return renderOncall(body);          // (the weekend on-call panel, shared with the social workers: 14zl)
     if(t === 'settings') return srvRenderCoordSettings(body);
     return srvRenderCoordSchedule(body);
   }
+  if(me.role === 'manager') return mgrRender(t, body);
   if(t === 'schedule') return srvRenderSchedule(body);
   if(t === 'inbox') return srvRenderInbox(body);
   if(t === 'vacation') return srvRenderVacation(body);
@@ -290,21 +293,35 @@ function srvRenderTab(me, body, t){
   if(t === 'hours') return srvRenderTeacherHours(body);
   if(t === 'open') return srvRenderOpenShifts(body);
   if(t === 'prefs' && me.role === 'instructor') return renderInstructorPrefs(body);
+  if(['instructor', 'service'].includes(me.role)){          // "החלפות וחופשות" (Guy 2026-11-03): my requests, the open swap requests, and the vacation request — all folded at first
+    body.innerHTML = `<div id="sv-swaps"></div><details class="pfold" data-fold="vac"${openFold('vac') ? ' open' : ''}><summary><span>בקשת חופשה</span></summary><div class="pfold-body sv-vac" id="sv-vac"></div></details>`;
+    body.querySelector('[data-fold="vac"]').addEventListener('toggle', e => { portalUi.fold.vac = e.target.open; });
+    renderInstructorSwaps(body.querySelector('#sv-swaps')); srvRenderVacation(body.querySelector('#sv-vac')); return;
+  }
   return renderInstructorSwaps(body);
 }
 async function srvRenderInbox(body){
   const st = portalLoad();
   if(!body.textContent.trim()) body.innerHTML = '<div class="pnote">טוען…</div>';          // (not a blank screen while the messages come)
-  const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
+  let an = await sbPersonal.from('announcements').select('id,created_at,text,need_ack').order('created_at', { ascending:false }).limit(10);
+  if(an.error) an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);          // (before scheduling-v52.sql)
+  let reads = []; if(!an.error && (an.data || []).some(a => a.id)){ try { const r = await sbPersonal.from('announcement_read').select('ann_id,ack_at').eq('staff_id', srv.me); reads = r.data || []; } catch(e){} }
   if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
   // the coordinator's messages first; then her updates, the same text only once (with how many times), the latest 7 and the rest under "עוד" (Guy 2026-10-28)
   const when = d => new Date(d).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' });
   const groups = []; st.notices.forEach(n => { const g = groups.find(x => x.text === n.text); if(g){ g.n++; if(!n.seen) g.fresh = true; } else groups.push({ text:n.text, at:n.at, kind:n.kind, n:1, fresh:!n.seen }); });
   const one = g => `<div class="pannounce ${g.kind}"><small>${when(g.at)}${g.fresh ? ' · חדש' : ''}${g.n > 1 ? ` · ${g.n} פעמים` : ''}</small><div>${pEsc(g.text)}</div></div>`;
   const ann = an.data || [];
-  body.innerHTML = `<h2 class="psec">הודעות מהרכזת</h2>${ann.length ? ann.map(a => `<div class="pannounce"><small>${when(a.created_at)}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}
+  const acked = id => reads.some(r => r.ann_id === id && r.ack_at);
+  body.innerHTML = `<h2 class="psec">הודעות</h2>${ann.length ? ann.map(a => `<div class="pannounce"><small>${when(a.created_at)}</small><div>${pEsc(a.text)}</div>${a.need_ack ? (acked(a.id) ? '<small class="pst pst-approved">קראתי ✓</small>' : `<button type="button" class="btn small" data-ann-ack="${a.id}">קראתי</button>`) : ''}</div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}
     <h2 class="psec">העדכונים שלך</h2>${groups.length ? groups.slice(0, 7).map(one).join('') + (groups.length > 7 ? `<details class="pfold" data-fold="inbox-more"><summary><span>עוד ${groups.length - 7} עדכונים</span></summary><div class="pfold-body">${groups.slice(7).map(one).join('')}</div></details>` : '') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}`;
   st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)
+  { const fresh = ann.filter(a => a.id && !reads.some(r => r.ann_id === a.id)).map(a => ({ ann_id:a.id, staff_id:srv.me }));          // (seen: the sender sees who saw; scheduling-v52.sql)
+    if(fresh.length && !portalUi.viewAs) sbPersonal.from('announcement_read').upsert(fresh, { onConflict:'ann_id,staff_id', ignoreDuplicates:true }).then(() => {}, () => {}); }
+  body.querySelectorAll('[data-ann-ack]').forEach(b => b.addEventListener('click', async () => {          // ("קראתי" is a separate, explicit step)
+    const r = await sbPersonal.from('announcement_read').upsert({ ann_id:b.dataset.annAck, staff_id:srv.me, ack_at:new Date().toISOString() });
+    if(r.error){ toast('לא נשמר'); return; } toast('תודה'); srvRenderInbox(body);
+  }));
 }// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
 async function srvReload(){ await srvFlush(); await srvLoad(); }
 async function srvReloadSafe(){ try { await srvReload(); } catch(e){ /* the screen refreshes on the next action; a failed refresh must not break what the person is doing */ } }

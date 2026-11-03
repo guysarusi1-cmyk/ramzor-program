@@ -3,7 +3,7 @@
 // Demo mode: there are no personal logins yet, so a small "viewing as" selector lets you see the portal as the
 // coordinator or as any instructor. Everything is stored in this browser only (see 14a-portal-data.js).
 const portalHomeFirst = () => PORTAL_ENABLED && !window.__portalNoHome && location.hash !== '#tv';       // (the test tools set __portalNoHome: they start from the רמזור home)
-const portalUi = { persona:'c1', tab:null, month:null, level:'avoid', openDay:null, fold:{ mine:false, team:true, swap:false } };          // (the team calendar opens by itself: Guy 2026-10-28)
+const portalUi = { persona:'c1', tab:null, month:null, level:'avoid', openDay:null, fold:{ mine:false, team:false, swap:false } };          // (every part folded at first, the team calendar too: Guy 2026-11-03)          // (the team calendar opens by itself: Guy 2026-10-28)
 
 function portalPerson(id){ return portalLoad().instructors.find(p => p.id === id); }
 function portalMe(){ return portalPerson(portalUi.persona) || portalLoad().instructors[0]; }          // (in server mode persona = the signed-in person)
@@ -72,6 +72,12 @@ function showAppHome(){
       ${installLinkHtml()}
       ${portalServerOn || sbPersonal ? '' : '<div class="apphome-demo">גרסת דמו של הפורטל: הנתונים בו לדוגמה בלבד ונשמרים במכשיר הזה.</div>'}
     </div>`;
+  document.querySelectorAll('#view-apphome .mx-home .home-card').forEach(c => {          // the second line of every card behind a small "פירוט" (Guy 2026-11-03)
+    const w = document.createElement('div'); w.className = 'home-card-wrap'; c.replaceWith(w); w.appendChild(c);
+    const more = document.createElement('button'); more.type = 'button'; more.className = 'home-card-more'; more.textContent = 'פירוט'; more.setAttribute('aria-expanded', 'false');
+    more.addEventListener('click', () => { const on = !w.classList.contains('open'); w.classList.toggle('open', on); more.setAttribute('aria-expanded', String(on)); });
+    w.appendChild(more);
+  });
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
   { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
@@ -87,7 +93,8 @@ function portalTabsFor(me){
     ? [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['timetable', 'לו"ז'], ['settings', 'הגדרות']]
     : [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['inbox', 'הודעות']];
 }
-// the side menu on a computer (Guy 2026-10-30: the instructors' and the coordinator's portals, like the therapy portal): the portal's title and hello above,
+// the side menu on a computer (Guy 2026-10-30; from 2026-11-03 the instructors' portal only: the coordinator's is back to the tabs across the top,
+// and the quick look switch is light / dark only — the leopard stays in the gear): the portal's title and hello above,
 // the same areas as the tabs (data-pstab buttons beside the tabs' data-ptab), then the gear, the way home and the look. On a phone the tabs stay (20-mercury.css shows one or the other)
 const PS_ICON = { schedule:'M4 6.5h16v13H4zM8 3.5v4M16 3.5v4M4 10.5h16', prefs:'M5 12l4 4 10-10', swaps:'M7 7h12l-3-3M17 17H5l3 3', vacation:'M3 20h18M6 20c1-6 4-10 9-11M15 9c-2-3-6-4-9-2 3 0 5 1 6 3M15 9c3-1 6 0 7 3-2-1-4-1-6 0',
   vacations:'M3 20h18M6 20c1-6 4-10 9-11M15 9c-2-3-6-4-9-2 3 0 5 1 6 3M15 9c3-1 6 0 7 3-2-1-4-1-6 0', inbox:'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4', submissions:'M4 13l2.5-7h11l2.5 7v5H4zM4 13h5l1 2h4l1-2h5',
@@ -117,18 +124,19 @@ function showPortal(tab){
   portalActivateView('view-portal');
   const tabs = portalTabsFor(me);
   if(typeof tab === 'string') portalUi.tab = tab;
+  if(portalUi.tab === 'vacation' && !tabs.some(t => t[0] === 'vacation') && tabs.some(t => t[0] === 'swaps')){ portalUi.tab = 'swaps'; portalUi.fold = Object.assign({}, portalUi.fold, { vac:true }); }          // (the vacation lives in "החלפות וחופשות" now)
   if(!tabs.some(t => t[0] === portalUi.tab)) portalUi.tab = tabs[0][0];
   const today = monthKeyOf(isoDate(new Date()));
   if(!portalUi.month) portalUi.month = today;
   const view = document.getElementById('view-portal');
   const leopard = portalServerOn && !portalUi.viewAs && leopardAllowed() && portalThemeNow() === 'leopard', theme = leopard ? 'leopard' : st.settings.theme;          // (the leopard look: the coordinator's own choice, kept with her account)
   document.body.classList.toggle('leopard-bg', leopard);
-  const pTitle = portalServerOn && portalAsCoord(me) ? (me.admin ? 'פורטל ניהול' : 'פורטל הרכזת') : portalServerOn && me.role === 'service' ? 'פורטל בנות השירות' : 'פורטל המדריך';
+  const pTitle = portalServerOn && portalAsCoord(me) ? (me.admin ? 'פורטל ניהול' : 'פורטל הרכזת') : portalServerOn && me.role === 'service' ? 'פורטל בנות השירות' : portalServerOn && me.role === 'manager' ? 'פורטל המנהלת' : 'פורטל המדריך';
   view.innerHTML = `
     <div class="portal-shell${portalServerOn && portalAsCoord(me) ? ' wide' : ''}" data-ptheme="${theme}">
-      ${portalSideHtml(me, tabs, pTitle, theme, portalServerOn && !portalUi.viewAs && leopardAllowed())}
+      ${portalServerOn && portalAsCoord(me) ? '' : portalSideHtml(me, tabs, pTitle, theme, false)}
       <div class="portal-top">
-        <button type="button" class="back-btn portal-back" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
+        <button type="button" class="back-btn portal-back${portalServerOn && !ramzorPersonal ? '' : ' is-home'}" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
         <h1 class="portal-title">${pTitle}</h1>
         <span class="portal-top-actions">${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof therapyAvailable === 'function' && therapyAvailable() ? '<button type="button" class="portal-theme" id="portal-therapy" aria-label="פורטל הטיפול" title="פורטל הטיפול">🌱</button>' : ''}${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
@@ -309,6 +317,35 @@ function csConfirmed(key, pid){
   const st = portalLoad(), id = (st.assignmentIds || {})[`${key}|${pid}`], r = id && (st.rows || []).find(x => x.id === id);
   return !!(r && (r.flags || []).includes('ok'));
 }
+// the weekly view of a month's calendar (Guy 2026-11-03): the weeks are the calendar's own rows (Sunday to Saturday); the first and the last
+// may be partly in the next or the previous month. A week number is kept per month; ‹ › move by one week and cross to the next or previous month
+function mcalWeeksOf(mk){ const d = daysOfMonth(mk); return Math.ceil((dowOf(d[0]) + d.length) / 7); }
+function mcalWeekOfDay(mk, iso){ const d = daysOfMonth(mk), i = d.indexOf(iso); return i < 0 ? 0 : Math.floor((dowOf(d[0]) + i) / 7); }
+function mcalWeekLabel(mk, w){
+  const d = daysOfMonth(mk), lead = dowOf(d[0]), inMonth = d.filter((_, i) => Math.floor((lead + i) / 7) === w);
+  if(!inMonth.length) return '';
+  const f = x => { const t = parseIso(x); return t.getDate() + '/' + (t.getMonth() + 1); };
+  return inMonth.length === 1 ? f(inMonth[0]) : f(inMonth[0]) + '–' + f(inMonth[inMonth.length - 1]);
+}
+function mcalViewBarHtml(mk, week, id){          // "חודש | שבוע" and, in the weekly view, the week with ‹ ›
+  const isW = Number.isInteger(week);
+  return `<div class="mcal-viewbar" id="${id}"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-mview="month" aria-pressed="${!isW}">חודש</button><button type="button" data-mview="week" aria-pressed="${isW}">שבוע</button></div>${isW ? `<div class="mcal-weeknav"><button type="button" class="mcal-wk" data-mwk="-1" aria-label="השבוע הקודם">›</button><b>שבוע ${pEsc(mcalWeekLabel(mk, week))}</b><button type="button" class="mcal-wk" data-mwk="1" aria-label="השבוע הבא">‹</button></div>` : ''}</div>`;
+}
+// wires the bar: get() / set(month, week|null) keep the screen's own state; redraw() draws it again
+function mcalViewBarWire(root, id, mk, get, set, redraw){
+  const bar = root.querySelector('#' + id); if(!bar) return;
+  bar.querySelectorAll('[data-mview]').forEach(b => b.addEventListener('click', () => {
+    if(b.dataset.mview === 'month') set(mk, null);
+    else set(mk, monthKeyOf(isoDate(new Date())) === mk ? mcalWeekOfDay(mk, isoDate(new Date())) : 0);
+    redraw();
+  }));
+  bar.querySelectorAll('[data-mwk]').forEach(b => b.addEventListener('click', () => {
+    let w = get() + parseInt(b.dataset.mwk, 10), m = mk;
+    if(w < 0){ m = addMonths(mk, -1); w = mcalWeeksOf(m) - 1; }          // (a calendar week split between two months shows each month's own days)
+    else if(w >= mcalWeeksOf(mk)){ m = addMonths(mk, 1); w = 0; }
+    set(m, w); redraw();
+  }));
+}
 function monthCalHtml(ctx, assignments, opts){
   opts = opts || {};
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date()), picks = ahmashPicks(table, ctx, opts.ahmash || {});
@@ -343,10 +380,16 @@ function monthCalHtml(ctx, assignments, opts){
     };
     return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${(liveMiss ? liveMiss[c.slot.key] || 0 : c.missing) ? `<span class="mcal-missing">חסר ${liveMiss ? liveMiss[c.slot.key] : c.missing}</span>` : ''}</div>`;
   };
+  if(Number.isInteger(opts.week) && opts.rows){          // the weekly view as rows: a day per row, its shifts side by side — room for the names on a phone (Guy 2026-11-03)
+    const w0 = Math.max(0, Math.min(opts.week, flat.length / 7 - 1)) * 7;
+    return `<div class="mcal mcal-wrows">${flat.slice(w0, w0 + 7).filter(Boolean).map(r => `<div class="mcal-wrow${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(r.date)]}</b><span>${parseIso(r.date).getDate()}/${parseIso(r.date).getMonth() + 1}</span></div><div class="mcal-wrow-cells">${ctx.shiftTypes.map((s, i) => `<div class="mcal-wrow-shift"><span class="mcal-wrow-lbl">${pEsc(s.label)} <small>${hours(s)}</small></span>${shiftCell(r, i)}</div>`).join('')}</div></div>`).join('')}</div>`;
+  }
   let out = `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head">${d}</div>`).join('')}`;
+  const onlyWeek = Number.isInteger(opts.week) ? Math.max(0, Math.min(opts.week, flat.length / 7 - 1)) * 7 : null;          // (one week of the month only: the weekly view, Guy 2026-11-03)
   for(let w = 0; w < flat.length; w += 7){
+    if(onlyWeek !== null && w !== onlyWeek) continue;
     const week = flat.slice(w, w + 7);
-    if(w > 0) out += `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head mini" aria-hidden="true">${d}</div>`).join('')}`;          // (the days of the week again, small, above every later week: the screen scrolls down)
+    if(w > 0 && onlyWeek === null) out += `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head mini" aria-hidden="true">${d}</div>`).join('')}`;          // (the days of the week again, small, above every later week: the screen scrolls down)
     out += `<div class="mcal-corner"></div>` + week.map(r => r ? `<div class="mcal-num${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}">${parseIso(r.date).getDate()}</div>` : blank).join('');
     weekOthers = !!others && week.some(r => r && others[r.date]);
     ctx.shiftTypes.forEach((s, i) => { out += `<div class="mcal-label"><b>${pEsc(s.label)}</b><small>${hours(s)}</small></div>` + week.map(r => r ? shiftCell(r, i) : blank).join(''); });

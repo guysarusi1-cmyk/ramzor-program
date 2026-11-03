@@ -32,7 +32,7 @@
   /* leopard: today's dark gold, redone on the new principles — a deep brown ground with faint rosettes (on the page behind, body.leopard-bg),
      opaque cards so the text reads clearly, gold for the one main button and the headings */
   --color-bg:#17100A; --color-surface:#22170E; --color-surface-alt:#2E2014; --color-surface-inset:#130D07; --color-surface-raised:#2A1C10;
-  --color-border:#4A3420; --color-border-strong:#6A4B2C; --color-text:#F7ECD8; --color-text-secondary:#D3BD97;
+  --color-border:#58402A; --color-border-strong:#765535; --color-text:#F9F0DF; --color-text-secondary:#DCC7A2;
   --color-primary:#E2B65C; --color-primary-hover:#ECC676; --color-primary-soft:#352612; --color-on-primary:#24140A;
   --color-success:#A9C98B; --color-success-soft:#26301A; --color-warning:#EBB06A; --color-warning-soft:#3B2615; --color-danger:#E59A8C; --color-danger-soft:#3C2119;
   --color-info:#9CC0DE; --color-info-soft:#1F2A33; --color-link:#ECC676; --color-heading:#E9C77A;
@@ -387,7 +387,7 @@ body:has(#view-apphome.active .mx-home[data-ptheme=light]){ background:#FAF7F2; 
   border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); font-family:var(--font-body); transition:border-color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
 .mx-home .home-card:hover{ border-color:var(--color-border-strong); background:var(--color-surface); }
 .mx-home .home-card:focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
-.mx-home .home-card:last-child:nth-child(odd of .home-card){ grid-column:1 / -1; min-height:0; }          /* (an odd tile out takes the whole row) */
+.mx-home .home-card-wrap:last-child:nth-child(odd of .home-card-wrap){ grid-column:1 / -1; }          /* (an odd tile out takes the whole row) */
 .mx-home .apphome-ico{ display:flex; align-items:center; justify-content:center; width:40px; height:40px; margin-bottom:var(--space-1); border-radius:var(--radius-md); background:var(--color-surface-alt); color:var(--color-primary); font-size:0; }
 .mx-home .home-card-title{ font-family:var(--font-heading); font-weight:600; font-size:17px; }
 .mx-home .home-card-sub{ font-size:14px; color:var(--color-text-secondary); line-height:1.45; }
@@ -427,3 +427,126 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme=light]) .toast{ background:#2D2A24; border-color:#2D2A24; color:#FAF7F2; font-family:'Assistant', Arial, sans-serif; box-shadow:0 8px 24px rgba(45, 42, 36, .18); }
 body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) .toast{ background:#2A1C10; border-color:#6A4B2C; color:#F7ECD8; font-family:'Assistant', Arial, sans-serif; }
 body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [data-ptheme]) .toast-undo-btn{ font-family:'Assistant', Arial, sans-serif; font-weight:700; }
+/* "חודש | שבוע" above a month's calendar, and the week with ‹ › (14e mcalViewBarHtml, Guy 2026-11-03) */
+.mcal-viewbar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin:8px 0 12px; }
+.portal-shell[data-ptheme] .mcal-seg{ display:inline-flex; padding:3px; gap:2px; border-radius:var(--radius-pill); background:var(--color-surface-alt); border:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .mcal-seg button{ min-height:36px; padding:0 16px; border:0; border-radius:var(--radius-pill); background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:14px; cursor:pointer; }
+.portal-shell[data-ptheme] .mcal-seg button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
+.mcal-weeknav{ display:flex; align-items:center; gap:8px; }
+.mcal-weeknav b{ min-width:120px; text-align:center; font-family:var(--font-heading, inherit); font-weight:600; }
+.portal-shell[data-ptheme] .mcal-wk{ width:44px; height:44px; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); font-size:20px; cursor:pointer; }
+.sv-vac > h2.psec:first-child{ display:none; }          /* (the fold's own title says "בקשת חופשה") */
+/* the weekly view as rows (14e monthCalHtml opts.rows): a day per row, its shifts side by side */
+.mcal.mcal-wrows{ display:flex; flex-direction:column; gap:8px; }
+.mcal-wrow{ display:grid; grid-template-columns:56px minmax(0, 1fr); gap:8px; align-items:stretch; padding:8px; border-radius:12px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); }
+.mcal-wrow.today{ border-color:var(--color-primary, var(--gold)); }
+.mcal-wrow.weekend{ background:var(--color-surface-alt, var(--p-panel2)); }
+.mcal-wrow-day{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:13px; color:var(--color-text-secondary, var(--p-muted)); }
+.mcal-wrow-day b{ font-size:16px; color:var(--color-text, var(--p-text)); }
+.mcal-wrow-cells{ display:grid; grid-template-columns:repeat(auto-fit, minmax(84px, 1fr)); gap:6px; }
+.mcal-wrow-shift{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.mcal-wrow-lbl{ font-size:12px; font-weight:700; color:var(--color-text-secondary, var(--p-muted)); }
+.mcal-wrow-lbl small{ font-weight:400; }
+.mcal-wrows .mcal-cell{ min-height:36px; border-radius:8px; padding:4px; }
+.mcal-wrows .mcal-name{ font-size:13px; padding:2px 6px; }
+/* names never break in the middle of a word, also with the larger text (Guy 2026-11-03) */
+.mcal-name{ overflow-wrap:normal !important; word-break:normal; hyphens:none; overflow:hidden; text-overflow:ellipsis; }
+/* "תצוגת העדפות" and the weekend row of the weekly preferences (14zj, Guy 2026-11-03) */
+.pview-row{ display:flex; justify-content:flex-end; margin:0 0 8px; }
+.pview-btn{ min-height:36px !important; font-size:14px !important; }
+.pview-opt{ display:flex; flex-direction:column; gap:8px; margin:12px 0; font-weight:600; }
+.mx-sheet .pview-seg, .pview-seg{ display:flex; padding:3px; gap:2px; border-radius:var(--radius-pill, 999px); background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); }
+.pview-seg button{ flex:1; min-height:40px; border:0; border-radius:var(--radius-pill, 999px); background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; font-size:15px; cursor:pointer; }
+.pview-seg button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.pwlong{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0 4px; padding:8px; border-radius:12px; border:1px dashed var(--color-border-strong, var(--p-line)); }
+.pwlong-btn{ flex:1 1 180px; }
+.pwlong .ppick{ min-height:44px; padding:0 14px; border-radius:999px; border:1px solid var(--color-border-strong, var(--p-line)); background:transparent; color:inherit; font-family:inherit; font-weight:600; cursor:pointer; }
+/* the first screen (Guy 2026-11-03): larger icons and titles; the second line behind a quiet "פירוט" */
+.mx-home .home-card-wrap{ position:relative; display:flex; flex-direction:column; }
+.mx-home .home-card-wrap .home-card{ flex:1; min-height:140px; align-items:center; justify-content:center; text-align:center; gap:var(--space-3); padding:var(--space-6) var(--space-4) var(--space-8); }
+.mx-home .apphome-ico{ width:64px; height:64px; border-radius:var(--radius-lg); }
+.mx-home .apphome-ico svg{ width:34px; height:34px; }
+.mx-home .home-card-title{ font-size:19px; }
+.mx-home .home-card-wrap:not(.open) .home-card-sub{ display:none; }
+.mx-home .home-card-more{ position:absolute; bottom:6px; inset-inline:0; margin-inline:auto; width:max-content; min-height:28px; padding:0 10px; border:0; background:transparent; color:var(--color-text-secondary); opacity:.7; font-family:var(--font-body); font-size:12px; cursor:pointer; }
+.mx-home .home-card-more:hover, .mx-home .home-card-more:focus-visible{ opacity:1; }
+/* the settings (the gear): the options smaller than the titles (Guy 2026-11-03) */
+.mx-sheet:has([data-set-theme]) .sheet-card .pchoice button{ font-size:14px; min-height:40px; }
+.mx-sheet:has([data-set-theme]) .sheet-card .pnote{ font-size:13.5px; }
+.mx-sheet:has([data-set-theme]) .sheet-card summary{ font-size:16px; }
+/* a phone: "→ מסך ראשי" at the top of the instructors' portal goes — "בית" in the bottom bar does it (Guy 2026-11-03); "יציאה" stays */
+@media (max-width:700px){ .portal-shell[data-ptheme]:not(.wide) #portal-home.is-home{ visibility:hidden; } }
+/* "כוננית סוף שבוע" (14zl, Guy 2026-11-03) */
+.oc{ display:flex; flex-direction:column; gap:12px; }
+.oc-periods{ display:flex; flex-wrap:wrap; gap:6px; }
+.oc-period{ min-height:40px; padding:0 14px; border-radius:999px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; font-size:14px; cursor:pointer; }
+.oc-period.on{ background:var(--color-primary, var(--gold)); color:var(--color-on-primary, #1b1b1b); border-color:var(--color-primary, var(--gold)); }
+.oc-active{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; border-radius:12px; background:var(--color-primary-soft, var(--p-panel2)); }
+.oc-active.oc-none{ background:var(--color-warning-soft, var(--p-avoid-bg)); color:var(--color-warning, var(--p-avoid)); }
+.oc-active.oc-none b{ font-size:17px; }
+.oc-events{ display:flex; flex-direction:column; gap:6px; padding:12px 14px; border-radius:12px; border:1px solid var(--color-info, var(--p-can)); background:var(--color-info-soft, var(--p-can-bg)); }
+.oc-event{ display:flex; flex-direction:column; } .oc-event small{ color:var(--color-text-secondary, var(--p-muted)); }
+.oc-person{ display:flex; flex-direction:column; gap:8px; padding:12px; margin:8px 0; border-radius:12px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); }
+.oc-who{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; } .oc-who small{ color:var(--color-text-secondary, var(--p-muted)); }
+.oc-dir{ display:grid; grid-template-columns:52px minmax(0, 1fr); gap:6px 8px; align-items:center; padding-top:8px; border-top:1px dashed var(--color-border, var(--p-line)); }
+.oc-dir-lbl{ grid-row:span 3; font-weight:700; color:var(--color-text-secondary, var(--p-muted)); }
+.oc-need{ display:flex; flex-wrap:wrap; padding:3px; gap:2px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); }
+.oc-need button{ flex:1 1 auto; min-height:36px; padding:0 8px; border:0; border-radius:999px; background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; font-size:13px; cursor:pointer; }
+.oc-need button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.oc-need button[data-oc-need=need][aria-pressed=true]{ background:var(--color-warning-soft, var(--p-avoid-bg)); color:var(--color-warning, var(--p-avoid)); }
+.oc-field{ display:flex; align-items:center; gap:8px; font-size:14px; } .oc-field span{ min-width:42px; color:var(--color-text-secondary, var(--p-muted)); } .oc-field input{ flex:1; min-width:0; min-height:40px; }
+.oc-ordered{ display:flex; align-items:center; gap:8px; font-weight:600; min-height:40px; }
+.oc-ordered input{ width:20px; height:20px; }
+.oc-cell{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.oc-x, .oc-add{ min-width:28px; min-height:28px; border-radius:8px; border:1px solid var(--color-border-strong, var(--p-line)); background:transparent; color:inherit; font-size:15px; line-height:1; cursor:pointer; }
+.oc-add{ font-weight:700; color:var(--color-primary, var(--gold)); }
+/* "יומן הילדים" (14zm, Guy 2026-11-03) */
+.dg{ display:flex; flex-direction:column; gap:12px; }
+.dg-top{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.dg-ev{ display:grid; grid-template-columns:96px minmax(0, 1fr); gap:10px; width:100%; margin:4px 0; padding:10px 12px; text-align:start; border-radius:12px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); color:inherit; font-family:inherit; font-size:15px; cursor:pointer; }
+.dg-today .dg-ev{ border-color:var(--color-primary, var(--gold)); background:var(--color-primary-soft, var(--p-panel2)); font-weight:600; }
+.dg-time{ color:var(--color-text-secondary, var(--p-muted)); font-variant-numeric:tabular-nums; }
+.dg-what{ display:flex; flex-direction:column; gap:2px; } .dg-what small{ color:var(--color-text-secondary, var(--p-muted)); font-weight:400; }
+.dg-day-h{ margin:12px 0 4px; font-weight:700; color:var(--color-text-secondary, var(--p-muted)); }
+.dg-wday{ padding:4px 0 8px; border-bottom:1px solid var(--color-border, var(--p-line)); } .dg-wday.today .dg-day-h{ color:var(--color-primary, var(--gold)); }
+.dg-empty{ color:var(--color-text-secondary, var(--p-muted)); padding:4px 0; }
+.dg-kind{ display:flex; padding:3px; gap:2px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); margin:8px 0; }
+.dg-kind button{ flex:1; min-height:40px; border:0; border-radius:999px; background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; cursor:pointer; }
+.dg-kind button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.dg-times, .dg-return{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.dg-return[hidden]{ display:none; }
+@media (max-width:420px){ .dg-ev{ grid-template-columns:1fr; gap:2px; } }
+/* "פורטל המנהלת" (14zn, Guy 2026-11-03) */
+.mgr-weeknav{ justify-content:center; margin:4px 0 12px; }
+.mgr-links{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+.mgr-tt-day{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.mgr-tt-item{ padding:4px 10px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); font-size:14px; }
+.mgr-kids{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
+.mgr-kid{ display:flex; flex-direction:column; gap:8px; }
+.mgr-kid-h{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; } .mgr-kid-h small{ color:var(--color-text-secondary, var(--p-muted)); }
+.mgr-goals{ margin:0; padding-inline-start:18px; font-size:14px; }
+.mgr-kid-acts{ display:flex; flex-wrap:wrap; gap:6px; }
+.mgr-conv{ display:flex; flex-direction:column; gap:2px; width:100%; text-align:start; cursor:pointer; color:inherit; font-family:inherit; }
+.mgr-conv small{ color:var(--color-text-secondary, var(--p-muted)); }
+.mgr-conv.fresh{ border-color:var(--color-primary, var(--gold)); }
+.mgr-chat-top{ display:flex; justify-content:flex-end; margin-bottom:8px; }
+.mgr-thread{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+.mgr-msg{ max-width:85%; padding:8px 12px; border-radius:12px; background:var(--color-surface, var(--p-panel)); border:1px solid var(--color-border, var(--p-line)); align-self:flex-start; }
+.mgr-msg.mine{ align-self:flex-end; background:var(--color-primary-soft, var(--p-panel2)); }
+.mgr-msg small{ display:block; color:var(--color-text-secondary, var(--p-muted)); }
+.mgr-compose{ display:flex; gap:8px; align-items:flex-end; } .mgr-compose textarea{ flex:1; }
+.mgr-new-msg{ display:flex; flex-direction:column; gap:10px; }
+.mgr-seg{ display:flex; padding:3px; gap:2px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); }
+.mgr-seg button{ flex:1; min-height:40px; border:0; border-radius:999px; background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; cursor:pointer; }
+.mgr-seg button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.mgr-sent summary{ flex-wrap:wrap; } .mgr-sent summary small{ color:var(--color-text-secondary, var(--p-muted)); font-weight:400; }
+.mgr-readers{ list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:4px 12px; }
+.mgr-readers li{ display:flex; justify-content:space-between; gap:8px; } .mgr-readers small{ color:var(--color-text-secondary, var(--p-muted)); }
+/* the coordinator on a phone (Guy 2026-11-03): one week as rows, the shift opened by a tap; the side panel stays on the computer */
+@media (max-width:700px){
+  .portal-shell.wide .cs-layout{ display:block; }
+  .portal-shell.wide .cs-layout .cs-side{ display:none; }
+  .portal-shell.wide .mcal-wrows .mcal-cell.editable{ min-height:44px; cursor:pointer; }
+}
+/* the coordinator's tabs on a phone (one more: "כוננית"): two rows rather than a tab cut at the edge */
+@media (max-width:700px){ .portal-shell[data-ptheme].wide .portal-tabs{ flex-wrap:wrap; overflow-x:visible; } .portal-shell[data-ptheme].wide .portal-tabs button{ padding:var(--space-2) var(--space-3); } }

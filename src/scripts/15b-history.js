@@ -105,6 +105,7 @@
     if(!rootSet){ rootSet = true; stack = [key]; snaps = [snapshot(key)]; syncGuard(); updateBack(); return; }          // the first page after signing in is the start of the trail
     const top = stack[stack.length - 1];
     if(key === top){ snaps[snaps.length - 1] = snapshot(key); return; }
+    if(key === 'hub'){ const i = stack.findIndex(isRamzorFlow); if(i > 0){ stack.length = i; snaps.length = i; } }          // the Ramzor's home closes the protocol pages that were open before it (a protocol opened again later starts fresh)
     if(key === 'apphome' || (key === 'hub' && stack[0] !== 'apphome')){ stack = [key]; snaps = [snapshot(key)]; }          // home from anywhere: a new trail
     else if(stack.lastIndexOf(key) >= 0){ stack.length = stack.lastIndexOf(key) + 1; snaps.length = stack.length; snaps[snaps.length - 1] = snapshot(key); }          // a page already in the trail (an in-app "back" button, or a tab visited before): back to it
     else { stack.push(key); snaps.push(snapshot(key)); }

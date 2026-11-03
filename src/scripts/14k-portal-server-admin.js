@@ -1,7 +1,7 @@
 
 // ---------- THE PORTAL ON THE SERVER: the coordinator's other screens (who submitted, absences, vacation requests, settings) ----------
 const ABSENCE_REASONS = [['sick', 'מחלה'], ['reserve', 'מילואים'], ['leave', 'חופשה מיוחדת / לידה'], ['other', 'אחר']];
-const KIND_WORD = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', therapist:'איש/אשת טיפול' };
+const KIND_WORD = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', therapist:'איש/אשת טיפול', manager:'מנהלת מסגרת' };
 const nameOf = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
 const shortDate = d => `${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`;
 // the days of one person as ranges: ['2026-12-03','2026-12-04','2026-12-05'] -> '3/12–5/12'
@@ -143,16 +143,17 @@ function srvRenderCoordSettings(body){
       ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
         <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
-        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${srv.meRow && srv.meRow.admin ? `<button type="button" class="btn ghost small" data-simple="${p.id}">${(st.simple || {})[p.id] ? 'הגשה פשוטה ✓' : 'הגשה פשוטה'}</button>` : ''}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
+        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${srv.meRow && srv.meRow.admin ? `<button type="button" class="btn ghost small" data-simple="${p.id}">${(st.simple || {})[p.id] ? 'הגשה פשוטה ✓' : 'הגשה פשוטה'}</button>` : ''}${srv.meRow && srv.meRow.admin && p.role === 'therapist' ? `<button type="button" class="btn ghost small" data-oc-grant="${p.id}">שיבוץ בכוננית</button>` : ''}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
       ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${p.admin ? 'מנהל' : p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : KIND_WORD[p.role]}</small></span>
         ${p.role === 'teacher' && p.active ? `<button type="button" class="btn ghost small" data-fixed-hours="${p.id}">שעות קבועות</button>` : ''}
         <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
         ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
-      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${mercuryOn() && srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
+      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${mercuryOn() && srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}${srv.meRow && srv.meRow.admin ? '<option value="manager">מנהלת מסגרת</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
-        box.querySelectorAll('[data-simple]').forEach(b => b.addEventListener('click', () => simplePrefsSheet(b.dataset.simple, again)));          // (the admin only: "שבוע אחרי שבוע" / "בלי צבעים" for somebody, Guy 2026-10-30)
+        box.querySelectorAll('[data-simple]').forEach(b => b.addEventListener('click', () => simplePrefsSheet(b.dataset.simple, again)));
+        box.querySelectorAll('[data-oc-grant]').forEach(b => b.addEventListener('click', () => oncallGrantSheet(b.dataset.ocGrant)));          // (the admin: may this social worker add / remove instructors in the weekend shifts? scheduling-v50.sql)          // (the admin only: "שבוע אחרי שבוע" / "בלי צבעים" for somebody, Guy 2026-10-30)
         box.querySelectorAll('[data-fixed-hours]').forEach(b => b.addEventListener('click', () => teacherHoursSheet(b.dataset.fixedHours)));
         box.querySelectorAll('[data-left], [data-back]').forEach(b => b.addEventListener('click', async () => {
           const id = b.dataset.left || b.dataset.back, on = !!b.dataset.back, p = st.instructors.find(x => x.id === id), nm = p ? instrName(p, st.instructors) : '';
@@ -386,6 +387,21 @@ function resizePhoto(file, size){
   });
 }
 // the admin switches the simpler preferences screen on or off for an instructor (scheduling-v48.sql: set_simple_prefs)
+// the admin lets a social worker add or remove an instructor in the shifts of Thursday 22:00 – Sunday 11:00 (only that; Guy 2026-11-03)
+async function oncallGrantSheet(id){
+  const st = portalLoad(), p = st.instructors.find(x => x.id === id), cur = await sbPersonal.from('staff_settings').select('oncall_assign').eq('staff_id', id).maybeSingle();
+  if(cur.error){ toast('צריך קודם להריץ את scheduling-v50.sql'); return; }
+  const on = !!(cur.data && cur.data.oncall_assign);
+  const sh = portalSheet(`<h2>שיבוץ בכוננית: ${pEsc(p ? instrName(p, st.instructors) : '')}</h2>
+    <div class="pnote">מותר לה להוסיף או להסיר מדריך במשמרות שבין חמישי 22:00 לראשון 11:00 בלבד. לא ליצור משמרות ולא לשנות שעות.</div>
+    <div class="pchoice wrap"><button type="button" class="${on ? 'on' : ''}" data-ocg="1">מותר</button><button type="button" class="${on ? '' : 'on'}" data-ocg="0">לא מותר</button></div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+  sh.querySelectorAll('[data-ocg]').forEach(b => b.addEventListener('click', async () => {
+    const r = await sbPersonal.rpc('set_oncall_assign', { p_staff:id, p_on:b.dataset.ocg === '1' });
+    if(r.error){ toast('השינוי נכשל'); return; }
+    sh.querySelectorAll('[data-ocg]').forEach(x => x.classList.toggle('on', x === b)); toast('נשמר');
+  }));
+}
 function simplePrefsSheet(id, again){
   const st = portalLoad(), p = st.instructors.find(x => x.id === id), cur = Object.assign({ w:false, p:false }, (st.simple || {})[id]);
   const row = (k, on, off) => `<div class="pchoice wrap"><button type="button" class="${cur[k] ? 'on' : ''}" data-sp="${k}:1">${on}</button><button type="button" class="${cur[k] ? '' : 'on'}" data-sp="${k}:0">${off}</button></div>`;

@@ -289,7 +289,8 @@ async function learnScene(name){
   if(name === 'coord'){ const c = portalState.instructors.find(p => p.id === 'c1'); Object.assign(srv, { me:'c1', meRow:c, profile:{ kind:'coordinator', female:true, admin:false } }); portalUi.persona = 'c1'; await srvLoadCoord(); showPortal('schedule'); window.scrollTo(0, 0); return; }
   if(name === 'schedule-mine') portalUi.fold = { mine:true, team:false, swap:false };
   if(name === 'swaps'){ portalUi.fold = { mine:false, team:true, swap:false, swmine:true, swopen:true };          // (one request of "me" that still waits for somebody)
-    const r = portalState.rows.filter(x => x.staff === 'me' && x.day > srvToday())[2]; if(r) learnRpc('request_swap', { p_assignment:r.id }); }
+    const r = portalState.rows.filter(x => x.staff === 'me' && x.day > srvToday())[2]; if(r) learnRpc('request_swap', { p_assignment:r.id });
+    (portalState.swaps || []).filter(x => x.status === 'open' && x.from !== 'me' && x.key).forEach(x => { srvPrefsOf(portalMonth(monthKeyOf(x.key.split('|')[0])), 'me').slots[x.key] = 'yes'; }); }          // ("me" marked "כן" on the shifts she can take: only then she is offered them, Guy 2026-11-03)
   if(name === 'prefs-filled') learnFillPrefs();
   showPortal(name === 'swaps' ? 'swaps' : /^prefs/.test(name) ? 'prefs' : 'schedule');
   window.scrollTo(0, 0);

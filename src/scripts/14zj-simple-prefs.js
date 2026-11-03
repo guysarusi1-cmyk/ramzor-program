@@ -107,7 +107,7 @@ function renderWeekPrefs(body, mk, m, prefs){
   let pos = pwGet(pwPosKey(mk), 'kinds'); if(typeof pos === 'number' && (pos < 0 || pos >= weeks.length)) pos = 0;
   if((pos === 'end' || (typeof pos === 'number' && pos > 0)) && !Object.keys(prefs.slots || {}).length && !(prefs.absent || []).length && !Object.keys(prefs.hours || {}).length){ pos = 'kinds'; pwSet(pwPosKey(mk), pos); }          // (nothing is marked for this month any more, e.g. cleared on TEST: start again from the first question)
   const go = p => { pwSet(pwPosKey(mk), p); renderInstructorPrefs(body); };
-  const head = `<div class="pweek-head"><b>ההעדפות ל${pEsc(monthLabel(mk))}</b><span class="pweek-steps" aria-hidden="true">${['kinds', 'days'].concat(weeks.map((_, i) => i)).concat(['end']).map(p => `<i class="${p === pos ? 'on' : ''}"></i>`).join('')}</span></div>`;
+  const head = `${prefViewBtnHtml()}<div class="pweek-head"><b>ההעדפות ל${pEsc(monthLabel(mk))}</b><span class="pweek-steps" aria-hidden="true">${['kinds', 'days'].concat(weeks.map((_, i) => i)).concat(['end']).map(p => `<i class="${p === pos ? 'on' : ''}"></i>`).join('')}</span></div>`;
   // the opening questions: the kinds of shifts and the weekdays she does not do this month (both may be skipped)
   if(pos === 'kinds' || pos === 'days'){
     const isK = pos === 'kinds', chosenKey = `ramzor-week${isK ? 'kinds' : 'days'}-${srv.me}-${mk}`;
@@ -142,6 +142,7 @@ function renderWeekPrefs(body, mk, m, prefs){
       <div class="pconsents"><div class="pconsent"><span>אם נצטרך, האם יהיה לך נוח להישאר עד 16:00 במשמרת בוקר?</span>${choice('extend')}</div>
       <div class="pconsent"><span>אם נצטרך, האם יהיה לך נוח להמשיך משבת בלילה עד יום ראשון ב-11:00?</span>${choice('pull')}</div></div>
       ${left ? `<div class="pnote pnote-soft">עוד ${left} משמרות עם נקודה</div>` : ''}
+      ${prefPickLineHtml(mk, prefs)}
       <div class="pweek-nav"><button type="button" class="btn ghost" id="pw-prev">→ הקודם</button><button type="button" class="btn" id="pw-submit">הגשת ההעדפות</button></div></div>`;
     body.querySelectorAll('[data-consent]').forEach(b => b.addEventListener('click', () => { const [n, v] = b.dataset.consent.split(':'); prefs.consent[n] = v === 'ask' ? 'ask' : v === '1'; portalSave(); renderInstructorPrefs(body); }));
     body.querySelector('#pw-prev').addEventListener('click', () => go(weeks.length - 1));
@@ -168,6 +169,7 @@ function renderWeekPrefs(body, mk, m, prefs){
   body.innerHTML = `${head}<div class="pweek${plain ? ' plain' : ''}"><h2 class="pweek-title">שבוע ${pos + 1} מתוך ${weeks.length} <small><bdi dir="ltr">${range}</bdi></small></h2>
     ${plain ? '' : `<div class="plevelbar pweek-levels">${SRV_LEVEL_BUTTONS.filter(b => b[0] !== 'hours').map(b => `<button type="button" class="lvbtn lv-${b[0]}${(portalUi.level || 'yes') === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}</div>`}
     <div class="pwdays">${rows}</div>
+    ${prefWeekendBarHtml(wk, inMonth, prefs)}
     <div class="pweek-bottom">${plain ? prefPlainBarHtml() : '<div class="plevelbar pplain-bar"><button type="button" class="lvbtn" id="pplain-hours">שעות אחרות</button></div>'}</div>
     ${dots ? `<div class="pweek-left">עוד ${dots} ${dots === 1 ? 'נקודה' : 'נקודות'}</div>` : ''}
     <div class="pweek-nav"><button type="button" class="btn ghost" id="pw-prev">→ הקודם</button><button type="button" class="btn" id="pw-next"${blocked ? ' disabled' : ''}>${last ? 'לסיום ←' : 'השבוע הבא ←'}</button></div>
@@ -182,11 +184,13 @@ function renderWeekPrefs(body, mk, m, prefs){
       if(prefs.slots[key] === lv) delete prefs.slots[key]; else prefs.slots[key] = lv; portalSave(); redraw();
     }));
   }
+  prefWeekendWire(body, prefs, plain, redraw);
   body.querySelector('#pplain-hours').addEventListener('click', () => prefHoursGuided(wk.filter(d => inMonth.has(d) && !fixedOn(d) && !prefs.absent.includes(d)), prefs, redraw));
   { const q = body.querySelector('#pplain-q'); if(q) q.addEventListener('click', () => prefPlainHelp(true)); }
   body.querySelector('#pw-prev').addEventListener('click', () => go(pos === 0 ? 'days' : pos - 1));
   body.querySelector('#pw-next').addEventListener('click', () => { if(blocked) return; go(last ? 'end' : pos + 1); });
   body.querySelector('#pw-month').addEventListener('click', () => { portalUi.prefsWholeMonth = true; redraw(); });
+  prefViewWire(body);
   if(plain) prefPlainHelp(false);
 }
 // the whole month without colours: the same calendar, with dots, bold and faded; "שעות אחרות" asks which day
@@ -202,8 +206,59 @@ function prefPlainMonth(body, mk, prefs){
 // after the month screen is drawn: without colours its own taps; and, for "שבוע אחרי שבוע" seen as a whole month, the way back
 function prefMonthExtras(body, mk, prefs, locked, submitted){
   if(prefPlainOn() && !locked) prefPlainMonth(body, mk, prefs);
+  if(portalServerOn && !locked && !prefOther() && !portalUi.prefsPast && portalMe().role === 'instructor'){ const t = body.querySelector('.pmonth, .pstatus'); if(t){ t.insertAdjacentHTML('beforebegin', prefViewBtnHtml()); prefViewWire(body); } }
   if(portalServerOn && srv.prefWeekly && portalUi.prefsWholeMonth && !locked && !submitted && !portalUi.prefsPast && !prefOther()){
     const s = body.querySelector('.pstatus'); if(s) s.insertAdjacentHTML('afterend', '<button type="button" class="btn ghost small" id="pw-back-week">חזרה לשבוע אחרי שבוע</button>');
     const bw = body.querySelector('#pw-back-week'); if(bw) bw.addEventListener('click', () => { portalUi.prefsWholeMonth = false; renderInstructorPrefs(body); });
   }
+}
+
+// ---- "תצוגת העדפות" (Guy 2026-11-03): week by week or the whole month, without colours or with them ("יכול" comes back with the colours).
+// Only the instructor's screen changes: the marks are stored as always, and the coordinator sees them in her colours.
+const prefViewBtnHtml = () => portalServerOn ? '<div class="pview-row"><button type="button" class="btn ghost small pview-btn" data-pview>תצוגת העדפות</button></div>' : '';
+function prefViewWire(body){
+  body.querySelectorAll('[data-pview]').forEach(b => b.addEventListener('click', () => {
+    const seg = (name, a, b2, on) => `<div class="mx-seg pview-seg" role="group" aria-label="${name}"><button type="button" data-pv="${name}:1" aria-pressed="${on}">${a}</button><button type="button" data-pv="${name}:0" aria-pressed="${!on}">${b2}</button></div>`;
+    const sh = portalSheet(`<h2>תצוגת העדפות</h2>
+      <div class="pview-opt"><span>איך לראות את החודש</span>${seg('weekly', 'שבוע אחרי שבוע', 'כל החודש', !!srv.prefWeekly)}</div>
+      <div class="pview-opt"><span>איך לסמן</span>${seg('plain', 'בלי צבעים', 'עם צבעים', !!srv.prefPlain)}</div>
+      <div class="pnote">"בלי צבעים": לחיצה = כן, עוד לחיצה = לא, לחיצה ארוכה מחזירה לנקודה. "עם צבעים": כן, יכול או לא.</div>
+      <div class="confirm-actions"><button type="button" class="btn" data-close>סגירה</button></div>`);
+    sh.querySelectorAll('[data-pv]').forEach(x => x.addEventListener('click', async () => {
+      const [k, v] = x.dataset.pv.split(':'), patch = k === 'weekly' ? { prefWeekly:v === '1' } : { prefPlain:v === '1' };
+      sh.querySelectorAll(`[data-pv^="${k}:"]`).forEach(y => y.setAttribute('aria-pressed', String(y === x)));
+      portalUi.prefsWholeMonth = false; if(k === 'plain' && v === '0') portalUi.level = 'yes';
+      await srvSaveSimplePrefs(patch); renderInstructorPrefs(document.getElementById('portal-body'));
+    }));
+  }));
+}
+// the long weekend and "רק אחד מאלה" in the week of the weekend (approved by Guy 2026-11-03): shown only to who switched them on, as in the month screen
+function prefWeekendBarHtml(wk, inMonth, prefs){
+  if(!portalServerOn || !(srv.showLong || srv.pickOne)) return '';
+  const fri = wk.find(d => dowOf(d) === 5 && inMonth.has(d)); if(!fri) return '';
+  const gone = (prefs.fixed || []).some(f => f.day === fri) || prefs.absent.includes(fri), lv = gone ? 'no' : (prefs.slots[`${fri}|l`] || 'neutral'), picked = (prefs.pick || []).includes(fri);
+  return `<div class="pwlong">${srv.showLong ? `<button type="button" class="pshift pwshift pwlong-btn lv-${lv}" data-plongw="${fri}"${gone ? ' disabled' : ''}>🕯️ סופ"ש ארוך <small>שישי–שבת</small></button>` : ''}${srv.pickOne ? `<button type="button" class="ppick${picked ? ' on' : ''}" data-ppickw="${fri}" aria-pressed="${picked}">⭐ רק אחד מאלה</button>` : ''}</div>`;
+}
+function prefWeekendWire(body, prefs, plain, redraw){
+  body.querySelectorAll('[data-plongw]').forEach(b => b.addEventListener('click', () => {
+    const fri = b.dataset.plongw, key = `${fri}|l`, cur = prefs.slots[key];
+    const next = plain ? (cur === 'yes' ? 'no' : cur === 'no' ? null : 'yes') : (cur === (portalUi.level || 'yes') ? null : (portalUi.level || 'yes'));          // (it may stay unmarked: no dot to clear)
+    if(next) prefs.slots[key] = next; else delete prefs.slots[key];
+    if(['yes', 'avoid'].includes(next)){          // (the shifts inside the long weekend give way to it, as in the month screen)
+      const sat = addDays(fri, 1), inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(k => prefs.slots[k]);
+      inside.forEach(k => delete prefs.slots[k]); if(inside.length) toast(tx('long_replaced'));
+    }
+    portalSave(); redraw();
+  }));
+  body.querySelectorAll('[data-ppickw]').forEach(b => b.addEventListener('click', () => {
+    const fri = b.dataset.ppickw; prefs.pick = (prefs.pick || []).includes(fri) ? prefs.pick.filter(f => f !== fri) : (prefs.pick || []).concat(fri);
+    portalSave(); redraw();
+  }));
+}
+function prefPickLineHtml(mk, prefs){          // the end screen: what "רק אחד מאלה" means for her, in one line
+  if(!portalServerOn || !srv.pickOne) return '';
+  const picks = (prefs.pick || []).filter(f => monthKeyOf(f) === mk).sort(), d = f => { const t = parseIso(f); return t.getDate() + '/' + (t.getMonth() + 1); };
+  if(!picks.length) return '';
+  return picks.length >= 2 ? `<div class="pnote pnote-soft">⭐ סימנת ${picks.length} סופי שבוע ב"רק אחד מאלה" (${picks.map(d).join(', ')}): נשבץ אותך רק באחד מהם.</div>`
+    : `<div class="pnote pnote-soft">⭐ ב"רק אחד מאלה" צריך לפחות שני סופי שבוע. סימנת אחד (${d(picks[0])}).</div>`;
 }

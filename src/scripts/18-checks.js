@@ -131,7 +131,8 @@
       const r = $('bottom-nav').getBoundingClientRect();
       check('bar sits at the bottom edge', Math.abs(r.bottom - innerHeight) < 2, 'bottom ' + r.bottom + ' vs ' + innerHeight);
       $('hub-daily-btn').click(); openGuidedScreen('red');
-      check('bar is hidden during a protocol', !visible($('bottom-nav')), 'visible');
+      await sleep(60);
+      check('during a protocol the bar shows חזור | בית | הבא (Guy 2026-11-03)', visible($('bottom-nav')) && visible($('bnav-next')) && visible($('bnav-home')), 'bar or "הבא" hidden');
       showHub();
     });
 
@@ -145,11 +146,12 @@
         check(`${key}: legend lists all ${total} steps`, items.length === total, items.length);
         check(`${key}: legend shows number + action only`, items.every((li, i) => li.querySelector('.gl-n').textContent === String(i + 1) && li.querySelector('.gl-t').textContent.length > 2) && !/העמקת ההבנה|אני רואה שאתה כועס|אני אתן לך שתי אזהרות/.test($('guided-legend-list').textContent), $('guided-legend-list').textContent.slice(0, 80));
         check(`${key}: step 1 is marked as current`, items[0].classList.contains('current') && items.filter(li => li.classList.contains('current')).length === 1, 'wrong current');
-        check(`${key}: the step list is hidden until the button is pressed`, visible($('guided-legend-btn')) && !visible($('guided-legend')), 'visibility wrong');
-        $('guided-legend-btn').click();
+        check(`${key}: the step list is open at first (Guy 2026-11-03)`, visible($('guided-legend-btn')) && visible($('guided-legend')), 'visibility wrong');
         const main = document.querySelector('#staff-screen-guided .guided-main').getBoundingClientRect(), side = $('guided-legend').getBoundingClientRect();
         check(`${key}: pressing it shows the list BESIDE the step, not over it`, visible($('guided-legend')) && visible($('guided-step-body')) && (side.right <= main.left + 2 || main.right <= side.left + 2), `list ${Math.round(side.left)}..${Math.round(side.right)} / step ${Math.round(main.left)}..${Math.round(main.right)}`);
-        check(`${key}: the next/back buttons still work with the list open`, visible($('guided-next-btn')) && $('guided-next-btn').getBoundingClientRect().right <= innerWidth + 1 && $('guided-next-btn').getBoundingClientRect().left >= -1, 'button cut off');
+        await sleep(60);
+        { const nb = visible($('guided-next-btn')) ? $('guided-next-btn') : $('bnav-next');          // (on a phone "הבא" is in the bottom bar)
+          check(`${key}: the next/back buttons still work with the list open`, !!nb && visible(nb) && nb.getBoundingClientRect().right <= innerWidth + 1 && nb.getBoundingClientRect().left >= -1, 'button cut off'); }
         document.querySelectorAll('#guided-legend-list [data-step]')[3].click();
         check(`${key}: tapping step 4 jumps there`, guidedStep === 3 && document.querySelector('#guided-legend-list li.current .gl-n').textContent === '4' && $('guided-counter').textContent.includes('4'), 'guidedStep=' + guidedStep);
         check(`${key}: the list stays open after choosing`, visible($('guided-legend')), 'closed');
@@ -418,12 +420,12 @@
     await step('back button', async () => {
       const pressBack = async () => { history.back(); await sleep(350); };
       showHub(); await sleep(400);
-      const e0 = navTrail().length;
-      $('hub-daily-btn').click(); await sleep(100);
-      openLightFlow('red'); await sleep(100);
+      const e0 = navTrail().length, tr = ['hub:' + navTrail().join('>') + '/' + activeView()];
+      $('hub-daily-btn').click(); await sleep(100); tr.push('daily:' + navTrail().join('>') + '/' + activeView());
+      openLightFlow('red'); await sleep(100); tr.push('red:' + navTrail().join('>') + '/' + activeView());
       for(let i = 0; i < 2; i++) $('guided-next-btn').click();
       await sleep(100);
-      check('each new screen is a page in the trail (and Back has something to go back to)', navTrail().length === e0 + 2 && history.state && history.state.nav === 'guard', navTrail().join(' > '));
+      check('each new screen is a page in the trail (and Back has something to go back to)', navTrail().length === e0 + 2 && history.state && history.state.nav === 'guard', navTrail().join(' > ') + ` | ${tr.join(' ; ')} state=${JSON.stringify(history.state)}`);
       check('(setup) protocol is on step 3', guidedStep === 2, 'step ' + (guidedStep + 1));
       await pressBack(); check('Back: previous step of the protocol', visible($('staff-screen-guided')) && guidedStep === 1, 'step ' + (guidedStep + 1));
       await pressBack(); check('Back again: step 1', visible($('staff-screen-guided')) && guidedStep === 0, 'step ' + (guidedStep + 1));
@@ -437,7 +439,7 @@
       // the step list is not an overlay: Back goes back a step with it open
       $('hub-daily-btn').click(); await sleep(100);
       document.querySelector('[data-quick="red"]').click(); await sleep(100);
-      $('guided-next-btn').click(); $('guided-legend-btn').click(); await sleep(100);
+      $('guided-next-btn').click(); await sleep(100);          // (the step list is open at first)
       await pressBack();
       check('Back goes one step back even with the step list open (the list stays)', guidedStep === 0 && visible($('guided-legend')) && visible($('staff-screen-guided')), 'step ' + (guidedStep + 1));
       showHub(); await sleep(300);
@@ -1170,7 +1172,7 @@
       const rows = [{ day:d1, shift:'N', from:'22:00', to:'08:00' }, { day:pick(0)[0], shift:'M', from:'07:00', to:'15:00' }];
       const fb = srvFeedbackFor({ first:'דנה' }, mk, { prefs, rows, profile:{ female:true }, goal:null });
       check('feedback: counts the requests that were met and the ones that were not', fb.asked === 4 && fb.honored === 3 && fb.unmet.length === 1, JSON.stringify([fb.asked, fb.honored, fb.unmet.length]));
-      check('feedback: the words say that we tried, and thank the person', /הצלחנו להיענות ל-3/.test(fb.text) && /ניסינו/.test(fb.text) && /תודה/.test(fb.text) && /אנחנו כאן בשבילך/.test(fb.text), fb.text.slice(0, 200));
+      check('feedback: the words say that we tried, and thank the person', /שובצת ב-\d+ מתוך \d+ המשמרות שסימנת/.test(fb.text) && /ניסינו/.test(fb.text) && /תודה/.test(fb.text) && /אנחנו כאן בשבילך/.test(fb.text), fb.text.slice(0, 200));
       check('feedback: nothing in it blames the person or sounds like a reprimand', !/אשמתך|לא עמדת|עליך לשפר|כשל|הפרת|חייב/.test(fb.text), fb.text);
       check('feedback: the shift that was not honoured is named with its day', fb.unmet[0].includes(dayLabel(d1)) && /לילה/.test(fb.unmet[0]), fb.unmet[0]);
       { const own = fbMinimum({ female:true, min_mid:1, min_nights:0, min_weekend:0 }, mk), wk = fbWeeks(mk);
@@ -1394,6 +1396,7 @@
         await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(next), extend_morning:false, pull_to_sunday:false });
         await srvLoad();
       }
+      srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (these checks look at the month with colours, also after a reload; the new default — week by week, no colours — is checked in "simple preferences")
       portalUi.persona = srv.me; portalUi.tab = 'prefs'; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
       check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
       const prefsShut = !srvPrefsOpen(next);          // (after the 24th the month is closed: one line, the marks to read only — Guy 2026-10-28)
@@ -1458,8 +1461,8 @@
         document.querySelector('[data-plevel="avoid"]').click(); await sleep(50); document.querySelector(`[data-plong="${fri}"]`).click(); await sleep(50);
         check('portal server: the long-weekend button takes the chosen level (יכול)', srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`] === 'avoid' && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-avoid'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
         { const sat = addDays(fri, 1), sl = () => srvPrefsOf(portalMonth(next), srv.me).slots, cell = k => document.querySelector(`[data-pslot="${k}"]`);
-          const inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(cell);
-          check('long weekend package: with "יכול" on it, Friday afternoon and night and Saturday morning and afternoon are locked inside it', inside.length >= 2 && inside.every(k => cell(k).classList.contains('in-long')), inside.map(k => k + ':' + cell(k).className).join(' '));
+          const inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(k => cell(k) && !cell(k).closest('.absent'));          // (a day of absence is "לא" by itself, outside the package)
+          check('long weekend package: with "יכול" on it, Friday afternoon and night and Saturday morning and afternoon are locked inside it', inside.length >= 2 && inside.every(k => cell(k).classList.contains('in-long')), inside.map(k => k + ':' + cell(k).className).join(' ') + ` | n=${document.querySelectorAll(`[data-pslot="${sat}|m"]`).length} l=${sl()[`${fri}|l`]} lf=${prefLongFri(`${sat}|m`)} in=${prefInsideLong(srvPrefsOf(portalMonth(next), srv.me), `${sat}|m`)} day=${(cell(`${sat}|m`).closest('.pday') || {}).className} wrap=${(cell(`${sat}|m`).closest('[id]') || {}).id} plain=${srv.prefPlain} weekly=${srv.prefWeekly}`);
           check('long weekend package: ... their own marks were replaced by it, and Friday morning stays free with its mark', !sl()[`${fri}|e`] && !sl()[`${fri}|n`] && !cell(`${fri}|m`).classList.contains('in-long') && sl()[`${fri}|m`] === 'no' && (!cell(`${sat}|n`) || !cell(`${sat}|n`).classList.contains('in-long')), JSON.stringify(sl()));
           document.querySelector('[data-plevel="yes"]').click(); await sleep(50); cell(`${fri}|e`).click(); await sleep(50);
           check('long weekend package: a locked shift cannot be chosen by itself', !sl()[`${fri}|e`] && cell(`${fri}|e`).classList.contains('in-long'), JSON.stringify(sl()[`${fri}|e`]));
@@ -1605,7 +1608,7 @@
       // --- a service girl sees only her own place
       if(await asPerson('service')){
         portalUi.persona = srv.me; portalUi.tab = null; showPortal(); await sleep(100);
-        check('portal server: the service account gets its own tabs (availability, vacation) and no instructor preferences', !document.querySelector('[data-ptab="prefs"]') && !!document.querySelector('[data-ptab="avail"]') && !!document.querySelector('[data-ptab="vacation"]'), [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab).join(','));
+        check('portal server: the service account gets its own tabs (availability, "החלפות וחופשות") and no instructor preferences', !document.querySelector('[data-ptab="prefs"]') && !!document.querySelector('[data-ptab="avail"]') && /החלפות וחופשות/.test((document.querySelector('[data-ptab="swaps"]') || {}).textContent || ''), [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab).join(','));
       }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
       portalUi.persona = 'c1'; portalUi.tab = null; portalUi.pmonth = portalUi.smonth = null; showHub();
@@ -1900,6 +1903,7 @@
     // ---- a published month: the coordinator's change waits for "שליחת עדכונים", then the person gets ONE message (scheduling-v45.sql).
     //      On a month of its own that has no schedule on the test server (made here and removed at the end)
     await step('send updates', async () => {
+      portalUi.csWeekOn = false;          // (the whole month: the changed name may be in another week than the phone's default one)
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
       const enter = async kind => { await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; const { error } = await signInRetry(M(kind), PW); if(error) return false; portalServerOn = true; if(!(await srvLoad())) return false; portalUi.persona = srv.me; return true; };
@@ -2334,7 +2338,7 @@
         await showTherapyPortal();
         const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         { const mt = document.querySelector('#view-therapy [data-th-tab="mine"]'); if(mt){ mt.click(); await sleep(80); } }
-        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3.slice(1, 3).join(',') === 'oncall,diary' && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
         showAppHome(); await sleep(80);
         check('therapy portal: somebody with both roles still gets one card', !document.getElementById('apphome-therapist') && document.querySelectorAll('#apphome-therapy').length === 1, 'cards wrong');
         // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)
@@ -2520,10 +2524,11 @@
         const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k));
         if(!mk) check('(info) fixed preferences: no month is open for preferences on the test server now, the board was not exercised', true, '');
         else {
+        srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (the month with colours, also after a reload)
         portalUi.pmonth = mk; showPortal('prefs'); await sleep(400);
         const day = daysOfMonth(mk).find(d => !srvPrefsOf(portalMonth(mk), srv.me).slots[`${d}|m`] && !srvPrefsOf(portalMonth(mk), srv.me).absent.includes(d) && document.querySelector(`[data-pslot="${d}|m"]`));
         const ms = day && document.querySelector(`[data-pslot="${day}|m"]`);
-        check('fixed preferences: her mornings start as "no" (red), with a sentence that explains it', !!ms && ms.classList.contains('lv-no') && /הבקרים מסומנים אצלך "לא"/.test(document.getElementById('portal-body').textContent), ms ? ms.className : 'no free morning');
+        check('fixed preferences: her mornings start as "no" (red), with a sentence that explains it', !!ms && ms.classList.contains('lv-no') && /הבקרים מסומנים אצלך "לא"|קבוע אצלך:[^.]*לא עושה בקרים/.test(document.getElementById('portal-body').textContent), ms ? ms.className : 'no free morning');
         if(day){
           portalUi.level = 'yes'; renderInstructorPrefs(document.getElementById('portal-body')); await sleep(100);
           document.querySelector(`[data-pday="${day}"]`).click(); await sleep(150);
@@ -2554,7 +2559,7 @@
         const k0 = 'x|m', t = { slots:{} };
         prefPlainTap(t, k0); const a = t.slots[k0]; prefPlainTap(t, k0); const b = t.slots[k0]; prefPlainTap(t, k0); const c = t.slots[k0]; prefPlainReset(t, k0);
         check('simple preferences: without colours a tap = כן, another = לא, another = כן again, a long press = the dot again', a === 'yes' && b === 'no' && c === 'yes' && !(k0 in t.slots), JSON.stringify([a, b, c]));
-        delete m.submitted[srv.me]; srv.prefWeekly = true; srv.prefPlain = true; portalUi.prefsWholeMonth = false; portalUi.prefsPast = false;
+        delete m.submitted[srv.me]; srv.prefWeekly = true; srv.prefPlain = true; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '1'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '1'); } catch(e){} portalUi.prefsWholeMonth = false; portalUi.prefsPast = false;
         try { localStorage.removeItem(pwPosKey(mk)); localStorage.setItem('ramzor-plain-help', '1'); } catch(e){}
         portalUi.pmonth = mk; showPortal('prefs'); await sleep(300);
         const pb = () => document.getElementById('portal-body');
@@ -2572,6 +2577,7 @@
           const lb = pb().querySelector(`[data-pslot="${key}"]`); lb.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true })); await sleep(700); lb.dispatchEvent(new PointerEvent('pointerup', { bubbles:true }));
           check('... on the screen: a tap = כן (bold), another = לא, a long press brings the dot back; stored as everybody\'s marks', y === 'yes' && yb && n === 'no' && !pr.slots[key] && !!pb().querySelector(`[data-pslot="${key}"].lv-neutral`), JSON.stringify([y, yb, n, pr.slots[key]]));
         } else check('(info) simple preferences: week 1 has no shift waiting for a mark, the taps were not exercised on the screen', true, '');
+        document.querySelectorAll('.psheet').forEach(x => x.remove());          // (the short "איך מסמנים" help may still be open)
         pb().querySelector('#pplain-hours').click(); await sleep(150);
         const dayBtn = document.querySelector('.psheet [data-hgday]');
         if(dayBtn){ const d = dayBtn.dataset.hgday; dayBtn.click(); await sleep(80); document.querySelector('.psheet [data-hg="other"]').click(); await sleep(80);
