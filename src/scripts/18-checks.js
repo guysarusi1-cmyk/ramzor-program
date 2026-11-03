@@ -1920,13 +1920,15 @@
         if(!srv.pendingOn){ check('(info) send updates: needs scheduling-v45.sql on the test server', true, ''); return; }
         const real = async () => { const q = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return (q.data || []).length; };
         try { localStorage.removeItem('ramzor-pending-told'); } catch(e){}
+        showPortal('schedule'); await sleep(800);
+        const n0 = +((((document.querySelector('#cs-send') || {}).textContent || '').match(/\((\d+)\)/) || [])[1] || 0);          // (changes already waiting on the test server in other months, e.g. somebody's own trial: counted, never touched)
         const w = await asgWrite(mk, 'insert', null, { month:firstOf(mk), staff_id:i2, day, shift:'M', from_time:'07:00', to_time:'15:00', flags:['manual'] });
         check('send updates: at the first change an explanation: saved, but not sent until "שליחת עדכונים"', /עוד לא נשלח/.test((document.querySelector('.psheet') || {}).textContent || ''), 'no explanation');
         { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
         check('send updates: a change of a published month is kept aside (the staff do not see it yet)', !w.error && (await real()) === 0, w.error ? w.error.message : 'already in the schedule');
         await srvReload(); showPortal('schedule'); await waitFor(async () => !!document.querySelector('#cs-send'), 60);
         const sendB = document.querySelector('#cs-send');
-        check('send updates: the coordinator sees "שליחת עדכונים" blinking, with "ביטול השינויים", and the waiting name dashed', !!sendB && sendB.classList.contains('blink') && /\(1\)/.test(sendB.textContent) && !!document.querySelector('#cs-discard') && !!document.querySelector(`.mcal-cell[data-key="${day}|m"] .mcal-name.pend`), sendB ? sendB.outerHTML.slice(0, 120) : 'no button ' + JSON.stringify({ pend:portalLoad().pending, on:srv.pendingOn, month:portalUi.month, mk, pub:portalMonth(mk).published, tab:portalUi.tab }));
+        check('send updates: the coordinator sees "שליחת עדכונים" blinking, with "ביטול השינויים", and the waiting name dashed', !!sendB && sendB.classList.contains('blink') && sendB.textContent.includes(`(${n0 + 1})`) && !!document.querySelector('#cs-discard') && !!document.querySelector(`.mcal-cell[data-key="${day}|m"] .mcal-name.pend`), sendB ? sendB.outerHTML.slice(0, 120) : 'no button ' + JSON.stringify({ pend:portalLoad().pending, on:srv.pendingOn, month:portalUi.month, mk, pub:portalMonth(mk).published, tab:portalUi.tab }));
         if(!sendB) return;
         document.querySelector('#cs-discard').click(); await answerSheet();
         check('send updates: "ביטול השינויים" throws the change away and offers "שחזור"', await waitFor(async () => !!document.querySelector('#cs-restore') && !document.querySelector('#cs-send'), 100), 'no restore');

@@ -558,3 +558,5 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
   body:has(.view.active .portal-shell.wide) .sheet.psheet-center .sheet-card{ max-height:calc(85dvh / 1.2); }
   .sheet.psheet-center .confirm-actions{ position:sticky; bottom:-20px; margin-bottom:-20px; padding:10px 0 20px; background:var(--color-surface-raised, var(--panel)); z-index:1; border-top:1px solid var(--color-border, var(--line)); }
 }
+/* a button a window hides (e.g. "הוספה" before an instructor is chosen) stays hidden: the theme's .btn display must not bring it back */
+.psheet [hidden]{ display:none !important; }
