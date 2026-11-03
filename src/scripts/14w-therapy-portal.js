@@ -76,7 +76,7 @@ function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
     t.push(['todo', 'משימות']);
-    if(isTherapistMe() || (srv.profile && srv.profile.admin)) t.push(['oncall', 'כוננית סוף שבוע'], ['diary', 'יומן הילדים']);          // (the social workers' urgent areas: Guy 2026-11-03; 14zl, 14zm)
+    if(isTherapistMe() || (srv.profile && srv.profile.admin)) t.push(['oncall', 'כוננית סוף שבוע'], ['diary', 'יומן הילדים'], ['chats', 'שיחות']);          // (the social workers' urgent areas: Guy 2026-11-03; 14zl, 14zm)
     t.push(['mine', 'הילדים שלי']);
     if(thp.v32) t.push(['plans', 'תוכניות טיפוליות']);          // (the plans, one goal at a time: 14zf)
     t.push(['kids', 'כל הילדים']);          // (every child as the staff sees it, read only: Mercury decision 87)
@@ -98,8 +98,8 @@ function thpTabs(){
 // a row of tabs: 4 visible, the rest under "עוד" (Guy, after the simplicity checker: tabs must fit a phone). tabs = [[key, word, badge]]
 // the side menu on a computer (Guy 2026-10-30): every area shown, an icon by each word, the daily work first and the rest after a quiet line
 const thpWide = () => { try { return matchMedia('(min-width:1024px)').matches; } catch(e){ return false; } };
-const THP_DAILY = ['todo', 'oncall', 'diary', 'mine', 'plans', 'kids', 'myobs'];
-const THP_ICO = { diary:'<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2.5v3M16 2.5v3M4 9h16M8 13h3M8 17h6"/>', oncall:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4"/>', todo:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>', mine:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/>',
+const THP_DAILY = ['todo', 'oncall', 'diary', 'chats', 'mine', 'plans', 'kids', 'myobs'];
+const THP_ICO = { chats:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>', diary:'<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2.5v3M16 2.5v3M4 9h16M8 13h3M8 17h6"/>', oncall:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4"/>', todo:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>', mine:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/>',
   plans:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6v2.5H9zM8.5 11h7M8.5 15h5"/>', kids:'<circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19.5c.9-3.1 3-4.8 5.5-4.8s4.6 1.7 5.5 4.8M15 14.8c2.6-.3 4.6 1.2 5.4 4"/>',
   myobs:'<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>', library:'<path d="M5 4.5h5.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H5zM19 4.5h-5.5a2 2 0 0 0-1 .3"/><path d="M19 4.5v13.9h-5.4a1.6 1.6 0 0 0-1.1.5"/>',
   settings:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>', assign:'<path d="M10 14a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
@@ -221,6 +221,7 @@ function thpRender(){
   else if(thp.tab === 'archive') inner = '<div id="cr-archive"><div class="pnote">טוען...</div></div>';
   else if(thp.tab === 'oncall') inner = '<div id="th-oncall"><div class="pnote">טוען...</div></div>';
   else if(thp.tab === 'diary') inner = '<div id="th-diary"><div class="pnote">טוען...</div></div>';
+  else if(thp.tab === 'chats') inner = '<div id="th-chats"><div class="pnote">טוען...</div></div>';
   else if(thp.tab === 'assign'){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
@@ -268,6 +269,7 @@ function thpRender(){
   if(thp.tab === 'archive') careArchiveHtml(body.querySelector('#cr-archive'));
   if(thp.tab === 'oncall') renderOncall(body.querySelector('#th-oncall'));
   if(thp.tab === 'diary') renderDiary(body.querySelector('#th-diary'));
+  if(thp.tab === 'chats') mgrChats(body.querySelector('#th-chats'));
   if(thp.tab === 'overview'){ const rv = body.querySelector('#bk-review'); if(rv) rv.addEventListener('click', () => { const s = bankReview(0); const close = s.close; s.close = () => { close(); thpRender(); }; }); }
   if(thp.tab === 'settings') obsWireNotify(body);
   if(thp.editing && ther && thp.v32 && planCanEdit(thp.editing)) planOpenEditor(thp.editing);

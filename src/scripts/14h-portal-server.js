@@ -256,7 +256,7 @@ async function srvSubmit(mk, note, goal){
 // ---- the screens in server mode
 function srvTabs(me){
   if(srvEditingFor()) return me.role === 'service' ? [['avail', 'זמינות']] : [['prefs', 'העדפות']];          // (filling for somebody: only that tab — a service girl's availability, an instructor's preferences)
-  if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
+  if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
   if(me.role === 'manager') return MGR_TABS;          // (the manager of the framework: 14zn)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps and the vacation in one tab: Guy 2026-11-03)
@@ -282,6 +282,7 @@ function srvRenderTab(me, body, t){
     if(t === 'swaps') return srvRenderCoordSwaps(body);
     if(t === 'vacations') return srvRenderCoordVacations(body);
     if(t === 'oncall') return renderOncall(body);          // (the weekend on-call panel, shared with the social workers: 14zl)
+    if(t === 'chats') return mgrChats(body);          // (the conversations with the manager and the social workers: 14zn)
     if(t === 'settings') return srvRenderCoordSettings(body);
     return srvRenderCoordSchedule(body);
   }

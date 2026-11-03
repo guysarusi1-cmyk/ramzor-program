@@ -548,5 +548,5 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
   .portal-shell.wide .cs-layout .cs-side{ display:none; }
   .portal-shell.wide .mcal-wrows .mcal-cell.editable{ min-height:44px; cursor:pointer; }
 }
-/* the coordinator's tabs on a phone (one more: "כוננית"): two rows rather than a tab cut at the edge */
-@media (max-width:700px){ .portal-shell[data-ptheme].wide .portal-tabs{ flex-wrap:wrap; overflow-x:visible; } .portal-shell[data-ptheme].wide .portal-tabs button{ padding:var(--space-2) var(--space-3); } }
+/* many tabs on a phone (the coordinator's, the manager's): two rows rather than a tab cut at the edge */
+@media (max-width:700px){ .portal-shell[data-ptheme] .portal-tabs{ flex-wrap:wrap; overflow-x:visible; } .portal-shell[data-ptheme] .portal-tabs button{ padding:var(--space-2) var(--space-3); } }

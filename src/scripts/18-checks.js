@@ -2338,7 +2338,7 @@
         await showTherapyPortal();
         const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         { const mt = document.querySelector('#view-therapy [data-th-tab="mine"]'); if(mt){ mt.click(); await sleep(80); } }
-        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3.slice(1, 3).join(',') === 'oncall,diary' && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary', 'chats'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3.slice(1, 3).join(',') === 'oncall,diary' && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
         showAppHome(); await sleep(80);
         check('therapy portal: somebody with both roles still gets one card', !document.getElementById('apphome-therapist') && document.querySelectorAll('#apphome-therapy').length === 1, 'cards wrong');
         // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)

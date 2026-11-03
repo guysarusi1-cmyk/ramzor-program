@@ -12,7 +12,7 @@ const mgrShort = iso => { const t = parseIso(iso); return t.getDate() + '/' + (t
 const mgrWeekStart = () => { const t = isoDate(new Date()); return mgr.week || addDays(t, -dowOf(t)); };
 async function mgrKids(){          // the children's names: the manager reads the roster with her own sign-in
   if(typeof roster !== 'undefined' && roster.length) return roster;
-  try { const r = await sbPersonal.from('roster').select('*'); if(!r.error && typeof roster !== 'undefined'){ roster = r.data || []; } } catch(e){}
+  try { const list = await getRoster(); if(list.length && typeof roster !== 'undefined') roster = list; } catch(e){}          // (getRoster: the same shape as everywhere — firstName, lastInitial)
   return typeof roster !== 'undefined' ? roster : [];
 }
 async function mgrRender(t, body){
@@ -80,7 +80,9 @@ async function mgrKidsTab(body){
     const id = b.dataset.mkPlan, p = plan(id);
     await sbPersonal.from('therapy_access').insert({ child_id:id, what:'פירוט תוכנית (מנהלת)' });          // (logged before it opens)
     const goals = (p.published && p.published.goals) || [];
-    portalSheet(`<h2>התוכנית של ${pEsc(dgName(id))}</h2><div class="pnote">קריאה בלבד.</div>${goals.map(g => `<div class="card"><b>${pEsc(g.title || '')}</b>${g.why ? `<div class="pnote">${pEsc(g.why)}</div>` : ''}${(g.targets || []).length ? `<ul>${g.targets.map(x => `<li>${pEsc(x.text || x.title || '')}</li>`).join('')}</ul>` : ''}${(g.interventions || []).length ? `<div class="pnote">${g.interventions.map(x => pEsc(x.name || x.what || '')).join(' · ')}</div>` : ''}</div>`).join('') || '<div class="pnote">אין מטרות.</div>'}
+    portalSheet(`<h2>התוכנית של ${pEsc(dgName(id))}</h2><div class="pnote">קריאה בלבד.</div>${goals.map(g => { const lines = v => (Array.isArray(v) ? v.map(x => (x && (x.text || x.title)) || x) : String(v || '').split('\n')).map(x => String(x || '').trim()).filter(Boolean);          // (a goal's fields, as the plan keeps them: 14zf)
+        const tg = lines(g.targets);
+        return `<div class="card"><b>${pEsc(g.title || '')}</b>${g.theme ? ` <small>${pEsc(g.theme)}</small>` : ''}${g.why_staff ? `<div class="pnote">למה: ${pEsc(g.why_staff)}</div>` : ''}${tg.length ? `<ul>${tg.map(x => `<li>${pEsc(x)}</li>`).join('')}</ul>` : ''}${g.avoid_line ? `<div class="pnote">להימנע: ${pEsc(g.avoid_line)}</div>` : ''}</div>`; }).join('') || '<div class="pnote">אין מטרות.</div>'}
       <div class="confirm-actions"><button type="button" class="btn" data-close>סגירה</button></div>`);
   }));
   body.querySelectorAll('[data-mk-diary]').forEach(b => b.addEventListener('click', async () => {

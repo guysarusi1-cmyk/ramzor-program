@@ -29,7 +29,7 @@ const dgKids = () => (typeof thpScope === 'function' ? thpScope() : []);
 const dgName = id => { const c = (typeof roster !== 'undefined' ? roster : []).find(x => x.id === id); return c ? displayName(c) : '?'; };
 function dgLineHtml(o){
   const e = o.e, k = DG_KIND[e.kind] || ['', ''], time = e.start_time ? `${dgT(e.start_time)}${e.end_time ? '–' + dgT(e.end_time) : ''}` : 'בלי שעה';
-  const rep = e.every_weeks ? (e.every_weeks === 1 ? 'כל שבוע' : `כל ${e.every_weeks} שבועות`) : e.monthly_nth ? `כל חודש, ה${DG_NTH[e.monthly_nth]}` : '';
+  const rep = e.every_weeks ? (e.every_weeks === 1 ? 'כל שבוע' : `כל ${e.every_weeks} שבועות`) : e.monthly_nth ? `כל חודש, ${DG_NTH[e.monthly_nth]}` : '';
   return `<button type="button" class="dg-ev dg-${e.kind}" data-dg-ev="${e.id}|${o.day}"><span class="dg-time"><bdi dir="ltr">${time}</bdi></span><span class="dg-what"><b class="ar-keep">${pEsc(dgName(e.child_id))}</b> · ${k[1]} ${k[0]}${e.with_whom ? ` עם ${pEsc(e.with_whom)}` : ''}${e.place ? ` · ${pEsc(e.place)}` : ''}${e.kind === 'outing' && e.return_day ? ` · חזרה ${dgShort(e.return_day)}${e.return_time ? ' ' + dgT(e.return_time) : ''}` : ''}${e.note ? `<small>${pEsc(e.note)}</small>` : ''}${rep ? `<small class="dg-rep">↻ ${rep}</small>` : ''}</span></button>`;
 }
 async function renderDiary(box){
@@ -78,7 +78,7 @@ function dgEdit(e, occDay, done){
     <div class="confirm-actions">${e ? '<button type="button" class="btn danger" id="dg-del">מחיקה</button>' : ''}<button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="dg-save">שמירה</button></div>`);
   const $ = id => sh.querySelector('#' + id);
   let kind = v.kind;
-  const monthWord = () => { const d = $('dg-day').value || v.day; $('dg-rep-m').textContent = `כל חודש, ${DOW_NAMES[dowOf(d)]} ה${dgNthOf(d) >= 5 ? DG_NTH[-1] : DG_NTH[dgNthOf(d)]} בחודש`; };
+  const monthWord = () => { const d = $('dg-day').value || v.day; $('dg-rep-m').textContent = `כל חודש, ${DOW_NAMES[dowOf(d)]} ${dgNthOf(d) >= 5 ? DG_NTH[-1] : DG_NTH[dgNthOf(d)]} בחודש`; };
   monthWord(); $('dg-day').addEventListener('change', monthWord);
   sh.querySelectorAll('[data-dg-kind]').forEach(b => b.addEventListener('click', () => { kind = b.dataset.dgKind; sh.querySelectorAll('[data-dg-kind]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); sh.querySelector('.dg-return').hidden = kind !== 'outing'; }));
   const fields = () => {
@@ -90,7 +90,7 @@ function dgEdit(e, occDay, done){
   const scope = async verb => !series ? 'all' : await new Promise(res => {          // a series: only this time, or from this day on
     const q = portalSheet(`<h2>${verb}</h2><div class="pnote">זה אירוע חוזר. מה ${verb === 'מחיקה' ? 'למחוק' : 'לשנות'}?</div><div class="confirm-actions dg-scope"><button type="button" class="btn ghost" data-sc="one">רק הפעם (${dgShort(occDay)})</button><button type="button" class="btn" data-sc="on">מהיום והלאה</button></div>`);
     q.querySelectorAll('[data-sc]').forEach(b => b.addEventListener('click', () => { q.close(); res(b.dataset.sc); }));
-    const c = q.close; q.close = () => { c(); res(null); };
+    q.addEventListener('click', e => { if(e.target === q) res(null); });          // (a tap outside: nothing changes)
   });
   const fail = r => { if(r && r.error){ toast('לא נשמר. אפשר לנסות שוב.'); return true; } return false; };
   $('dg-save').addEventListener('click', async () => {
