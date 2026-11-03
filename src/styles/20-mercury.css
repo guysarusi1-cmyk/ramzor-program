@@ -560,3 +560,18 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 }
 /* a button a window hides (e.g. "הוספה" before an instructor is chosen) stays hidden: the theme's .btn display must not bring it back */
 .psheet [hidden]{ display:none !important; }
+/* the timetable's hour: two short lists (00–23 : minutes) instead of a time box that a phone may show as AM/PM (Guy 2026-11-03) */
+.ctl-tt-row{ grid-template-columns:auto 46px 1fr auto; }
+.ctl-tt-time{ display:inline-flex; align-items:center; gap:2px; font-variant-numeric:tabular-nums; }
+.ctl-tt-time select{ min-height:42px; min-width:54px; padding:4px 6px; border-radius:10px; font:inherit; font-size:16px; background:var(--color-surface, var(--panel-2)); color:var(--color-text, var(--text)); border:1px solid var(--color-border, var(--line)); }
+.ctl-tt-moved{ animation:tt-moved 1.8s ease-out; border-radius:10px; }
+@keyframes tt-moved{ 0%, 40%{ box-shadow:0 0 0 2px var(--color-primary, var(--gold)); } 100%{ box-shadow:0 0 0 2px transparent; } }
+@media (prefers-reduced-motion:reduce){ .ctl-tt-moved{ animation:none; } }
+/* a chosen person in a new conversation: a ✓ too, so the choice shows on every screen and theme (Guy 2026-11-03) */
+.mc-people button.on::before{ content:'✓ '; font-weight:700; }
+/* the manager's messages: the groups and the names one under the other; the children folded, the name first */
+.mm-groups, .mm-some{ display:grid; gap:2px; margin:4px 0 8px; }
+.mm-names summary small{ margin-inline-start:auto; color:var(--color-text-secondary, var(--muted)); }
+.mm-list{ display:grid; gap:0; max-height:50vh; overflow-y:auto; }
+.mgr-new-msg{ display:grid; gap:8px; }
+.mgr-kid summary small{ margin-inline-start:auto; color:var(--color-text-secondary, var(--muted)); font-weight:400; }

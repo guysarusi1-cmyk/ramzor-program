@@ -6,8 +6,8 @@
 //   * messages to the staff (everybody or chosen people; portal or also e-mail) with who saw and who confirmed "קראתי"
 //   * the WhatsApp group of the framework: a shortcut only
 const mgr = { week:null, conv:null, kidsLoaded:false };
-const MGR_TABS = [['mhome', 'בית'], ['schedule', 'סידור העבודה'], ['timetable', 'לו"ז'], ['kids', 'הילדים'], ['chats', 'שיחות'], ['msgs', 'הודעות לצוות']];
-const mgrIsMe = () => (portalMe() || {}).role === 'manager';
+const MGR_TABS = [['mhome', 'בית'], ['schedule', 'סידור העבודה'], ['timetable', 'לו"ז'], ['kids', 'הילדים'], ['chats', 'שיחות']];          // (the messages to the staff: inside the home tab, Guy 2026-11-03)
+const mgrIsMe = () => { try { return (portalMe() || {}).role === 'manager'; } catch(e){ return false; } };
 const mgrShort = iso => { const t = parseIso(iso); return t.getDate() + '/' + (t.getMonth() + 1); };
 const mgrWeekStart = () => { const t = isoDate(new Date()); return mgr.week || addDays(t, -dowOf(t)); };
 async function mgrKids(){          // the children's names: the manager reads the roster with her own sign-in
@@ -21,7 +21,6 @@ async function mgrRender(t, body){
   if(t === 'timetable') return mgrTimetable(body);
   if(t === 'kids') return mgrKidsTab(body);
   if(t === 'chats') return mgrChats(body);
-  if(t === 'msgs') return mgrMessages(body);
   return mgrHome(body);
 }
 // ---- home: the current week (Sunday–Saturday, Guy: "השבוע הנוכחי"), the timetable of the week, and the ways in
@@ -29,21 +28,19 @@ async function mgrHome(body){
   const st = portalLoad(), start = mgrWeekStart(), days = Array.from({ length:7 }, (_, i) => addDays(start, i)), mk = monthKeyOf(start), m = portalMonth(mk);
   const thisWeek = start === addDays(isoDate(new Date()), -dowOf(isoDate(new Date())));
   const fixed = await sbPersonal.from('timetable_fixed').select('weekday,items'), daily = await sbPersonal.from('timetable_day').select('day,items').gte('day', days[0]).lte('day', days[6]);
-  const unread = await mgrUnreadCount();
   if(!body.isConnected) return;
   const ttOf = d => ((daily.data || []).find(x => x.day === d) || (fixed.data || []).find(x => x.weekday === dowOf(d)) || {}).items || [];
   const wk = mcalWeekOfDay(mk, start < mk + '-01' ? mk + '-01' : start);
   const group = String((st.waMsg || {}).group || '').trim();
   body.innerHTML = `
-    <div class="mcal-weeknav mgr-weeknav"><button type="button" class="mcal-wk" data-mw="-7" aria-label="השבוע הקודם">›</button><b>${thisWeek ? 'השבוע הנוכחי' : 'שבוע'} ${mgrShort(days[0])}–${mgrShort(days[6])}</b><button type="button" class="mcal-wk" data-mw="7" aria-label="השבוע הבא">‹</button></div>
+    <div class="mcal-weeknav mgr-weeknav"><button type="button" class="mcal-wk" data-mw="-7" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>${thisWeek ? 'השבוע הנוכחי' : 'שבוע'} ${mgrShort(days[0])}–${mgrShort(days[6])}</b><button type="button" class="mcal-wk" data-mw="7" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>
     <div class="mgr-links">
-      <button type="button" class="btn ghost" data-mgo="chats">שיחות${unread ? ` <span class="pcount">${unread}</span>` : ''}</button>
-      <button type="button" class="btn ghost" data-mgo="msgs">הודעה לצוות</button>
       <button type="button" class="btn ghost" data-mgo="kids">תוכניות הילדים</button>
       ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת הצוות</span></a>` : ''}
     </div>
+    <details class="pfold" data-fold="m-msg"${openFold('m-msg') ? ' open' : ''}><summary><span>הודעה לצוות</span></summary><div class="pfold-body" id="mgr-msgs"><div class="pnote">רק רגע...</div></div></details>
     <details class="pfold" data-fold="m-sched" open><summary><span>סידור העבודה השבוע</span></summary><div class="pfold-body">
-      ${m.published ? monthCalHtml(portalCtx(mk), m.assignments, { week:wk, rows:true }) : '<div class="pnote">הסידור של החודש עוד לא פורסם.</div>'}
+      ${m.published ? monthCalHtml(portalCtx(mk), m.assignments, { week:wk, rows:true, othersInCells:true }) : '<div class="pnote">הסידור של החודש עוד לא פורסם.</div>'}
     </div></details>
     <details class="pfold" data-fold="m-tt" open><summary><span>הלו"ז השבוע</span></summary><div class="pfold-body mgr-tt">
       ${days.map(d => `<div class="mcal-wrow${d === isoDate(new Date()) ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(d)]}</b><span>${mgrShort(d)}</span></div><div class="mgr-tt-day">${ttOf(d).length ? ttOf(d).map(x => `<span class="mgr-tt-item"><bdi dir="ltr">${pEsc(x.t || '')}</bdi> ${pEsc(x.n || '')}</span>`).join('') : '<span class="pnote">—</span>'}</div></div>`).join('')}
@@ -51,18 +48,19 @@ async function mgrHome(body){
   body.querySelectorAll('[data-mw]').forEach(b => b.addEventListener('click', () => { mgr.week = addDays(mgrWeekStart(), +b.dataset.mw); const nm = monthKeyOf(mgr.week); if(nm !== portalUi.month){ portalUi.month = nm; } mgrHome(body); }));
   body.querySelectorAll('[data-mgo]').forEach(b => b.addEventListener('click', () => showPortal(b.dataset.mgo)));
   wireFolds(body);
+  mgrMessages(body.querySelector('#mgr-msgs'));
 }
 // ---- the schedule: read only, a week at first
 function mgrSchedule(body){
   const mk = portalUi.month || (portalUi.month = monthKeyOf(isoDate(new Date()))), m = portalMonth(mk), today = isoDate(new Date());
   const wk = portalUi.mgrMonthView ? null : portalUi.mgrWeekMk === mk ? portalUi.mgrWeek : mk === monthKeyOf(today) ? mcalWeekOfDay(mk, today) : 0;
-  body.innerHTML = `${monthNavHtml(mk)}<div class="pnote">צפייה בלבד.</div>${m.published ? mcalViewBarHtml(mk, wk, 'mgr-viewbar') + monthCalHtml(portalCtx(mk), m.assignments, { week:wk === null ? undefined : wk, rows:true }) : '<div class="pnote">הסידור של החודש עוד לא פורסם.</div>'}`;
+  body.innerHTML = `${monthNavHtml(mk)}<div class="pnote">צפייה בלבד.</div>${m.published ? mcalViewBarHtml(mk, wk, 'mgr-viewbar') + monthCalHtml(portalCtx(mk), m.assignments, { week:wk === null ? undefined : wk, rows:true, othersInCells:true }) : '<div class="pnote">הסידור של החודש עוד לא פורסם.</div>'}`;
   wireMonthNav(body);
   mcalViewBarWire(body, 'mgr-viewbar', mk, () => wk, (mm, w) => { portalUi.mgrMonthView = w === null; portalUi.mgrWeek = w; portalUi.mgrWeekMk = mm; portalUi.month = mm; }, () => portalRefresh());
 }
 // ---- the general timetable: the same editor as the ahmash control; the database tells the coordinator about her changes
 async function mgrTimetable(body){
-  body.innerHTML = '<div class="pnote">שינוי שלך בלו"ז נשמר מיד, והרכזת מקבלת על כך הודעה בפורטל.</div><div id="mgr-tt"><div class="pnote">רק רגע...</div></div>';
+  body.innerHTML = '<div class="pnote">זה הלו"ז שמוצג לילדים במסך הילדים (בטלוויזיה). שינוי נשמר בלחיצה על "שמירה", מופיע במסך הילדים תוך רגע, והרכזת מקבלת על כך הודעה בפורטל.</div><div id="mgr-tt"><div class="pnote">רק רגע...</div></div>';
   try { await ctlTimetable(body.querySelector('#mgr-tt')); } catch(e){ body.querySelector('#mgr-tt').innerHTML = '<div class="pstatus bad">הלו"ז לא נטען. אפשר לנסות שוב.</div>'; }
 }
 // ---- the children: a short summary of each plan, the full plan and the diary read only; opening the detail is logged
@@ -73,9 +71,9 @@ async function mgrKidsTab(body){
   if(!body.isConnected) return;
   const plan = id => (pl.data || []).find(p => p.child_id === id), upcoming = id => (ev.data || []).filter(e => e.child_id === id).length;
   body.innerHTML = `<div class="pnote">קריאה בלבד. פתיחת פירוט נרשמת.</div><div class="mgr-kids">${kids.map(c => { const p = plan(c.id), goals = p && p.published && Array.isArray(p.published.goals) ? p.published.goals : [];
-    return `<div class="card mgr-kid"><div class="mgr-kid-h"><b class="ar-keep">${pEsc(displayName(c))}</b>${p && p.published ? `<small>תוכנית פורסמה${p.published_at ? ' ' + mgrShort(String(p.published_at).slice(0, 10)) : ''}</small>` : '<small>אין תוכנית מפורסמת</small>'}</div>
+    return `<details class="pfold mgr-kid"><summary><span class="ar-keep">${pEsc(displayName(c))}</span>${p && p.published ? `<small>תוכנית פורסמה${p.published_at ? ' ' + mgrShort(String(p.published_at).slice(0, 10)) : ''}</small>` : '<small>אין תוכנית מפורסמת</small>'}</summary><div class="pfold-body">
       ${goals.length ? `<ul class="mgr-goals">${goals.slice(0, 3).map(g => `<li>${pEsc(g.title || g.text || '')}</li>`).join('')}${goals.length > 3 ? `<li class="pnote">ועוד ${goals.length - 3}</li>` : ''}</ul>` : ''}
-      <div class="mgr-kid-acts">${p && p.published ? `<button type="button" class="btn ghost small" data-mk-plan="${pEsc(c.id)}">פירוט התוכנית</button>` : ''}<button type="button" class="btn ghost small" data-mk-diary="${pEsc(c.id)}">יומן${upcoming(c.id) ? ` (${upcoming(c.id)})` : ''}</button></div></div>`; }).join('') || '<div class="pnote">אין ילדים ברשימה.</div>'}</div>`;
+      <div class="mgr-kid-acts">${p && p.published ? `<button type="button" class="btn ghost small" data-mk-plan="${pEsc(c.id)}">פירוט התוכנית</button>` : ''}<button type="button" class="btn ghost small" data-mk-diary="${pEsc(c.id)}">יומן${upcoming(c.id) ? ` (${upcoming(c.id)})` : ''}</button></div></div></details>`; }).join('') || '<div class="pnote">אין ילדים ברשימה.</div>'}</div>`;
   body.querySelectorAll('[data-mk-plan]').forEach(b => b.addEventListener('click', async () => {
     const id = b.dataset.mkPlan, p = plan(id);
     await sbPersonal.from('therapy_access').insert({ child_id:id, what:'פירוט תוכנית (מנהלת)' });          // (logged before it opens)
@@ -93,13 +91,6 @@ async function mgrKidsTab(body){
   }));
 }
 // ---- conversations (one-to-one or groups) with the coordinator and the social workers
-async function mgrUnreadCount(){
-  try {
-    const mem = await sbPersonal.from('conv_member').select('conv_id,last_read').eq('staff_id', srv.me); if(mem.error) return 0;
-    let n = 0; for(const x of mem.data || []){ let q = sbPersonal.from('conv_msg').select('id', { count:'exact', head:true }).eq('conv_id', x.conv_id).neq('from_staff', srv.me); if(x.last_read) q = q.gt('at', x.last_read); const r = await q; n += r.count || 0; }
-    return n;
-  } catch(e){ return 0; }
-}
 async function mgrChats(body){
   const [mem, staff] = await Promise.all([sbPersonal.from('conv_member').select('conv_id,last_read,staff_id'), sbPersonal.from('staff').select('id,display_name,kind,active')]);
   if(!body.isConnected) return;
@@ -112,11 +103,13 @@ async function mgrChats(body){
   const members = id => (mem.data || []).filter(x => x.conv_id === id && x.staff_id !== srv.me).map(x => names[x.staff_id] || '?');
   const myRead = id => ((mem.data || []).find(x => x.conv_id === id && x.staff_id === srv.me) || {}).last_read;
   if(mgr.conv && convs.some(c => c.id === mgr.conv)) return mgrThread(body, convs.find(c => c.id === mgr.conv), names, members(mgr.conv));
+  const forMe = !mgrIsMe();          // (the coordinator and the social workers: the messages to them first)
   convs.sort((a, b) => String((last[b.id] || {}).at || b.created_at).localeCompare(String((last[a.id] || {}).at || a.created_at)));
-  body.innerHTML = `<div class="mgr-chat-top"><button type="button" class="btn small" id="mc-new">+ שיחה חדשה</button></div>
+  body.innerHTML = `${forMe ? '<div id="mgr-inbox"></div>' : ''}<div class="mgr-chat-top"><button type="button" class="btn small" id="mc-new">+ שיחה חדשה</button></div>
     ${convs.length ? convs.map(c => { const l = last[c.id], fresh = l && l.from_staff !== srv.me && (!myRead(c.id) || l.at > myRead(c.id));
       return `<button type="button" class="card mgr-conv${fresh ? ' fresh' : ''}" data-mc="${c.id}"><b>${pEsc(c.title || members(c.id).join(', '))}</b>${c.child_id ? `<small>בנושא: <span class="ar-keep">${pEsc(dgName(c.child_id))}</span></small>` : ''}<small>${l ? pEsc((names[l.from_staff] || '') + ': ' + l.text.slice(0, 80)) : 'אין הודעות עדיין'}</small></button>`; }).join('') : '<div class="pnote">אין שיחות עדיין.</div>'}`;
   body.querySelectorAll('[data-mc]').forEach(b => b.addEventListener('click', () => { mgr.conv = b.dataset.mc; mgrChats(body); }));
+  if(forMe) mgrMsgsForMe(body.querySelector('#mgr-inbox'));
   body.querySelector('#mc-new').addEventListener('click', async () => {
     const people = (staff.data || []).filter(s => s.active && s.id !== srv.me && ['coordinator', 'therapist', 'manager', 'admin'].includes(s.kind));
     const kids = await mgrKids();
@@ -151,39 +144,77 @@ async function mgrThread(body, c, names, others){
     mgrThread(body, c, names, others);
   });
 }
-// ---- messages to the staff: everybody or chosen people; the portal only or also e-mail; seen and "קראתי" apart
+// ---- messages to the staff (in the home tab): how first ("בפורטל / במייל / בשניהם", "קראתי"), then to whom — the whole staff by groups,
+// or some of it: every ahmash and/or names from a folded list (Guy 2026-11-03). Seen and "קראתי" apart.
+const MGR_GROUPS = [['guide', 'צוות ההדרכה', s => s.kind === 'instructor'], ['service', 'בנות שירות', s => s.kind === 'service'], ['lead', 'הצוות המוביל', s => ['coordinator', 'therapist'].includes(s.kind)]];          // (the leading staff: the coordinator and the social workers, for now)
+const MGR_VIA = [['portal', 'בפורטל'], ['email', 'במייל'], ['both', 'בשניהם']];
 async function mgrMessages(body){
+  if(!body) return;
   const [an, staff] = await Promise.all([sbPersonal.from('announcements').select('id,created_at,text,via,audience,need_ack,from_staff').eq('from_staff', srv.me).order('created_at', { ascending:false }).limit(20), sbPersonal.from('staff').select('id,display_name,kind,active')]);
   if(!body.isConnected) return;
   if(an.error){ body.innerHTML = '<div class="pstatus bad">ההודעות לצוות עוד לא זמינות כאן (חסר עדכון במסד: scheduling-v52.sql).</div>'; return; }
   const ids = (an.data || []).map(a => a.id), reads = ids.length ? ((await sbPersonal.from('announcement_read').select('ann_id,staff_id,seen_at,ack_at').in('ann_id', ids)).data || []) : [];
   const names = {}; (staff.data || []).forEach(s => { names[s.id] = s.display_name; });
-  const team = (staff.data || []).filter(s => s.active && ['instructor', 'service', 'teacher'].includes(s.kind)).sort((a, b) => a.display_name.localeCompare(b.display_name, 'he'));
+  const active = (staff.data || []).filter(s => s.active && s.id !== srv.me).sort((a, b) => a.display_name.localeCompare(b.display_name, 'he'));
+  const people = active.filter(s => ['instructor', 'service', 'teacher', 'coordinator', 'therapist'].includes(s.kind));
+  const team = active.filter(s => ['instructor', 'service', 'teacher'].includes(s.kind));
   const to = a => a.audience ? a.audience : team.map(s => s.id);
-  body.innerHTML = `<div class="card mgr-new-msg"><h3 class="psec">הודעה חדשה לצוות</h3>
+  body.innerHTML = `<div class="mgr-new-msg">
       <textarea id="mm-text" rows="3" maxlength="1500" placeholder="מה רוצים לומר?"></textarea>
-      <div class="mx-seg mgr-seg" role="group" aria-label="למי"><button type="button" data-mm-to="all" aria-pressed="true">לכל הצוות</button><button type="button" data-mm-to="some" aria-pressed="false">לחלק מהצוות</button></div>
-      <div class="pchoice wrap mm-people" hidden>${team.map(s => `<button type="button" data-mmp="${s.id}" aria-pressed="false">${pEsc(s.display_name)}</button>`).join('')}</div>
-      <div class="mx-seg mgr-seg" role="group" aria-label="איך"><button type="button" data-mm-via="portal" aria-pressed="true">בפורטל</button><button type="button" data-mm-via="both" aria-pressed="false">בפורטל ובמייל</button></div>
+      <div class="mx-seg mgr-seg" role="group" aria-label="איך">${MGR_VIA.map(([k, w], i) => `<button type="button" data-mm-via="${k}" aria-pressed="${i === 0}">${w}</button>`).join('')}</div>
       <label class="oc-ordered"><input type="checkbox" id="mm-ack"> לבקש אישור "קראתי"</label>
+      <div class="mx-seg mgr-seg" role="group" aria-label="למי"><button type="button" data-mm-to="all" aria-pressed="true">לכל הצוות</button><button type="button" data-mm-to="some" aria-pressed="false">לחלק מהצוות</button></div>
+      <div class="mm-groups">${MGR_GROUPS.map(([k, w], i) => `<label class="oc-ordered"><input type="checkbox" data-mm-grp="${k}"${i === 0 ? ' checked' : ''}> ${w}</label>`).join('')}</div>
+      <div class="mm-some" hidden>
+        <label class="oc-ordered"><input type="checkbox" id="mm-ahm"> כל האחמ"שים</label>
+        <details class="pfold mm-names"><summary><span>בחירת שמות</span><small id="mm-n"></small></summary><div class="pfold-body mm-list">${people.map(s => `<label class="oc-ordered"><input type="checkbox" data-mmp="${s.id}"> ${pEsc(s.display_name)}</label>`).join('')}</div></details>
+      </div>
       <button type="button" class="btn" id="mm-send">שליחה</button></div>
     <h3 class="psec">ההודעות ששלחת</h3>
     ${(an.data || []).map(a => { const list = to(a), rs = reads.filter(r => r.ann_id === a.id), seen = rs.filter(r => r.seen_at), ack = rs.filter(r => r.ack_at);
       return `<details class="pfold mgr-sent"><summary><span>${pEsc(a.text.slice(0, 60))}${a.text.length > 60 ? '…' : ''}</span><small>ראו ${seen.length}/${list.length}${a.need_ack ? ` · קראתי ${ack.length}/${list.length}` : ''}</small></summary><div class="pfold-body">
-        <div class="pnote">${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${a.via === 'portal' ? 'בפורטל' : 'בפורטל ובמייל'} · ${a.audience ? 'לחלק מהצוות' : 'לכל הצוות'}</div>
+        <div class="pnote">${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${(MGR_VIA.find(v => v[0] === a.via) || MGR_VIA[0])[1]} · ${a.audience ? `ל-${a.audience.length} אנשים` : 'לכל הצוות'}</div>
         <div>${pEsc(a.text)}</div>
         <ul class="mgr-readers">${list.map(id => { const r = rs.find(x => x.staff_id === id); return `<li><span>${pEsc(names[id] || '?')}</span><small>${r && r.ack_at ? 'קראתי ✓' : r ? 'ראה/תה' : 'עוד לא'}</small></li>`; }).join('')}</ul></div></details>`; }).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
   let toAll = true, via = 'portal';
-  body.querySelectorAll('[data-mm-to]').forEach(b => b.addEventListener('click', () => { toAll = b.dataset.mmTo === 'all'; body.querySelectorAll('[data-mm-to]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); body.querySelector('.mm-people').hidden = toAll; }));
-  body.querySelectorAll('[data-mmp]').forEach(x => x.addEventListener('click', () => { const on = x.getAttribute('aria-pressed') !== 'true'; x.setAttribute('aria-pressed', String(on)); x.classList.toggle('on', on); }));
+  const $ = q => body.querySelector(q);
+  const chosen = () => {
+    if(toAll){ const g = [...body.querySelectorAll('[data-mm-grp]:checked')].map(x => x.dataset.mmGrp); return active.filter(s => MGR_GROUPS.some(([k, , f]) => g.includes(k) && f(s))).map(s => s.id); }
+    const set = new Set([...body.querySelectorAll('[data-mmp]:checked')].map(x => x.dataset.mmp));
+    if($('#mm-ahm').checked) active.filter(s => (srv.ahmash || {})[s.id] > 0).forEach(s => set.add(s.id));
+    return [...set];
+  };
+  const count = () => { const n = body.querySelectorAll('[data-mmp]:checked').length; $('#mm-n').textContent = n ? `נבחרו ${n}` : ''; };
+  body.querySelectorAll('[data-mm-to]').forEach(b => b.addEventListener('click', () => { toAll = b.dataset.mmTo === 'all'; body.querySelectorAll('[data-mm-to]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); $('.mm-groups').hidden = !toAll; $('.mm-some').hidden = toAll; }));
+  body.querySelectorAll('[data-mmp]').forEach(x => x.addEventListener('change', count));
   body.querySelectorAll('[data-mm-via]').forEach(b => b.addEventListener('click', () => { via = b.dataset.mmVia; body.querySelectorAll('[data-mm-via]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
-  body.querySelector('#mm-send').addEventListener('click', async () => {
-    const text = body.querySelector('#mm-text').value.trim(), who = [...body.querySelectorAll('[data-mmp][aria-pressed=true]')].map(x => x.dataset.mmp);
+  wireFolds(body);
+  $('#mm-send').addEventListener('click', async () => {
+    const text = $('#mm-text').value.trim(), who = chosen();
     if(!text){ toast('כתבו את ההודעה'); return; }
-    if(!toAll && !who.length){ toast('בחרו למי'); return; }
-    if(!(await confirmSheet({ title:'לשלוח את ההודעה?', text:`${toAll ? 'לכל הצוות' : `ל-${who.length} אנשים`}, ${via === 'portal' ? 'בפורטל' : 'בפורטל ובמייל'}.`, okLabel:'שליחה', cancelLabel:'חזרה' }))) return;
-    const r = await sbPersonal.rpc('post_staff_message', { p_text:text, p_via:via, p_to:toAll ? null : who, p_need_ack:body.querySelector('#mm-ack').checked });
+    if(!who.length){ toast('בחרו למי'); return; }
+    if(!(await confirmSheet({ title:'לשלוח את ההודעה?', text:`ל-${who.length} אנשים, ${(MGR_VIA.find(v => v[0] === via) || MGR_VIA[0])[1]}.`, okLabel:'שליחה', cancelLabel:'חזרה' }))) return;
+    const r = await sbPersonal.rpc('post_staff_message', { p_text:text, p_via:via, p_to:who, p_need_ack:$('#mm-ack').checked });
     if(r.error){ toast('לא נשלח'); return; }
     toast('נשלח'); mgrMessages(body);
   });
+}
+// the messages to me (the leading staff: the coordinator, the social workers): above their conversations, seen when shown, "קראתי" by a tap
+async function mgrMsgsForMe(box){
+  if(!box || !srv.me) return;
+  const r = await sbPersonal.from('announcements').select('id,created_at,text,need_ack,from_staff').contains('audience', [srv.me]).neq('from_staff', srv.me).gte('created_at', addDays(isoDate(new Date()), -30) + 'T00:00:00').order('created_at', { ascending:false }).limit(10);
+  if(!box.isConnected) return;
+  if(r.error || !(r.data || []).length){ box.innerHTML = ''; return; }
+  const rd = await sbPersonal.from('announcement_read').select('ann_id,ack_at').eq('staff_id', srv.me).in('ann_id', r.data.map(a => a.id));
+  if(!box.isConnected) return;
+  const mine = rd.data || [], seen = id => mine.some(x => x.ann_id === id), acked = id => mine.some(x => x.ann_id === id && x.ack_at);
+  const fresh = r.data.filter(a => !seen(a.id)), waiting = r.data.filter(a => a.need_ack && !acked(a.id));
+  box.innerHTML = `<details class="pfold mgr-inbox"${fresh.length || waiting.length ? ' open' : ''}><summary><span>הודעות אלייך</span>${fresh.length + waiting.length ? `<span class="pcount">${new Set(fresh.concat(waiting)).size}</span>` : ''}</summary><div class="pfold-body">
+    ${r.data.map(a => `<div class="pannounce"><small>${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })}</small><div>${pEsc(a.text)}</div>${a.need_ack ? (acked(a.id) ? '<small>קראתי ✓</small>' : `<button type="button" class="btn small" data-mack="${a.id}">קראתי</button>`) : ''}</div>`).join('')}</div></details>`;
+  if(fresh.length) sbPersonal.from('announcement_read').upsert(fresh.map(a => ({ ann_id:a.id, staff_id:srv.me })), { onConflict:'ann_id,staff_id', ignoreDuplicates:true }).then(() => {}, () => {});
+  box.querySelectorAll('[data-mack]').forEach(b => b.addEventListener('click', async () => {
+    const w = await sbPersonal.from('announcement_read').upsert({ ann_id:b.dataset.mack, staff_id:srv.me, ack_at:new Date().toISOString() });
+    if(w.error){ toast('לא נשמר. אפשר לנסות שוב.'); return; }
+    mgrMsgsForMe(box);
+  }));
 }

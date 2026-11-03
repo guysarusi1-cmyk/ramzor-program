@@ -329,7 +329,7 @@ function mcalWeekLabel(mk, w){
 }
 function mcalViewBarHtml(mk, week, id){          // "חודש | שבוע" and, in the weekly view, the week with ‹ ›
   const isW = Number.isInteger(week);
-  return `<div class="mcal-viewbar" id="${id}"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-mview="month" aria-pressed="${!isW}">חודש</button><button type="button" data-mview="week" aria-pressed="${isW}">שבוע</button></div>${isW ? `<div class="mcal-weeknav"><button type="button" class="mcal-wk" data-mwk="-1" aria-label="השבוע הקודם">›</button><b>שבוע ${pEsc(mcalWeekLabel(mk, week))}</b><button type="button" class="mcal-wk" data-mwk="1" aria-label="השבוע הבא">‹</button></div>` : ''}</div>`;
+  return `<div class="mcal-viewbar" id="${id}"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-mview="week" aria-pressed="${isW}">שבוע</button><button type="button" data-mview="month" aria-pressed="${!isW}">חודש</button></div>${isW ? `<div class="mcal-weeknav"><button type="button" class="mcal-wk" data-mwk="-1" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>שבוע ${pEsc(mcalWeekLabel(mk, week))}</b><button type="button" class="mcal-wk" data-mwk="1" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>` : ''}</div>`;
 }
 // wires the bar: get() / set(month, week|null) keep the screen's own state; redraw() draws it again
 function mcalViewBarWire(root, id, mk, get, set, redraw){
