@@ -16,6 +16,7 @@ const ocWeekendKey = fri => 'w:' + fri;
 const ocShort = iso => { const t = parseIso(iso); return t.getDate() + '/' + (t.getMonth() + 1); };
 const ocShiftWord = s => (typeof SRV_SHIFT_WORD !== 'undefined' && SRV_SHIFT_WORD[s]) || s;
 const ocHours = r => r.from_time && r.to_time ? `${String(r.from_time).slice(0, 5)}–${String(r.to_time).slice(0, 5)}` : OC_STD_HOURS[r.shift] || '';
+const ocTripTime = (r, dir) => { const h = ocHours(r).match(/^(\d\d:\d\d)–(\d\d:\d\d)$/); return h ? (dir === 'in' ? h[1] : h[2]) : ''; };          // (arrival = the shift's start, return = its end)
 const ocInWindow = (day, shift) => { const d = dowOf(day); return d === 4 ? shift === 'N' : d === 5 || d === 6 ? true : d === 0 ? ['M', 'S'].includes(shift) : false; };          // (= public.oncall_in_window)
 
 // the periods to choose from: this weekend and the next three, and the holidays the admin set
@@ -66,6 +67,11 @@ async function renderOncall(box){
   if(!box.isConnected) return;
   if(d.error){ box.innerHTML = '<div class="pstatus bad">הכוננית עוד לא זמינה כאן (חסר עדכון במסד: scheduling-v50.sql).</div>'; return; }
   oc.data = d;
+  ocPaint(box, d);
+}
+// the panel drawn from the data in hand — a tap changes it at once, without waiting for the database (Guy 2026-11-03: "יש דיליי")
+function ocPaint(box, d){
+  if(!box.isConnected) return;
   const p = d.period, me = srv.me, nm = id => (d.names[id] || {}).display_name || '?';
   const listDays = p.kind === 'weekend' ? [p.from_day, addDays(p.from_day, 1)] : (() => { const a = []; for(let x = p.from_day; x <= p.to_day; x = addDays(x, 1)) a.push(x); return a; })();
   const list = d.rows.filter(r => listDays.includes(r.day)).sort((a, b) => (a.day + OC_SHIFT_ORDER[a.shift]).localeCompare(b.day + OC_SHIFT_ORDER[b.shift]) || nm(a.staff_id).localeCompare(nm(b.staff_id), 'he'));
@@ -73,12 +79,12 @@ async function renderOncall(box){
   const groups = []; list.forEach(r => { const k = r.day + '|' + r.shift; let g = groups.find(x => x.k === k); if(!g){ g = { k, day:r.day, shift:r.shift, rows:[] }; groups.push(g); } g.rows.push(r); });
   groups.forEach(g => { const n = {}; g.rows.forEach(r => { n[ocHours(r)] = (n[ocHours(r)] || 0) + 1; }); g.hours = Object.keys(n).sort((a, b) => n[b] - n[a])[0] || ''; });          // (the hours most of them have: written once; somebody else's own hours by her name)
   const mine = d.events.filter(e => !e.seen && (e.for_staff === me || (!e.for_staff && p.active_staff === me)));
-  const dirHtml = (r, dir) => { const t = tripOf(r, dir), k = `${r.staff_id}|${r.day}|${r.shift}|${dir}`, w = dir === 'in' ? 'הגעה' : 'חזרה';
+  const dirHtml = (r, dir) => { const t = tripOf(r, dir), k = `${r.staff_id}|${r.day}|${r.shift}|${dir}`, w = dir === 'in' ? 'הגעה' : 'חזרה', tm = t.at_time || ocTripTime(r, dir);
     return `<details class="oc-d${t.need === 'need' ? ' need' : ''}" data-oc-trip="${k}"${portalUi.fold['oc:' + k] ? ' open' : ''}><summary><span class="oc-d-lbl">${w}</span>
         <span class="mx-seg oc-need" role="group" aria-label="${w}: מונית">${OC_NEED.map(([v, x]) => `<button type="button" data-oc-need="${v}" aria-pressed="${t.need === v}">${x}</button>`).join('')}</span>
         ${t.need === 'need' ? `<button type="button" class="oc-ordered-btn" data-oc-ordered aria-pressed="${!!t.ordered}">${t.ordered ? '✓ ' : ''}המונית הוזמנה</button>` : ''}
-        <span class="oc-d-more">${(() => { const pl = t.place || d.addr[r.staff_id] || '', x = [t.at_time, pl].filter(Boolean).join(' · '); return x ? pEsc(x.length > 28 ? x.slice(0, 27) + '…' : x) : 'שעה וכתובת'; })()} <i aria-hidden="true">▾</i></span></summary>
-      <div class="oc-d-body"><label class="oc-field"><span>שעה</span><input type="text" inputmode="numeric" maxlength="20" data-oc-time value="${pEsc(t.at_time || '')}" placeholder="למשל 06:30"></label>
+        <span class="oc-d-more">${(() => { const pl = t.place || d.addr[r.staff_id] || '', x = [tm, pl].filter(Boolean).join(' · '); return x ? pEsc(x.length > 28 ? x.slice(0, 27) + '…' : x) : 'שעה וכתובת'; })()} <i aria-hidden="true">▾</i></span></summary>
+      <div class="oc-d-body"><label class="oc-field"><span>שעה</span><input type="text" inputmode="numeric" maxlength="20" data-oc-time value="${pEsc(tm)}" placeholder="למשל 06:30"></label>
         <label class="oc-field"><span>כתובת</span><input type="text" maxlength="120" data-oc-place value="${pEsc(t.place || d.addr[r.staff_id] || '')}"></label></div></details>`; };
   // the schedule: the month, a week at first (the weekend's week)
   const mk = monthKeyOf(p.from_day), days = daysOfMonth(mk), wk = oc.monthView ? null : (Number.isInteger(oc.week) && oc.weekMk === mk ? oc.week : mcalWeekOfDay(mk, p.from_day));
@@ -109,7 +115,7 @@ async function renderOncall(box){
 }
 
 function ocWire(box, d){
-  const p = d.period, nm = id => (d.names[id] || {}).display_name || '?', again = () => renderOncall(box);
+  const p = d.period, nm = id => (d.names[id] || {}).display_name || '?', again = () => renderOncall(box), paint = () => ocPaint(box, d);
   box.querySelectorAll('details[data-fold]').forEach(x => x.addEventListener('toggle', () => { portalUi.fold[x.dataset.fold] = x.open; }));
   box.querySelectorAll('[data-oc-period]').forEach(b => b.addEventListener('click', () => { oc.key = b.dataset.ocPeriod; oc.week = null; again(); }));
   box.querySelectorAll('[data-oc-view]').forEach(b => b.addEventListener('click', () => { oc.view = b.dataset.ocView; again(); }));
@@ -140,9 +146,19 @@ function ocWire(box, d){
     const cur = d.trips.find(t => t.staff_id === staff_id && t.day === day && t.shift === shift && t.dir === dir) || { need:'pending', at_time:null, place:null, ordered:false };
     const row = Object.assign({ period_key:p.key, staff_id, day, shift, dir, need:cur.need, at_time:cur.at_time, place:cur.place, ordered:cur.ordered }, patch, { updated_by:srv.me, updated_at:new Date().toISOString() });
     const r = await sbPersonal.from('oncall_trip').upsert(row);
-    if(r.error){ toast('לא נשמר. אפשר לנסות שוב.'); return; }
+    if(r.error){ toast('לא נשמר. אפשר לנסות שוב.'); return false; }
     Object.assign(cur, row); if(!d.trips.includes(cur)) d.trips.push(cur);
-    await ocTell(p, `${nm(staff_id)} · ${ocShort(day)} ${ocShiftWord(shift)} · ${dir === 'in' ? 'הגעה' : 'חזרה'}: ${words}`);
+    ocTell(p, `${nm(staff_id)} · ${ocShort(day)} ${ocShiftWord(shift)} · ${dir === 'in' ? 'הגעה' : 'חזרה'}: ${words}`);          // (the note for the active on-call: behind, not waited for)
+    return true;
+  };
+  // a choice is shown at once; if the database refuses it, the screen goes back to what it was
+  const quick = async (wrap, patch, words) => {
+    const [staff_id, day, shift, dir] = wrap.dataset.ocTrip.split('|');
+    let cur = d.trips.find(t => t.staff_id === staff_id && t.day === day && t.shift === shift && t.dir === dir);
+    const before = cur ? Object.assign({}, cur) : null;
+    if(!cur){ cur = { staff_id, day, shift, dir, need:'pending', at_time:null, place:null, ordered:false }; d.trips.push(cur); }
+    Object.assign(cur, patch); paint();
+    if(!(await saveTrip(wrap, patch, words))){ if(before) Object.assign(cur, before); else d.trips.splice(d.trips.indexOf(cur), 1); paint(); }
   };
   box.querySelectorAll('[data-oc-trip]').forEach(w => {
     const k = w.dataset.ocTrip, staff = k.split('|')[0];
@@ -150,11 +166,11 @@ function ocWire(box, d){
     w.querySelectorAll('[data-oc-need]').forEach(b => b.addEventListener('click', async e => {
       e.preventDefault(); e.stopPropagation();          // (a choice in the folded line: not opening it)
       const cur = b.getAttribute('aria-pressed') === 'true', v = cur ? 'pending' : b.dataset.ocNeed;          // (pressed again: back to nothing marked)
-      await saveTrip(w, Object.assign({ need:v }, v !== 'need' ? { ordered:false } : {}), v === 'pending' ? 'הסימון הוסר' : (OC_NEED.find(n => n[0] === v) || [])[1] === 'צריך' ? 'צריך מונית' : 'לא צריך מונית');
-      again();
+      quick(w, Object.assign({ need:v }, v !== 'need' ? { ordered:false } : {}), v === 'pending' ? 'הסימון הוסר' : v === 'need' ? 'צריך מונית' : 'לא צריך מונית');
     }));
     const t = w.querySelector('[data-oc-time]'), pl = w.querySelector('[data-oc-place]'), o = w.querySelector('[data-oc-ordered]');
-    t.addEventListener('change', () => saveTrip(w, { at_time:t.value.trim() || null }, `שעה ${t.value.trim() || '—'}`));
+    t.addEventListener('change', () => { const r0 = d.rows.find(x => x.staff_id === staff && x.day === k.split('|')[1] && x.shift === k.split('|')[2]), v = t.value.trim(), dflt = r0 ? ocTripTime(r0, k.split('|')[3]) : '';
+      quick(w, { at_time:v && v !== dflt ? v : null }, `שעה ${v || '—'}`); });
     pl.addEventListener('change', async () => {
       const v = pl.value.trim(), fixed = d.addr[staff] || '';
       await saveTrip(w, { place:v && v !== fixed ? v : null }, `כתובת ${v || '—'}`);
@@ -168,7 +184,7 @@ function ocWire(box, d){
     if(o) o.addEventListener('click', async e => {
       e.preventDefault(); e.stopPropagation();
       const on = o.getAttribute('aria-pressed') !== 'true';
-      await saveTrip(w, { ordered:on }, on ? 'המונית הוזמנה' : 'סימון "הוזמנה" הוסר'); again();
+      quick(w, { ordered:on }, on ? 'המונית הוזמנה' : 'סימון "הוזמנה" הוסר');
     });
   });
   // the schedule: add / remove in the weekend window (who may: checked again in the database)
