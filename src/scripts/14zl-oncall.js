@@ -8,8 +8,8 @@
 //   * a change by somebody who is not the active on-call: a message for her inside the panel (no e-mail, no WhatsApp)
 const OC_SHIFT_ORDER = { M:0, S:1, A:2, L:3, N:4 };
 const OC_STD_HOURS = { M:'07:00–15:00', S:'07:00–11:00', A:'14:00–22:00', N:'22:00–08:00', L:'שישי–מוצ"ש' };
-const OC_NEED = [['none', 'לא צריך'], ['pending', 'ממתין לבירור'], ['need', 'צריך מונית']];
-const oc = { key:null, week:null, monthView:false, data:null, busy:false };
+const OC_NEED = [['need', 'צריך'], ['none', 'לא צריך']];          // (nothing marked until somebody chooses: no "ממתין לבירור", Guy 2026-11-03)
+const oc = { key:null, week:null, monthView:false, data:null, busy:false, view:'list' };
 
 const ocFridayOf = iso => { const d = dowOf(iso); return addDays(iso, d === 5 ? 0 : d === 6 ? -1 : (5 - d)); };          // (this coming Friday; on Friday / Saturday — this one)
 const ocWeekendKey = fri => 'w:' + fri;
@@ -29,10 +29,11 @@ function ocPeriodsOf(rows, today){
 
 async function ocLoad(){
   const today = isoDate(new Date()), from = addDays(today, -40), to = addDays(today, 70);
-  const [per, staff, may] = await Promise.all([
+  const [per, staff, may, adr] = await Promise.all([
     sbPersonal.from('oncall_period').select('*').gte('to_day', addDays(today, -7)),
     sbPersonal.from('staff').select('id,display_name,kind,active'),
-    sbPersonal.rpc('oncall_may_assign')]);
+    sbPersonal.rpc('oncall_may_assign'),
+    sbPersonal.from('oncall_address').select('staff_id,address')]);          // (the permanent addresses: scheduling-v56.sql; without it, none)
   if(per.error) return { error:per.error };
   const periods = ocPeriodsOf(per.data, today);
   if(!oc.key || !periods.some(p => p.key === oc.key)) oc.key = periods[0].key;
@@ -43,7 +44,8 @@ async function ocLoad(){
     sbPersonal.from('oncall_trip').select('*').eq('period_key', oc.key),
     sbPersonal.from('oncall_event').select('*').eq('period_key', oc.key).order('at', { ascending:false }).limit(40)]);
   const names = {}; (staff.data || []).forEach(s => { names[s.id] = s; });
-  return { periods, period:p, names, rows:asg.data || [], trips:trips.data || [], events:ev.data || [], may:!may.error && may.data === true, from, to };
+  const addr = {}; (adr.error ? [] : adr.data || []).forEach(a => { addr[a.staff_id] = a.address; });
+  return { periods, period:p, names, rows:asg.data || [], trips:trips.data || [], events:ev.data || [], may:!may.error && may.data === true, from, to, addr, addrOn:!adr.error };
 }
 
 async function ocEnsurePeriod(p){          // a weekend's row is made the first time something is kept for it
@@ -68,13 +70,15 @@ async function renderOncall(box){
   const listDays = p.kind === 'weekend' ? [p.from_day, addDays(p.from_day, 1)] : (() => { const a = []; for(let x = p.from_day; x <= p.to_day; x = addDays(x, 1)) a.push(x); return a; })();
   const list = d.rows.filter(r => listDays.includes(r.day)).sort((a, b) => (a.day + OC_SHIFT_ORDER[a.shift]).localeCompare(b.day + OC_SHIFT_ORDER[b.shift]) || nm(a.staff_id).localeCompare(nm(b.staff_id), 'he'));
   const tripOf = (r, dir) => d.trips.find(t => t.staff_id === r.staff_id && t.day === r.day && t.shift === r.shift && t.dir === dir) || { need:'pending', at_time:'', place:'', ordered:false };
+  const groups = []; list.forEach(r => { const k = r.day + '|' + r.shift; let g = groups.find(x => x.k === k); if(!g){ g = { k, day:r.day, shift:r.shift, rows:[] }; groups.push(g); } g.rows.push(r); });
+  groups.forEach(g => { const n = {}; g.rows.forEach(r => { n[ocHours(r)] = (n[ocHours(r)] || 0) + 1; }); g.hours = Object.keys(n).sort((a, b) => n[b] - n[a])[0] || ''; });          // (the hours most of them have: written once; somebody else's own hours by her name)
   const mine = d.events.filter(e => !e.seen && (e.for_staff === me || (!e.for_staff && p.active_staff === me)));
-  const dirHtml = (r, dir) => { const t = tripOf(r, dir), k = `${r.staff_id}|${r.day}|${r.shift}|${dir}`;
-    return `<div class="oc-dir" data-oc-trip="${k}"><span class="oc-dir-lbl">${dir === 'in' ? 'הגעה' : 'חזרה'}</span>
-      <div class="mx-seg oc-need" role="group" aria-label="${dir === 'in' ? 'הגעה' : 'חזרה'}: מונית">${OC_NEED.map(([v, w]) => `<button type="button" data-oc-need="${v}" aria-pressed="${t.need === v}">${w}</button>`).join('')}</div>
-      <label class="oc-field"><span>שעה</span><input type="text" inputmode="numeric" maxlength="20" data-oc-time value="${pEsc(t.at_time || '')}" placeholder="למשל 06:30"></label>
-      <label class="oc-field"><span>מיקום</span><input type="text" maxlength="120" data-oc-place value="${pEsc(t.place || '')}"></label>
-      <label class="oc-ordered"><input type="checkbox" data-oc-ordered${t.ordered ? ' checked' : ''}> המונית הוזמנה</label></div>`; };
+  const dirHtml = (r, dir) => { const t = tripOf(r, dir), k = `${r.staff_id}|${r.day}|${r.shift}|${dir}`, w = dir === 'in' ? 'הגעה' : 'חזרה';
+    return `<details class="oc-d${t.need === 'need' ? ' need' : ''}" data-oc-trip="${k}"${portalUi.fold['oc:' + k] ? ' open' : ''}><summary><span class="oc-d-lbl">${w}</span>
+        <span class="mx-seg oc-need" role="group" aria-label="${w}: מונית">${OC_NEED.map(([v, x]) => `<button type="button" data-oc-need="${v}" aria-pressed="${t.need === v}">${x}</button>`).join('')}</span>
+        ${t.need === 'need' ? `<button type="button" class="oc-ordered-btn" data-oc-ordered aria-pressed="${!!t.ordered}">${t.ordered ? '✓ ' : ''}המונית הוזמנה</button>` : ''}</summary>
+      <div class="oc-d-body"><label class="oc-field"><span>שעה</span><input type="text" inputmode="numeric" maxlength="20" data-oc-time value="${pEsc(t.at_time || '')}" placeholder="למשל 06:30"></label>
+        <label class="oc-field"><span>כתובת</span><input type="text" maxlength="120" data-oc-place value="${pEsc(t.place || d.addr[r.staff_id] || '')}"></label></div></details>`; };
   // the schedule: the month, a week at first (the weekend's week)
   const mk = monthKeyOf(p.from_day), days = daysOfMonth(mk), wk = oc.monthView ? null : (Number.isInteger(oc.week) && oc.weekMk === mk ? oc.week : mcalWeekOfDay(mk, p.from_day));
   const lead = dowOf(days[0]), shown = wk === null ? days : days.filter((_, i) => Math.floor((lead + i) / 7) === wk);
@@ -89,15 +93,16 @@ async function renderOncall(box){
       : `<div class="oc-active oc-none"><b>לא נבחרה כוננית פעילה</b><button type="button" class="btn small" data-oc-take>אני הכוננית הפעילה</button></div>`}
     ${mine.length ? `<div class="oc-events"><b>שינויים שעשו אחרים</b>${mine.map(e => `<div class="oc-event"><span>${pEsc(e.text)}</span><small>${pEsc(nm(e.by_staff))} · ${new Date(e.at).toLocaleString('he-IL', { day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit' })}</small></div>`).join('')}<button type="button" class="btn ghost small" data-oc-seen>ראיתי</button></div>` : ''}
     ${!p.active_staff && d.events.some(e => !e.for_staff && !e.seen) ? `<div class="pnote">${d.events.filter(e => !e.for_staff && !e.seen).length} שינויים נשמרו לבדיקה של מי שתיקח את הכוננות.</div>` : ''}
-    <details class="pfold" data-fold="oc-list" open><summary><span>עובדי ${p.kind === 'weekend' ? 'סוף השבוע' : 'החג'} ומוניות</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">
-      <div class="pnote">לכל משמרת הגעה וחזרה. מוודאים שעה ומיקום עם כל מדריך בכל סוף שבוע מחדש.</div>
-      ${list.length ? list.map(r => `<div class="oc-person"><div class="oc-who"><b>${pEsc(nm(r.staff_id))}</b><small>${pEsc(DOW_NAMES[dowOf(r.day)])} ${ocShort(r.day)} · ${ocShiftWord(r.shift)} <bdi dir="ltr">${ocHours(r)}</bdi></small></div>${dirHtml(r, 'in')}${dirHtml(r, 'out')}</div>`).join('') : '<div class="pnote">אין עדיין שיבוצים בסידור לתקופה הזו.</div>'}
-    </div></details>
-    <details class="pfold" data-fold="oc-sched"${portalUi.fold['oc-sched'] ? ' open' : ''}><summary><span>סידור העבודה</span></summary><div class="pfold-body">
+    <div class="mx-seg oc-views" role="group" aria-label="תצוגה"><button type="button" data-oc-view="list" aria-pressed="${oc.view !== 'sched'}">עובדי ${p.kind === 'weekend' ? 'סוף השבוע' : 'החג'} ומוניות</button><button type="button" data-oc-view="sched" aria-pressed="${oc.view === 'sched'}">סידור</button></div>
+    ${oc.view !== 'sched' ? `<div class="oc-list">
+      <div class="pnote">לכל משמרת הגעה וחזרה. לחיצה על "הגעה" או "חזרה" פותחת שעה וכתובת.</div>
+      ${groups.length ? groups.map(g => `<div class="oc-group"><div class="oc-group-h"><b>${pEsc(DOW_NAMES[dowOf(g.day)])} ${ocShort(g.day)} · ${ocShiftWord(g.shift)}</b> <bdi dir="ltr">${g.hours}</bdi></div>
+        ${g.rows.map(r => `<div class="oc-p"><div class="oc-p-name"><b>${pEsc(nm(r.staff_id))}</b>${ocHours(r) !== g.hours ? `<small><bdi dir="ltr">${ocHours(r)}</bdi></small>` : ''}</div><div class="oc-p-dirs">${dirHtml(r, 'in')}${dirHtml(r, 'out')}</div></div>`).join('')}</div>`).join('') : '<div class="pnote">אין עדיין שיבוצים בסידור לתקופה הזו.</div>'}
+    </div>` : `<div class="oc-sched">
       ${mcalViewBarHtml(mk, wk, 'oc-viewbar')}
       ${d.may ? '<div class="pnote">אפשר להוסיף או להסיר מדריך במשמרות שבין חמישי 22:00 לראשון 11:00.</div>' : ''}
       <div class="mcal mcal-wrows">${sched}</div>
-    </div></details>
+    </div>`}
   </div>`;
   ocWire(box, d);
 }
@@ -106,8 +111,9 @@ function ocWire(box, d){
   const p = d.period, nm = id => (d.names[id] || {}).display_name || '?', again = () => renderOncall(box);
   box.querySelectorAll('details[data-fold]').forEach(x => x.addEventListener('toggle', () => { portalUi.fold[x.dataset.fold] = x.open; }));
   box.querySelectorAll('[data-oc-period]').forEach(b => b.addEventListener('click', () => { oc.key = b.dataset.ocPeriod; oc.week = null; again(); }));
+  box.querySelectorAll('[data-oc-view]').forEach(b => b.addEventListener('click', () => { oc.view = b.dataset.ocView; again(); }));
   mcalViewBarWire(box, 'oc-viewbar', monthKeyOf(p.from_day), () => (oc.monthView ? null : (Number.isInteger(oc.week) ? oc.week : mcalWeekOfDay(monthKeyOf(p.from_day), p.from_day))),
-    (mm, w) => { oc.monthView = w === null; oc.week = w; oc.weekMk = mm; portalUi.fold['oc-sched'] = true; }, again);
+    (mm, w) => { oc.monthView = w === null; oc.week = w; oc.weekMk = mm; }, again);
   const take = box.querySelector('[data-oc-take]');
   if(take) take.addEventListener('click', async () => {
     const prev = p.active_staff;
@@ -138,14 +144,31 @@ function ocWire(box, d){
     await ocTell(p, `${nm(staff_id)} · ${ocShort(day)} ${ocShiftWord(shift)} · ${dir === 'in' ? 'הגעה' : 'חזרה'}: ${words}`);
   };
   box.querySelectorAll('[data-oc-trip]').forEach(w => {
-    w.querySelectorAll('[data-oc-need]').forEach(b => b.addEventListener('click', async () => {
-      w.querySelectorAll('[data-oc-need]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-      await saveTrip(w, { need:b.dataset.ocNeed }, (OC_NEED.find(n => n[0] === b.dataset.ocNeed) || [])[1] || '');
+    const k = w.dataset.ocTrip, staff = k.split('|')[0];
+    w.addEventListener('toggle', () => { portalUi.fold['oc:' + k] = w.open; });
+    w.querySelectorAll('[data-oc-need]').forEach(b => b.addEventListener('click', async e => {
+      e.preventDefault(); e.stopPropagation();          // (a choice in the folded line: not opening it)
+      const cur = b.getAttribute('aria-pressed') === 'true', v = cur ? 'pending' : b.dataset.ocNeed;          // (pressed again: back to nothing marked)
+      await saveTrip(w, Object.assign({ need:v }, v !== 'need' ? { ordered:false } : {}), v === 'pending' ? 'הסימון הוסר' : (OC_NEED.find(n => n[0] === v) || [])[1] === 'צריך' ? 'צריך מונית' : 'לא צריך מונית');
+      again();
     }));
     const t = w.querySelector('[data-oc-time]'), pl = w.querySelector('[data-oc-place]'), o = w.querySelector('[data-oc-ordered]');
     t.addEventListener('change', () => saveTrip(w, { at_time:t.value.trim() || null }, `שעה ${t.value.trim() || '—'}`));
-    pl.addEventListener('change', () => saveTrip(w, { place:pl.value.trim() || null }, `מיקום ${pl.value.trim() || '—'}`));
-    o.addEventListener('change', () => saveTrip(w, { ordered:o.checked }, o.checked ? 'המונית הוזמנה' : 'סימון "הוזמנה" הוסר'));
+    pl.addEventListener('change', async () => {
+      const v = pl.value.trim(), fixed = d.addr[staff] || '';
+      await saveTrip(w, { place:v && v !== fixed ? v : null }, `כתובת ${v || '—'}`);
+      if(!v || v === fixed || !d.addrOn) return;
+      if(!(await confirmSheet({ title:`להגדיר ככתובת הקבועה של ${nm(staff)}?`, text:`"${v}" תופיע מעכשיו בהגעה ובחזרה של כל המשמרות שלה. אפשר תמיד לשנות כתובת לנסיעה אחת.`, okLabel:'כן, כתובת קבועה', cancelLabel:'רק לנסיעה הזו' }))) return;
+      const r = await sbPersonal.from('oncall_address').upsert({ staff_id:staff, address:v, updated_by:srv.me, updated_at:new Date().toISOString() });
+      if(r.error){ toast('הכתובת הקבועה לא נשמרה'); return; }
+      await saveTrip(w, { place:null }, `כתובת קבועה: ${v}`);
+      toast('נשמרה ככתובת הקבועה'); again();
+    });
+    if(o) o.addEventListener('click', async e => {
+      e.preventDefault(); e.stopPropagation();
+      const on = o.getAttribute('aria-pressed') !== 'true';
+      await saveTrip(w, { ordered:on }, on ? 'המונית הוזמנה' : 'סימון "הוזמנה" הוסר'); again();
+    });
   });
   // the schedule: add / remove in the weekend window (who may: checked again in the database)
   box.querySelectorAll('[data-oc-un]').forEach(b => b.addEventListener('click', async () => {

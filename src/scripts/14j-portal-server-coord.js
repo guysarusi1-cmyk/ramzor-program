@@ -240,17 +240,27 @@ function srvRenderCoordSchedule(body){
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });
   if(csClose) csClose.addEventListener('click', () => { portalUi.csOpen = false; portalUi.csPerson = null; srvRenderCoordSchedule(body); });
+  // a finger hides what it drags: on a touch screen the dragged name is drawn big, above and beside the finger (Guy 2026-11-03)
+  const lift = (e, el) => {
+    try {
+      if(!matchMedia('(pointer:coarse)').matches || !e.dataTransfer.setDragImage) return;
+      const g = document.createElement('div'); g.className = 'cs-drag-ghost'; g.textContent = el.firstChild ? el.firstChild.textContent : el.textContent;
+      document.body.appendChild(g);
+      e.dataTransfer.setDragImage(g, g.offsetWidth + 28, g.offsetHeight + 36);          // (the finger below and to the side of it)
+      setTimeout(() => g.remove(), 0);
+    } catch(x){}
+  };
   // drag a name from the panel into a shift of the schedule
   body.querySelectorAll('.cs-name[data-cs-person]').forEach(b => {
     b.setAttribute('draggable', 'true');
-    b.addEventListener('dragstart', e => { srvDragWho = b.dataset.csPerson; e.dataTransfer.setData('text/plain', b.dataset.csPerson); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
+    b.addEventListener('dragstart', e => { srvDragWho = b.dataset.csPerson; e.dataTransfer.setData('text/plain', b.dataset.csPerson); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); lift(e, b); });
     b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   body.querySelectorAll('.mcal-cell.editable .mcal-name[data-iid]').forEach(n => {          // (a name in the calendar is dragged to another shift: it moves there; Guy 2026-10-25)
     const cell = n.closest('.mcal-cell'), rowId = (portalLoad().assignmentIds || {})[`${cell.dataset.key}|${n.dataset.iid}`];
     if(!rowId) return;
     n.setAttribute('draggable', 'true');
-    n.addEventListener('dragstart', e => { e.stopPropagation(); srvDragWho = n.dataset.iid; srvDragRow = rowId; e.dataTransfer.setData('text/plain', 'row:' + rowId); e.dataTransfer.effectAllowed = 'move'; n.classList.add('dragging'); });
+    n.addEventListener('dragstart', e => { e.stopPropagation(); srvDragWho = n.dataset.iid; srvDragRow = rowId; e.dataTransfer.setData('text/plain', 'row:' + rowId); e.dataTransfer.effectAllowed = 'move'; n.classList.add('dragging'); lift(e, n); });
     n.addEventListener('dragend', () => { srvDragWho = null; srvDragRow = null; n.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   body.querySelectorAll('.mcal-cell.editable').forEach(c => {
@@ -264,7 +274,7 @@ function srvRenderCoordSchedule(body){
   body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('keydown', e => e.stopPropagation()));
   body.querySelectorAll('[data-cs-other]').forEach(b => {          // (a service girl or a teacher from the fold at the bottom of the panel)
     b.setAttribute('draggable', 'true');
-    b.addEventListener('dragstart', e => { srvDragWho = 'other:' + b.dataset.csOther; e.dataTransfer.setData('text/plain', srvDragWho); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
+    b.addEventListener('dragstart', e => { srvDragWho = 'other:' + b.dataset.csOther; e.dataTransfer.setData('text/plain', srvDragWho); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); lift(e, b); });
     b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   { const of = body.querySelector('#cs-others-fold'); if(of) of.addEventListener('toggle', () => { portalUi.csOthersOpen = of.open; }); }
@@ -304,27 +314,50 @@ function csShareSheet(mk, wk){
   if((st.rows || []).some(r => r.pending && monthKeyOf(r.day) === mk)){ toast('יש שינויים שעוד לא נשלחו. קודם "שליחת עדכונים", ואז שיתוף.', 5000); return; }
   const t = srvToday(), w = Number.isInteger(wk) ? wk : monthKeyOf(t) === mk ? mcalWeekOfDay(mk, t) : 0;
   const sh = portalSheet(`<h2>שיתוף תמונת סידור</h2><div class="pnote">התמונה נפתחת לשיתוף. בוחרים את הנמען בוואטסאפ.</div>
-    <div class="pchoice wrap"><button type="button" data-cs-img="week">השבוע ${pEsc(mcalWeekLabel(mk, w))}</button><button type="button" data-cs-img="month">כל ${pEsc(monthLabel(mk))}</button></div>
+    <div class="cs-share-pick"><button type="button" class="btn" data-cs-img="week">תמונה שבועית<small>${pEsc(mcalWeekLabel(mk, w))}</small></button><button type="button" class="btn" data-cs-img="month">תמונה חודשית<small>כל ${pEsc(monthLabel(mk))}</small></button></div>
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
   sh.querySelectorAll('[data-cs-img]').forEach(b => b.addEventListener('click', async () => { sh.close(); await csShareImage(mk, b.dataset.csImg === 'week' ? w : null); }));
 }
 async function csShareImage(mk, week){
   const st = portalLoad(), days = daysOfMonth(mk), lead = dowOf(days[0]), list = week === null ? days : days.filter((_, i) => Math.floor((lead + i) / 7) === week);
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
+  const roleOf = id => (st.instructors.find(x => x.id === id) || {}).role;
+  const hh = x => String(parseInt(x, 10));
   const cols = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה']];
-  const rowsOf = (d, code) => (st.rows || []).filter(r => r.day === d && (r.shift === code || (code === 'M' && r.shift === 'S') || (code === 'A' && r.shift === 'L')) && ((st.instructors.find(x => x.id === r.staff) || {}).role === 'instructor'));
-  const W = 1080, rowH = 74, headH = 150, H = headH + list.length * rowH + 30, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const g = c.getContext('2d'); g.direction = 'rtl'; g.fillStyle = '#FAF7F2'; g.fillRect(0, 0, W, H);
+  const inCol = (r, code) => r.shift === code || (code === 'M' && r.shift === 'S') || (code === 'A' && r.shift === 'L');
+  // the instructors, then the teachers and the service girls with their hours (Guy 2026-11-03)
+  const cell = (d, code) => {
+    const rs = (st.rows || []).filter(r => r.day === d && inCol(r, code));
+    return { main:rs.filter(r => roleOf(r.staff) === 'instructor').map(r => nm(r.staff)),
+             other:rs.filter(r => ['teacher', 'service'].includes(roleOf(r.staff))).sort((x, y) => (roleOf(x.staff) === 'teacher' ? 0 : 1) - (roleOf(y.staff) === 'teacher' ? 0 : 1)).map(r => nm(r.staff) + (r.from && r.to ? ` ${hh(r.from)} עד ${hh(r.to)}` : '')) };          // ("8 עד 14": no range to turn round in Hebrew)
+  };
+  const W = 1080, headH = 150, lineH = 34, pad = 22, colW = (W - 80 - 170) / 3;
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  // names never cut: a name that does not fit goes to the next line of its cell
+  const wrap = (names, font) => { g.font = font; const out = []; let cur = '';
+    names.forEach(n => { const t = cur ? cur + ', ' + n : n; if(cur && g.measureText(t).width > colW - 16){ out.push(cur + ','); cur = n; } else cur = t; });
+    if(cur) out.push(cur); return out; };
+  const F_MAIN = '400 25px Assistant, Arial', F_OTHER = '400 22px Assistant, Arial';
+  const rows = list.map(d => { const cs = cols.map(([code]) => { const x = cell(d, code); return { main:wrap(x.main, F_MAIN), other:wrap(x.other, F_OTHER) }; });
+    const lines = Math.max(1, ...cs.map(x => x.main.length + x.other.length)); return { d, cs, h:Math.max(74, pad * 2 + lines * lineH - 6) }; });
+  const H = headH + rows.reduce((t, r) => t + r.h, 0) + 70; c.width = W; c.height = H;
+  g.direction = 'rtl'; g.fillStyle = '#FAF7F2'; g.fillRect(0, 0, W, H);
   g.fillStyle = '#2D2A24'; g.textAlign = 'right'; g.font = '600 44px Rubik, Assistant, Arial'; g.fillText(`סידור העבודה · ${monthLabel(mk)}`, W - 40, 64);
-  g.font = '400 30px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(week === null ? 'כל החודש' : `שבוע ${mcalWeekLabel(mk, week)}`, W - 40, 108);
-  const colW = (W - 80 - 170) / 3;
+  g.font = '400 30px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(week === null ? 'כל החודש' : `שבוע ${mcalWeekLabel(mk, week).replace('–', ' עד ')}`, W - 40, 108);          // (left to right inside: the range does not turn round)
   g.font = '700 28px Assistant, Arial'; g.fillStyle = '#5C6F52'; cols.forEach(([, w], i) => g.fillText(w, W - 40 - 170 - i * colW, headH - 8));
-  list.forEach((d, i) => {
-    const y = headH + i * rowH; g.fillStyle = i % 2 ? '#FFFFFF' : '#F4EFE7'; g.fillRect(30, y + 4, W - 60, rowH - 6);
-    g.fillStyle = '#2D2A24'; g.font = '700 28px Assistant, Arial'; g.fillText(`${DOW_SHORT[dowOf(d)]} ${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`, W - 44, y + 46);
-    g.font = '400 25px Assistant, Arial';
-    cols.forEach(([code], ci) => { const txt = rowsOf(d, code).map(r => nm(r.staff)).join(', '); let t2 = txt; while(t2 && g.measureText(t2).width > colW - 16) t2 = t2.slice(0, -2) + '…'; g.fillText(t2 || '—', W - 40 - 170 - ci * colW, y + 46); });
+  let y = headH;
+  rows.forEach((r, i) => {
+    g.fillStyle = i % 2 ? '#FFFFFF' : '#F4EFE7'; g.fillRect(30, y + 4, W - 60, r.h - 6);
+    g.fillStyle = '#2D2A24'; g.font = '700 28px Assistant, Arial'; g.fillText(`${DOW_SHORT[dowOf(r.d)]} ${parseIso(r.d).getDate()}/${parseIso(r.d).getMonth() + 1}`, W - 44, y + pad + 24);
+    r.cs.forEach((x, ci) => {
+      const xr = W - 40 - 170 - ci * colW; let ly = y + pad + 24;
+      if(!x.main.length && !x.other.length){ g.font = F_MAIN; g.fillStyle = '#2D2A24'; g.fillText('—', xr, ly); return; }
+      g.font = F_MAIN; g.fillStyle = '#2D2A24'; x.main.forEach(t => { g.fillText(t, xr, ly); ly += lineH; });
+      g.font = F_OTHER; g.fillStyle = '#7A6F5E'; x.other.forEach(t => { g.fillText(t, xr, ly); ly += lineH; });
+    });
+    y += r.h;
   });
+  if(rows.some(r => r.cs.some(x => x.other.length))){ g.font = '400 22px Assistant, Arial'; g.fillStyle = '#7A6F5E'; g.fillText('בצבע הבהיר: מורות ובנות שירות, עם השעות שלהן', W - 40, y + 44); }
   const blob = await new Promise(res => c.toBlob(res, 'image/png'));
   const file = new File([blob], `schedule-${mk}${week === null ? '' : '-w' + (week + 1)}.png`, { type:'image/png' });
   try { if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'סידור העבודה' }); return; } } catch(e){ if(e && e.name === 'AbortError') return; }

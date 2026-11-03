@@ -1304,7 +1304,7 @@
         if(coord){
           adminActAs(coord.id); await sleep(200);
           const tabsC = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab);
-          check('admin in the coordinator\'s screen: her own tabs, with a banner of full control', tabsC.includes('schedule') && tabsC.includes('submissions') && tabsC.includes('settings') && !tabsC.includes('admin') && !!document.querySelector('.adm-viewas.act'), tabsC.join(','));
+          check('admin in the coordinator\'s screen: her own tabs, with a banner of full control', tabsC.includes('schedule') && tabsC.includes('submissions') && (matchMedia('(max-width:700px)').matches ? tabsC.join(',') === 'schedule,submissions,swaps,oncall' : tabsC.includes('settings')) && !tabsC.includes('admin') && !!document.querySelector('.adm-viewas.act'), tabsC.join(','));
           document.querySelector('[data-ptab="submissions"]').click(); await sleep(200);
           check('admin in the coordinator\'s screen: ... and it works (not "only to look")', portalUi.tab === 'submissions' && !!document.querySelector('.adm-viewas.act'), portalUi.tab);
           await adminViewAsEnd(); await sleep(150);
@@ -1313,7 +1313,8 @@
       document.getElementById('apphome-portal').click(); await sleep(300);
       check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
-      check('personal sign-in: ... and the management portal has the coordinator tabs', !!document.querySelector('[data-ptab="submissions"]') && !!document.querySelector('[data-ptab="settings"]') && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      check('personal sign-in: ... and the management portal has the coordinator tabs (on a phone the four of the day-to-day work only)', !!document.querySelector('[data-ptab="submissions"]') && (matchMedia('(max-width:700px)').matches ? !document.querySelector('[data-ptab="settings"]') && !document.querySelector('[data-ptab="admin"]') : !!document.querySelector('[data-ptab="settings"]')) && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      if(!matchMedia('(max-width:700px)').matches){          // (the management tab: on the computer only, Guy 2026-11-03)
       document.querySelector('[data-ptab="admin"]') && document.querySelector('[data-ptab="admin"]').click(); await sleep(200);
       check('management portal: a "ניהול" tab with the staff details, looking as somebody, the system settings, building again and the full log', document.querySelectorAll('#portal-body details[data-afold]').length === 6 && !!document.querySelector('#portal-body details[data-afold="problems"]'), document.querySelectorAll('#portal-body details[data-afold]').length);
       { const other = portalLoad().instructors.find(p => p.active && p.id !== srv.me && p.role === 'instructor');
@@ -1321,6 +1322,7 @@
         check('management portal: looking as somebody shows a clear "only to look" bar, with the way back', !!document.querySelector('.adm-viewas') && !!document.getElementById('viewas-end'), 'no bar');
         document.getElementById('viewas-end').click(); await sleep(200);
         check('management portal: ... and the way back returns to the management tab', !portalUi.viewAs && portalUi.persona === srv.me && !!document.querySelector('[data-ptab="admin"].active'), String(portalUi.viewAs)); }
+      }
       srv.meRow.admin = false; portalUi.manager = false; showAppHome();
       await personalLeave();
       check('personal sign-in: leaving returns the Ramzor to the staff login of this device', sb === sbShared && !ramzorPersonal, 'still personal');
@@ -1421,7 +1423,7 @@
         check('portal server: choosing a goal marks it on the screen', portalMonth(next).goals[srv.me] === 'weekly45' && document.querySelector('[data-goal="weekly45"]').classList.contains('on'), JSON.stringify(portalMonth(next).goals));
         document.querySelector('[data-goal=""]').click(); await sleep(60);
         check('portal server: "אין לי העדפה מיוחדת" can be chosen, and it is the one marked when nothing else was chosen', !portalMonth(next).goals[srv.me] && document.querySelector('[data-goal=""]').classList.contains('on') && document.querySelectorAll('.pgoal-opt.on').length === 1, document.querySelectorAll('.pgoal-opt.on').length);
-        check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pday:not(.absent) .pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
+        check('portal server: the whole screen starts neutral (nothing marked), with no notes above it (Guy 2026-11-03)', [...document.querySelectorAll('.pday:not(.absent) .pshift')].every(b => b.classList.contains('lv-neutral')) && !document.getElementById('neutral-note'), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
         check('portal server: a locked day (vacation, sick leave...) has its reason written on it', [...document.querySelectorAll('.pday.fixed')].every(d => !!d.querySelector('.pday-fixed') && d.querySelector('.pday-fixed').textContent.trim().length > 1), document.querySelectorAll('.pday.fixed').length + ' locked days');
         check('portal server: the two small questions use the normal question style (no green/red)', ![...document.querySelectorAll('.pconsents button')].some(b => /rgb\(123, 224, 160\)|rgb\(255, 138, 128\)/.test(getComputedStyle(b).color)), [...document.querySelectorAll('.pconsents button')].map(b => getComputedStyle(b).color).join(' '));
         const day = daysOfMonth(next)[9], key = `${day}|n`;
@@ -1454,7 +1456,7 @@
           check('portal server: the long-weekend button spreads across the Friday and the Saturday columns', fr.left <= Math.min(fc.left, sc.left) + 3 && fr.right >= Math.max(fc.right, sc.right) - 3, JSON.stringify([fr.left, fr.right, fc.left, sc.left])); }
         check('portal server: the long weekend starts neutral and is not touched by marking the Friday', firstLong.classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], '');
         check('portal server: the shift of noon is called צהריים and marked צ', st.shiftTypes[1].label === 'צהריים' && document.querySelector(`[data-pslot="${sun}|e"] .ps-l`).textContent === 'צ' && !!document.querySelector('.pshift-key'), st.shiftTypes[1].label);
-        check('portal server: the explanation is folded away until it is asked for', document.querySelector('details[data-fold="prefhelp"]') && document.querySelector('details[data-fold="prefhelp"]').open === false, 'open');
+        check('portal server: no "איך ממלאים" explanation above the month (Guy 2026-11-03)', !document.querySelector('details[data-fold="prefhelp"]'), 'still there');
         check('portal server: the bottom buttons are כן / יכול / לא / שעות אחרות / נקה הכל (no absence, no all-month button)', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|') === 'כן|יכול|לא|שעות אחרות|נקה הכל', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|'));
         document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-pday="${fri}"]`).click(); await sleep(50);
         check('portal server: marking the whole Friday "לא" does not change the long weekend (it stays neutral)', [...document.querySelectorAll(`[data-pslot^="${fri}|"]`)].every(b => b.classList.contains('lv-no')) && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));

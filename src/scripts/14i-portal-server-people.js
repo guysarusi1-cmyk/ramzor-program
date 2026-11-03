@@ -6,8 +6,17 @@ const SRV_FLAG_WORD = { ok:'אישר/ה ✓', extension:'הארכה עד 16:00',
 const SRV_VAC_STATUS = { pending:'מחכה לתשובה', approved:'אושרה', rejected:'הפעם לא אושרה', cancelled:'בוטלה' };
 const srvToday = () => israelNow().date;
 
+// "איך הלכו הבקשות שלך" in the portal, short (Guy 2026-11-03): how many of the shifts she marked "כן" or "יכול" she got, and a sentence —
+// no minimum, no list (the message sent when the schedule is published stays as it is)
+function srvFeedbackShort(fb){
+  const ar = typeof arOn === 'function' && arOn(), fem = !(srv.profile && srv.profile.female === false), L = (he, a) => ar ? a : he;
+  if(!fb.wished) return L(`שובצת החודש ב-${fb.total} משמרות. תודה ש${fem ? 'את' : 'אתה'} איתנו!`, `جُدولت هذا الشهر في ${fb.total} مناوبات. شكرًا لأنك معنا!`);
+  return L(`שובצת ב-${fb.placed} מתוך ${fb.wished} המשמרות שסימנת "כן" או "יכול".`, `جُدولت في ${fb.placed} من ${fb.wished} المناوبات التي اخترت فيها "نعم" أو "ممكن".`) + '\n'
+    + (fb.placed >= fb.wished ? L('קיבלת את כל מה שביקשת. תודה!', 'حصلت على كل ما طلبت. شكرًا!')
+       : L(`עשינו כמיטב יכולתנו לחלק את המשמרות בין כולם. תודה ש${fem ? 'את' : 'אתה'} איתנו!`, 'بذلنا أفضل ما بوسعنا لتوزيع المناوبات بين الجميع. شكرًا لأنك معنا!'));
+}
 function srvRowLine(r){
-  const flags = (r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean);
+  const flags = (r.flags || []).filter(f => f !== 'ok').map(f => SRV_FLAG_WORD[f]).filter(Boolean);          // ("אישר/ה ✓" is the coordinator's own mark, not shown to the instructor: Guy 2026-11-03)
   const hrs = r.from && r.to ? rangeHtml(r.from, r.to) : '';
   return `<b>${dayLabel(r.day)}</b><span>${SRV_SHIFT_WORD[r.shift] || r.shift} ${hrs}${flags.length ? ` · <em>${flags.join(', ')}</em>` : ''}</span>`;
 }
@@ -40,7 +49,8 @@ function srvRenderSchedule(body){
   const next = st.rows.filter(r => r.staff === me.id && r.day >= today).sort((a, b) => (a.day + (a.from || '')).localeCompare(b.day + (b.from || '')))[0];
   const notices = st.notices.filter(n => !n.seen);
   const openByAid = {}; st.swaps.filter(s => s.from === me.id && ['open', 'offered'].includes(s.status)).forEach(s => { openByAid[s.aid] = s; });
-  const wk = portalUi.ischMonthView ? null : portalUi.ischWeekMk === mk ? portalUi.ischWeek : mk === monthKeyOf(today) ? mcalWeekOfDay(mk, today) : 0;          // (a week at first, the month by "חודש": Guy 2026-11-03)
+  // "הצוות כולו": "היום" or "חודש" — the month a week at a time, in the calendar's own grid, with arrows between the weeks (Guy 2026-11-03)
+  const ischDay = !!portalUi.ischDay, wk = portalUi.ischWeekMk === mk && Number.isInteger(portalUi.ischWeek) ? portalUi.ischWeek : mk === monthKeyOf(today) ? mcalWeekOfDay(mk, today) : 0;
   const fb = (isInstr && m.published && !(srv.profile && srv.profile.manual_only)) ? srvFeedbackFor(me, mk, { prefs:srvPrefsOf(m, me.id), rows:st.rows.filter(r => r.staff === me.id), profile:srv.profile, goal:(m.goals || {})[me.id] || null }) : null;
   body.innerHTML = `
     ${notices.length ? `<details class="pfold pnotices" data-fold="notices"${openFold('notices') ? ' open' : ''}><summary><span>הודעות חדשות</span><span class="pcount">${notices.length}</span></summary><div class="pfold-body">
@@ -59,19 +69,22 @@ function srvRenderSchedule(body){
           <div class="pmine-main">${isNext ? '<span class="pnext-badge">המשמרת הבאה שלך</span>' : ''}${srvRowLine(r)}</div>
           ${req ? `<em class="pst pst-${req.status}">${SWAP_STATUS[req.status]}</em>` : ''}
         </div>`; }).join('') : `<div class="pnote">${tx('sch_none')}</div>`}</div>
-        ${canChange ? `<div class="pnote">${tx('sch_help')}</div>` : ''}</div>
+        </div>
     </details>
     <details class="pfold" data-fold="team"${openFold('team') ? ' open' : ''}>
       <summary><span>הצוות כולו</span></summary>
-      <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}${mcalViewBarHtml(mk, wk, 'isch-viewbar')}${monthCalHtml(me.role === 'service' ? Object.assign({}, ctx, { shiftTypes:ctx.shiftTypes.filter(s => s.id !== 'n') }) : ctx, m.assignments, { week:wk === null ? undefined : wk, rows:true, me:me.id, ahmash:srv.ahmash, othersInCells:true, labelsCenter:me.role === 'service' })}</div>
+      <div class="pfold-body">${isInstr ? '<div class="pnote">לחיצה על השם שלך במשמרת שעוד לא עברה פותחת בקשת החלפה או דיווח שלא תוכל/י להגיע.</div>' : ''}<div class="mcal-viewbar" id="isch-viewbar"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-isch="day" aria-pressed="${ischDay}">היום</button><button type="button" data-isch="month" aria-pressed="${!ischDay}">חודש</button></div>${ischDay ? '' : mcalWeekNavHtml(mk, wk)}</div>${ischDay && mk !== monthKeyOf(today) ? '<div class="pnote">היום לא בחודש הזה.</div>' : ''}${monthCalHtml(me.role === 'service' ? Object.assign({}, ctx, { shiftTypes:ctx.shiftTypes.filter(s => s.id !== 'n') }) : ctx, m.assignments, ischDay ? { week:mcalWeekOfDay(mk, mk === monthKeyOf(today) ? today : mk + '-01'), rows:true, day:today, me:me.id, ahmash:srv.ahmash, othersInCells:true, labelsCenter:me.role === 'service' } : { week:wk, me:me.id, ahmash:srv.ahmash, othersInCells:true, labelsCenter:me.role === 'service' })}</div>
     </details>
-    ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(fb.text)}</div></div></details>` : ''}
+    ${fb ? `<details class="pfold" data-fold="fb"${openFold('fb') ? ' open' : ''}><summary><span>איך הלכו הבקשות שלך</span></summary><div class="pfold-body"><div class="pfb">${pEsc(srvFeedbackShort(fb))}</div></div></details>` : ''}
     ${isInstr ? `<details class="pfold" data-fold="openshifts"${openFold('openshifts') ? ' open' : ''}>
       <summary><span>משמרות פתוחות</span><span class="pcount" id="open-count"></span></summary>
       <div class="pfold-body" id="open-fold-body"><div class="pnote">רק רגע...</div></div>
     </details>` : ''}`}`;
   wireMonthNav(body); wireFolds(body);
-  if(m.published) mcalViewBarWire(body, 'isch-viewbar', mk, () => wk, (mm, w) => { portalUi.ischMonthView = w === null; portalUi.ischWeek = w; portalUi.ischWeekMk = mm; portalUi.month = mm; portalUi.fold.team = true; }, () => portalRefresh());
+  if(m.published){
+    mcalViewBarWire(body, 'isch-viewbar', mk, () => wk, (mm, w) => { portalUi.ischWeek = w; portalUi.ischWeekMk = mm; portalUi.month = mm; portalUi.fold.team = true; }, () => portalRefresh());
+    body.querySelectorAll('[data-isch]').forEach(b => b.addEventListener('click', () => { portalUi.ischDay = b.dataset.isch === 'day'; if(portalUi.ischDay) portalUi.month = monthKeyOf(today); portalUi.fold.team = true; portalRefresh(); }));
+  }
   if(isInstr && !portalUi.viewAs) srvFillOpenDays(body);          // (a new day for sign-up, at the top)
   if(isInstr && m.published) srvFillOpenFold(body, mk); else { const ob = document.getElementById('open-fold-body'); if(ob) ob.innerHTML = `<div class="pnote">${tx('open_none')}</div>`; }
   body.querySelectorAll('[data-notice-ok]').forEach(b => b.addEventListener('click', () => { const n = st.notices.find(x => x.id === b.dataset.noticeOk); if(n) n.seen = true; portalSave(); srvRenderSchedule(body); }));

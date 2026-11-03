@@ -327,9 +327,10 @@ function mcalWeekLabel(mk, w){
   const f = x => { const t = parseIso(x); return t.getDate() + '/' + (t.getMonth() + 1); };
   return inMonth.length === 1 ? f(inMonth[0]) : f(inMonth[0]) + '–' + f(inMonth[inMonth.length - 1]);
 }
+const mcalWeekNavHtml = (mk, week) => `<div class="mcal-weeknav"><button type="button" class="mcal-wk" data-mwk="-1" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>שבוע ${pEsc(mcalWeekLabel(mk, week))}</b><button type="button" class="mcal-wk" data-mwk="1" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>`;
 function mcalViewBarHtml(mk, week, id){          // "חודש | שבוע" and, in the weekly view, the week with ‹ ›
   const isW = Number.isInteger(week);
-  return `<div class="mcal-viewbar" id="${id}"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-mview="week" aria-pressed="${isW}">שבוע</button><button type="button" data-mview="month" aria-pressed="${!isW}">חודש</button></div>${isW ? `<div class="mcal-weeknav"><button type="button" class="mcal-wk" data-mwk="-1" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>שבוע ${pEsc(mcalWeekLabel(mk, week))}</b><button type="button" class="mcal-wk" data-mwk="1" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>` : ''}</div>`;
+  return `<div class="mcal-viewbar" id="${id}"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-mview="week" aria-pressed="${isW}">שבוע</button><button type="button" data-mview="month" aria-pressed="${!isW}">חודש</button></div>${isW ? mcalWeekNavHtml(mk, week) : ''}</div>`;
 }
 // wires the bar: get() / set(month, week|null) keep the screen's own state; redraw() draws it again
 function mcalViewBarWire(root, id, mk, get, set, redraw){
@@ -382,7 +383,7 @@ function monthCalHtml(ctx, assignments, opts){
   };
   if(Number.isInteger(opts.week) && opts.rows){          // the weekly view as rows: a day per row, its shifts side by side — room for the names on a phone (Guy 2026-11-03)
     const w0 = Math.max(0, Math.min(opts.week, flat.length / 7 - 1)) * 7;
-    return `<div class="mcal mcal-wrows">${flat.slice(w0, w0 + 7).filter(Boolean).map(r => `<div class="mcal-wrow${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(r.date)]}</b><span>${parseIso(r.date).getDate()}/${parseIso(r.date).getMonth() + 1}</span></div><div class="mcal-wrow-cells">${ctx.shiftTypes.map((s, i) => `<div class="mcal-wrow-shift"><span class="mcal-wrow-lbl">${pEsc(s.label)} <small>${hours(s)}</small></span>${shiftCell(r, i)}</div>`).join('')}</div></div>`).join('')}</div>`;
+    return `<div class="mcal mcal-wrows">${flat.slice(w0, w0 + 7).filter(Boolean).filter(r => !opts.day || r.date === opts.day).map(r => `<div class="mcal-wrow${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(r.date)]}</b><span>${parseIso(r.date).getDate()}/${parseIso(r.date).getMonth() + 1}</span></div><div class="mcal-wrow-cells">${ctx.shiftTypes.map((s, i) => `<div class="mcal-wrow-shift"><span class="mcal-wrow-lbl">${pEsc(s.label)} <small>${hours(s)}</small></span>${shiftCell(r, i)}</div>`).join('')}</div></div>`).join('')}</div>`;
   }
   let out = `<div class="mcal-corner"></div>${DOW_SHORT.map(d => `<div class="mcal-head">${d}</div>`).join('')}`;
   const onlyWeek = Number.isInteger(opts.week) ? Math.max(0, Math.min(opts.week, flat.length / 7 - 1)) * 7 : null;          // (one week of the month only: the weekly view, Guy 2026-11-03)

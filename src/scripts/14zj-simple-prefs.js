@@ -6,7 +6,7 @@
 //   "שעות אחרות": guided — which day, then a quick 12:00–20:00 or the start and the end on the phone's own time wheel.
 // Only the screen changes: the marks are stored as everybody's, so the coordinator sees them as from everyone.
 const prefPlainOn = () => portalServerOn && !!srv.prefPlain && !prefOther();
-const prefWeekOn = (me, locked, submitted) => portalServerOn && !!srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !submitted && !portalUi.prefsPast && !portalUi.prefsWholeMonth;
+const prefWeekOn = (me, locked, submitted) => portalServerOn && !!srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !portalUi.prefsPast && !portalUi.prefsWholeMonth;          // (also after handing in: the switch decides, Guy 2026-11-03)
 const prefFem = () => !(srv.profile && srv.profile.female === false);
 const prefG = (f, m) => prefFem() ? f : m;
 const PW_KINDS = [['m', 'בוקר'], ['e', 'צהריים'], ['n', 'לילה']];
@@ -131,6 +131,7 @@ function renderWeekPrefs(body, mk, m, prefs){
       });
       pwSet(chosenKey, [...chosen]); portalSave(); go(next);
     });
+    prefViewWire(body);          // (the small switch, on every screen of the weekly view)
     return;
   }
   // the end: the two small questions every instructor answers, and handing in
@@ -153,6 +154,7 @@ function renderWeekPrefs(body, mk, m, prefs){
       try { await srvSubmit(mk, (m.notes && m.notes[me.id]) || '', m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
       toast(tx('submit_ok')); renderInstructorPrefs(body);
     });
+    prefViewWire(body);          // (the small switch, on every screen of the weekly view)
     return;
   }
   // one week
@@ -213,23 +215,16 @@ function prefMonthExtras(body, mk, prefs, locked, submitted){
   }
 }
 
-// ---- "תצוגת העדפות" (Guy 2026-11-03): week by week or the whole month, without colours or with them ("יכול" comes back with the colours).
+// ---- the small switch of the preferences (Guy 2026-11-03): "שבועי, בלי צבעים" or "חודשי, עם צבעים" ("יכול" comes back with the colours).
 // Only the instructor's screen changes: the marks are stored as always, and the coordinator sees them in her colours.
-const prefViewBtnHtml = () => portalServerOn ? '<div class="pview-row"><button type="button" class="btn ghost small pview-btn" data-pview>תצוגת העדפות</button></div>' : '';
+const prefViewBtnHtml = () => portalServerOn ? `<div class="pview-row"><div class="mx-seg pview-seg" role="group" aria-label="תצוגת ההעדפות"><button type="button" data-pview="week" aria-pressed="${!!srv.prefWeekly}">שבועי, בלי צבעים</button><button type="button" data-pview="month" aria-pressed="${!srv.prefWeekly}">חודשי, עם צבעים</button></div></div>` : '';
 function prefViewWire(body){
-  body.querySelectorAll('[data-pview]').forEach(b => b.addEventListener('click', () => {
-    const seg = (name, a, b2, on) => `<div class="mx-seg pview-seg" role="group" aria-label="${name}"><button type="button" data-pv="${name}:1" aria-pressed="${on}">${a}</button><button type="button" data-pv="${name}:0" aria-pressed="${!on}">${b2}</button></div>`;
-    const sh = portalSheet(`<h2>תצוגת העדפות</h2>
-      <div class="pview-opt"><span>איך לראות את החודש</span>${seg('weekly', 'שבוע אחרי שבוע', 'כל החודש', !!srv.prefWeekly)}</div>
-      <div class="pview-opt"><span>איך לסמן</span>${seg('plain', 'בלי צבעים', 'עם צבעים', !!srv.prefPlain)}</div>
-      <div class="pnote">"בלי צבעים": לחיצה = כן, עוד לחיצה = לא, לחיצה ארוכה מחזירה לנקודה. "עם צבעים": כן, יכול או לא.</div>
-      <div class="confirm-actions"><button type="button" class="btn" data-close>סגירה</button></div>`);
-    sh.querySelectorAll('[data-pv]').forEach(x => x.addEventListener('click', async () => {
-      const [k, v] = x.dataset.pv.split(':'), patch = k === 'weekly' ? { prefWeekly:v === '1' } : { prefPlain:v === '1' };
-      sh.querySelectorAll(`[data-pv^="${k}:"]`).forEach(y => y.setAttribute('aria-pressed', String(y === x)));
-      portalUi.prefsWholeMonth = false; if(k === 'plain' && v === '0') portalUi.level = 'yes';
-      await srvSaveSimplePrefs(patch); renderInstructorPrefs(document.getElementById('portal-body'));
-    }));
+  body.querySelectorAll('[data-pview]').forEach(b => b.addEventListener('click', async () => {
+    const week = b.dataset.pview === 'week';
+    if(b.getAttribute('aria-pressed') === 'true' && !portalUi.prefsWholeMonth) return;
+    portalUi.prefsWholeMonth = false; if(!week) portalUi.level = 'yes';
+    await srvSaveSimplePrefs({ prefWeekly:week, prefPlain:week });
+    renderInstructorPrefs(document.getElementById('portal-body'));
   }));
 }
 // the long weekend and "רק אחד מאלה" in the week of the weekend (approved by Guy 2026-11-03): shown only to who switched them on, as in the month screen

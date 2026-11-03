@@ -86,7 +86,7 @@ async function mgrKidsTab(body){
   body.querySelectorAll('[data-mk-diary]').forEach(b => b.addEventListener('click', async () => {
     const id = b.dataset.mkDiary, [e, s] = await Promise.all([sbPersonal.from('child_diary').select('*').eq('child_id', id), sbPersonal.from('child_diary_skip').select('*')]);
     const today = isoDate(new Date()), occ = dgOccurrences(e.data || [], s.data || [], addDays(today, -7), addDays(today, 45));
-    portalSheet(`<h2>היומן של ${pEsc(dgName(id))}</h2><div class="pnote">קריאה בלבד. העו"סית האחראית עורכת.</div>${occ.length ? occ.map(o => `<div class="dg-day-h">${pEsc(DOW_NAMES[dowOf(o.day)])} ${mgrShort(o.day)}</div>${dgLineHtml(o).replace('<button type="button"', '<div').replace('</button>', '</div>')}`).join('') : '<div class="pnote">אין אירועים קרובים.</div>'}
+    portalSheet(`<h2>היומן של ${pEsc(dgName(id))}</h2><div class="pnote">קריאה בלבד. העו"סית האחראית עורכת.</div>${occ.length ? occ.map(o => `<div class="dg-day-h">${pEsc(DOW_NAMES[dowOf(o.day)])} ${mgrShort(o.day)}</div>${dgLineHtml(o, true)}`).join('') : '<div class="pnote">אין אירועים קרובים.</div>'}
       <div class="confirm-actions"><button type="button" class="btn" data-close>סגירה</button></div>`);
   }));
 }

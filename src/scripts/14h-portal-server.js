@@ -256,7 +256,11 @@ async function srvSubmit(mk, note, goal){
 // ---- the screens in server mode
 function srvTabs(me){
   if(srvEditingFor()) return me.role === 'service' ? [['avail', 'זמינות']] : [['prefs', 'העדפות']];          // (filling for somebody: only that tab — a service girl's availability, an instructor's preferences)
-  if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
+  if(portalAsCoord(me)){
+    const all = [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);
+    const phone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
+    return phone ? all.filter(t => ['schedule', 'submissions', 'swaps', 'oncall'].includes(t[0])) : all;          // (on a phone: סידור, הגשות, החלפות, כוננית only — the rest on the computer: Guy 2026-11-03)
+  }          // (the admin: one more tab, 14s-portal-admin.js)
   if(me.role === 'manager') return MGR_TABS;          // (the manager of the framework: 14zn)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps and the vacation in one tab: Guy 2026-11-03)
