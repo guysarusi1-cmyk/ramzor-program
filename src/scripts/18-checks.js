@@ -2587,7 +2587,7 @@
         const days = pb().querySelectorAll('.pwday'), dotsLeft = prefDotsOf(mk, pr, wks[0]).length, next = pb().querySelector('#pw-next');
         check('... then week 1: seven days, the days of another month faded, and "השבוע הבא" closed while dots are left', days.length === 7 && pb().querySelectorAll('.pwday.out').length === wks[0].filter(d => !daysOfMonth(mk).includes(d)).length && (dotsLeft ? next.disabled && /עוד \d+ נקוד/.test(pb().textContent) : !next.disabled), JSON.stringify([days.length, dotsLeft, next.disabled]));
         { const nb = pb().querySelector('.pweek-navbar'), tl = pb().querySelector('.pweek-tools'), r = id => pb().querySelector(id).getBoundingClientRect();
-          check('the week: "הקודם" and "השבוע הבא" in the bar fixed at the bottom', !!nb && getComputedStyle(nb).position === 'fixed' && !!nb.querySelector('#pw-prev') && !!nb.querySelector('#pw-next'), '');
+          check('the week: in the bar fixed at the bottom "הקודם", "שעות אחרות", "השבוע הבא", in this order, nothing cut', !!nb && getComputedStyle(nb).position === 'fixed' && [...nb.querySelectorAll('button')].map(b => b.id).join() === 'pw-prev,pplain-hours,pw-next' && [...nb.querySelectorAll('button')].every(b => b.scrollWidth <= b.clientWidth + 1), [...nb.querySelectorAll('button')].map(b => b.scrollWidth + '/' + b.clientWidth).join());
           check('... "לראות את כל החודש" and "?" side by side at the end of the screen, nothing cut', !!tl && !!tl.querySelector('#pw-month') && !!tl.querySelector('#pplain-q') && Math.abs(r('#pw-month').top - r('#pplain-q').top) < 3 && tl.scrollWidth <= tl.clientWidth + 1, ''); }
         const sb = pb().querySelector('.pwshift.lv-neutral');
         if(sb){
