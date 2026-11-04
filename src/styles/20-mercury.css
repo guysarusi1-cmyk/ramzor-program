@@ -636,3 +636,11 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 .oc-d-lbl::after{ content:none !important; }
 .oc-d-more{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:4px; min-height:34px; padding:4px 10px; border-radius:999px; border:1px dashed var(--color-border-strong, var(--p-line)); color:var(--color-text-secondary, var(--p-muted)); font-size:.85em; max-width:100%; }
 .oc-d[open] .oc-d-more i{ display:inline-block; transform:rotate(180deg); }
+/* "בקרת ילדים": today's bonuses, and by each one who lost it today (Guy 2026-11-04) */
+.kq-bonus-today{ margin-top:6px; border:1px solid var(--line); border-radius:12px; padding:6px 10px; }
+.kq-bonus-today summary{ cursor:pointer; font-weight:700; min-height:36px; display:flex; align-items:center; }
+.kq-bt-row{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:6px 0; border-top:1px solid var(--line); }
+.kq-bt-row.now .kq-bt-text{ font-weight:800; }
+.kq-bt-row .bb-icon{ font-size:20px; } .kq-bt-text{ flex:1; }
+.kq-bt-out{ flex-basis:100%; font-size:13px; color:var(--yellow, #e0b000); display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.kq-bt-note{ display:block; margin-top:4px; opacity:.7; }

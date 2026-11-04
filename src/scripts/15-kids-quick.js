@@ -12,6 +12,7 @@ const KIDS_QUICK_TITLES = {
 
 function kidsQuickShowColorPicker(){
   document.getElementById('kids-quick-pick-color').style.display = 'block';
+  kqBonusToday();
   document.getElementById('kids-quick-pick-child').style.display = 'none';
   document.getElementById('kids-quick-moon-panel').style.display = 'none';
   document.getElementById('kids-quick-yellow-intro').style.display = 'none';
@@ -126,3 +127,13 @@ document.getElementById('kq-pick-child-for-revoke-btn').addEventListener('click'
 });
 document.getElementById('kids-quick-yellow-list-back').addEventListener('click', ()=> kidsQuickShowChildPicker('yellow'));
 
+// today's bonuses on the staff's phone, and by each one who lost it today (until 22:00): the only place this is shown (Guy, BONUSES-SPEC, 2026-11-04)
+async function kqBonusToday(){
+  const box = document.getElementById('kq-bonus-today'); if(!box) return;
+  try { if(typeof loadBonusDay === 'function') await loadBonusDay(); } catch(e){}
+  const list = bonusesForToday(bonusesDaily, false).concat(bonusesForToday(bonusesWeekly, true));
+  if(!list.length){ box.innerHTML = ''; return; }
+  const by = groupRevocationsByBonus(await getActiveBonusRevocations());
+  const n = Object.values(by).reduce((t, l) => t + l.length, 0);
+  box.innerHTML = `<details class="kq-bonus-today"><summary>🍬 הבונוסים של היום${n ? ` · ${n} נגרעו` : ''}</summary>${list.map(b => `<div class="kq-bt-row${isBonusTimeActive(b) ? ' now' : ''}"><span class="bb-icon">${bonusIcon(b)}</span><span class="kq-bt-text">${b.text}</span>${(by[b.id] || []).length ? `<span class="kq-bt-out">לא היום: ${by[b.id].join(' ')}</span>` : ''}</div>`).join('')}<small class="kq-bt-note">גריעה בתוקף עד 22:00.</small></details>`;
+}

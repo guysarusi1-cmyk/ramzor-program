@@ -50,12 +50,25 @@ function nextBonusesToRevoke(list, revokedIds, now){
   if(later.length){ const first = Math.min(...later.map(b => toMin(b.startTime))); return later.filter(b => toMin(b.startTime) === first); }
   return [left.find(b => !(b.startTime && b.endTime)) || left[left.length - 1]];
 }
-const BONUS_REVOCATION_HOURS = 5;
+// a revocation holds for the bonus of that day only: until 22:00 of the day it was made (Israel time), and one made after 22:00 until 22:00 the next day.
+// The next day the child is entitled again by itself; the history stays (Guy, BONUSES-SPEC and 2026-11-04).
+const BONUS_REVOCATION_END = '22:00';
+function bonusRevocationEnds(at){
+  const il = d => { const o = {}; new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Jerusalem', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(d).forEach(p => { o[p.type] = p.value; }); return o; };
+  const t = il(new Date(at)), [eh, em] = BONUS_REVOCATION_END.split(':').map(Number), mins = Number(t.hour) * 60 + Number(t.minute);
+  const day = `${t.year}-${t.month}-${t.day}`;
+  return mins < eh * 60 + em ? day : addDays(day, 1);          // (the Israel day whose 22:00 ends it)
+}
+function bonusRevocationActive(r, now){
+  const t = (now || new Date()), o = {}; new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Jerusalem', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(t).forEach(p => { o[p.type] = p.value; });
+  const today = `${o.year}-${o.month}-${o.day}`, end = bonusRevocationEnds(r.revoked_at), [eh, em] = BONUS_REVOCATION_END.split(':').map(Number);
+  return today < end || (today === end && Number(o.hour) * 60 + Number(o.minute) < eh * 60 + em);
+}
 async function getActiveBonusRevocations(){
-  const since = new Date(Date.now() - BONUS_REVOCATION_HOURS*60*60*1000).toISOString();
+  const since = new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString();          // (long enough for any that may still hold)
   const { data, error } = await sb.from('bonus_revocations').select('*').gte('revoked_at', since);
   if(error){ console.error(error); return []; }
-  return data;
+  return (data || []).filter(r => bonusRevocationActive(r));
 }
 // returns the new revocation (so it can be taken back), or null when it was not saved
 async function revokeBonus(childId, bonusId){

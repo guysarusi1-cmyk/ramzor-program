@@ -311,6 +311,10 @@
       document.querySelector('.toast-undo-btn').click(); await sleep(1500);
       const revUndone = (await getActiveBonusRevocations()).length;
       check('revocation undo works (needs supabase/hardening.sql in this project)', revUndone === revBefore || revUndone === revAfter, 'unexpected ' + revUndone);
+      { const at = iso => new Date(iso), act = (made, now) => bonusRevocationActive({ revoked_at:made }, at(now));          // (Israel time is UTC+2 in November)
+        const r = [act('2026-11-04T08:00:00Z', '2026-11-04T19:59:00Z'), act('2026-11-04T08:00:00Z', '2026-11-04T20:00:00Z'), act('2026-11-04T20:30:00Z', '2026-11-05T10:00:00Z'), act('2026-11-04T20:30:00Z', '2026-11-05T20:00:00Z')];
+        check('a revocation holds until 22:00 of its day (one made after 22:00: until 22:00 the next day)', JSON.stringify(r) === '[true,false,true,false]', JSON.stringify(r)); }
+      check('the kids screen does not show who lost a bonus', typeof renderBonusesSlide === 'function' && !/getActiveBonusRevocations\(\)/.test(String(renderBonusesSlide)), 'still read');
       showHub();
     });
 
@@ -2728,7 +2732,7 @@
         const r = [at(329), at(330), at(449), at(450), at(1169), at(1170), at(0), at(330, '2026-11-07')];
         israelNow = real;
         check('tv today: morning 05:30–07:30, the day 07:30–19:30, good night 19:30–05:30, the same on Saturday', JSON.stringify(r) === JSON.stringify(['night', 'morning', 'morning', null, null, 'night', 'night', 'morning']), JSON.stringify(r));
-        check('tv today: the morning shows the three steps and then breakfast apart — a sandwich, cornflakes on Saturday', /מתלבשים[\s\S]*מצחצחים שיניים[\s\S]*נועלים נעליים[\s\S]*ואז[\s\S]*ארוחת בוקר/.test(TV_QUIET_HTML.morning(false)) && /סנדוויץ/.test(TV_QUIET_HTML.morning(false)) && /קורנפלקס/.test(TV_QUIET_HTML.morning(true)) && !/קורנפלקס/.test(TV_QUIET_HTML.morning(false)), ''); }
+        check('tv today: the morning shows the three steps and then breakfast apart — a sandwich, cornflakes on Saturday', /שוטפים פנים ומצחצחים שיניים[\s\S]*מתלבשים[\s\S]*נועלים נעליים[\s\S]*ואז[\s\S]*ארוחת בוקר/.test(TV_QUIET_HTML.morning(false)) && /סנדוויץ/.test(TV_QUIET_HTML.morning(false)) && /קורנפלקס/.test(TV_QUIET_HTML.morning(true)) && !/קורנפלקס/.test(TV_QUIET_HTML.morning(false)), ''); }
       stopCarousel(); showHub(); PORTAL_TV_LIVE = liveWas; refreshPortalSlides();
       if(q){ q.hidden = true; q.innerHTML = ''; } tvQuietShown = null;
     });

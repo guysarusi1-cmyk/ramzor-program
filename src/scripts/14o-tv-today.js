@@ -63,14 +63,14 @@ function tvQuietNow(){
   if(n >= hm('19:30') || n < hm('05:30')) return 'night';
   return null;
 }
-// the morning: the whole sequence at once — getting ready (three steps), and only then breakfast, apart (a sandwich; cornflakes on Saturday).
+// the morning: the whole sequence at once — getting ready (washing the face with the teeth first, Guy 2026-11-04; dressing; shoes), and only then breakfast, apart (a sandwich; cornflakes on Saturday).
 // An order to see, without reading: no tracking, no locking, nothing to press.
 const TV_QUIET_HTML = {
   night:() => `<div class="tvq tvq-night"><div class="tvq-stars" aria-hidden="true">${Array.from({ length:40 }, (_, i) => `<i style="left:${(i * 47) % 100}%; top:${(i * 29) % 100}%; animation-delay:${(i % 7) * -0.6}s"></i>`).join('')}</div>
       <div class="tvq-moon" aria-hidden="true">🌙</div><div class="tvq-title">לילה טוב</div><div class="tvq-row" aria-hidden="true">😴 🧸 ⭐ 💤</div></div>`,
   morning:sat => `<div class="tvq tvq-morning"><div class="tvq-sun" aria-hidden="true">🌞</div><div class="tvq-title">בוקר טוב!</div>
       <div class="tvq-flow">
-        <div class="tvq-steps tvq-ready"><div><b>1</b><span>👕</span>מתלבשים</div><div><b>2</b><span>🦷</span>מצחצחים שיניים</div><div><b>3</b><span>👟</span>נועלים נעליים</div></div>
+        <div class="tvq-steps tvq-ready"><div><b>1</b><span>💦🦷</span>שוטפים פנים ומצחצחים שיניים</div><div><b>2</b><span>👕</span>מתלבשים</div><div><b>3</b><span>👟</span>נועלים נעליים</div></div>
         <div class="tvq-then"><span aria-hidden="true">⬅</span>ואז</div>
         <div class="tvq-steps tvq-eat"><div><span>${sat ? '🥣' : '🥪'}</span>ארוחת בוקר<small>${sat ? 'קורנפלקס' : 'סנדוויץ\''}</small></div></div>
       </div></div>`
