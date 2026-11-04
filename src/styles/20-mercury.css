@@ -681,3 +681,11 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 /* the steps ahead: the number plain to see, a small dot above it until the egg comes */
 .pweek-steps i, .pweek-steps i.done{ opacity:1; }
 .pw-dot{ display:block; width:8px; height:8px; margin:6px; border-radius:50%; background:var(--color-border-strong, var(--p-line)); }
+/* the week of the process: the shifts beside the day, not under it, so the seven days take as little of the screen as can be (Guy 2026-11-04) */
+.pwdays .pwday{ flex-wrap:nowrap; justify-content:flex-start; gap:8px; padding:5px 8px; }
+.pwdays .pwday-name{ flex:0 0 62px; width:62px; min-width:0; margin:0; padding:2px 4px; line-height:1.2; }
+.pwdays .pwday-name b, .pwdays .pwday-name small{ display:block; }
+.pwdays .pwday-name .pday-hrs{ font-size:11px; }
+.pwdays .pwday-shifts{ flex:1 1 0; min-width:0; gap:5px; }
+.pwdays .pwshift{ flex:1 1 0; min-width:0; padding:0 3px; }
+.pwdays .pwday-away{ flex:1 1 0; min-width:0; text-align:center; }
