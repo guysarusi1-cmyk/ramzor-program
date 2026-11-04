@@ -696,3 +696,13 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 .pweek-tools{ display:flex; justify-content:center; gap:8px; margin-top:12px; }
 .pweek-tools .btn{ min-height:44px; padding-inline:10px; white-space:nowrap; }
 .pweek-tools .pweek-q-btn{ flex:0 0 44px; padding-inline:0; }
+/* the high contrast of the device is made for the dark screens: it gave .sheet white text and a dark panel, and over the light look that was white words on a
+   white sheet (Guy reported it again and again, 2026-11-04: buttons not chosen looked empty). On the light look the look's own colours stay. */
+html[data-contrast=high] .mx-sheet[data-ptheme=light],
+html[data-contrast=high] body[data-rlook=light] #protected-app,
+html[data-contrast=high] body[data-rlook=light] .sheet:not(.mx-sheet),
+html[data-contrast=high] body[data-rlook=light] .toast{
+  --text:#2D2A24; --muted:#6E675C; --line:#B5A991; --panel:#FFFFFF; --panel-2:#F4EFE7;
+}
+/* "פירוט" on the home cards: a button, so its faded word still has to be read on the light look */
+.mx-home[data-ptheme=light] .home-card-more{ opacity:.9; }

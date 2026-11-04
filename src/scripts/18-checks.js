@@ -2711,6 +2711,57 @@
       }
     });
     // ---- very large text (the gear: "טקסט גדול מאוד"): every tab and folded part still fits the screen, for an instructor, a service girl and the coordinator
+    // ---- every word on every screen can be read, in each look, with the high contrast of the device on and off (Guy 2026-11-04: white on white in the sheets)
+    await step('readable looks', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)';
+      const rgba = c => { const x = /^color\(/.test(c) ? 255 : 1, m = String(c).replace(/^color\(srgb/, '').match(/[\d.]+/g) || []; return { r:(+m[0] || 0) * x, g:(+m[1] || 0) * x, b:(+m[2] || 0) * x, a:m[3] === undefined ? 1 : +m[3] }; };
+      const lum = c => [c.r, c.g, c.b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0);
+      const over = (top, under, a) => ({ r:top.r * a + under.r * (1 - a), g:top.g * a + under.g * (1 - a), b:top.b * a + under.b * (1 - a), a:1 });
+      // what is really behind an element: its layers up the page, null when a picture is there
+      const behind = el => { const layers = []; for(let e = el; e; e = e.parentElement){ const cs = getComputedStyle(e); if(cs.backgroundImage !== 'none') return null; const c = rgba(cs.backgroundColor); if(c.a > 0){ layers.push(c); if(c.a === 1) break; } } let b = { r:255, g:255, b:255, a:1 }; layers.reverse().forEach(c => { b = over(c, b, c.a); }); return b; };
+      const scan = root => { const bad = []; document.getAnimations().forEach(a => { try { a.finish(); } catch(e){} });
+        root.querySelectorAll('*').forEach(el => {
+          if(el.closest('svg, option, script, style') || !el.getClientRects().length) return;
+          const own = [...el.childNodes].some(x => x.nodeType === 3 && /[\p{L}\p{N}]/u.test(x.textContent)); if(!own) return;
+          const cs = getComputedStyle(el); if(cs.visibility === 'hidden') return;
+          const bg = behind(el); if(!bg) return;
+          let op = 1; for(let e = el; e; e = e.parentElement) op *= +getComputedStyle(e).opacity;
+          if(op < .05) return;
+          const fg0 = rgba(cs.color), fg = over(fg0, bg, fg0.a * op), a = lum(fg), b = lum(bg), r = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+          const low = el.closest('[disabled], .lv-no, .out, .svcal-day.off') ? 1.5 : 3;
+          if(r < low) bad.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} "${el.textContent.trim().slice(0, 14)}" ${r.toFixed(1)}`);
+        });
+        return bad; };
+      const lookSet = t => { srv.portalTheme = t; portalLoad().settings.theme = t === 'leopard' ? 'light' : t; };
+      const contrastSet = on => { a11y.contrast = on; applyA11y(); };
+      const view = () => document.querySelector('.view.active');
+      const tabsScan = async (sel, key, into) => { const ids = [...view().querySelectorAll(sel)].map(b => b.dataset[key]);
+        into.push(...scan(view()));
+        for(const id of ids){ const b = [...view().querySelectorAll(sel)].find(x => x.dataset[key] === id); if(!b) continue; b.click(); await sleep(450); view().querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(30); into.push(...scan(view()).map(x => `${id}: ${x}`)); } };
+      const wasContrast = !!a11y.contrast;
+      try {
+        for(const kind of ['instructor', 'coordinator', 'service', 'manager', 'therapist']){
+          await sbPersonal.auth.signOut();
+          const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW);
+          if(error || !(await personalEnter())){ check(`readable looks (${kind}): signs in`, false, error ? error.message : 'no'); continue; }
+          const was = { p:srv.portalTheme, t:portalLoad().settings.theme };
+          for(const look of ['light', 'dark'].concat(kind === 'coordinator' ? ['leopard'] : [])) for(const hc of [false, true]){
+            contrastSet(hc); lookSet(look); const bad = [];
+            if(personalRamzorKind()){ showAppHome(); await sleep(250); bad.push(...scan(view()).map(x => `home: ${x}`)); }
+            if(!personalIsTherapistOnly()){
+              srvOpenPortal(); await sleep(450); await tabsScan('[data-ptab]', 'ptab', bad);
+              const g = document.getElementById('portal-gear');
+              if(g){ g.click(); await sleep(350); const sh = [...document.querySelectorAll('.psheet')].pop(); if(sh){ sh.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(60); bad.push(...scan(sh).map(x => `gear: ${x}`)); sh.remove(); } }
+            }
+            if(look !== 'leopard' && typeof therapyAvailable === 'function' && therapyAvailable()){ await showTherapyPortal(); await sleep(500); await tabsScan('[data-th-tab]', 'thTab', bad); }
+            const u = [...new Set(bad)];
+            check(`readable looks: ${kind}, ${look}${hc ? ', high contrast' : ''}`, !u.length, `${u.length}: ${u.slice(0, 14).join(' | ')}`);
+          }
+          srv.portalTheme = was.p; portalLoad().settings.theme = was.t; contrastSet(wasContrast);
+        }
+      } finally { contrastSet(wasContrast); await personalLeave(); showHub(); }
+    });
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
