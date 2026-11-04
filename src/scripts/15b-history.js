@@ -88,9 +88,11 @@
   let ignoreUntil = 0;                // the moment our own history.back() (taking the guard away) lands: not a Back of the person
   let muteScreenWatcher = false;      // while the app answers a Back press, the watcher stays quiet
   history.replaceState({ nav:'base' }, '');
+  const flowBack = () => typeof prefFlowCanBack === 'function' && prefFlowCanBack();          // (a step of the preferences process to go back to: 14zj)
+  const canGoBack = () => stack.length > 1 || flowBack();
   function syncGuard(){
-    if(stack.length > 1 && !guardOn){ history.pushState({ nav:'guard' }, ''); guardOn = true; }
-    else if(stack.length <= 1 && guardOn){ guardOn = false; ignoreUntil = Date.now() + 1200; history.back(); }
+    if(canGoBack() && !guardOn){ history.pushState({ nav:'guard' }, ''); guardOn = true; }
+    else if(!canGoBack() && guardOn){ guardOn = false; ignoreUntil = Date.now() + 1200; history.back(); }
   }
 
   let queued = false;
@@ -116,6 +118,7 @@
     if(Date.now() < ignoreUntil){ ignoreUntil = 0; return; }             // our own move (the guard taken away)
     guardOn = false;                                                      // (the person's Back took the guard)
     if(closeOpenSheet()){ syncGuard(); return; }                          // Back only closed a sheet: the page stays
+    if(typeof prefFlowBack === 'function' && prefFlowBack()){ syncGuard(); updateBack(); return; }          // one step back in the preferences process, same page
     if(stack.length <= 1){ syncGuard(); return; }                         // at the first page: the next Back leaves the app
     const top = stack[stack.length - 1], target = stack[stack.length - 2], snap = snaps[stack.length - 2];
     muteScreenWatcher = true;
@@ -140,14 +143,15 @@
       nav.insertBefore(b, nav.firstChild); backBtns.push(b);
     }
     // (no floating button on a wide screen any more: it covered things and the browser's back does the same: Guy 2026-10-26)
-    backBtns.forEach(b => b.addEventListener('click', () => { if(stack.length > 1) history.back(); }));
+    backBtns.forEach(b => b.addEventListener('click', () => { if(canGoBack()) history.back(); }));
   }
   function updateBack(){
-    const can = rootSet && stack.length > 1;
+    const can = rootSet && canGoBack();
     backBtns.forEach(b => { b.hidden = !can; });
     const nav = el('bottom-nav'); if(nav) nav.classList.toggle('has-back', can);
   }
   makeBack(); updateBack();
-  window.navCanGoBack = () => rootSet && stack.length > 1;          // (for the checks)
+  window.navCanGoBack = () => rootSet && canGoBack();          // (for the checks)
+  window.navRefresh = () => { syncGuard(); updateBack(); };          // (a step of the preferences process changed: the page is the same, Back has more or less to do)
   window.navTrail = () => stack.slice();
 })();

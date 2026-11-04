@@ -327,7 +327,7 @@ function mcalWeekLabel(mk, w){
   const f = x => { const t = parseIso(x); return t.getDate() + '/' + (t.getMonth() + 1); };
   return inMonth.length === 1 ? f(inMonth[0]) : f(inMonth[0]) + '–' + f(inMonth[inMonth.length - 1]);
 }
-const mcalWeekNavHtml = (mk, week) => `<div class="mcal-weeknav"><button type="button" class="mcal-wk" data-mwk="-1" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>שבוע ${pEsc(mcalWeekLabel(mk, week))}</b><button type="button" class="mcal-wk" data-mwk="1" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>`;
+const mcalWeekNavHtml = (mk, week) => `<div class="mcal-weeknav"><button type="button" class="mcal-wk" data-mwk="-1" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>שבוע <bdi dir="ltr">${pEsc(mcalWeekLabel(mk, week))}</bdi></b><button type="button" class="mcal-wk" data-mwk="1" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>`;
 function mcalViewBarHtml(mk, week, id){          // "חודש | שבוע" and, in the weekly view, the week with ‹ ›
   const isW = Number.isInteger(week);
   return `<div class="mcal-viewbar" id="${id}"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-mview="week" aria-pressed="${isW}">שבוע</button><button type="button" data-mview="month" aria-pressed="${!isW}">חודש</button></div>${isW ? mcalWeekNavHtml(mk, week) : ''}</div>`;

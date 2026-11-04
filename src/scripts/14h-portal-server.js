@@ -78,7 +78,8 @@ async function srvLoad(){
     srvAll(() => sbPersonal.from('schedule').select('month,status').gte('month', from).lte('month', to)),
     sbPersonal.from('notices').select('id,text,kind,seen,created_at').eq('to_staff', meId).order('created_at', { ascending:false }).limit(40).then(r => { if(r.error) throw r.error; return r.data || []; }),          // (only her own: the coordinator may read everybody's notices; and only the last 40)
     srvAll(() => sbPersonal.from('prefs_hours').select('staff_id,day,from_time,to_time').gte('day', from).lte('day', to)),
-    srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday,extend_ask,pull_ask').gte('month', from).lte('month', to))
+    srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday,extend_ask,pull_ask,extend_na,pull_na').gte('month', from).lte('month', to))
+      .catch(() => srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday,extend_ask,pull_ask').gte('month', from).lte('month', to)))          // (a project without scheduling-v58.sql)
       .catch(() => srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday').gte('month', from).lte('month', to)))          // (a project without scheduling-v39.sql: no "תבדקו איתי")
   ]);
   const st = {
@@ -101,7 +102,7 @@ async function srvLoad(){
   });
   abs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); if(r.reason === 'self') pr.absent.push(r.day); else pr.fixed.push({ day:r.day, reason:r.reason, note:r.note }); });      // (a vacation, sick leave... that the coordinator entered cannot be changed here)
   hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); (pr.hours[r.day] = pr.hours[r.day] || []).push([parseInt(r.from_time, 10), parseInt(r.to_time, 10) || 24]); });
-  cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_ask ? 'ask' : r.extend_morning, pull:r.pull_ask ? 'ask' : r.pull_to_sunday }; });
+  cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_na ? 'na' : r.extend_ask ? 'ask' : r.extend_morning, pull:r.pull_na ? 'na' : r.pull_ask ? 'ask' : r.pull_to_sunday }; });
   subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
   let goalRows = []; try { goalRows = await srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,goal').gte('month', from).lte('month', to)); } catch(e){ goalRows = []; }          // (the goal column comes with scheduling-v5.sql; until then there is none)
   goalRows.forEach(r => { const m = st.months[monthOf(r.month)]; if(m && r.goal) m.goals[r.staff_id] = r.goal; });
@@ -208,7 +209,8 @@ async function srvSyncPrefs(mk){
   }
   if(p.consent.extend !== null && p.consent.pull !== null){          // the two consents are asked again every month; saved once both are answered
     const ce = p.consent.extend, cp = p.consent.pull, row = { staff_id:srvWho(), month:firstOf(mk), extend_morning:ce === true, pull_to_sunday:cp === true, answered_at:new Date().toISOString() };
-    r = await sbPersonal.from('prefs_consent').upsert(Object.assign({}, row, { extend_ask:ce === 'ask', pull_ask:cp === 'ask' }));          // ("תבדקו איתי" = no for the engine: scheduling-v39.sql)
+    r = await sbPersonal.from('prefs_consent').upsert(Object.assign({}, row, { extend_ask:ce === 'ask', pull_ask:cp === 'ask', extend_na:ce === 'na', pull_na:cp === 'na' }));          // ("לא רלוונטי" = no for the engine too: scheduling-v58.sql)
+    if(r.error && /extend_na|pull_na/i.test(r.error.message || '')) r = await sbPersonal.from('prefs_consent').upsert(Object.assign({}, row, { extend_ask:ce === 'ask', pull_ask:cp === 'ask' }));          // ("תבדקו איתי" = no for the engine: scheduling-v39.sql)
     if(r.error && /extend_ask|pull_ask|column/i.test(r.error.message || '')) r = await sbPersonal.from('prefs_consent').upsert(row);
     if(r.error) throw r.error;
   }

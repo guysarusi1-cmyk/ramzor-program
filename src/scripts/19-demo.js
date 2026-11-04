@@ -18,6 +18,7 @@
       const kind = /^psrv-(subs|csched|cswaps|cvac|cset)$/.test(what) ? 'coordinator' : what === 'psrv-service' ? 'service' : 'instructor';
       await sbPersonal.auth.signInWithPassword({ email:kind + '-test@merkaz-cherum.local', password:'@config(testPersonalPassword)' });
       try { const sz = location.search.match(/[?&]size=(\d)/); localStorage.setItem('ramzor-portal-big', sz ? sz[1] : '0'); } catch(e){}          // (&size=2 shows the very large text)
+      if(/[?&]light(&|$)/.test(location.search)) localStorage.setItem('ramzor-portal-theme', 'light');          // (&light: the light look)
       await srvStart();
       const pm = location.search.match(/[?&]pmonth=(\d{4}-\d{2})/); if(pm) portalUi.month = portalUi.pmonth = portalUi.smonth = pm[1];          // (&pmonth=2026-11 opens that month)
       if(/[?&]long\b/.test(location.search)){ srv.showLong = true; srv.pickOne = /[?&]pick\b/.test(location.search); }          // (&long shows the long weekend, &long&pick also "only one of these")
@@ -29,6 +30,10 @@
         window.print = () => {}; for(let i = 0; i < 80 && !document.getElementById('cs-print'); i++) await new Promise(r => setTimeout(r, 250)); document.getElementById('cs-print').click(); await new Promise(r => setTimeout(r, 200));
         const sheet = document.getElementById('print-sheet').cloneNode(true); setTimeout(() => { document.body.appendChild(sheet); document.body.classList.add('printing'); }, 1500);
       }, 2500);
+      if(/[?&]light(&|$)/.test(location.search)){ srv.portalTheme = 'light'; portalLoad().settings.theme = 'light'; }
+      { const pw = (location.search.match(/[?&]pw=(\w+)/) || [])[1];          // (&pw=kinds|days|0|1..|end: a step of the process; &pw=month: the month opened from it; &pw=wk: "שבוע-שבוע")
+        if(pw){ const wk = pw === 'wk'; srv.prefWeekly = !wk; srv.prefPlain = !wk; localStorage.setItem('ramzor-plain-help', '1'); portalUi.prefsWholeMonth = pw === 'month'; localStorage.setItem(pwPosKey(prefsMonthNow()), JSON.stringify(/^\d+$/.test(pw) ? Number(pw) : pw === 'month' || wk ? 0 : pw)); } }
+      if(/[?&]gear(&|$)/.test(location.search)) setTimeout(() => { document.getElementById('portal-gear').click(); setTimeout(() => document.querySelectorAll('.psheet details').forEach(d => { d.open = true; }), 400); }, 1500);          // (&gear: the settings, every fold open)
       showPortal(({ 'psrv-prefs':'prefs', 'psrv-subs':'submissions', 'psrv-swaps':'swaps', 'psrv-cswaps':'swaps', 'psrv-cvac':'vacations', 'psrv-cset':'settings', 'psrv-inbox':'inbox' })[what] || (location.search.match(/[?&]ptab=(\w+)/) || [])[1] || 'schedule');          // (&ptab=avail opens that tab)
       return;
     }

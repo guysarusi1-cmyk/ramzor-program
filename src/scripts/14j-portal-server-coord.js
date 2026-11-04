@@ -686,8 +686,8 @@ function srvPersonRequestsHtml(p, mk){
     ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
     ${longs.length ? `<div class="cs-req cs-long"><b>סופ"ש ארוך</b><div class="cs-req-days">${longs.map(([d, lv]) => `<div class="cs-req-day"><span class="cs-req-date">${pEsc(dayLabel(d))}</span><span class="mcal-name wish-${lv === 'avoid' ? 'can' : lv}">${lv === 'yes' ? 'כן' : lv === 'avoid' ? 'יכול' : 'לא'}</span></div>`).join('')}</div></div>` : ''}
     ${(pr.pick || []).length ? `<div class="cs-req cs-long"><b>רק אחד מסופי השבוע</b><span>${pr.pick.slice().sort().map(f => pEsc(dayLabel(f))).join(' · ')}</span></div>` : ''}
-    <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
-    <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.extend === 'na' ? 'לא רלוונטי' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.pull === 'na' ? 'לא רלוונטי' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
     ${goal ? `<div class="cs-req"><b>יעד</b><span>${GOAL[goal] || goal}</span></div>` : ''}
     ${note ? `<div class="cs-req"><b>הערה</b><span>${pEsc(note)}</span></div>` : ''}
   </div>`;

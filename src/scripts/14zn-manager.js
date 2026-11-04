@@ -33,7 +33,7 @@ async function mgrHome(body){
   const wk = mcalWeekOfDay(mk, start < mk + '-01' ? mk + '-01' : start);
   const group = String((st.waMsg || {}).group || '').trim();
   body.innerHTML = `
-    <div class="mcal-weeknav mgr-weeknav"><button type="button" class="mcal-wk" data-mw="-7" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>${thisWeek ? 'השבוע הנוכחי' : 'שבוע'} ${mgrShort(days[0])}–${mgrShort(days[6])}</b><button type="button" class="mcal-wk" data-mw="7" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>
+    <div class="mcal-weeknav mgr-weeknav"><button type="button" class="mcal-wk" data-mw="-7" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>${thisWeek ? 'השבוע הנוכחי' : 'שבוע'} <bdi dir="ltr">${mgrShort(days[0])}–${mgrShort(days[6])}</bdi></b><button type="button" class="mcal-wk" data-mw="7" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>
     <div class="mgr-links">
       <button type="button" class="btn ghost" data-mgo="kids">תוכניות הילדים</button>
       ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת הצוות</span></a>` : ''}

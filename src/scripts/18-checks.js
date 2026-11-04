@@ -1402,7 +1402,7 @@
         await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(next), extend_morning:false, pull_to_sunday:false });
         await srvLoad();
       }
-      srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (these checks look at the month with colours, also after a reload; the new default — week by week, no colours — is checked in "simple preferences")
+      portalUi.prefsWholeMonth = true; srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (these checks look at the month with colours, also after a reload; the new default — week by week, no colours — is checked in "simple preferences")
       portalUi.persona = srv.me; portalUi.tab = 'prefs'; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
       check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
       const prefsShut = !srvPrefsOpen(next);          // (after the 24th the month is closed: one line, the marks to read only — Guy 2026-10-28)
@@ -2533,7 +2533,7 @@
         const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k));
         if(!mk) check('(info) fixed preferences: no month is open for preferences on the test server now, the board was not exercised', true, '');
         else {
-        srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (the month with colours, also after a reload)
+        portalUi.prefsWholeMonth = true; srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (the month with colours, also after a reload)
         portalUi.pmonth = mk; showPortal('prefs'); await sleep(400);
         const day = daysOfMonth(mk).find(d => !srvPrefsOf(portalMonth(mk), srv.me).slots[`${d}|m`] && !srvPrefsOf(portalMonth(mk), srv.me).absent.includes(d) && document.querySelector(`[data-pslot="${d}|m"]`));
         const ms = day && document.querySelector(`[data-pslot="${day}|m"]`);
@@ -2559,6 +2559,14 @@
       await sbPersonal.auth.signOut();
       const { error } = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
       if(error || !(await personalEnter())){ check('simple preferences: the instructor signs in', false, error ? error.message : 'no'); return; }
+      { const lum = c => { const m = String(c).match(/[\d.]+/g); if(!m) return null; const [r, g, b, a] = m.map(Number); if(a === 0) return null; return [r, g, b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0); };
+        const cr = (a, b) => (Math.max(a, b) + .05) / (Math.min(a, b) + .05), under = el => { for(let e = el.parentElement; e; e = e.parentElement){ const l = lum(getComputedStyle(e).backgroundColor); if(l !== null) return l; } return 1; };
+        const was = portalLoad().settings.theme, wasT = srv.portalTheme; portalLoad().settings.theme = 'light'; srv.portalTheme = 'light'; portalUi.tab = 'schedule'; showPortal('schedule'); await sleep(250);
+        document.getElementById('portal-gear').click(); await sleep(450);
+        const sh = [...document.querySelectorAll('.psheet')].pop(); sh.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(150);
+        const bad = [...sh.querySelectorAll('button')].filter(b => b.getBoundingClientRect().width).filter(b => { const cs = getComputedStyle(b), own = lum(cs.backgroundColor), u = under(b), box = Math.max(own === null ? 1 : cr(own, u), parseFloat(cs.borderTopWidth) ? cr(lum(cs.borderTopColor), u) : 1), txt = cr(lum(cs.color), own === null ? u : own); return txt < 3 || (box < 1.45 && parseFloat(cs.borderTopWidth) > 0); }).map(b => b.textContent.trim().slice(0, 16));
+        check('light theme: every button of the settings can be seen, chosen or not', sh.dataset.ptheme === 'light' && !bad.length, bad.join(' | '));
+        sh.remove(); portalLoad().settings.theme = was; srv.portalTheme = wasT; }
       const mk = prefsMonthNow(), realOpen = srvPrefsOpen, realSave = portalSave, sim = !srvPrefsOpen(mk);
       if(sim){ srvPrefsOpen = () => true; portalSave = () => {}; }          // (no month open on the test server now: the screen is tried as if it were, nothing is saved)
       const m = portalMonth(mk), pr = srvPrefsOf(m, srv.me), saved = JSON.stringify(pr.slots), savedHours = JSON.stringify(pr.hours), wasSub = m.submitted[srv.me], was = [srv.prefWeekly, srv.prefPlain];
@@ -2595,7 +2603,64 @@
           check('"שעות אחרות" guided: which day, then "מתי תוכלי להתחיל ב<day>?" and "מתי תרצי לסיים ב<day>?" on the time wheel; kept as other hours', /^מתי תוכל.? להתחיל ביום /.test(q1) && /^מתי תרצ.? לסיים ביום /.test(q2) && JSON.stringify(pr.hours[d]) === '[[9,15]]', JSON.stringify([q1, q2, pr.hours[d]]));
         } else check('(info) simple preferences: no day of week 1 for other hours', true, '');
         pb().querySelector('#pw-month').click(); await sleep(200);
-        check('"לראות את כל החודש": the month without colours, with "שעות אחרות" and "?" instead of the colour buttons, and the way back to the weeks', !!pb().querySelector('.pcal.plain') && !!pb().querySelector('.pplain-bar #pplain-hours') && !pb().querySelector('[data-plevel]') && !!pb().querySelector('#pw-back-week'), '');
+        const stepNow = () => pwGet(pwPosKey(mk), 'kinds');
+        check('"לראות את כל החודש" from the process: the month without colours, and at the bottom one button only, "חזרה לתהליך"', !!pb().querySelector('.pcal.plain') && !pb().querySelector('[data-plevel]') && !pb().querySelector('#pplain-hours') && pb().querySelectorAll('.plevelbar button').length === 1 && pb().querySelector('.plevelbar #pw-back-flow').textContent === 'חזרה לתהליך', pb().querySelector('.plevelbar') ? pb().querySelector('.plevelbar').textContent : 'no bar');
+        { const at = stepNow(); pb().querySelector('#pw-back-flow').click(); await sleep(200);
+          check('"חזרה לתהליך": back to the very step it was opened from', !portalUi.prefsWholeMonth && stepNow() === at && !!pb().querySelector('.pwdays'), String(stepNow())); }
+        // the marker: numbered, an egg that hatches
+        { const it = [...pb().querySelectorAll('.pweek-steps i')];
+          check('the marker of the steps: numbered 1.. with a drawing in each, the first an egg and the last a hatching chick', it.length === 2 + wks.length + 1 && it.every((x, i) => x.querySelector('b').textContent === String(i + 1) && !!x.querySelector('svg')) && !it[0].querySelector('.c') && !!it[it.length - 1].querySelector('.c'), String(it.length)); }
+        // a whole day
+        { const dayB = pb().querySelector('[data-pwday]');
+          if(dayB){ const d = dayB.dataset.pwday, ks = prefShiftsFor(d).map(x => `${d}|${x.id}`).filter(k => !prefFixedNo(k) && !prefInsideLong(pr, k));
+            ks.forEach(k => delete pr.slots[k]); renderInstructorPrefs(pb()); await sleep(100);
+            pb().querySelector(`[data-pwday="${d}"]`).click(); await sleep(150);
+            const y = ks.every(k => pr.slots[k] === 'yes');
+            pb().querySelector(`[data-pwday="${d}"]`).click(); await sleep(150);
+            const no = ks.every(k => pr.slots[k] === 'no');
+            pb().querySelector(`[data-pslot="${ks[0]}"]`).click(); await sleep(150);
+            check('a tap on the day marks all of it (כן, then לא), and a single shift still changes by itself', y && no && pr.slots[ks[0]] === 'yes' && (ks.length < 2 || pr.slots[ks[1]] === 'no'), JSON.stringify(ks.map(k => pr.slots[k]))); } }
+        // going back, one step at a time, keeping the choices; the question of the days
+        { pwSet(pwPosKey(mk), 'kinds'); renderInstructorPrefs(pb()); await sleep(120);
+          pb().querySelector('[data-pwopt="n"]').click(); await sleep(60); pb().querySelector('#pw-next').click(); await sleep(150);
+          const qText = pb().querySelector('.pweek-q h2').textContent, sub = pb().querySelector('.pweek-q .pnote').textContent;
+          check('the second question: its new words, and the small line', /^האם יש יום קבוע בשבוע שבו לא תגיע.? החודש\?$/.test(qText) && sub === 'כל המופעים של הימים שבחרת יסומנו מראש כ׳לא׳.', qText + ' | ' + sub);
+          pb().querySelector('[data-pwopt="3"]').click(); await sleep(60);
+          const wed = daysOfMonth(mk).filter(d => dowOf(d) === 3 && !pr.absent.includes(d) && !(pr.fixed || []).some(f => f.day === d));
+          check('a day chosen: all its shifts in all the month are "לא" at once, as the line says', wed.every(d => prefShiftsFor(d).every(x => pr.slots[`${d}|${x.id}`] === 'no')), JSON.stringify(wed));
+          check('"חזור" has somewhere to go in the process', navCanGoBack() && prefFlowCanBack(), '');
+          prefFlowBack(); await sleep(150);
+          check('"חזור" from the second question goes to the first, with its choice still on', stepNow() === 'kinds' && pb().querySelector('[data-pwopt="n"]').classList.contains('on'), String(stepNow()));
+          pb().querySelector('#pw-next').click(); await sleep(150);
+          check('... and forward again, the day chosen is still on', stepNow() === 'days' && pb().querySelector('[data-pwopt="3"]').classList.contains('on'), '');
+          pb().querySelector('[data-pwopt="3"]').click(); await sleep(60);
+          const fri0 = daysOfMonth(mk).find(d => dowOf(d) === 3);
+          check('taken back: the day waits for a mark again, only its night stays "לא" (the first question keeps it)', !pr.slots[`${fri0}|m`] && pr.slots[`${fri0}|n`] === 'no', JSON.stringify([pr.slots[`${fri0}|m`], pr.slots[`${fri0}|n`]]));
+          pwSet(pwPosKey(mk), 'kinds'); renderInstructorPrefs(pb()); await sleep(100); pb().querySelector('[data-pwopt="n"]').click(); await sleep(60); }
+        // "לא רלוונטי" follows the marks
+        { const allK = Object.keys(pr.slots); const keep = JSON.stringify(pr.slots), keepC = JSON.stringify(pr.consent);
+          allK.forEach(k => { pr.slots[k] = 'no'; }); pr.consent.extend = null; pr.consent.pull = null; try { localStorage.removeItem(prefConsentAutoKey(mk)); } catch(e){}
+          pwSet(pwPosKey(mk), 'end'); renderInstructorPrefs(pb()); await sleep(150);
+          check('"לא רלוונטי": marked by itself with no morning and no Saturday night chosen', pr.consent.extend === 'na' && pr.consent.pull === 'na' && pb().querySelector('[data-consent="extend:na"]').classList.contains('on') && pb().querySelector('[data-consent="pull:na"]').classList.contains('on'), JSON.stringify(pr.consent));
+          const d1 = daysOfMonth(mk)[0], sat1 = daysOfMonth(mk).find(d => dowOf(d) === 6); pr.slots[`${d1}|m`] = 'yes'; renderInstructorPrefs(pb()); await sleep(120);
+          check('... a morning chosen: the first question opens again, the second stays', pr.consent.extend === null && pr.consent.pull === 'na', JSON.stringify(pr.consent));
+          pr.slots[`${sat1}|n`] = 'yes'; renderInstructorPrefs(pb()); await sleep(120);
+          check('... a Saturday night chosen: the second opens too', pr.consent.pull === null, JSON.stringify(pr.consent));
+          pb().querySelector('[data-consent="pull:na"]').click(); await sleep(120); renderInstructorPrefs(pb()); await sleep(80);
+          check('... pressed by hand it stays', pr.consent.pull === 'na', JSON.stringify(pr.consent));
+          pr.slots = JSON.parse(keep); pr.consent = JSON.parse(keepC); try { localStorage.removeItem(prefConsentAutoKey(mk)); } catch(e){} }
+        // "שבוע-שבוע": one week across, with the arrows
+        { srv.prefWeekly = false; srv.prefPlain = false; portalUi.prefsWholeMonth = false; portalUi.prefWk = 0; portalUi.level = 'yes'; renderInstructorPrefs(pb()); await sleep(200);
+          const nums = () => [...pb().querySelectorAll('.pcal .pday-num')].map(x => x.textContent).join(',');
+          const n1 = nums(), sw = [...pb().querySelectorAll('[data-pview]')].map(x => x.textContent).join('|');
+          check('the switch: "שלב שלב, בלי יכול" and "שבוע-שבוע"', sw === 'שלב שלב, בלי יכול|שבוע-שבוע', sw);
+          check('"שבוע-שבוע": the calendar with one week only, the days side by side, with "יכול"', pb().querySelectorAll('.pcal .pday:not(.blank)').length <= 7 && !!pb().querySelector('[data-plevel="avoid"]') && getComputedStyle(pb().querySelector('.pcal')).display === 'grid', n1);
+          pb().querySelector('[data-mwk="1"]').click(); await sleep(200);
+          check('... the arrow moves to the next week, and back', nums() !== n1 && portalUi.prefWk === 1, nums());
+          pb().querySelector('[data-mwk="-1"]').click(); await sleep(200);
+          check('... and at the first week there is no going before it', nums() === n1 && pb().querySelector('[data-mwk="-1"]').disabled, nums());
+          check('... the special bar of the process is not here', !pb().querySelector('#pw-back-flow') && pb().querySelectorAll('.plevelbar button').length > 1, '');
+          srv.prefWeekly = true; srv.prefPlain = true; portalUi.prefWk = 0; }
       } finally {
         pr.slots = JSON.parse(saved); pr.hours = JSON.parse(savedHours); if(wasSub) m.submitted[srv.me] = wasSub; srv.prefWeekly = was[0]; srv.prefPlain = was[1]; portalUi.prefsWholeMonth = false;
         try { localStorage.removeItem(pwPosKey(mk)); } catch(e){}
