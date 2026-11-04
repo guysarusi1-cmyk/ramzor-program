@@ -644,3 +644,7 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 .kq-bt-row .bb-icon{ font-size:20px; } .kq-bt-text{ flex:1; }
 .kq-bt-out{ flex-basis:100%; font-size:13px; color:var(--yellow, #e0b000); display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
 .kq-bt-note{ display:block; margin-top:4px; opacity:.7; }
+/* the timetable editor: the start and the end of an activity side by side (Guy 2026-11-04) */
+.ctl-tt-times{ display:inline-flex; align-items:center; gap:2px; flex-wrap:wrap; }
+.ctl-tt-dash{ opacity:.6; padding:0 2px; }
+@media (max-width:520px){ .ctl-tt-row{ grid-template-columns:1fr 46px auto; } .ctl-tt-row .ctl-tt-times{ grid-column:1 / -1; } }

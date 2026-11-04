@@ -45,11 +45,14 @@ function renderShiftsLive(){
 function renderTimetableLive(){
   const el = document.getElementById('tv-timetable'), list = (tvTimetable && tvTimetable.items) || [];
   if(!list.length){ el.innerHTML = '<div class="empty">אין לו"ז להיום</div>'; return; }
-  const n = nowMin(); let current = -1; list.forEach((a, i) => { if(hm(a.t) <= n) current = i; });
+  // "now" by the hours (Guy 2026-11-04, SCHEDULE-SPEC): from its start to its end — or, with no end written, to the next activity that starts later;
+  // two activities at the same time (different groups) are both "now"
+  const n = nowMin(), endOf = (a, i) => a.end ? hm(a.end) : (() => { const nx = list.slice(i + 1).find(b => hm(b.t) > hm(a.t)); return nx ? hm(nx.t) : hm(a.t) + 60; })();
+  const phase = (a, i) => n >= hm(a.t) && n < endOf(a, i) ? ' now' : n >= endOf(a, i) ? ' past' : '';
   el.className = 'tv-timetable tvt2';
   el.style.setProperty('--tvt-cols', list.length > 8 ? 6 : list.length > 4 ? 4 : list.length);
-  el.innerHTML = `${tvTimetable.title ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${i === current ? ' now' : i < current ? ' past' : ''}">
-      <div class="tvt2-time">${escapeHtml(a.t)}</div><div class="tvt2-icon">${ttArt(a.i)}</div><div class="tvt2-name">${escapeHtml(a.n)}</div></div>`).join('')}</div>`;
+  el.innerHTML = `${tvTimetable.title ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${phase(a, i)}">
+      <div class="tvt2-time"><bdi dir="ltr">${escapeHtml(a.t)}${a.end ? '–' + escapeHtml(a.end) : ''}</bdi></div><div class="tvt2-icon">${ttArt(a.i)}</div><div class="tvt2-name">${escapeHtml(a.n)}</div></div>`).join('')}</div>`;
 }
 // the picture of an activity (the drawings of 14p-timetable-art.js when there is one, else the emoji)
 const ttArt = id => (typeof TT_ART !== 'undefined' && TT_ART[id]) || `<span class="tvt2-emoji">${ttIcon(id)[2]}</span>`;
