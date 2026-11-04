@@ -319,7 +319,64 @@ function csShareSheet(mk, wk){
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
   sh.querySelectorAll('[data-cs-img]').forEach(b => b.addEventListener('click', async () => { sh.close(); await csShareImage(mk, b.dataset.csImg === 'week' ? w : null); }));
 }
+// the month as a picture: a calendar, a square at most 1600 on its long side. WhatsApp brings every picture down to about that size, so a tall list came out blurred;
+// here nothing is scaled, the letters stay sharp (Guy 2026-11-04). Everyone is in it, the teachers and the service girls with their hours.
+function csMonthCanvas(mk){
+  const st = portalLoad(), days = daysOfMonth(mk), lead = dowOf(days[0]), weeks = Math.ceil((lead + days.length) / 7);
+  const W = 1600, MAX = 1600, mar = 16, cw = (W - mar * 2) / 7, head = 136, dowH = 36, foot = 34, c = document.createElement('canvas'), g = c.getContext('2d');
+  const hh = x => String(parseInt(x, 10)), type = id => (st.shiftTypes || []).find(s => s.id === id) || {}, roleOf = id => (st.instructors.find(x => x.id === id) || {}).role;
+  const nm = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
+  const SH = [{ code:'M', id:'m', bg:'#FFF1CC' }, { code:'A', id:'e', bg:'#DFEBDC' }, { code:'N', id:'n', bg:'#DDE3F1' }].map(s => Object.assign(s, { label:type(s.id).label || '', from:hh(type(s.id).start || '0'), to:hh(type(s.id).end || '0') }));
+  const inCol = (r, code) => r.shift === code || (code === 'M' && r.shift === 'S') || (code === 'A' && r.shift === 'L');
+  const INK = '#1F1C17', OTHER = '#1F4E79';
+  // the people of a shift, the instructors first; hours by a name only when they are not the hours of the shift
+  const people = (d, s) => { const rs = (st.rows || []).filter(r => r.day === d && inCol(r, s.code)), own = r => r.from && r.to && (hh(r.from) !== s.from || hh(r.to) !== s.to) ? ` ${hh(r.from)} עד ${hh(r.to)}` : '';
+    const rank = r => ({ teacher:1, service:2 })[roleOf(r.staff)] || 0;
+    return rs.slice().sort((x, y) => rank(x) - rank(y)).map(r => rank(r) ? { t:nm(r.staff) + (r.from && r.to ? ` ${hh(r.from)} עד ${hh(r.to)}` : ''), c:OTHER } : { t:nm(r.staff) + own(r), c:INK }); };
+  // words go on from the right and down; a name is never cut. Returns the lines, each a list of [word, colour, x from the right]
+  const flow = (label, list, fs, width) => { const lines = [[]]; g.font = `700 ${fs}px Assistant, Arial`; let x = g.measureText(label + ' ').width; lines[0].push([label, INK, 0, true]); g.font = `400 ${fs}px Assistant, Arial`;
+    if(!list.length) lines[0].push(['—', INK, x]);
+    list.forEach((p, i) => { const t = p.t + (i < list.length - 1 ? ', ' : ''), w = g.measureText(t).width; if(x && x + w > width){ lines.push([]); x = 0; } lines[lines.length - 1].push([t, p.c, x]); x += w; });
+    return lines; };
+  const layout = fs => { const lh = Math.round(fs * 1.22), dateH = Math.round(fs * 1.5), inner = cw - 12; const cells = {}; const rowH = Array(weeks).fill(0);
+    days.forEach((d, i) => { const blocks = SH.map(s => ({ s, lines:flow(s.label, people(d, s), fs, inner) })), h = dateH + blocks.reduce((t, b) => t + b.lines.length * lh + 6, 0) + 4, w = Math.floor((lead + i) / 7); cells[d] = blocks; rowH[w] = Math.max(rowH[w], h); });
+    return { fs, lh, dateH, cells, rowH, H:head + dowH + rowH.reduce((a, b) => a + b, 0) + foot }; };
+  g.direction = 'rtl'; g.textAlign = 'right';
+  let L = null; for(let fs = 20; fs >= 13; fs--){ L = layout(fs); if(L.H <= MAX) break; }
+  c.width = W; c.height = L.H; g.direction = 'rtl'; g.textAlign = 'right'; g.textBaseline = 'alphabetic';
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W, L.H);
+  g.fillStyle = INK; g.font = '600 46px Rubik, Assistant, Arial'; g.fillText(`סידור העבודה · ${monthLabel(mk)}`, W - mar - 4, 56);
+  // which shift is which, and its hours, once at the top ("7 עד 15": no range to turn round in Hebrew)
+  { let x = W - mar - 4; g.font = '700 26px Assistant, Arial'; SH.forEach(s => { const t = `${s.label} ${s.from} עד ${s.to}`, w = g.measureText(t).width + 28; g.fillStyle = s.bg; g.fillRect(x - w, 76, w, 42); g.strokeStyle = '#6E675C'; g.lineWidth = 1; g.strokeRect(x - w + .5, 76.5, w - 1, 41); g.fillStyle = INK; g.fillText(t, x - 14, 106); x -= w + 12; }); }
+  let y = head;
+  DOW_NAMES.forEach((n, i) => { const x = W - mar - (i + 1) * cw; g.fillStyle = i >= 5 ? '#D9CDB8' : '#EDE6D8'; g.fillRect(x, y, cw, dowH); g.fillStyle = INK; g.font = '700 22px Assistant, Arial'; g.textAlign = 'center'; g.fillText(n, x + cw / 2, y + 26); g.textAlign = 'right'; });
+  y += dowH;
+  for(let w = 0; w < weeks; w++){
+    const h = L.rowH[w];
+    for(let i = 0; i < 7; i++){
+      const d = days[w * 7 + i - lead], x = W - mar - (i + 1) * cw;
+      g.strokeStyle = '#8F8574'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, cw - 1, h - 1);
+      if(!d){ g.fillStyle = '#F2EEE6'; g.fillRect(x + 1, y + 1, cw - 2, h - 2); continue; }
+      const right = x + cw - 6; let ly = y + L.fs + 3;
+      g.fillStyle = INK; g.font = `800 ${L.fs + 2}px Assistant, Arial`; g.fillText(`${DOW_SHORT[i]} ${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`, right, ly);
+      ly = y + L.dateH;
+      L.cells[d].forEach(b => { const bh = b.lines.length * L.lh + 4; g.fillStyle = b.s.bg; g.fillRect(x + 2, ly, cw - 4, bh);
+        b.lines.forEach((line, k) => line.forEach(([t, col, dx, bold]) => { g.fillStyle = col; g.font = `${bold ? 700 : 400} ${L.fs}px Assistant, Arial`; g.fillText(t, right - dx, ly + (k + 1) * L.lh - Math.round(L.lh * .24)); }));
+        ly += bh + 2; });
+    }
+    y += h;
+  }
+  g.fillStyle = OTHER; g.font = '400 20px Assistant, Arial'; g.fillText('בכחול: מורות ובנות שירות, עם השעות שלהן', W - mar - 4, y + 25);
+  return c;
+}
+async function csShareCanvas(c, mk, week){
+  const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+  const file = new File([blob], `schedule-${mk}${week === null ? '' : '-w' + (week + 1)}.png`, { type:'image/png' });
+  try { if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'סידור העבודה' }); return; } } catch(e){ if(e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); toast('התמונה נשמרה. אפשר לצרף אותה בוואטסאפ.');
+}
 async function csShareImage(mk, week){
+  if(week === null) return csShareCanvas(csMonthCanvas(mk), mk, null);
   const st = portalLoad(), days = daysOfMonth(mk), lead = dowOf(days[0]), list = week === null ? days : days.filter((_, i) => Math.floor((lead + i) / 7) === week);
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
   const roleOf = id => (st.instructors.find(x => x.id === id) || {}).role;
@@ -359,10 +416,7 @@ async function csShareImage(mk, week){
     y += r.h;
   });
   if(rows.some(r => r.cs.some(x => x.other.length))){ g.font = '400 22px Assistant, Arial'; g.fillStyle = '#7A6F5E'; g.fillText('בצבע הבהיר: מורות ובנות שירות, עם השעות שלהן', W - 40, y + 44); }
-  const blob = await new Promise(res => c.toBlob(res, 'image/png'));
-  const file = new File([blob], `schedule-${mk}${week === null ? '' : '-w' + (week + 1)}.png`, { type:'image/png' });
-  try { if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'סידור העבודה' }); return; } } catch(e){ if(e && e.name === 'AbortError') return; }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); toast('התמונה נשמרה. אפשר לצרף אותה בוואטסאפ.');
+  await csShareCanvas(c, mk, week);
 }
 
 // what Guy took off the coordinator's screen (2026-10-23): composition, personal minimums, the day colleague, a service girl's day off

@@ -2782,6 +2782,15 @@
         { const a = document.querySelector('#cs-openday').getBoundingClientRect(), b = document.querySelector('#cs-share').getBoundingClientRect(), sb = document.querySelector('#cs-share');
           check('phone: "פתיחת יום לשיבוץ" and "שיתוף" side by side, nothing out of the screen, room for a finger', Math.abs(a.top - b.top) < 3 && a.height >= 44 && b.height >= 44 && !wide() && Math.min(a.left, b.left) >= 0 && Math.max(a.right, b.right) <= innerWidth, JSON.stringify([a.top, b.top, a.height, wide()]));
           check('phone: the button is called "שיתוף", with the WhatsApp mark', sb.textContent.trim() === 'שיתוף' && !!sb.querySelector('svg'), sb.textContent); }
+        // the picture of the month: a calendar small enough for WhatsApp to leave it sharp, and everyone is in it
+        { const mk0 = portalUi.month, said = [], real = CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText = function(t, ...a){ said.push(String(t)); return real.call(this, t, ...a); };
+          let pic = null; try { pic = csMonthCanvas(mk0); } finally { CanvasRenderingContext2D.prototype.fillText = real; }
+          const st0 = portalLoad(), text = said.join(' | '), rowsM = (st0.rows || []).filter(r => monthKeyOf(r.day) === mk0), who = [...new Set(rowsM.map(r => r.staff))].map(id => { const p = st0.instructors.find(x => x.id === id); return p ? instrName(p, st0.instructors) : null; }).filter(Boolean);
+          const others = rowsM.filter(r => { const p = st0.instructors.find(x => x.id === r.staff); return p && ['service', 'teacher'].includes(p.role); });
+          check('the picture of the month: 1600 at most on its long side, not a tall list', !!pic && pic.width === 1600 && pic.height <= 1600, pic ? `${pic.width}x${pic.height}` : 'none');
+          check('... everyone who works this month is in it, the teachers and the service girls too', who.every(n => text.includes(n)), who.filter(n => !text.includes(n)).join(', '));
+          check('... the seven days by name, every date, and the hours of the three shifts at the top', DOW_NAMES.every(n => said.includes(n)) && daysOfMonth(mk0).every(d => said.includes(`${DOW_SHORT[dowOf(d)]} ${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`)) && /בוקר \d+ עד \d+/.test(text) && /לילה \d+ עד \d+/.test(text), said.slice(0, 6).join(' | '));
+          check('... the hours by the teachers and the service girls', !others.length || / \d+ עד \d+/.test(said.filter(t => !/בוקר|צהריים|לילה/.test(t)).join(' ')), String(others.length)); }
         // a finger
         const touch = (type, el, x, y) => { const t = new Touch({ identifier:1, target:el, clientX:x, clientY:y }), end = type === 'touchend' || type === 'touchcancel'; el.dispatchEvent(new TouchEvent(type, { bubbles:true, cancelable:true, touches:end ? [] : [t], targetTouches:end ? [] : [t], changedTouches:[t] })); };
         const ids = portalLoad().assignmentIds || {}, names = [...document.querySelectorAll('.mcal-wrows .mcal-cell.editable .mcal-name[data-iid]')].filter(x => ids[`${x.closest('.mcal-cell').dataset.key}|${x.dataset.iid}`]);

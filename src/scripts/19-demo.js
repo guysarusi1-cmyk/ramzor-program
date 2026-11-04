@@ -34,6 +34,7 @@
       { const pw = (location.search.match(/[?&]pw=(\w+)/) || [])[1];          // (&pw=kinds|days|0|1..|end: a step of the process; &pw=month: the month opened from it; &pw=wk: "שבוע-שבוע")
         if(pw){ const wk = pw === 'wk'; srv.prefWeekly = !wk; srv.prefPlain = !wk; localStorage.setItem('ramzor-plain-help', '1'); portalUi.prefsWholeMonth = pw === 'month'; localStorage.setItem(pwPosKey(prefsMonthNow()), JSON.stringify(/^\d+$/.test(pw) ? Number(pw) : pw === 'month' || wk ? 0 : pw)); } }
       if(/[?&]gear(&|$)/.test(location.search)) setTimeout(() => { document.getElementById('portal-gear').click(); setTimeout(() => document.querySelectorAll('.psheet details').forEach(d => { d.open = true; }), 400); }, 1500);          // (&gear: the settings, every fold open)
+      if(/[?&]monthpic(&|$)/.test(location.search)) setTimeout(() => { const c = csMonthCanvas(portalUi.month || monthKeyOf(srvToday())); c.style.cssText = 'position:fixed;top:0;left:0;z-index:99999;width:' + c.width + 'px;height:' + c.height + 'px'; document.body.appendChild(c); }, 5000);          // (&monthpic: the picture of the month to share, at its own size)
       showPortal(({ 'psrv-prefs':'prefs', 'psrv-subs':'submissions', 'psrv-swaps':'swaps', 'psrv-cswaps':'swaps', 'psrv-cvac':'vacations', 'psrv-cset':'settings', 'psrv-inbox':'inbox' })[what] || (location.search.match(/[?&]ptab=(\w+)/) || [])[1] || 'schedule');          // (&ptab=avail opens that tab)
       return;
     }
