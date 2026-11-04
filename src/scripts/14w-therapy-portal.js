@@ -81,7 +81,8 @@ function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
     t.push(['todo', 'משימות']);
-    if(isTherapistMe() || (srv.profile && srv.profile.admin)) t.push(['diary', 'יומן הילדים'], ['chats', 'שיחות']);          // (the social workers' urgent areas: Guy 2026-11-03; 14zl, 14zm)
+    if(isTherapistMe() || (srv.profile && srv.profile.admin)) t.push(['diary', 'יומן הילדים']);
+    if(!(typeof chatsOwnScreen === 'function' && chatsOwnScreen())) t.push(['chats', 'שיחות']);          // (the social workers have them as a card on the first screen)          // (the social workers' urgent areas: Guy 2026-11-03; 14zl, 14zm)
     t.push(['mine', 'הילדים שלי']);
     if(thp.v32) t.push(['plans', 'תוכניות טיפוליות']);          // (the plans, one goal at a time: 14zf)
     t.push(['kids', 'כל הילדים']);          // (every child as the staff sees it, read only: Mercury decision 87)

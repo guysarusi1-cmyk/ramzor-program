@@ -37,7 +37,7 @@ function confirmSheet(opts){
     const wrap = document.createElement('div');
     wrap.className = 'sheet confirm-sheet';
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-    { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme; } }          // (in a staff area the question wears its look: 20-mercury.css, Guy 2026-10-30)
+    { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme; } }          // (in a staff area the question wears its look: 20-mercury.css, Guy 2026-10-30)
     wrap.innerHTML = `<div class="sheet-card">
         <h2></h2><p class="confirm-text"></p>
         ${opts.typeWord ? '<input type="text" class="confirm-input" autocomplete="off" aria-label="אישור בהקלדה">' : ''}

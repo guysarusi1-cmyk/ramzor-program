@@ -63,6 +63,11 @@ function showAppHome(){
           <span class="home-card-title">כוננית סוף שבוע</span>
           <span class="home-card-sub">עובדי סוף השבוע, מוניות וסידור</span>
         </button>` : ''}
+        ${typeof chatsOwnScreen === 'function' && chatsOwnScreen() ? `<button type="button" class="home-card" id="apphome-chats">
+          <span class="apphome-emoji apphome-ico">${psIco('inbox')}</span>
+          <span class="home-card-title">שיחות</span>
+          <span class="home-card-sub">עם המנהלת, הרכזת והעובדות הסוציאליות</span>
+        </button>` : ''}
         ${portalServerOn && (portalMe() || {}).admin ? `<button type="button" class="home-card" id="apphome-learn">
           <span class="apphome-emoji apphome-ico">${psIco('play')}</span>
           <span class="home-card-title">לומדה</span>
@@ -85,6 +90,7 @@ function showAppHome(){
   });
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
   { const oc1 = document.getElementById('apphome-oncall'); if(oc1) oc1.addEventListener('click', () => showOncallScreen()); }
+  { const ch = document.getElementById('apphome-chats'); if(ch) ch.addEventListener('click', () => showChatsScreen()); }
   { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
   { const ln = document.getElementById('apphome-learn'); if(ln) ln.addEventListener('click', showLearnHome); }          // (the admin's training videos, 14zh-learn.js)
@@ -214,7 +220,7 @@ function portalCtx(mk){
 function portalSheet(html){
   const wrap = document.createElement('div');
   wrap.className = 'sheet psheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
+  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
   wrap.innerHTML = `<div class="sheet-card">${html}</div>`;
   const close = () => wrap.remove();
   wrap.addEventListener('click', e => { if(e.target === wrap || e.target.closest('[data-close]')) close(); });

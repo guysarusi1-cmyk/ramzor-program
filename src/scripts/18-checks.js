@@ -2348,7 +2348,7 @@
         await showTherapyPortal();
         const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         { const mt = document.querySelector('#view-therapy [data-th-tab="mine"]'); if(mt){ mt.click(); await sleep(80); } }
-        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary', 'chats'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3.slice(1, 3).join(',') === 'diary,chats' && !t3.includes('oncall') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary', 'chats'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3[1] === 'diary' && !t3.includes('oncall') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
         showAppHome(); await sleep(80);
         check('therapy portal: somebody with both roles still gets one card', !document.getElementById('apphome-therapist') && document.querySelectorAll('#apphome-therapy').length === 1, 'cards wrong');
         // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)
@@ -2889,7 +2889,10 @@
           await sleep(200);
           check('the therapist comes in to the first screen, with the cards of the therapy portal and of the on-call', document.querySelector('.view.active').id === 'view-apphome' && !!document.getElementById('apphome-oncall') && !!document.getElementById('apphome-therapy'), document.querySelector('.view.active').id);
           await showTherapyPortal(); await sleep(100);
-          check('the therapy portal has no on-call tab', !document.querySelector('[data-th-tab="oncall"]'), '');
+          check('the therapy portal has no on-call tab, and no conversations tab', !document.querySelector('[data-th-tab="oncall"]') && !document.querySelector('[data-th-tab="chats"]'), '');
+          showAppHome(); await sleep(120); { const c = document.getElementById('apphome-chats'); check('the conversations are a card of their own', !!c, ''); if(c){ c.click(); await sleep(700); check('... it opens its screen', document.querySelector('.view.active').id === 'view-chats' && !document.querySelector('#view-chats .pstatus.bad') && !!document.querySelector('#chats-screen *'), document.querySelector('.view.active').id); } }
+          window.__asLive = true; showAppHome(); await sleep(120); check('live: the social worker has the Ramzor, the on-call and the conversations, and no therapy portal', !!document.getElementById('apphome-ramzor') && !!document.getElementById('apphome-oncall') && !!document.getElementById('apphome-chats') && !document.getElementById('apphome-therapy'), ''); window.__asLive = false;
+          await showTherapyPortal(); await sleep(100);
           try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
           const set = document.querySelector('[data-th-tab="settings"]'); if(set){ set.click(); await sleep(400); } else { thp.tab = 'settings'; thpRender(); await sleep(300); }
           const bs = [...document.querySelectorAll('[data-th-big]')];

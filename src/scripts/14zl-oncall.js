@@ -15,6 +15,16 @@ const oc = { key:null, week:null, monthView:false, data:null, busy:false, view:'
 const ocAllowed = () => typeof portalServerOn !== 'undefined' && portalServerOn && !portalUi.viewAs && !!((srv.meRow && (['coordinator', 'manager'].includes(srv.meRow.role) || srv.meRow.admin)) || (srv.profile && (srv.profile.admin || srv.profile.therapist || srv.profile.kind === 'therapist')));
 const ocPhone = () => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } };
 // its own screen, a card of the first screen beside the portals, not inside any of them (Guy 2026-11-04)
+// the social workers' conversations: a card of their own, so that they do not hang on the therapy portal, which is not part of the coming live version (Guy 2026-11-04)
+const chatsOwnScreen = () => typeof portalServerOn !== 'undefined' && portalServerOn && !portalUi.viewAs && !!(srv.profile && (srv.profile.therapist || srv.profile.kind === 'therapist')) && !(srv.meRow && (['coordinator', 'manager'].includes(srv.meRow.role) || srv.meRow.admin));
+function showChatsScreen(){
+  document.body.classList.remove('leopard-bg');
+  portalActivateView('view-chats');
+  let look = 'dark'; try { look = (srv.portalTheme && srv.portalTheme !== 'leopard' ? srv.portalTheme : portalLoad().settings.theme) || 'dark'; } catch(e){}
+  document.getElementById('view-chats').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc(look)}"><div class="portal-top"><button type="button" class="back-btn portal-back" id="chats-home-back">→ מסך ראשי</button><h1 class="portal-title">שיחות</h1><span class="portal-top-actions"></span></div><div id="chats-screen"></div></div>`;
+  document.getElementById('chats-home-back').addEventListener('click', () => { if(personalRamzorKind()) showAppHome(); else srvOpenPortal(); });
+  mgrChats(document.getElementById('chats-screen'));
+}
 function showOncallScreen(as){          // (as: the manager looks at a social worker's screen, nothing can be changed)
   document.body.classList.remove('leopard-bg');
   portalActivateView('view-oncall');
