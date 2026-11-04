@@ -2982,6 +2982,47 @@
         { const r = await sb.from('child_state').update({ stars:0 }).eq('child_id', 'none'); check('... whatever would write is stopped', !!r.error && /צפייה/.test(r.error.message), JSON.stringify(r.error)); const q = await sb.from('roster').select('id').limit(1); check('... reading works', !q.error && (q.data || []).length === 1, JSON.stringify(q.error)); }
       } finally { window.__asLive = false; document.querySelectorAll('.toast').forEach(x => x.remove()); const g = document.getElementById('hub-manage-gear'), k = document.getElementById('hub-kids-btn'); await personalLeave(); sb = sbShared || sb; if(g) g.hidden = false; if(k) k.hidden = false; showHub(); }
     });
+    // ---- a service girl from start to end, what no other step covers: other hours kept and read again, the team's schedule, what she may not touch, what the coordinator gets (Guy 2026-11-04)
+    await step('service round', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', enter = async kind => { await sbPersonal.auth.signOut(); const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW); return !error && await personalEnter(); };
+      if(!(await enter('service'))){ check('service round: she signs in', false, ''); return; }
+      const next = addMonths(monthKeyOf(srvToday()), 1), me = srv.me, other = portalLoad().instructors.find(p => p.active && p.role === 'instructor'), mk0 = monthKeyOf(srvToday());
+      try {
+        check('she comes in with her own role and tabs', (portalMe() || {}).role === 'service' && !!document.querySelector('[data-ptab="schedule"]') && !!document.querySelector('[data-ptab="avail"]'), (portalMe() || {}).role);
+        portalUi.tab = 'schedule'; portalUi.smonth = mk0; showPortal('schedule'); await sleep(500);
+        { const folds = [...document.querySelectorAll('#portal-body details')], team = folds.find(x => /הצוות כולו/.test(x.textContent)); if(team){ team.open = true; await sleep(250); } const mine = folds.find(x => /המשמרות שלי/.test(x.textContent));
+          check('the schedule: her own shifts and the whole team', !!mine && !!team && (!portalMonth(mk0).published || !!team.querySelector('.mcal-name, .mcal-cell')), ''); }
+        if(srvPrefsOpen(next)){
+          const day = daysOfMonth(next).find(d => dowOf(d) === 1);
+          portalUi.pmonth = next; showPortal('avail'); await sleep(700);
+          document.querySelector('[data-svtool="hours"]').click(); await sleep(300);
+          document.querySelector(`[data-svslot="${day}|early"]`).click(); await sleep(200);
+          { const sh = document.querySelector('.psheet'); sh.querySelector('#svh-from').value = '9'; sh.querySelector('#svh-to').value = '13'; sh.querySelector('#svh-go').click(); await sleep(800); }
+          const h = await sbPersonal.from('prefs_hours').select('from_time,to_time').eq('staff_id', me).eq('day', day);
+          check('other hours: kept', (h.data || []).length === 1 && String(h.data[0].from_time).startsWith('09:00'), JSON.stringify(h.data));
+          showPortal('schedule'); await sleep(200); portalUi.pmonth = next; showPortal('avail'); await sleep(700);
+          check('... and there again when the screen is opened anew', /09:00–13:00/.test((document.querySelector(`[data-svday="${day}"]`) || {}).textContent || ''), '');
+          await sbPersonal.from('prefs_hours').delete().eq('staff_id', me).eq('day', day); await sbPersonal.from('prefs_service').delete().eq('staff_id', me).eq('day', day);
+          const st0 = await sbPersonal.from('prefs_submission').upsert({ staff_id:me, month:firstOf(next), submitted_at:new Date().toISOString() });
+          check('she can hand it in', !st0.error, JSON.stringify(st0.error));
+        } else check('(info) service round: the month is not open on the test server, the hours were not tried', true, '');
+        if(other){
+          const r1 = await sbPersonal.from('prefs_slot').select('staff_id').eq('staff_id', other.id).limit(1), r2 = await sbPersonal.from('prefs_service').select('staff_id').neq('staff_id', me).limit(1);
+          check('she does not see what others asked for', !(r1.data || []).length && !(r2.data || []).length, JSON.stringify([r1.data, r2.data]));
+          const w = await sbPersonal.from('prefs_service').upsert({ staff_id:other.id, day:firstOf(next), opt:'none' });
+          check('she cannot change anybody else', !!w.error, '');
+          const t = await sbPersonal.from('child_plans').select('child_id').limit(1);
+          check('... and sees nothing of the therapy', !(t.data || []).length, JSON.stringify(t.error || t.data));
+        }
+        if(await enter('coordinator')){
+          portalUi.tab = 'submissions'; portalUi.smonth = next; portalUi.pmonth = next; showPortal('submissions'); await sleep(900);
+          const nm = (portalPerson(me) || {}).first, row = [...document.querySelectorAll('#portal-body .preq, #portal-body [data-sub], #portal-body details, #portal-body .card')].find(x => nm && x.textContent.includes(nm));
+          check('the coordinator gets it: she is on the list of the submissions', !!row || (document.getElementById('portal-body').textContent || '').includes(nm), String(nm));
+          await sbPersonal.from('prefs_submission').delete().eq('staff_id', me).eq('month', firstOf(next));
+        }
+      } finally { await personalLeave(); showHub(); }
+    });
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
