@@ -659,8 +659,8 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 .pweek-steps i.done{ opacity:.85; }
 .pweek-steps i.on{ opacity:1; background:var(--color-primary-soft, var(--p-panel2)); box-shadow:0 0 0 1.5px var(--color-primary, var(--gold)); }
 .pweek-steps b{ font-size:10px; line-height:1; font-weight:700; color:var(--color-text, var(--p-text)); font-variant-numeric:tabular-nums; }
-.pw-egg{ width:20px; height:20px; display:block; }
-.pw-egg .s{ fill:#FFF4DC; stroke:#B89358; stroke-width:1.1; stroke-linejoin:round; }
+.pw-egg{ width:20px; height:20px; display:block; overflow:visible; }
+.pw-egg .s{ stroke-width:1.1; stroke-linejoin:round; }
 .pw-egg .k{ fill:none; stroke:#7A5A2B; stroke-width:1.1; stroke-linecap:round; stroke-linejoin:round; }
 .pw-egg .h{ fill:#4A3418; stroke:#7A5A2B; stroke-width:.8; stroke-linejoin:round; }
 .pw-egg .c{ fill:#FFD84A; stroke:#C99A1E; stroke-width:.8; }

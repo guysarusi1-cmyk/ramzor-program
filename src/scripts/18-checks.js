@@ -2614,7 +2614,9 @@
           const a1 = it().filter(x => x.querySelector('svg')).length, plain1 = !it()[0].querySelector('.c');
           pwSet(pwPosKey(mk), 'end'); renderInstructorPrefs(pb()); await sleep(100);
           check('... at the first step one egg only, at the last all of them, ending in the hatching chick', a1 === 1 && plain1 && it().every(x => !!x.querySelector('svg')) && !!it()[n - 1].querySelector('.c'), String(a1));
-          pwSet(pwPosKey(mk), here); renderInstructorPrefs(pb()); await sleep(100); }
+          pwSet(pwPosKey(mk), here); renderInstructorPrefs(pb()); await sleep(100);
+          const seq = [0, 1, 2, 3, 4, 5, 6].map(i => pwEggOf(addMonths(mk, i)));
+          check('the eggs: seven kinds, each hatches into its own, another one every month, the same on every device', PW_EGG_NAMES.length === 7 && new Set(seq).size === 7 && pwEggOf(mk) === pwEggOf(mk) && new Set(PW_EGG_NAMES.map(k => pwEggHtml(7, k))).size === 7 && it()[0].querySelector('svg').dataset.egg === pwEggOf(mk), seq.join(',')); }
         // a whole day
         { const dayB = pb().querySelector('[data-pwday]');
           if(dayB){ const d = dayB.dataset.pwday, ks = prefShiftsFor(d).map(x => `${d}|${x.id}`).filter(k => !prefFixedNo(k) && !prefInsideLong(pr, k));

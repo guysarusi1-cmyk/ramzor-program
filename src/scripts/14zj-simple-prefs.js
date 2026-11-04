@@ -11,17 +11,40 @@ const prefFem = () => !(srv.profile && srv.profile.female === false);
 const prefG = (f, m) => prefFem() ? f : m;
 const PW_KINDS = [['m', 'בוקר'], ['e', 'צהריים'], ['n', 'לילה']];
 // the marker of the steps: the numbers are always there, each under a dot; reaching a step, its dot gives way to the egg of that stage, up to the hatching chick (drawn here: no files to load). Eight stages, spread over the steps of the month.
-const PW_EGG = [
-  '',
-  '<path class="k" d="M9 8l1.5 2-1.2 1.6"/>',
-  '<path class="k" d="M6.6 12l2-1.4 1.6 2 2-1.8 1.4 1.6"/>',
-  '<path class="k" d="M5.4 12.6l2.2-1.8 2 2 2.4-2 2 2 2.2-1.8 2.4 1.6"/>',
-  '<path class="h" d="M8 12.2l2-1.8 2 1.8 2-1.8 2 1.8-1 3.4h-6z"/><path class="k" d="M5.4 12.6l2.6-.4M16 12.2l2.6.4"/>',
-  '<path class="h" d="M8 12.2l2-1.8 2 1.8 2-1.8 2 1.8-1 3.4h-6z"/><path class="b" d="M10.6 13.4l1.4 2 1.4-2z"/>',
-  '<circle class="c" cx="12" cy="11" r="4.6"/><circle class="e" cx="10.4" cy="10.2" r=".8"/><circle class="e" cx="13.6" cy="10.2" r=".8"/><path class="b" d="M10.8 11.6l1.2 1.5 1.2-1.5z"/><path class="s" d="M6 12.5l2.4 1.6 1.8-1.4 1.8 1.4 1.8-1.4 1.8 1.4 2.4-1.6c.4 5-2.4 9-6 9s-6.4-4-6-9z"/>',
-  '<circle class="c" cx="12" cy="9" r="5.2"/><circle class="e" cx="10.2" cy="8.2" r=".9"/><circle class="e" cx="13.8" cy="8.2" r=".9"/><path class="b" d="M10.6 9.8l1.4 1.8 1.4-1.8z"/><path class="s" d="M5.4 13.6l2.6 1.8 2-1.6 2 1.6 2-1.6 2 1.6 2.6-1.8c.3 4.4-2.6 8-6.6 8s-6.9-3.6-6.6-8z"/>'
-];
-const pwEggHtml = stage => `<svg class="pw-egg" viewBox="0 0 24 24" aria-hidden="true">${stage < 6 ? '<path class="s" d="M12 2.4c3.9 0 7 6 7 11.2a7 7 0 0 1-14 0C5 8.4 8.1 2.4 12 2.4z"/>' : ''}${PW_EGG[stage]}</svg>`;
+// Seven kinds of egg: each instructor gets another one every month, by chance (Guy 2026-11-04). s = the shell, l = its line, p = what peeks out,
+// mark = the pattern on the shell, head = who hatches (drawn around 0,0 in a radius of about 5).
+const PW_EGG_KINDS = {
+  chick:{ s:'#FFF4DC', l:'#B89358', p:'#F08A24', mark:'',
+    head:'<circle r="5" style="fill:#FFD84A;stroke:#C99A1E;stroke-width:.8"/><circle class="e" cx="-1.7" cy="-.9" r=".85"/><circle class="e" cx="1.7" cy="-.9" r=".85"/><path class="b" d="M-1.2.6L0 2.2 1.2.6z"/>' },
+  dragon:{ s:'#BFE3A6', l:'#4E8A3A', p:'#5FAE4B', mark:'<path style="fill:none;stroke:#4E8A3A;stroke-width:.7" d="M9 6.5q1.2 1.2 2.4 0M12.6 6.5q1.2 1.2 2.4 0M7.6 16.5q1.2 1.2 2.4 0M11 16.5q1.2 1.2 2.4 0M14.4 16.5q1.2 1.2 2.4 0"/>',
+    head:'<path style="fill:#F2D478;stroke:#B8902E;stroke-width:.5" d="M-3.6-3.6L-4.6-6.8-1.6-4.6zM3.6-3.6L4.6-6.8 1.6-4.6z"/><circle r="5" style="fill:#6FBF5A;stroke:#3F7F30;stroke-width:.8"/><circle cx="-1.8" cy="-1.1" r="1.1" style="fill:#FFE27A"/><circle cx="1.8" cy="-1.1" r="1.1" style="fill:#FFE27A"/><circle class="e" cx="-1.8" cy="-1.1" r=".55"/><circle class="e" cx="1.8" cy="-1.1" r=".55"/><path style="fill:none;stroke:#2F5F24;stroke-width:.8;stroke-linecap:round" d="M-2 2q2 1.6 4 0"/><circle class="e" cx="-.7" cy=".8" r=".3"/><circle class="e" cx=".7" cy=".8" r=".3"/>' },
+  dino:{ s:'#EAD9B6', l:'#8A6A3A', p:'#49A58E', mark:'<g style="fill:#B08A52"><circle cx="9.4" cy="7.6" r="1.1"/><circle cx="14.8" cy="9.4" r="1.4"/><circle cx="8.6" cy="16" r="1.3"/><circle cx="13" cy="17.6" r="1"/><circle cx="16" cy="15" r=".9"/></g>',
+    head:'<path style="fill:#F08A24" d="M-4-3.2l1-2.8 1.4 2.2zM-1.4-4.4L0-7.2 1.4-4.4zM1.6-3.8L3-6l1 2.8z"/><ellipse rx="5.2" ry="4.6" style="fill:#57BBA2;stroke:#2F8570;stroke-width:.8"/><circle class="e" cx="-1.8" cy="-1.1" r=".85"/><circle class="e" cx="1.8" cy="-1.1" r=".85"/><path style="fill:none;stroke:#205F50;stroke-width:.8;stroke-linecap:round" d="M-2.4 1.4q2.4 1.8 4.8 0"/>' },
+  ostrich:{ s:'#FBF6E9', l:'#A89878', p:'#F0A040', mark:'<g style="fill:#CFC3A6"><circle cx="9" cy="8" r=".45"/><circle cx="12" cy="6" r=".45"/><circle cx="15" cy="9" r=".45"/><circle cx="10" cy="11.5" r=".45"/><circle cx="14" cy="13" r=".45"/><circle cx="8.5" cy="15" r=".45"/><circle cx="12" cy="17" r=".45"/><circle cx="15.6" cy="16" r=".45"/></g>',
+    head:'<rect x="-1.1" y="-1" width="2.2" height="8" style="fill:#D8CCBC;stroke:#9A8C78;stroke-width:.5"/><circle cy="-3" r="3.2" style="fill:#CDBFAE;stroke:#8E8070;stroke-width:.7"/><circle class="e" cx="-1" cy="-3.6" r=".85"/><circle class="e" cx="1.4" cy="-3.6" r=".6"/><path class="b" d="M-1.2-2.2h3.8L.4-.6z"/>' },
+  penguin:{ s:'#DDEEF8', l:'#6C94AE', p:'#2D2A24', mark:'<path style="fill:none;stroke:#A9C8DC;stroke-width:.8;stroke-linecap:round" d="M8 9l1.4-1.2M15 7.6l1 1.4M8.6 16.4l1.4 1M14.4 17l1.4-1"/>',
+    head:'<circle r="5" style="fill:#2D2A24"/><ellipse cy=".9" rx="3.6" ry="3.5" style="fill:#FFFFFF"/><circle class="e" cx="-1.5" cy="-.5" r=".8"/><circle class="e" cx="1.5" cy="-.5" r=".8"/><path class="b" d="M-1.2.8h2.4L0 2.4z"/>' },
+  alien:{ s:'#D9C7F5', l:'#7A4FC2', p:'#7ED957', mark:'<g style="fill:#9CF06A;stroke:#7A4FC2;stroke-width:.3"><circle cx="9" cy="8.4" r=".9"/><circle cx="14.6" cy="7.6" r=".7"/><circle cx="12" cy="16.6" r="1"/><circle cx="8.4" cy="15.2" r=".6"/><circle cx="15.6" cy="15.6" r=".7"/></g>',
+    head:'<path style="fill:none;stroke:#4FA832;stroke-width:.8" d="M-2-4.4L-3.2-7M2-4.4L3.2-7"/><circle cx="-3.2" cy="-7.2" r=".8" style="fill:#FF5A9A"/><circle cx="3.2" cy="-7.2" r=".8" style="fill:#FF5A9A"/><path style="fill:#86E05C;stroke:#4FA832;stroke-width:.8" d="M0-5c3.2 0 5 2 5 4.4C5 2 2.2 5 0 5s-5-3-5-5.6C-5-3-3.2-5 0-5z"/><ellipse class="e" cx="-2" cy="-.7" rx="1.4" ry="2" transform="rotate(18 -2 -.7)"/><ellipse class="e" cx="2" cy="-.7" rx="1.4" ry="2" transform="rotate(-18 2 -.7)"/>' },
+  cat:{ s:'#FBD9DF', l:'#C4728A', p:'#F2A65A', mark:'<g style="fill:#E9A3B3"><circle cx="11" cy="16" r="1.5"/><circle cx="8.8" cy="13.6" r=".7"/><circle cx="10.6" cy="12.8" r=".7"/><circle cx="12.6" cy="13" r=".7"/><circle cx="14.2" cy="14.4" r=".7"/></g><path style="fill:#D8325A" d="M17.4 2.4h2l-.5 5h-1zM18.4 8.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>',
+    head:'<path style="fill:#F2A65A;stroke:#B9722A;stroke-width:.6" d="M-4.6-2L-4.6-6.6-1-4.2zM4.6-2L4.6-6.6 1-4.2z"/><circle r="5" style="fill:#F2A65A;stroke:#B9722A;stroke-width:.8"/><circle class="e" cx="-1.8" cy="-.9" r=".85"/><circle class="e" cx="1.8" cy="-.9" r=".85"/><path style="fill:#D8325A" d="M-.6.6h1.2L0 1.4z"/><path style="fill:none;stroke:#7A4A1A;stroke-width:.45;stroke-linecap:round" d="M-2 1.4l-3.4-.4M-2 2.2l-3.2.8M2 1.4l3.4-.4M2 2.2l3.2.8"/><path style="fill:#D8325A" d="M6.2-8.6h1.8l-.5 4.6h-.9zM7.1-3.2a.95.95 0 1 1 0 1.9.95.95 0 0 1 0-1.9z"/>' }
+};
+const PW_EGG_NAMES = Object.keys(PW_EGG_KINDS);
+// by chance, but the same on all her devices and another one every month: her own number and the month, around the seven kinds
+const pwEggOf = mk => { let h = 0; String(srv.me || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); const [y, m] = mk.split('-').map(Number); return PW_EGG_NAMES[(h + y * 12 + m) % PW_EGG_NAMES.length]; };
+const PW_CRACK = ['', '<path class="k" d="M9 8l1.5 2-1.2 1.6"/>', '<path class="k" d="M6.6 12l2-1.4 1.6 2 2-1.8 1.4 1.6"/>', '<path class="k" d="M5.4 12.6l2.2-1.8 2 2 2.4-2 2 2 2.2-1.8 2.4 1.6"/>'];
+function pwEggHtml(stage, kind){
+  const k = PW_EGG_KINDS[kind] || PW_EGG_KINDS.chick, st = `style="fill:${k.s};stroke:${k.l}"`, hole = '<path class="h" d="M8 12.2l2-1.8 2 1.8 2-1.8 2 1.8-1 3.4h-6z"/>';
+  const whole = `<path class="s" ${st} d="M12 2.4c3.9 0 7 6 7 11.2a7 7 0 0 1-14 0C5 8.4 8.1 2.4 12 2.4z"/>${k.mark}`;
+  const head = (y, sc) => `<g class="c" style="stroke:none" transform="translate(12 ${y}) scale(${sc})">${k.head}</g>`;
+  let in_ = '';
+  if(stage < 4) in_ = whole + PW_CRACK[stage];
+  else if(stage === 4) in_ = whole + hole + '<path class="k" d="M5.4 12.6l2.6-.4M16 12.2l2.6.4"/>';
+  else if(stage === 5) in_ = whole + hole + `<path style="fill:${k.p}" d="M10.6 13.4l1.4 2 1.4-2z"/>`;
+  else if(stage === 6) in_ = head(11, .92) + `<path class="s" ${st} d="M6 12.5l2.4 1.6 1.8-1.4 1.8 1.4 1.8-1.4 1.8 1.4 2.4-1.6c.4 5-2.4 9-6 9s-6.4-4-6-9z"/>`;
+  else in_ = head(9, 1.04) + `<path class="s" ${st} d="M5.4 13.6l2.6 1.8 2-1.6 2 1.6 2-1.6 2 1.6 2.6-1.8c.3 4.4-2.6 8-6.6 8s-6.9-3.6-6.6-8z"/>`;
+  return `<svg class="pw-egg" viewBox="0 0 24 24" aria-hidden="true" data-egg="${kind || 'chick'}">${in_}</svg>`;
+}
 const pwStage = (i, n) => n < 2 ? 0 : Math.round(i * 7 / (n - 1));
 const pwPosKey = mk => `ramzor-weekpos-${srv.me}-${mk}`;
 const pwGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } };
@@ -121,7 +144,7 @@ function renderWeekPrefs(body, mk, m, prefs){
   if((pos === 'end' || (typeof pos === 'number' && pos > 0)) && !Object.keys(prefs.slots || {}).length && !(prefs.absent || []).length && !Object.keys(prefs.hours || {}).length){ pos = 'kinds'; pwSet(pwPosKey(mk), pos); }          // (nothing is marked for this month any more, e.g. cleared on TEST: start again from the first question)
   const go = p => { pwSet(pwPosKey(mk), p); renderInstructorPrefs(body); window.scrollTo(0, 0); if(window.navRefresh) window.navRefresh(); };
   const steps = ['kinds', 'days'].concat(weeks.map((_, i) => i)).concat(['end']), at = steps.indexOf(pos);
-  const head = `${prefViewBtnHtml()}<div class="pweek-head"><b>ההעדפות ל${pEsc(monthLabel(mk))}</b><span class="pweek-steps" role="img" aria-label="שלב ${at + 1} מתוך ${steps.length}">${steps.map((p, i) => `<i class="${i === at ? 'on' : i < at ? 'done' : ''}">${i <= at ? pwEggHtml(pwStage(i, steps.length)) : '<span class="pw-dot"></span>'}<b>${i + 1}</b></i>`).join('')}</span></div>`;
+  const head = `${prefViewBtnHtml()}<div class="pweek-head"><b>ההעדפות ל${pEsc(monthLabel(mk))}</b><span class="pweek-steps" role="img" aria-label="שלב ${at + 1} מתוך ${steps.length}">${steps.map((p, i) => `<i class="${i === at ? 'on' : i < at ? 'done' : ''}">${i <= at ? pwEggHtml(pwStage(i, steps.length), pwEggOf(mk)) : '<span class="pw-dot"></span>'}<b>${i + 1}</b></i>`).join('')}</span></div>`;
   // the opening questions: the kinds of shifts and the weekdays she does not do this month (both may be skipped)
   if(pos === 'kinds' || pos === 'days'){
     const isK = pos === 'kinds', chosenKey = `ramzor-week${isK ? 'kinds' : 'days'}-${srv.me}-${mk}`;
