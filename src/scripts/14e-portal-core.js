@@ -39,7 +39,7 @@ function showAppHome(){
   document.getElementById('view-apphome').innerHTML = `
     <div class="apphome mx-home" data-ptheme="${look}">
       <div class="apphome-top"><button type="button" class="home-text-btn" id="apphome-logout">יציאה</button></div>
-      <div class="eyebrow-gold mx-brand" dir="ltr">Mercury 1.2</div>
+      <div class="eyebrow-gold mx-brand">Mercury 1.2</div>
       <h1 class="apphome-title">מה תרצו לפתוח?</h1>
       <div class="apphome-cards">
         ${portalServerOn ? `<div class="apphome-hello">שלום ${pEsc((portalMe() || {}).first || '')}</div>` : ''}
