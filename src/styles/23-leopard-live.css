@@ -23,7 +23,7 @@
   .portal-shell[data-ptheme=leopard] .portal-hello, .portal-shell[data-ptheme=leopard] .pmonth b{ color:#fffaf0; text-shadow:0 1px 2px rgba(0,0,0,.6); }
 
 /* what the new frame changed under the look: the tabs in their rounded box, and the bright colours of the wishes as on the live site */
-.portal-shell[data-ptheme=leopard]{ --p-yes:#7be0a0; --p-yes-bg:#123322; --p-no:#ff8a80; --p-no-bg:#3a1a18; --p-can:#8ec0ff; --p-can-bg:#14263f; --p-avoid:#8ec0ff; --p-avoid-bg:#14263f; }
+.portal-shell[data-ptheme=leopard]{ --p-yes:#7be0a0; --p-yes-bg:#123322; --p-no:#ff8a80; --p-no-bg:#3a1a18; --p-can:#8ec0ff; --p-can-bg:#14263f; }
 .portal-shell[data-ptheme=leopard] .portal-tabs{ border-radius:14px; padding:6px; gap:6px; }
 .portal-shell[data-ptheme=leopard] .portal-tabs button{ border-radius:10px; }
 .portal-shell[data-ptheme=leopard] .portal-tabs button.active::after{ display:none; }
