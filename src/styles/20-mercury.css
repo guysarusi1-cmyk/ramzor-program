@@ -689,3 +689,10 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 .pwdays .pwday-shifts{ flex:1 1 0; min-width:0; gap:5px; }
 .pwdays .pwshift{ flex:1 1 0; min-width:0; padding:0 3px; }
 .pwdays .pwday-away{ flex:1 1 0; min-width:0; text-align:center; }
+/* the week of the process: going on and back in the bar at the bottom; the small tools at the end of the screen, side by side (Guy 2026-11-04) */
+.pweek-navbar{ width:100%; }
+.pweek-navbar .btn{ flex:1 1 0; min-width:0; min-height:48px; padding-inline:8px; white-space:nowrap; }
+.pweek-navbar .btn[disabled]{ opacity:.4; }
+.pweek-tools{ display:flex; justify-content:center; gap:8px; margin-top:12px; }
+.pweek-tools .btn{ min-height:44px; padding-inline:10px; white-space:nowrap; }
+.pweek-tools .pweek-q-btn{ flex:0 0 44px; padding-inline:0; }

@@ -213,10 +213,11 @@ function renderWeekPrefs(body, mk, m, prefs){
     ${plain ? '' : `<div class="plevelbar pweek-levels">${SRV_LEVEL_BUTTONS.filter(b => b[0] !== 'hours').map(b => `<button type="button" class="lvbtn lv-${b[0]}${(portalUi.level || 'yes') === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}</div>`}
     <div class="pwdays">${rows}</div>
     ${prefWeekendBarHtml(wk, inMonth, prefs)}
-    <div class="pweek-bottom">${plain ? prefPlainBarHtml() : '<div class="plevelbar pplain-bar"><button type="button" class="lvbtn" id="pplain-hours">שעות אחרות</button></div>'}</div>
+    ${plain ? '' : '<div class="pweek-bottom"><div class="plevelbar pplain-bar"><button type="button" class="lvbtn" id="pplain-hours">שעות אחרות</button></div></div>'}
     ${dots ? `<div class="pweek-left">עוד ${dots} ${dots === 1 ? 'נקודה' : 'נקודות'}</div>` : ''}
-    <div class="pweek-nav"><button type="button" class="btn ghost" id="pw-prev">→ הקודם</button><button type="button" class="btn" id="pw-next"${blocked ? ' disabled' : ''}>${last ? 'לסיום ←' : 'השבוע הבא ←'}</button></div>
-    <button type="button" class="btn ghost small pweek-month" id="pw-month">לראות את כל החודש</button></div>`;
+    ${plain ? '<div class="pweek-tools"><button type="button" class="btn ghost small" id="pplain-hours">שעות אחרות</button><button type="button" class="btn ghost small" id="pw-month">לראות את כל החודש</button><button type="button" class="btn ghost small pweek-q-btn" id="pplain-q" aria-label="איך מסמנים">?</button></div>' : ''}
+    <div class="${plain ? 'plevelbar pweek-navbar' : 'pweek-nav'}"><button type="button" class="btn ghost" id="pw-prev">→ הקודם</button><button type="button" class="btn" id="pw-next"${blocked ? ' disabled' : ''}>${last ? 'לסיום ←' : 'השבוע הבא ←'}</button></div>
+    ${plain ? '' : '<button type="button" class="btn ghost small pweek-month" id="pw-month">לראות את כל החודש</button>'}</div>`;
   const redraw = () => renderInstructorPrefs(body);
   if(plain) prefWirePlain(body, prefs, redraw);
   else {
