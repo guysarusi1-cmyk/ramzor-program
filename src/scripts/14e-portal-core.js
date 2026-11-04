@@ -50,10 +50,15 @@ function showAppHome(){
         </button>
         ${(portalMe() || {}).role === 'therapist' ? '' : `<button type="button" class="home-card" id="apphome-portal">
           <span class="apphome-emoji apphome-ico">${psIco('people')}</span>
-          <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
-          <span class="home-card-sub">משמרות, העדפות והודעות</span>
+          <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'manager' ? 'ניהול' : portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
+          <span class="home-card-sub">${portalServerOn && (portalMe() || {}).role === 'manager' ? 'סידור, לו"ז, שיחות ומשתמשים' : 'משמרות, העדפות והודעות'}</span>
         </button>`}
-        ${typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
+        ${portalServerOn && liveCut() && (['therapist', 'manager'].includes((portalMe() || {}).role) || (srv.profile && srv.profile.therapist)) ? `<button type="button" class="home-card home-soon" id="apphome-therapy-soon" disabled>
+          <span class="apphome-emoji apphome-ico">${psIco('leaf')}</span>
+          <span class="home-card-title">פורטל הטיפול</span>
+          <span class="home-card-sub">בקרוב</span>
+        </button>` : ''}
+        ${!liveCut() && typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
           <span class="apphome-emoji apphome-ico">${psIco('leaf')}</span>
           <span class="home-card-title">פורטל הטיפול</span>
           <span class="home-card-sub">${canTherapistPortal() ? 'מה מחכה לך, התוכניות, התצפיות והמעקב' : 'מה עושים עם כל ילד, וממה להימנע'}</span>
@@ -164,7 +169,7 @@ function showPortal(tab){
       if(ev.target.closest('button, input, select, textarea, a, [data-pslot], [data-pday], [role=button]')){ ev.preventDefault(); ev.stopPropagation(); toast('זו צפייה בלבד'); }
     }, true);
   }
-  document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
+  document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? async () => { if(await askLogout()) srvSignOut(); } : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
   { const oc1 = document.getElementById('portal-oncall'); if(oc1) oc1.addEventListener('click', showOncallScreen); }          // (they have no first screen: their way to the on-call screen)
   { const th = document.getElementById('portal-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (service girls and teachers: their way to the therapy portal)

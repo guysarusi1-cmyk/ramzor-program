@@ -263,7 +263,7 @@ function srvTabs(me){
     const phone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
     return phone ? all.filter(t => ['schedule', 'submissions', 'swaps'].includes(t[0])) : all;          // (on a phone: סידור, הגשות, החלפות only; the on-call screen is a card of the first screen — the rest on the computer: Guy 2026-11-03)
   }          // (the admin: one more tab, 14s-portal-admin.js)
-  if(me.role === 'manager') return MGR_TABS;          // (the manager of the framework: 14zn)
+  if(me.role === 'manager') return MGR_TABS.filter(t => t[0] !== 'kids' || !liveCut());          // (the manager of the framework: 14zn)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
   if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps and the vacation in one tab: Guy 2026-11-03)
   if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps: only among the service girls)
@@ -445,7 +445,7 @@ const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' ||
 // ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
 let ramzorPersonal = false;
-const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
+const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist', 'manager'].includes(srv.profile.kind)) || ['instructor', 'coordinator', 'manager'].includes((portalMe() || {}).role);
 async function personalEnter(){
   portalServerOn = true; portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoadFirst())) return false;

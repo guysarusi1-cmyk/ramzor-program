@@ -136,7 +136,7 @@ const ctlFace = p => p.photo ? `<img class="ctl-face" src="${p.photo}" alt="">` 
 async function ctlTimetable(box){
   const r = await sb.rpc('tv_timetable_today'); if(r.error) throw r.error;
   ctl.tt = r.data;
-  if(!ctl.ttEdit || ctl.ttEdit.day !== r.data.day) ctl.ttEdit = { day:r.data.day, items:(r.data.items || []).map(x => Object.assign({}, x)) };
+  if(!ctl.ttEdit || ctl.ttEdit.day !== r.data.day) ctl.ttEdit = { day:r.data.day, items:(r.data.items || []).map(x => Object.assign({}, x)) };          // (what was kept: its end is never suggested over)
   ctlTimetableDraw(box);
 }
 // the hour of an activity: two short lists, the hours 00–23 and the minutes (a time box would show AM/PM on a phone set that way: Guy 2026-11-03)
@@ -163,16 +163,21 @@ function ctlTimetableDraw(box){
       ? `<button type="button" class="btn" id="tt-save">שמירה להיום</button>${tt.changed ? '<button type="button" class="btn ghost" id="tt-reset">חזרה ללו"ז הקבוע</button>' : ''}${coord ? `<button type="button" class="btn ghost" id="tt-save-fixed">שמירה גם כקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}</button>` : ''}`
       : `<button type="button" class="btn" id="tt-fixed-save">שמירת הלו"ז הקבוע</button><button type="button" class="btn ghost" id="tt-fixed-close">חזרה להיום</button>`}</div>
     ${coord && fixedDay == null ? `<div class="ctl-fixed-pick"><span>עריכת הלו"ז הקבוע של:</span>${WEEKDAY_NAMES.map((n, i) => `<button type="button" class="btn ghost small" data-fixed="${i}">${n}</button>`).join('')}</div>` : ''}`;
+  // the end is offered, never asked for: the start of the next activity, until somebody sets it or empties it by hand (Guy 2026-11-04)
+  const suggest = () => editing.items.forEach((x, i) => { if(!x.endAuto) return; const nx = editing.items.slice(i + 1).find(b => b.t && b.t > x.t); x.end = nx ? nx.t : ''; });
   const sync = () => box.querySelectorAll('[data-row]').forEach(row => { const i = +row.dataset.row; editing.items[i].t = ttTimeOf(row.querySelector('[data-tt-time]')); editing.items[i].end = ttTimeOf(row.querySelector('[data-tt-end]')); editing.items[i].n = row.querySelector('[data-tt-name]').value.trim(); });
   // a changed hour: the activity glides to its place in the day, and the others make room (Guy 2026-11-03)
+  box.querySelectorAll('[data-tt-end] select').forEach(sel => sel.addEventListener('change', () => { sync(); const x = editing.items[+sel.closest('[data-row]').dataset.row]; x.endAuto = false; x.endSet = true; }));
   box.querySelectorAll('[data-tt-time] select').forEach(sel => sel.addEventListener('change', () => {
     sync();
+    { const x = editing.items[+sel.closest('[data-row]').dataset.row]; if(!x.end && !x.endSet) x.endAuto = true; }
     const sorted = editing.items.slice().sort((a, b) => (a.t || '99').localeCompare(b.t || '99'));
-    if(sorted.every((x, k) => x === editing.items[k])) return;
+    { const at = sorted.indexOf(editing.items[+sel.closest('[data-row]').dataset.row]), before = sorted[at - 1]; if(before && !before.end && !before.endSet) before.endAuto = true; }
+    if(sorted.every((x, k) => x === editing.items[k])){ suggest(); ctlTimetableDraw(box); return; }
     const tops = new Map([...box.querySelectorAll('[data-row]')].map(r => [editing.items[+r.dataset.row], r.getBoundingClientRect().top]));
     const moved = editing.items[+sel.closest('[data-row]').dataset.row];
     editing.items.splice(0, editing.items.length, ...sorted);
-    ctlTimetableDraw(box);
+    suggest(); ctlTimetableDraw(box);
     box.querySelectorAll('[data-row]').forEach(r => {
       const it = editing.items[+r.dataset.row], d = (tops.get(it) || 0) - r.getBoundingClientRect().top;
       if(it === moved) r.classList.add('ctl-tt-moved');
@@ -181,7 +186,7 @@ function ctlTimetableDraw(box){
   }));
   const clean = () => { sync(); return editing.items.filter(x => x.t && x.n).sort((a, b) => a.t.localeCompare(b.t)).map(x => Object.assign({ t:x.t, n:x.n, i:x.i || 'other' }, x.end && x.end > x.t ? { end:x.end } : {})); };          // (an end before the start is left out)
   box.querySelectorAll('[data-tt-del]').forEach(b => b.addEventListener('click', () => { sync(); editing.items.splice(+b.dataset.ttDel, 1); ctlTimetableDraw(box); }));
-  box.querySelector('#tt-add').addEventListener('click', () => { sync(); editing.items.push({ t:'', n:'', i:'other' }); ctlTimetableDraw(box); const last = box.querySelector('.ctl-tt-row:last-child [data-tt-h]'); if(last) last.focus(); });
+  box.querySelector('#tt-add').addEventListener('click', () => { sync(); editing.items.push({ t:'', n:'', i:'other', endAuto:true }); ctlTimetableDraw(box); const last = box.querySelector('.ctl-tt-row:last-child [data-tt-h]'); if(last) last.focus(); });
   box.querySelectorAll('[data-tt-icon]').forEach(b => b.addEventListener('click', () => {
     sync(); const i = +b.dataset.ttIcon;
     const sh = portalSheet(`<h2>תמונה לפעילות</h2><div class="ctl-icons">${TT_ICON_LIST.map(([id, word, e]) => `<button type="button" class="ctl-icon-opt${editing.items[i].i === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`).join('')}</div>

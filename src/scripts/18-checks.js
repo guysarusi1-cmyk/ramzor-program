@@ -2849,7 +2849,7 @@
       const PW = '@config(testPersonalPassword)', phone = matchMedia('(max-width:700px)').matches;
       const enter = async kind => { await sbPersonal.auth.signOut(); const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW); return !error && await personalEnter(); };
       try {
-        for(const kind of ['instructor', 'manager', 'service']){
+        for(const kind of ['instructor', 'service']){
           if(!(await enter(kind))){ check(`oncall round: ${kind} signs in`, false, ''); continue; }
           if(personalRamzorKind()){ showAppHome(); await sleep(150); }
           check(`no right, no card: ${kind}`, !document.getElementById('apphome-oncall') && !document.getElementById('portal-oncall') && !ocAllowed(), '');
@@ -2914,6 +2914,71 @@
             check('"סוף השבוע הקרוב": Thursday night to Sunday morning, as the system counts it', rs.length === 4 && rs[0].textContent.includes(ocShort(addDays(f, -1))) && lbl(0).length === 1 && !!document.querySelector('.oc-wk-title') && rs[3].textContent.includes(ocShort(addDays(f, 2))) && !lbl(3).includes(ocShiftWord('N')), JSON.stringify(rs.map((_, i) => lbl(i)))); }
         } else check('a computer: the schedule stays as it was', !box.querySelector('[data-oc-sv]') && !!box.querySelector('.mcal-viewbar, .oc-viewbar, #oc-viewbar'), '');
       } finally { oc.view = 'list'; oc.wkStart = null; oc.schedView = 'week'; oc.key = null; try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); await personalLeave(); showHub(); }
+    });
+    // ---- the manager towards the live version: the first screen, one question before signing out, the timetable, the users to look at, the Ramzor to look at (Guy 2026-11-04)
+    await step('manager round', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('manager-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('manager round: she signs in', false, error ? error.message : 'no'); return; }
+      const phone = matchMedia('(max-width:700px)').matches, active = () => document.querySelector('.view.active').id, titles = () => [...document.querySelectorAll('#view-apphome .home-card-title')].map(x => x.textContent);
+      try {
+        await sleep(200);
+        check('she comes in to the first screen, not to a tab', active() === 'view-apphome', active());
+        check('... the cards: "הרמזור", "ניהול", "כוננית סוף שבוע"', ['הרמזור', 'ניהול', 'כוננית סוף שבוע'].every(t => titles().includes(t)) && !titles().includes('פורטל המדריך'), titles().join('|'));
+        // signing out asks, and "ביטול" stays
+        document.getElementById('apphome-logout').click(); await sleep(150);
+        { const sh = document.querySelector('.confirm-sheet'); check('signing out: the question and its two answers', !!sh && sh.querySelector('.confirm-text').textContent === 'פעולה זו תנתק אותך מהמערכת. האם להמשיך?' && sh.querySelector('.confirm-ok').textContent === 'התנתקות' && sh.querySelector('.confirm-cancel').textContent === 'ביטול', sh ? sh.textContent : 'none');
+          if(sh){ sh.querySelector('.confirm-cancel').click(); await sleep(250); } const s = await sbPersonal.auth.getSession(); check('... "ביטול" stays signed in', !!s.data.session && active() === 'view-apphome', active()); }
+        // what the coming live version leaves out
+        window.__asLive = true; showAppHome(); await sleep(120);
+        check('live: "פורטל הטיפול" as "בקרוב", and it does not open', !!document.getElementById('apphome-therapy-soon') && document.getElementById('apphome-therapy-soon').disabled && !document.getElementById('apphome-therapy'), titles().join('|'));
+        srvOpenPortal(); await sleep(300);
+        check('live: no "הילדים" tab', !document.querySelector('[data-ptab="kids"]') && !document.querySelector('[data-mgo="kids"]'), '');
+        window.__asLive = false; showAppHome(); await sleep(100); srvOpenPortal(); await sleep(400);
+        check('on the test site the children stay', !!document.querySelector('[data-ptab="kids"]'), '');
+        { const h = document.getElementById('portal-home'); check('no "יציאה" inside her portal', !h || !/יציאה/.test(h.textContent), h ? h.textContent : ''); }
+        // the timetable
+        portalUi.tab = 'timetable'; showPortal('timetable'); await sleep(900);
+        const ttr = await sbPersonal.rpc('tv_timetable_today'), n = ((ttr.data || {}).items || []).length;
+        check('the timetable: "לו"ז" and "עריכה", and the day as on the kids screen', document.querySelectorAll('[data-mtt]').length === 2 && document.querySelectorAll('.mgr-ttv-item').length === n, `${document.querySelectorAll('.mgr-ttv-item').length} / ${n}`);
+        if(phone){ await sleep(200); const clip = [...document.querySelectorAll('.mgr-ttv-name, .mgr-ttv-time')].filter(x => x.getBoundingClientRect().bottom > x.closest('.mgr-ttv-item').getBoundingClientRect().bottom + 1 || x.scrollWidth > x.clientWidth + 1), nav = document.querySelector('.bottom-nav'), last = [...document.querySelectorAll('.mgr-ttv-item')].pop();
+          check('... on a phone: all of it on the screen, no scrolling, nothing cut', document.documentElement.scrollWidth <= innerWidth + 1 && !clip.length && (!last || last.getBoundingClientRect().bottom <= (nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : innerHeight) + 1), `${clip.length} cut`); }
+        { const w = document.querySelector('[data-mtv="week"]'); if(w){ w.click(); await sleep(600); check('... the week', phone ? document.querySelectorAll('[data-mtd]').length === 7 : document.querySelectorAll('.mgr-ttv-col').length === 7, ''); } }
+        document.querySelector('[data-mtt="edit"]').click(); await sleep(800);
+        { const r0 = document.querySelector('.ctl-tt-row'); if(r0){ const ic = r0.querySelector('.ctl-tt-icon').getBoundingClientRect(), tx = r0.querySelector('input[type=text]').getBoundingClientRect(); check('the editor: the picture small, the words get the room', ic.width <= 50 && tx.width > ic.width * 2, `${ic.width} / ${tx.width}`); } }
+        // the end is offered, and a kept end is not touched
+        { const was = ctl.ttEdit.items; ctl.ttEdit.items = [{ t:'08:00', n:'א', i:'other', end:'08:30' }, { t:'10:00', n:'ב', i:'other', endAuto:true }, { t:'12:00', n:'ג', i:'other' }];
+          const box = document.getElementById('mgr-tt'); ctlTimetableDraw(box); await sleep(60);
+          const row = i => box.querySelectorAll('[data-row]')[i], setStart = async (i, h) => { const s = row(i).querySelector('[data-tt-time] [data-tt-h]'); s.value = h; s.dispatchEvent(new Event('change', { bubbles:true })); await sleep(60); };
+          await setStart(1, '11');
+          check('the end: offered as the start of the next one', ctl.ttEdit.items[1].end === '12:00', JSON.stringify(ctl.ttEdit.items[1]));
+          check('... an end set before stays', ctl.ttEdit.items[0].end === '08:30', JSON.stringify(ctl.ttEdit.items[0]));
+          { const s = row(1).querySelector('[data-tt-end] [data-tt-h]'); s.value = ''; s.dispatchEvent(new Event('change', { bubbles:true })); await sleep(40); await setStart(2, '13'); check('... emptied by hand it stays empty, it is not a must', !ctl.ttEdit.items[1].end, JSON.stringify(ctl.ttEdit.items[1])); }
+          ctl.ttEdit.items = was; ctl.ttEdit = null; }
+        // the users
+        portalUi.tab = 'users'; showPortal('users'); await sleep(400);
+        const groups = [...document.querySelectorAll('#portal-body .psec')].map(x => x.textContent);
+        check('"משתמשים": instructors, the coordinator, the social workers, no service girls', groups.includes('מדריכים') && groups.includes('רכזת') && groups.includes('מטפלות'), groups.join('|'));
+        { const ins = portalLoad().instructors.find(p => p.role === 'instructor' && p.active), b = document.querySelector(`[data-mu="${ins.id}"]`); b.click(); await sleep(500);
+          check('... an instructor: her screen, with the line that says it is only to look', !!document.querySelector('.adm-viewas') && !!document.querySelector('[data-ptab="prefs"]'), '');
+          const tab = document.querySelector('[data-ptab="prefs"]'); tab.click(); await sleep(400); const slots = (await sbPersonal.from('prefs_slot').select('staff_id').eq('staff_id', ins.id).limit(1));
+          check('... she may read the preferences of another (scheduling-v59.sql)', !slots.error, slots.error ? slots.error.message : '');
+          const w = await sbPersonal.from('prefs_submission').delete().eq('staff_id', ins.id).eq('month', '1999-01-01').select('staff_id'), u = await sbPersonal.from('prefs_slot').update({ level:'yes' }).eq('staff_id', ins.id).select('staff_id');
+          check('... and the database changes nothing for her', !(u.data || []).length, JSON.stringify(u.error || (u.data || []).length));
+          const body = document.getElementById('portal-body'), anyBtn = body.querySelector('[data-pslot], [data-pview], button:not([data-pmonth])'); if(anyBtn){ const wasS = JSON.stringify(portalMonth(portalUi.month || monthKeyOf(srvToday())).prefs || {}); anyBtn.click(); await sleep(150); check('... a tap changes nothing there', JSON.stringify(portalMonth(portalUi.month || monthKeyOf(srvToday())).prefs || {}) === wasS, ''); }
+          document.getElementById('viewas-end').click(); await sleep(400);
+          check('... and back to the list', portalUi.tab === 'users' && !portalUi.viewAs && !!document.querySelector('[data-mu]'), String(portalUi.tab)); }
+        { const c = portalLoad().instructors.find(p => p.role === 'coordinator' && p.active && !p.admin), b = c && document.querySelector(`[data-mu="${c.id}"]`); if(b){ b.click(); await sleep(900); check('... the coordinator: her tabs', !!document.querySelector('[data-ptab="schedule"]') && !!document.querySelector('.adm-viewas') && !document.querySelector('#portal-body .pstatus.bad'), ''); document.getElementById('viewas-end').click(); await sleep(400); } }
+        { const t = portalLoad().instructors.find(p => p.role === 'therapist' && p.active), b = t && document.querySelector(`[data-mu="${t.id}"]`); if(b){ b.click(); await sleep(900); check('... a social worker: the on-call, to look at, not the therapy portal', active() === 'view-oncall' && !!document.querySelector('#view-oncall .adm-viewas'), active()); document.getElementById('oc-home-back').click(); await sleep(300); } }
+        // the on-call, as a social worker
+        showAppHome(); await sleep(100); document.getElementById('apphome-oncall').click(); await sleep(900);
+        check('the on-call opens for her (scheduling-v59.sql)', !!document.querySelector('#view-oncall .oc') && !document.querySelector('#view-oncall .pstatus.bad'), '');
+        // the Ramzor, to look at
+        showAppHome(); await sleep(100); document.getElementById('apphome-ramzor').click(); await sleep(500);
+        check('the Ramzor opens for her, with no management and no control of the kids screen', active() === 'view-hub' && document.getElementById('hub-manage-gear').hidden && document.getElementById('hub-kids-btn').hidden, active());
+        { const r = await sb.from('child_state').update({ stars:0 }).eq('child_id', 'none'); check('... whatever would write is stopped', !!r.error && /צפייה/.test(r.error.message), JSON.stringify(r.error)); const q = await sb.from('roster').select('id').limit(1); check('... reading works', !q.error && (q.data || []).length === 1, JSON.stringify(q.error)); }
+      } finally { window.__asLive = false; document.querySelectorAll('.toast').forEach(x => x.remove()); const g = document.getElementById('hub-manage-gear'), k = document.getElementById('hub-kids-btn'); await personalLeave(); sb = sbShared || sb; if(g) g.hidden = false; if(k) k.hidden = false; showHub(); }
     });
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;

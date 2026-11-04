@@ -6,7 +6,7 @@
 //   * messages to the staff (everybody or chosen people; portal or also e-mail) with who saw and who confirmed "קראתי"
 //   * the WhatsApp group of the framework: a shortcut only
 const mgr = { week:null, conv:null, kidsLoaded:false };
-const MGR_TABS = [['mhome', 'בית'], ['schedule', 'סידור העבודה'], ['timetable', 'לו"ז'], ['kids', 'הילדים'], ['chats', 'שיחות']];          // (the messages to the staff: inside the home tab, Guy 2026-11-03)
+const MGR_TABS = [['mhome', 'בית'], ['schedule', 'סידור העבודה'], ['timetable', 'לו"ז'], ['kids', 'הילדים'], ['chats', 'שיחות'], ['users', 'משתמשים']];          // (the messages to the staff: inside the home tab, Guy 2026-11-03)
 const mgrIsMe = () => { try { return (portalMe() || {}).role === 'manager'; } catch(e){ return false; } };
 const mgrShort = iso => { const t = parseIso(iso); return t.getDate() + '/' + (t.getMonth() + 1); };
 const mgrWeekStart = () => { const t = isoDate(new Date()); return mgr.week || addDays(t, -dowOf(t)); };
@@ -21,6 +21,7 @@ async function mgrRender(t, body){
   if(t === 'timetable') return mgrTimetable(body);
   if(t === 'kids') return mgrKidsTab(body);
   if(t === 'chats') return mgrChats(body);
+  if(t === 'users') return mgrUsers(body);
   return mgrHome(body);
 }
 // ---- home: the current week (Sunday–Saturday, Guy: "השבוע הנוכחי"), the timetable of the week, and the ways in
@@ -35,7 +36,7 @@ async function mgrHome(body){
   body.innerHTML = `
     <div class="mcal-weeknav mgr-weeknav"><button type="button" class="mcal-wk" data-mw="-7" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>${thisWeek ? 'השבוע הנוכחי' : 'שבוע'} <bdi dir="ltr">${mgrShort(days[0])}–${mgrShort(days[6])}</bdi></b><button type="button" class="mcal-wk" data-mw="7" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>
     <div class="mgr-links">
-      <button type="button" class="btn ghost" data-mgo="kids">תוכניות הילדים</button>
+      ${liveCut() ? '' : '<button type="button" class="btn ghost" data-mgo="kids">תוכניות הילדים</button>'}
       ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת הצוות</span></a>` : ''}
     </div>
     <details class="pfold" data-fold="m-msg"${openFold('m-msg') ? ' open' : ''}><summary><span>הודעה לצוות</span></summary><div class="pfold-body" id="mgr-msgs"><div class="pnote">רק רגע...</div></div></details>
@@ -60,8 +61,47 @@ function mgrSchedule(body){
 }
 // ---- the general timetable: the same editor as the ahmash control; the database tells the coordinator about her changes
 async function mgrTimetable(body){
-  body.innerHTML = '<div class="pnote">זה הלו"ז שמוצג לילדים במסך הילדים (בטלוויזיה). שינוי נשמר בלחיצה על "שמירה", מופיע במסך הילדים תוך רגע, והרכזת מקבלת על כך הודעה בפורטל.</div><div id="mgr-tt"><div class="pnote">רק רגע...</div></div>';
-  try { await ctlTimetable(body.querySelector('#mgr-tt')); } catch(e){ body.querySelector('#mgr-tt').innerHTML = '<div class="pstatus bad">הלו"ז לא נטען. אפשר לנסות שוב.</div>'; }
+  const edit = mgr.ttMode === 'edit';
+  body.innerHTML = `<div class="mx-seg mgr-tt-mode" role="group" aria-label="לו&quot;ז"><button type="button" data-mtt="view" aria-pressed="${!edit}">לו"ז</button><button type="button" data-mtt="edit" aria-pressed="${edit}">עריכה</button></div><div id="mgr-tt"><div class="pnote">רק רגע...</div></div>`;
+  body.querySelectorAll('[data-mtt]').forEach(b => b.addEventListener('click', () => { mgr.ttMode = b.dataset.mtt; mgrTimetable(body); }));
+  const box = body.querySelector('#mgr-tt');
+  try {
+    if(!edit) return await mgrTimetableView(box);
+    box.insertAdjacentHTML('beforebegin', '<div class="pnote">שינוי נשמר בלחיצה על "שמירה", מופיע במסך הילדים תוך רגע, והרכזת מקבלת על כך הודעה בפורטל.</div>');
+    await ctlTimetable(box);
+  } catch(e){ box.innerHTML = '<div class="pstatus bad">הלו"ז לא נטען. אפשר לנסות שוב.</div>'; }
+}
+// to look at: the day as on the kids' screen, from the same data, or the week. On a phone it fits the screen without scrolling: the day's activities share the height that is left,
+// and the week shows one day at a time under its seven days (seven columns would be too small to read: Guy 2026-11-04)
+async function mgrTimetableView(box){
+  const today = isoDate(new Date()), sun = addDays(today, -dowOf(today)), week = mgr.ttView === 'week', days = Array.from({ length:7 }, (_, i) => addDays(sun, i));
+  const [r, fixed, daily] = await Promise.all([sb.rpc('tv_timetable_today'), sbPersonal.from('timetable_fixed').select('weekday,items'), sbPersonal.from('timetable_day').select('day,items').gte('day', days[0]).lte('day', days[6])]);
+  if(r.error) throw r.error;
+  if(!box.isConnected) return;
+  const itemsOf = d => d === today ? (r.data.items || []) : ((daily.data || []).find(x => x.day === d) || (fixed.data || []).find(x => x.weekday === dowOf(d)) || {}).items || [];
+  const card = a => `<div class="mgr-ttv-item"><div class="mgr-ttv-time"><bdi dir="ltr">${pEsc(a.t || '')}${a.end ? '–' + pEsc(a.end) : ''}</bdi></div><div class="mgr-ttv-icon">${typeof ttArt === 'function' ? ttArt(a.i) : ''}</div><div class="mgr-ttv-name">${pEsc(a.n || '')}</div></div>`;
+  const grid = list => list.length ? `<div class="mgr-ttv" style="--c:${list.length > 12 ? 4 : 3}">${list.map(card).join('')}</div>` : '<div class="pnote">אין לו"ז ליום הזה.</div>';
+  const phone = matchMedia('(max-width:700px)').matches, pick = mgr.ttDay && days.includes(mgr.ttDay) ? mgr.ttDay : today;
+  const seg = `<div class="mx-seg mgr-tt-mode" role="group" aria-label="תצוגה"><button type="button" data-mtv="day" aria-pressed="${!week}">היום</button><button type="button" data-mtv="week" aria-pressed="${week}">השבוע</button></div>`;
+  box.innerHTML = seg + (!week ? `<div class="mgr-ttv-fit">${grid(itemsOf(today))}</div>`
+    : phone ? `<div class="mgr-ttv-days">${days.map(d => `<button type="button" data-mtd="${d}" aria-pressed="${d === pick}"><b>${DOW_SHORT[dowOf(d)]}</b><small>${mgrShort(d)}</small></button>`).join('')}</div><div class="mgr-ttv-fit">${grid(itemsOf(pick))}</div>`
+    : `<div class="mgr-ttv-week">${days.map(d => `<div class="mgr-ttv-col${d === today ? ' today' : ''}"><b>${DOW_NAMES[dowOf(d)]} ${mgrShort(d)}</b>${itemsOf(d).map(card).join('') || '<div class="pnote">—</div>'}</div>`).join('')}</div>`);
+  box.querySelectorAll('[data-mtv]').forEach(b => b.addEventListener('click', () => { mgr.ttView = b.dataset.mtv; mgrTimetableView(box); }));
+  box.querySelectorAll('[data-mtd]').forEach(b => b.addEventListener('click', () => { mgr.ttDay = b.dataset.mtd; mgrTimetableView(box); }));
+  const fit = box.querySelector('.mgr-ttv-fit');
+  if(fit && phone){ const nav = document.querySelector('.bottom-nav'), bottom = nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : innerHeight; window.scrollTo(0, 0); fit.style.height = Math.max(240, bottom - fit.getBoundingClientRect().top - 8) + 'px'; }
+}
+// ---- "משתמשים": a person's screen as it is, to look at. Nothing can be changed there (the same view as the admin's; the database gives her reading only, scheduling-v59.sql)
+function mgrUsers(body){
+  const st = portalLoad(), group = (role, word) => { const l = st.instructors.filter(p => p.active && p.role === role && p.id !== srv.me).sort((a, b) => String(a.first).localeCompare(String(b.first), 'he'));
+    return l.length ? `<h2 class="psec">${word}</h2><div class="adm-people">${l.map(p => `<button type="button" class="cs-name" data-mu="${p.id}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span></button>`).join('')}</div>` : ''; };
+  body.innerHTML = `<div class="pnote">בחירה באדם פותחת את המסך כמו שהוא רואה אותו. צפייה בלבד: אי אפשר לשנות דבר, והאדם לא מקבל על כך הודעה.</div>${group('instructor', 'מדריכים')}${group('coordinator', 'רכזת')}${group('therapist', 'מטפלות')}`;
+  body.querySelectorAll('[data-mu]').forEach(b => b.addEventListener('click', async () => {
+    const p = portalPerson(b.dataset.mu); if(!p) return;
+    if(p.role === 'therapist'){ showOncallScreen(p); return; }          // (her portal is closed in the coming version: what she has is the on-call screen)
+    if(p.role === 'coordinator'){ try { await srvLoadCoord(); } catch(e){} }
+    Object.assign(portalUi, { fillReturn:{ tab:'users', manager:false }, viewAs:p.id, persona:p.id, manager:false, editPrefs:false, actAs:false, tab:null, pmonth:null, month:null }); showPortal();
+  }));
 }
 // ---- the children: a short summary of each plan, the full plan and the diary read only; opening the detail is logged
 async function mgrKidsTab(body){

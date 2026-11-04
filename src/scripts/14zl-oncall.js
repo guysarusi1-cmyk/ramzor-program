@@ -12,10 +12,10 @@ const OC_NEED = [['need', 'צריך'], ['none', 'לא צריך']];          // (
 const oc = { key:null, week:null, monthView:false, data:null, busy:false, view:'list' };
 
 // who may open it: the same people as public.can_oncall(), which the database checks again. The card on the first screen gives no right by itself
-const ocAllowed = () => typeof portalServerOn !== 'undefined' && portalServerOn && !portalUi.viewAs && !!((srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)) || (srv.profile && (srv.profile.admin || srv.profile.therapist || srv.profile.kind === 'therapist')));
+const ocAllowed = () => typeof portalServerOn !== 'undefined' && portalServerOn && !portalUi.viewAs && !!((srv.meRow && (['coordinator', 'manager'].includes(srv.meRow.role) || srv.meRow.admin)) || (srv.profile && (srv.profile.admin || srv.profile.therapist || srv.profile.kind === 'therapist')));
 const ocPhone = () => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } };
 // its own screen, a card of the first screen beside the portals, not inside any of them (Guy 2026-11-04)
-function showOncallScreen(){
+function showOncallScreen(as){          // (as: the manager looks at a social worker's screen, nothing can be changed)
   document.body.classList.remove('leopard-bg');
   portalActivateView('view-oncall');
   let look = 'dark';
@@ -24,7 +24,9 @@ function showOncallScreen(){
   document.getElementById('view-oncall').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc(look)}">
     <div class="portal-top"><button type="button" class="back-btn portal-back" id="oc-home-back">→ מסך ראשי</button><h1 class="portal-title">כוננית סוף שבוע</h1><span class="portal-top-actions"></span></div>
     <div id="oc-screen"></div></div>`;
-  document.getElementById('oc-home-back').addEventListener('click', () => { if(personalRamzorKind()) showAppHome(); else srvOpenPortal(); });
+  document.getElementById('oc-home-back').addEventListener('click', () => { if(as){ portalUi.tab = 'users'; showPortal('users'); return; } if(personalRamzorKind()) showAppHome(); else srvOpenPortal(); });
+  if(as){ const box = document.getElementById('oc-screen'); box.insertAdjacentHTML('beforebegin', `<div class="adm-viewas"><span>👁️ צפייה בלבד · כך ${pEsc(as.first)} רואה את הכוננית</span></div>`);
+    box.addEventListener('click', ev => { if(ev.target.closest('[data-oc-period], [data-oc-view], [data-oc-sv], [data-oc-wk]')) return; if(ev.target.closest('button, input, select, textarea, a')){ ev.preventDefault(); ev.stopPropagation(); toast('זו צפייה בלבד'); } }, true); }
   renderOncall(document.getElementById('oc-screen'));
 }
 
