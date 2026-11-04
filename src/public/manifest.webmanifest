@@ -1,7 +1,7 @@
 {
-  "name": "תכנית הרמזור",
-  "short_name": "הרמזור",
-  "description": "תכנית הרמזור — מרכז חירום",
+  "name": "Mercury",
+  "short_name": "Mercury",
+  "description": "Mercury",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./",
