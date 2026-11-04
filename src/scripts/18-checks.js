@@ -2801,8 +2801,12 @@
         if(!seen('#cs-share')){ check('(info) coordinator phone: skipped, no published schedule this month on the test server', true, ''); return; }
         if(!phone){
           check('the computer: the panel of the requests, the explanations and the long name of the share stay', (seen('.cs-tab') || seen('.cs-side')) && seen('.cs-help') && /שיתוף תמונת סידור/.test(document.querySelector('#cs-share').textContent), '');
+          portalUi.csOpen = true; showPortal('schedule'); await sleep(500);
+          { const sd = document.querySelector('.cs-side'), so = document.querySelector('.cs-sort-btn'); check('the panel: "לפי מספר משמרות", and in the usual text no scroll inside it', /לפי מספר משמרות/.test(so.textContent) && sd.scrollHeight <= sd.clientHeight + 2, `${sd.scrollHeight} / ${sd.clientHeight}`);
+            try { localStorage.setItem('ramzor-portal-big', '2'); } catch(e){} applyPortalSize(); await sleep(200); sd.scrollIntoView({ block:'start' }); await sleep(120); csSideFit(); await sleep(60); sd.scrollTop = 1e6; await sleep(60); const r = sd.getBoundingClientRect(); check('... in very large text it scrolls to its very end, inside the screen', r.bottom <= innerHeight + 1 && Math.abs(sd.scrollTop + sd.clientHeight - sd.scrollHeight) < 3, `${r.bottom} / ${innerHeight}`); try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); portalUi.csOpen = false; }
           return;
         }
+        check('the admin on a phone has all the tabs, the coordinator three', srvTabs(Object.assign({}, portalMe(), { admin:true })).length > 4 && srvTabs(Object.assign({}, portalMe(), { admin:false })).length === 3, '');
         check('phone: no panel of the requests and no explanations on the schedule tab', !seen('.cs-tab') && !seen('.cs-side') && !seen('.cs-help'), '');
         { const a = document.querySelector('#cs-openday').getBoundingClientRect(), b = document.querySelector('#cs-share').getBoundingClientRect(), sb = document.querySelector('#cs-share');
           check('phone: "פתיחת יום לשיבוץ" and "שיתוף" side by side, nothing out of the screen, room for a finger', Math.abs(a.top - b.top) < 3 && a.height >= 44 && b.height >= 44 && !wide() && Math.min(a.left, b.left) >= 0 && Math.max(a.right, b.right) <= innerWidth, JSON.stringify([a.top, b.top, a.height, wide()]));
@@ -2858,7 +2862,7 @@
           try { localStorage.setItem('ramzor-portal-big', big); } catch(e){} applyPortalSize(); await sleep(250);
           const c = document.querySelector('.portal-tabs .ptab-count'), was = c ? c.textContent : ''; if(c) c.textContent = '125'; await sleep(60);
           const tabs = [...document.querySelectorAll('.portal-tabs [data-ptab]')].filter(b => b.getClientRects().length), rs = tabs.map(b => b.getBoundingClientRect()), nav = document.querySelector('.portal-tabs');
-          check(`the tabs in ${big === '1' ? 'large' : 'very large'} text: one line, inside the screen, nothing cut`, tabs.length >= 4 && rs.every(r => Math.abs(r.top - rs[0].top) < 4 && r.left >= 0 && r.right <= innerWidth + .5) && tabs.every(b => b.scrollWidth <= b.clientWidth + 1) && nav.scrollWidth <= nav.clientWidth + 1 && !wide(), JSON.stringify(rs.map(r => [Math.round(r.left), Math.round(r.right), Math.round(r.top)])));
+          check(`the tabs in ${big === '1' ? 'large' : 'very large'} text: one line, inside the screen, nothing cut`, tabs.length >= 3 && rs.every(r => Math.abs(r.top - rs[0].top) < 4 && r.left >= 0 && r.right <= innerWidth + .5) && tabs.every(b => b.scrollWidth <= b.clientWidth + 1) && nav.scrollWidth <= nav.clientWidth + 1 && !wide(), JSON.stringify(rs.map(r => [Math.round(r.left), Math.round(r.right), Math.round(r.top)])));
           if(c) c.textContent = was;
         }
       } finally {
@@ -2914,19 +2918,22 @@
         line(0).querySelector('[data-oc-ord$="|out"]').click(); await sleep(250);
         check('... one way marked by itself', line(0).querySelector('[data-oc-ord$="|out"]').getAttribute('aria-pressed') === 'true' && line(0).querySelector('[data-oc-ord$="|in"]').getAttribute('aria-pressed') === 'false', '');
         line(0).querySelector('summary').click(); await sleep(120);
-        check('... opened: each way with its time and address', line(0).open && line(0).querySelectorAll('[data-oc-time]').length === 2 && line(0).querySelectorAll('[data-oc-place]').length === 2 && line(0).querySelector('[data-oc-time]').value === '07:00', '');
+        check('... opened: each way with its time and address, and no second choice of a taxi', line(0).open && line(0).querySelectorAll('[data-oc-time]').length === 2 && line(0).querySelectorAll('[data-oc-place]').length === 2 && line(0).querySelector('[data-oc-time]').value === '07:00' && !line(0).querySelector('.oc-p-body .oc-need'), '');
         box.querySelector('[data-oc-all-ordered]').click(); await sleep(500);
         const saved = (await sbPersonal.from('oncall_trip').select('staff_id,need,ordered,dir').eq('period_key', p.key)).data || [];
         check('"הוזמן לכולם": saved for who needs a taxi, both ways', saved.filter(t => t.staff_id === w0 && t.ordered).length === 2, JSON.stringify(saved));
         check('... and for nobody else', !saved.some(t => t.staff_id !== w0 && t.ordered) && !saved.some(t => t.staff_id === w2), JSON.stringify(saved));
-        check('... the button says it is done', box.querySelector('[data-oc-all-ordered]').disabled, '');
+        check('... the button says it is done', box.querySelector('[data-oc-all-ordered]').getAttribute('aria-pressed') === 'true', '');
+        box.querySelector('[data-oc-all-ordered]').click(); await sleep(500);
+        { const s2 = (await sbPersonal.from('oncall_trip').select('staff_id,ordered,dir').eq('period_key', p.key)).data || []; const stay = s2.filter(t => t.staff_id === w0 && t.ordered);
+          check('pressed again: it takes back what it marked, and what was marked by hand before stays', stay.length === 1 && stay[0].dir === 'out', JSON.stringify(s2)); }
         await sbPersonal.from('oncall_trip').delete().eq('period_key', p.key);
         await sbPersonal.from('oncall_event').delete().eq('period_key', p.key);
         // the schedule
         oc.key = d.period.key; oc.view = 'sched'; oc.wkStart = null; oc.schedView = 'week'; await renderOncall(box); await sleep(200);
-        if(phone){
+        {
           const sv = () => [...box.querySelectorAll('[data-oc-sv]')].map(b => b.textContent).join('|'), days = () => [...box.querySelectorAll('.oc-wk-day')];
-          check('a phone: two views only', sv() === 'שבוע|סוף השבוע הקרוב' && !box.querySelector('#oc-viewbar, .oc-viewbar'), sv());
+          check('two views only, on a phone and on a computer', sv() === 'שבוע|סוף השבוע הקרוב' && !box.querySelector('#oc-viewbar, .oc-viewbar'), sv());
           { const ds = days(), r = ds.map(x => x.getBoundingClientRect()); check('"שבוע": seven days side by side, Sunday on the right, inside the screen', ds.length === 7 && ds[0].textContent.startsWith(DOW_SHORT[0]) && r.every((x, i) => !i || (x.right <= r[i - 1].left + 3 && Math.abs(x.top - r[0].top) < 2)) && document.documentElement.scrollWidth <= innerWidth + 1, String(document.documentElement.scrollWidth)); }
           oc.wkStart = '2026-12-27'; await renderOncall(box); await sleep(200);
           check('... over the end of the year', days().map(x => x.querySelector('span').textContent).join(' ') === '27/12 28/12 29/12 30/12 31/12 1/1 2/1', days().map(x => x.textContent).join(' '));
@@ -2938,7 +2945,7 @@
           box.querySelector('[data-oc-sv="weekend"]').click(); await sleep(150);
           { const f = ocFridayOf(isoDate(new Date())), rs = [...box.querySelectorAll('.mcal-wrow')], lbl = i => [...rs[i].querySelectorAll('.mcal-wrow-lbl')].map(x => x.textContent);
             check('"סוף השבוע הקרוב": Thursday night to Sunday morning, as the system counts it', rs.length === 4 && rs[0].textContent.includes(ocShort(addDays(f, -1))) && lbl(0).length === 1 && !!document.querySelector('.oc-wk-title') && rs[3].textContent.includes(ocShort(addDays(f, 2))) && !lbl(3).includes(ocShiftWord('N')), JSON.stringify(rs.map((_, i) => lbl(i)))); }
-        } else check('a computer: the schedule stays as it was', !box.querySelector('[data-oc-sv]') && !!box.querySelector('.mcal-viewbar, .oc-viewbar, #oc-viewbar'), '');
+        }
       } finally { oc.view = 'list'; oc.wkStart = null; oc.schedView = 'week'; oc.key = null; try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); await personalLeave(); showHub(); }
     });
     // ---- the manager towards the live version: the first screen, one question before signing out, the timetable, the users to look at, the Ramzor to look at (Guy 2026-11-04)
@@ -2958,21 +2965,27 @@
           if(sh){ sh.querySelector('.confirm-cancel').click(); await sleep(250); } const s = await sbPersonal.auth.getSession(); check('... "ביטול" stays signed in', !!s.data.session && active() === 'view-apphome', active()); }
         // what the coming live version leaves out
         window.__asLive = true; showAppHome(); await sleep(120);
-        check('live: "פורטל הטיפול" as "בקרוב", and it does not open', !!document.getElementById('apphome-therapy-soon') && document.getElementById('apphome-therapy-soon').disabled && !document.getElementById('apphome-therapy'), titles().join('|'));
+        check('live: no therapy portal at all', !titles().includes('פורטל הטיפול') && !document.getElementById('apphome-therapy'), titles().join('|'));
         srvOpenPortal(); await sleep(300);
-        check('live: no "הילדים" tab', !document.querySelector('[data-ptab="kids"]') && !document.querySelector('[data-mgo="kids"]'), '');
+        check('live: no "הילדים" tab', !document.querySelector('[data-ptab="kids"]'), '');
         window.__asLive = false; showAppHome(); await sleep(100); srvOpenPortal(); await sleep(400);
         check('on the test site the children stay', !!document.querySelector('[data-ptab="kids"]'), '');
         { const h = document.getElementById('portal-home'); check('no "יציאה" inside her portal', !h || !/יציאה/.test(h.textContent), h ? h.textContent : ''); }
+        { const tabs = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab); check('no "בית" tab: she starts on the schedule', tabs[0] === 'schedule' && !tabs.includes('mhome'), tabs.join(',')); }
+        portalUi.tab = 'schedule'; portalUi.month = monthKeyOf(srvToday()); showPortal('schedule'); await sleep(350);
+        { const sh = document.getElementById('mgr-share'), seg = document.querySelector('#mgr-viewbar .mcal-seg'); if(sh){ const a = sh.getBoundingClientRect(), b = seg.getBoundingClientRect(); check('the schedule: "שיתוף" with the WhatsApp mark, left of the view, the same height, not touching', sh.textContent.trim() === 'שיתוף' && !!sh.querySelector('svg') && a.right < b.left - 4 && Math.abs(a.height - b.height) < 3, `${a.right} ${b.left} ${a.height} ${b.height}`); } else check('(info) manager round: this month is not published', true, ''); }
+        portalUi.tab = 'chats'; showPortal('chats'); await sleep(700);
+        check('the messages to the staff are in "שיחות", with no choice of all or some', !!document.querySelector('#mgr-msgs #mm-send') && !document.querySelector('[data-mm-to]') && !!document.querySelector('.mm-groups') && !document.querySelector('.mm-some').hidden, '');
         // the timetable
         portalUi.tab = 'timetable'; showPortal('timetable'); await sleep(900);
         const ttr = await sbPersonal.rpc('tv_timetable_today'), n = ((ttr.data || {}).items || []).length;
         check('the timetable: "לו"ז" and "עריכה", and the day as on the kids screen', document.querySelectorAll('[data-mtt]').length === 2 && document.querySelectorAll('.mgr-ttv-item').length === n, `${document.querySelectorAll('.mgr-ttv-item').length} / ${n}`);
         if(phone){ await sleep(200); const clip = [...document.querySelectorAll('.mgr-ttv-name, .mgr-ttv-time')].filter(x => x.getBoundingClientRect().bottom > x.closest('.mgr-ttv-item').getBoundingClientRect().bottom + 1 || x.scrollWidth > x.clientWidth + 1), nav = document.querySelector('.bottom-nav'), last = [...document.querySelectorAll('.mgr-ttv-item')].pop();
           check('... on a phone: all of it on the screen, no scrolling, nothing cut', document.documentElement.scrollWidth <= innerWidth + 1 && !clip.length && (!last || last.getBoundingClientRect().bottom <= (nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : innerHeight) + 1), `${clip.length} cut`); }
+        { const it = [...document.querySelectorAll('.mgr-ttv-item')].slice(0, 4), bad = it.filter(x => x.querySelector('.mgr-ttv-name').getBoundingClientRect().top < x.querySelector('.mgr-ttv-icon').getBoundingClientRect().bottom - 1 || [...x.querySelectorAll('.mgr-ttv-icon *')].some(e => e.getBoundingClientRect().bottom > x.querySelector('.mgr-ttv-name').getBoundingClientRect().top + 1)); check('... the words under the picture, the picture inside its frame', !bad.length, String(bad.length)); }
         { const w = document.querySelector('[data-mtv="week"]'); if(w){ w.click(); await sleep(600); check('... the week', phone ? document.querySelectorAll('[data-mtd]').length === 7 : document.querySelectorAll('.mgr-ttv-col').length === 7, ''); } }
         document.querySelector('[data-mtt="edit"]').click(); await sleep(800);
-        { const r0 = document.querySelector('.ctl-tt-row'); if(r0){ const ic = r0.querySelector('.ctl-tt-icon').getBoundingClientRect(), tx = r0.querySelector('input[type=text]').getBoundingClientRect(); check('the editor: the picture small, the words get the room', ic.width <= 50 && tx.width > ic.width * 2, `${ic.width} / ${tx.width}`); } }
+        { const r0 = document.querySelector('.ctl-tt-row'); if(r0){ check('the editor: the start on the left, the end on the right', r0.querySelector('[data-tt-time]').getBoundingClientRect().left < r0.querySelector('[data-tt-end]').getBoundingClientRect().left, ''); check('the editor: how often, for each activity', !!r0.querySelector('[data-tt-rep]'), ''); const ic = r0.querySelector('.ctl-tt-icon').getBoundingClientRect(), tx = r0.querySelector('input[type=text]').getBoundingClientRect(); check('the editor: the picture small, the words get the room', ic.width <= 50 && tx.width > ic.width * 2, `${ic.width} / ${tx.width}`); } }
         // the end is offered, and a kept end is not touched
         { const was = ctl.ttEdit.items; ctl.ttEdit.items = [{ t:'08:00', n:'א', i:'other', end:'08:30' }, { t:'10:00', n:'ב', i:'other', endAuto:true }, { t:'12:00', n:'ג', i:'other' }];
           const box = document.getElementById('mgr-tt'); ctlTimetableDraw(box); await sleep(60);
@@ -2982,6 +2995,9 @@
           check('... an end set before stays', ctl.ttEdit.items[0].end === '08:30', JSON.stringify(ctl.ttEdit.items[0]));
           { const s = row(1).querySelector('[data-tt-end] [data-tt-h]'); s.value = ''; s.dispatchEvent(new Event('change', { bubbles:true })); await sleep(40); await setStart(2, '13'); check('... emptied by hand it stays empty, it is not a must', !ctl.ttEdit.items[1].end, JSON.stringify(ctl.ttEdit.items[1])); }
           ctl.ttEdit.items = was; ctl.ttEdit = null; }
+        check('how often: every 2 weeks from a day, on that day and two weeks on, not the week between or before', ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-04') && ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-18') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-11') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-10-21'), '');
+        check('how often: the first Wednesday of the month', ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-04') && !ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-11') && ttOn({ rep:{ k:'month', nth:1 } }, '2026-12-02'), '');
+        check('how often: once and weekly always show on their day', ttOn({ rep:{ k:'once' } }, '2026-11-04') && ttOn({ rep:{ k:'week' } }, '2026-11-04') && ttOn({}, '2026-11-04'), '');
         // the users
         portalUi.tab = 'users'; showPortal('users'); await sleep(400);
         const groups = [...document.querySelectorAll('#portal-body .psec')].map(x => x.textContent);
@@ -3011,7 +3027,7 @@
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', enter = async kind => { await sbPersonal.auth.signOut(); const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW); return !error && await personalEnter(); };
       if(!(await enter('service'))){ check('service round: she signs in', false, ''); return; }
-      const next = addMonths(monthKeyOf(srvToday()), 1), me = srv.me, other = portalLoad().instructors.find(p => p.active && p.role === 'instructor'), mk0 = monthKeyOf(srvToday());
+      const rgbOf = c => (String(c).match(/[\d.]+/g) || []).map(Number), next = addMonths(monthKeyOf(srvToday()), 1), me = srv.me, other = portalLoad().instructors.find(p => p.active && p.role === 'instructor'), mk0 = monthKeyOf(srvToday());
       try {
         check('she comes in with her own role and tabs', (portalMe() || {}).role === 'service' && !!document.querySelector('[data-ptab="schedule"]') && !!document.querySelector('[data-ptab="avail"]'), (portalMe() || {}).role);
         portalUi.tab = 'schedule'; portalUi.smonth = mk0; showPortal('schedule'); await sleep(500);
@@ -3020,6 +3036,10 @@
         if(srvPrefsOpen(next)){
           const day = daysOfMonth(next).find(d => dowOf(d) === 1);
           portalUi.pmonth = next; showPortal('avail'); await sleep(700);
+          check('the calendar: five days and one narrow column for the weekend', [...document.querySelectorAll('.svcal-head')].map(x => x.textContent).join('|') === `${DOW_SHORT.slice(0, 5).join('|')}|סופ"ש`, [...document.querySelectorAll('.svcal-head')].map(x => x.textContent).join('|'));
+          document.querySelector('[data-svtool="no"]').click(); await sleep(350);
+          { const c = rgbOf(getComputedStyle(document.querySelector('[data-svtool="no"]')).backgroundColor); check('"לא" chosen: filled red', c[0] > c[1] + 40, String(c)); }
+          { let flash = false; const box = document.getElementById('portal-body'), mo = new MutationObserver(() => { if(/רק רגע/.test(box.textContent)) flash = true; }); mo.observe(box, { childList:true, subtree:true }); const y = scrollY, first = document.querySelector('[data-svslot]'), k = first.dataset.svslot.split('|')[0]; first.click(); await sleep(700); mo.disconnect(); check('a choice: the calendar does not blink or jump', !flash && Math.abs(scrollY - y) < 2, `${flash} ${y} ${scrollY}`); await sbPersonal.from('prefs_service').delete().eq('staff_id', me).eq('day', k); }
           document.querySelector('[data-svtool="hours"]').click(); await sleep(300);
           document.querySelector(`[data-svslot="${day}|early"]`).click(); await sleep(200);
           { const sh = document.querySelector('.psheet'); sh.querySelector('#svh-from').value = '9'; sh.querySelector('#svh-to').value = '13'; sh.querySelector('#svh-go').click(); await sleep(800); }

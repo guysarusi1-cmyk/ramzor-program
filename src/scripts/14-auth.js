@@ -84,13 +84,15 @@ function rzReadOnlyClient(real){
     if(k === 'from') return n => { const q = t.from(n); return new Proxy(q, { get(o, m){ if(['insert', 'update', 'upsert', 'delete'].includes(m)) return no; const v = o[m]; return typeof v === 'function' ? v.bind(o) : v; } }); };
     const v = t[k]; return typeof v === 'function' ? v.bind(t) : v; } });
 }
+const hubPlainBack = () => { try { return ['therapist', 'manager'].includes((portalMe() || {}).role) || !!(srv.profile && srv.profile.kind === 'therapist'); } catch(e){ return false; } };          // (no instructor portal to go to: just back, Guy 2026-11-04)
 const rzLookOnly = () => typeof srv !== 'undefined' && !!srv.me && portalServerOn && !!srv.meRow && srv.meRow.role === 'manager';
 function showHub(){
   document.body.classList.remove('portal-mode', 'leopard-bg');
   if(rzLookOnly()) sb = rzReadOnlyClient(sbPersonal);
   { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly(); if(kids) kids.hidden = rzLookOnly(); }
   stopCarousel();
-  const pl = document.getElementById('hub-portal-link'); if(pl) pl.hidden = !(typeof ramzorPersonal !== 'undefined' && ramzorPersonal);
+  { const pl = document.getElementById('hub-portal-link'), rp = typeof ramzorPersonal !== 'undefined' && ramzorPersonal, plain = rp && hubPlainBack();
+    if(pl){ pl.hidden = !rp || (plain && matchMedia('(max-width:700px)').matches); pl.textContent = plain ? '→ חזרה' : '👥 לפורטל'; } }          // (a phone has its own way back)
   const cb = document.getElementById('hub-control-btn'); if(cb) cb.hidden = !(typeof canControl === 'function' && canControl());          // (the ahmash control: ahmash, coordinator, admin)
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-hub').classList.add('active');
@@ -102,7 +104,7 @@ document.getElementById('hub-daily-btn').addEventListener('click', ()=>{
   selectedStaffChild = null;
   showStaffScreen('pick');
 });
-document.getElementById('hub-portal-link').addEventListener('click', () => { if(typeof srvOpenPortal === 'function') srvOpenPortal(); });
+document.getElementById('hub-portal-link').addEventListener('click', () => { if(hubPlainBack()) showAppHome(); else if(typeof srvOpenPortal === 'function') srvOpenPortal(); });
 document.getElementById('hub-control-btn').addEventListener('click', () => { if(typeof showControl === 'function') showControl(); });
 document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
   toast('לומדת הרמזור בקרוב! 🎓');

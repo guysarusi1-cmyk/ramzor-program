@@ -269,7 +269,7 @@ function srvRenderCoordSchedule(body){
     c.addEventListener('drop', e => { e.preventDefault(); srvDropClear(c); const who = e.dataTransfer.getData('text/plain') || (srvDragRow ? 'row:' + srvDragRow : srvDragWho); if(!who) return;
       if(who.startsWith('row:')) srvMoveToSlot(mk, c.dataset.key, who.slice(4), body); else if(who.startsWith('other:')) srvAddOtherToSlot(mk, c.dataset.key, who.slice(6), body); else srvAddToSlot(mk, c.dataset.key, who, body); });
   });
-  srvDragScrollWire();
+  srvDragScrollWire(); csSideFit();
   if(csPhone) csTouchDragWire(body, mk);
   body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); srvRemoveOther(b.dataset.otherRm, b.dataset.sid, body); }));
   body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('keydown', e => e.stopPropagation()));
@@ -705,6 +705,14 @@ function csCellAt(x, y){
   if(!sh){ const row = el.closest('.mcal-wrow'); if(row && !el.closest('.mcal-wrow-day')){ let best = 1e9; row.querySelectorAll('.mcal-wrow-shift').forEach(s => { const r = s.getBoundingClientRect(), d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom)); if(d < best){ best = d; sh = s; } }); } }
   return sh ? sh.querySelector('.mcal-cell.editable') : el.closest('.mcal-cell.editable');
 }
+// the side panel on a computer: what fits has no scroll of its own; what does not, scrolls inside the part of it that is on the screen, so its end can be reached from anywhere on the page
+function csSideFit(){
+  const sd = document.querySelector('.view.active .cs-side'); if(!sd || !sd.getClientRects().length || matchMedia('(max-width:760px)').matches) return;
+  const z = parseFloat(getComputedStyle(sd.closest('.portal-shell')).zoom) || 1, cap = (innerHeight - 20) / z; sd.style.maxHeight = cap + 'px';
+  if(sd.scrollHeight <= sd.clientHeight + 1) return;
+  sd.style.maxHeight = Math.max(160, (innerHeight - Math.max(sd.getBoundingClientRect().top, 10) - 10) / z) + 'px';
+}
+window.addEventListener('scroll', csSideFit, { passive:true }); window.addEventListener('resize', csSideFit);
 function csTouchDragWire(body, mk){
   const touchy = navigator.maxTouchPoints > 0 || 'ontouchstart' in window, ids = portalLoad().assignmentIds || {};
   body.querySelectorAll('.mcal-cell.editable .mcal-name[data-iid]').forEach(n => {
@@ -797,7 +805,7 @@ function srvSidePanelHtml(mk, issues){
   const others = st.instructors.filter(p => p.active && ['service', 'teacher'].includes(p.role)).sort((a, b) => (a.role === b.role ? 0 : a.role === 'teacher' ? -1 : 1) || String(instrName(a, st.instructors)).localeCompare(String(instrName(b, st.instructors)), 'he'));          // (dragged into the calendar: Guy 2026-10-25)
   return `<aside class="cs-side" aria-label="בקשות המדריכים">
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3>${sel ? '' : mcalKeyHtml(true)}<button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
-    <button type="button" class="btn ghost small cs-sort-btn${byCount ? ' on' : ''}" data-cs-sort="${byCount ? 'name' : 'count'}" aria-pressed="${byCount}">${byCount ? 'הסתר את מספר המשמרות' : 'הצג את מספר המשמרות'}</button>
+    <button type="button" class="btn ghost small cs-sort-btn${byCount ? ' on' : ''}" data-cs-sort="${byCount ? 'name' : 'count'}" aria-pressed="${byCount}">${byCount ? 'לפי שם' : 'לפי מספר משמרות'}</button>
     <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${byCount ? `<b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b>` : ''}</button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
     ${others.length ? `<details class="pfold cs-others-fold" id="cs-others-fold"${portalUi.csOthersOpen ? ' open' : ''}><summary><span>בנות שירות ומורות</span></summary><div class="pfold-body">

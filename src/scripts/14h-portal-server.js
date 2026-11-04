@@ -261,7 +261,8 @@ function srvTabs(me){
   if(portalAsCoord(me)){
     const all = [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['diary', 'יומן הילדים'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);
     const phone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
-    return phone ? all.filter(t => ['schedule', 'submissions', 'swaps'].includes(t[0])) : all;          // (on a phone: סידור, הגשות, החלפות only; the on-call screen is a card of the first screen — the rest on the computer: Guy 2026-11-03)
+    const kept = all.filter(t => t[0] !== 'diary' || !liveCut());          // (the children's diary is not part of the coming live version)
+    return phone && !me.admin ? kept.filter(t => ['schedule', 'submissions', 'swaps'].includes(t[0])) : kept;          // (on a phone: סידור, הגשות, החלפות only; the on-call screen is a card of the first screen — the rest on the computer: Guy 2026-11-03)
   }          // (the admin: one more tab, 14s-portal-admin.js)
   if(me.role === 'manager') return MGR_TABS.filter(t => t[0] !== 'kids' || !liveCut());          // (the manager of the framework: 14zn)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)

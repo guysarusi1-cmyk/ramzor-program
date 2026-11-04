@@ -192,7 +192,7 @@ const svcYesOf = (d, opt) => { const s = SVC_SLOTS(d).map(x => x[0]); if(!opt ||
 const svcOptOf = (d, yes) => { const s = SVC_SLOTS(d).map(x => x[0]); if(!yes.length) return 'none'; if(yes.length === s.length) return s.length === 2 ? 'both' : s[0]; return yes[0]; };
 async function srvRenderAvailability(body){          // (also the admin or the coordinator filling it for a service girl: srvWho())
   const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
-  body.innerHTML = '<div class="pnote">רק רגע...</div>';
+  if(!body.querySelector('.svcal')) body.innerHTML = '<div class="pnote">רק רגע...</div>';          // (a choice: the calendar stays until the new one is ready, nothing jumps)
   const all = daysOfMonth(mk), days = all.filter(d => dowOf(d) <= 4);
   const [r, rh] = await Promise.all([sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1]),
     sbPersonal.from('prefs_hours').select('day,from_time,to_time').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1])]);
@@ -209,13 +209,16 @@ async function srvRenderAvailability(body){          // (also the admin or the c
     return `<div class="svcal-day"><span class="svcal-num">${num}</span>${SVC_SLOTS(d).map(([k, w, h]) => `<button type="button" class="svcal-slot ${yes.includes(k) ? 'lv-yes' : 'lv-no'}" data-svslot="${d}|${k}"${locked ? ' disabled' : ''}>${w}<small>${h}</small></button>`).join('')}</div>`;
   };
   const lead = dowOf(all[0]), flat = Array(lead).fill(null).concat(all); while(flat.length % 7) flat.push(null);
+  // Friday and Saturday are one narrow column: the room goes to the days that count (Guy 2026-11-04)
+  const weekRows = []; for(let w = 0; w < flat.length; w += 7){ const wk = flat.slice(w, w + 7), end = wk.slice(5).filter(Boolean).map(d => parseIso(d).getDate());
+    weekRows.push(wk.slice(0, 5).map(d => d ? cell(d) : '<div class="svcal-day blank"></div>').join('') + (end.length ? `<div class="svcal-day off svcal-we"><span class="svcal-num">${end.join('–')}</span></div>` : '<div class="svcal-day blank"></div>')); }
   body.innerHTML = `
     ${monthFixedHtml(mk)}
     <div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? 'הזמינות שלכן אצלנו, תודה! אפשר לעדכן עד סגירת ההגשה.' : 'נשמח לדעת מתי אתן זמינות. הכל מסומן "כן", ומשנים רק את מה שלא מתאים.'}</div>
     ${locked ? '<div class="pnote">ההגשה לחודש הזה סגורה כרגע. לשינוי אפשר לפנות לרכזת, והיא תשמח לעזור.</div>' : ''}
     <div class="pchoice svcal-tools" role="group" aria-label="מה לסמן">${[['yes', 'כן'], ['no', 'לא'], ['hours', 'שעות אחרות']].map(([k, w]) => `<button type="button" class="${tool === k ? 'on' : ''} lv-${k}" data-svtool="${k}">${w}</button>`).join('')}</div>
     <div class="pnote">בוחרים למעלה מה לסמן, ולוחצים על המשמרת ביומן. "שעות אחרות" חל על כל היום. שישי ושבת לא רלוונטיים.</div>
-    <div class="svcal">${DOW_SHORT.map(x => `<div class="svcal-head">${x}</div>`).join('')}${flat.map(d => d ? cell(d) : '<div class="svcal-day blank"></div>').join('')}</div>
+    <div class="svcal">${DOW_SHORT.slice(0, 5).map(x => `<div class="svcal-head">${x}</div>`).join('')}<div class="svcal-head">סופ"ש</div>${weekRows.join('')}</div>
     <div class="pprefs-actions"><button type="button" class="btn" id="svc-submit"${locked ? ' disabled' : ''}>${submitted ? 'עדכון והגשה מחדש' : 'הגשה'}</button></div>`;
   wireMonthNav(body, 'pmonth');
   body.querySelectorAll('[data-svtool]').forEach(b => b.addEventListener('click', () => { portalUi.svcTool = b.dataset.svtool; srvRenderAvailability(body); }));

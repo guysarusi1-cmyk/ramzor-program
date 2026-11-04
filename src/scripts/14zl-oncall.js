@@ -102,7 +102,7 @@ function ocPaint(box, d){
   const mine = d.events.filter(e => !e.seen && (e.for_staff === me || (!e.for_staff && p.active_staff === me)));
   // a person is one folded line: taxi or not, and "הוזמן" for each way that needs one. Opened: each way by itself, with its time and address (Guy 2026-11-04)
   const dirHtml = (r, dir) => { const t = tripOf(r, dir), k = `${r.staff_id}|${r.day}|${r.shift}|${dir}`, w = dir === 'in' ? 'הגעה' : 'חזרה', tm = t.at_time || ocTripTime(r, dir);
-    return `<div class="oc-dir${t.need === 'need' ? ' need' : ''}" data-oc-trip="${k}"><div class="oc-dir-h"><b>${w}</b><span class="mx-seg oc-need" role="group" aria-label="${w}: מונית">${OC_NEED.map(([v, x]) => `<button type="button" data-oc-need="${v}" aria-pressed="${t.need === v}">${x}</button>`).join('')}</span></div>
+    return `<div class="oc-dir${t.need === 'need' ? ' need' : ''}" data-oc-trip="${k}"><div class="oc-dir-h"><b>${w}</b></div>
       <div class="oc-d-body"><label class="oc-field"><span>שעה</span><input type="text" inputmode="numeric" maxlength="20" data-oc-time value="${pEsc(tm)}" placeholder="למשל 06:30"></label>
         <label class="oc-field"><span>כתובת</span><input type="text" maxlength="120" data-oc-place value="${pEsc(t.place || d.addr[r.staff_id] || '')}"></label></div></div>`; };
   const personHtml = (r, g) => { const a = tripOf(r, 'in'), b = tripOf(r, 'out'), k = `${r.staff_id}|${r.day}|${r.shift}`, any = a.need === 'need' || b.need === 'need', none = !any && a.need === 'none' && b.need === 'none';
@@ -112,17 +112,13 @@ function ocPaint(box, d){
         <i class="oc-p-more" aria-hidden="true">▾</i>${any ? `<span class="oc-ords">${ord(a, 'in')}${ord(b, 'out')}</span>` : ''}</summary><div class="oc-p-body">${dirHtml(r, 'in')}${dirHtml(r, 'out')}</div></details>`; };
   // what "הוזמן לכולם" marks: who needs a taxi in this list, on this period, and is not marked yet
   d.waiting = []; list.forEach(r => ['in', 'out'].forEach(dir => { const t = tripOf(r, dir); if(t.need === 'need' && !t.ordered) d.waiting.push({ r, dir, t }); }));
-  const needN = list.reduce((n, r) => n + ['in', 'out'].filter(x => tripOf(r, x).need === 'need').length, 0);
-  // the schedule: the month, a week at first (the weekend's week)
-  const mk = monthKeyOf(p.from_day), days = daysOfMonth(mk), wk = oc.monthView ? null : (Number.isInteger(oc.week) && oc.weekMk === mk ? oc.week : mcalWeekOfDay(mk, p.from_day));
-  const lead = dowOf(days[0]), shown = wk === null ? days : days.filter((_, i) => Math.floor((lead + i) / 7) === wk);
+  const undoAll = oc.undoAll && oc.undoAll.key === p.key && oc.undoAll.trips.some(t => t.need === 'need' && t.ordered);          // (pressed again: what that press marked, and only that, is taken back)
   const cellIn = (day, s, rs) => { const can = d.may && ocInWindow(day, s);
     return `${rs.map(r => `<span class="mcal-name">${pEsc(nm(r.staff_id))}${d.may && ocInWindow(day, r.shift) ? ` <button type="button" class="oc-x" data-oc-un="${r.id}" aria-label="הסרת ${pEsc(nm(r.staff_id))} מ${ocShiftWord(r.shift)} ${ocShort(day)}">×</button>` : ''}</span>`).join('')}${can ? `<button type="button" class="oc-add" data-oc-add="${day}|${s}" aria-label="הוספת מדריך ל${ocShiftWord(s)} ${ocShort(day)}">+</button>` : ''}`; };
   const dayRow = (day, keep) => {
     const byShift = ['M', 'S', 'A', 'L', 'N'].map(s => [s, d.rows.filter(r => r.day === day && r.shift === s)]).filter(([s, rs]) => (rs.length || ['M', 'A', 'N'].includes(s)) && (!keep || keep(s)));
     return `<div class="mcal-wrow${[5, 6].includes(dowOf(day)) ? ' weekend' : ''}${day === isoDate(new Date()) ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(day)]}</b><span>${ocShort(day)}</span></div><div class="mcal-wrow-cells">${byShift.map(([s, rs]) => `<div class="mcal-wrow-shift"><span class="mcal-wrow-lbl">${ocShiftWord(s)}</span><div class="mcal-cell oc-cell">${cellIn(day, s, rs)}</div></div>`).join('')}</div></div>`; };
-  const sched = shown.map(day => dayRow(day)).join('');
-  // a phone: only two views. "שבוע": the seven days side by side, from the right, week after week past the month; "סוף השבוע הקרוב": Thursday night to Sunday morning, as in ocInWindow
+  // only two views, on a phone and on a computer (Guy 2026-11-04). "שבוע": the seven days side by side, from the right, week after week past the month; "סוף השבוע הקרוב": Thursday night to Sunday morning, as in ocInWindow
   const phoneSched = () => {
     const today = isoDate(new Date()), ws = oc.wkStart || ocSunday(p.from_day), week = [0, 1, 2, 3, 4, 5, 6].map(i => addDays(ws, i)), fri = ocFridayOf(today), end = oc.schedView === 'weekend';
     const seg = `<div class="mx-seg oc-sv" role="group" aria-label="תצוגת הסידור"><button type="button" data-oc-sv="week" aria-pressed="${!end}">שבוע</button><button type="button" data-oc-sv="weekend" aria-pressed="${end}">סוף השבוע הקרוב</button></div>`;
@@ -141,15 +137,11 @@ function ocPaint(box, d){
     ${!p.active_staff && d.events.some(e => !e.for_staff && !e.seen) ? `<div class="pnote">${d.events.filter(e => !e.for_staff && !e.seen).length} שינויים נשמרו לבדיקה של מי שתיקח את הכוננות.</div>` : ''}
     <div class="mx-seg oc-views" role="group" aria-label="תצוגה"><button type="button" data-oc-view="list" aria-pressed="${oc.view !== 'sched'}">עובדי ${p.kind === 'weekend' ? 'סוף השבוע' : 'החג'} ומוניות</button><button type="button" data-oc-view="sched" aria-pressed="${oc.view === 'sched'}">סידור</button></div>
     ${oc.view !== 'sched' ? `<div class="oc-list">
-      ${needN ? `<div class="oc-all-row"><button type="button" class="btn small" data-oc-all-ordered${d.waiting.length ? '' : ' disabled'}>${d.waiting.length ? 'הוזמן לכולם' : '✓ הוזמן לכולם'}</button></div>` : ''}
+      ${d.waiting.length || undoAll ? `<div class="oc-all-row"><button type="button" class="btn small${d.waiting.length ? '' : ' ghost'}" data-oc-all-ordered aria-pressed="${!d.waiting.length}">${d.waiting.length ? 'הוזמן לכולם' : '✓ הוזמן לכולם'}</button></div>` : ''}
       <div class="pnote">לחיצה על שם פותחת הגעה וחזרה, עם שעה וכתובת.</div>
       ${groups.length ? groups.map(g => `<div class="oc-group"><div class="oc-group-h"><b>${pEsc(DOW_NAMES[dowOf(g.day)])} ${ocShort(g.day)} · ${ocShiftWord(g.shift)}</b> <bdi dir="ltr">${g.hours}</bdi></div>
         ${g.rows.map(r => personHtml(r, g)).join('')}</div>`).join('') : '<div class="pnote">אין עדיין שיבוצים בסידור לתקופה הזו.</div>'}
-    </div>` : `<div class="oc-sched">${ocPhone() ? phoneSched() : `
-      ${mcalViewBarHtml(mk, wk, 'oc-viewbar')}
-      ${d.may ? '<div class="pnote">אפשר להוסיף או להסיר מדריך במשמרות שבין חמישי 22:00 לראשון 11:00.</div>' : ''}
-      <div class="mcal mcal-wrows">${sched}</div>`}
-    </div>`}
+    </div>` : `<div class="oc-sched">${phoneSched()}</div>`}
   </div>`;
   ocWire(box, d);
 }
@@ -161,8 +153,6 @@ function ocWire(box, d){
   box.querySelectorAll('[data-oc-view]').forEach(b => b.addEventListener('click', () => { oc.view = b.dataset.ocView; again(); }));
   box.querySelectorAll('[data-oc-sv]').forEach(b => b.addEventListener('click', () => { oc.schedView = b.dataset.ocSv; paint(); }));
   box.querySelectorAll('[data-oc-wk]').forEach(b => b.addEventListener('click', () => { oc.wkStart = addDays(oc.wkStart || ocSunday(p.from_day), Number(b.dataset.ocWk)); again(); }));
-  mcalViewBarWire(box, 'oc-viewbar', monthKeyOf(p.from_day), () => (oc.monthView ? null : (Number.isInteger(oc.week) ? oc.week : mcalWeekOfDay(monthKeyOf(p.from_day), p.from_day))),
-    (mm, w) => { oc.monthView = w === null; oc.week = w; oc.weekMk = mm; }, again);
   const take = box.querySelector('[data-oc-take]');
   if(take) take.addEventListener('click', async () => {
     const prev = p.active_staff;
@@ -218,21 +208,18 @@ function ocWire(box, d){
   });
   // "הוזמן לכולם": a mark in the system only (no taxi is ordered by it), for who needs one in this list and nobody else
   { const all = box.querySelector('[data-oc-all-ordered]'); if(all) all.addEventListener('click', async () => {
-      const todo = d.waiting.slice(); if(!todo.length) return;
-      const was = todo.map(x => d.trips.find(t => t.staff_id === x.r.staff_id && t.day === x.r.day && t.shift === x.r.shift && t.dir === x.dir));
-      was.forEach(t => { t.ordered = true; }); paint();
-      const undo = () => { was.forEach(t => { t.ordered = false; }); paint(); toast('לא נשמר. אפשר לנסות שוב.'); };
+      const todo = d.waiting.slice(), mark = todo.length > 0;
+      const was = mark ? todo.map(x => d.trips.find(t => t.staff_id === x.r.staff_id && t.day === x.r.day && t.shift === x.r.shift && t.dir === x.dir)) : ((oc.undoAll && oc.undoAll.key === p.key && oc.undoAll.trips) || []).filter(t => t.need === 'need' && t.ordered);
+      if(!was.length) return;
+      was.forEach(t => { t.ordered = mark; }); oc.undoAll = mark ? { key:p.key, trips:was } : null; paint();
+      const undo = () => { was.forEach(t => { t.ordered = !mark; }); oc.undoAll = mark ? null : { key:p.key, trips:was }; paint(); toast('לא נשמר. אפשר לנסות שוב.'); };
       if(!(await ocEnsurePeriod(p))){ undo(); return; }
-      const at = new Date().toISOString(), r = await sbPersonal.from('oncall_trip').upsert(was.map(t => ({ period_key:p.key, staff_id:t.staff_id, day:t.day, shift:t.shift, dir:t.dir, need:'need', at_time:t.at_time || null, place:t.place || null, ordered:true, updated_by:srv.me, updated_at:at })));
+      const at = new Date().toISOString(), r = await sbPersonal.from('oncall_trip').upsert(was.map(t => ({ period_key:p.key, staff_id:t.staff_id, day:t.day, shift:t.shift, dir:t.dir, need:'need', at_time:t.at_time || null, place:t.place || null, ordered:mark, updated_by:srv.me, updated_at:at })));
       if(r.error){ undo(); return; }
-      ocTell(p, `הוזמן לכולם: ${todo.length} נסיעות`);
+      ocTell(p, `${mark ? 'הוזמן לכולם' : 'בוטל "הוזמן לכולם"'}: ${was.length} נסיעות`);
     }); }
   box.querySelectorAll('[data-oc-trip]').forEach(w => {
     const k = w.dataset.ocTrip, staff = k.split('|')[0];
-    w.querySelectorAll('[data-oc-need]').forEach(b => b.addEventListener('click', () => {
-      const cur = b.getAttribute('aria-pressed') === 'true', v = cur ? 'pending' : b.dataset.ocNeed;
-      quick(w, Object.assign({ need:v }, v !== 'need' ? { ordered:false } : {}), v === 'pending' ? 'הסימון הוסר' : v === 'need' ? 'צריך מונית' : 'לא צריך מונית');
-    }));
     const t = w.querySelector('[data-oc-time]'), pl = w.querySelector('[data-oc-place]');
     t.addEventListener('change', () => { const r0 = d.rows.find(x => x.staff_id === staff && x.day === k.split('|')[1] && x.shift === k.split('|')[2]), v = t.value.trim(), dflt = r0 ? ocTripTime(r0, k.split('|')[3]) : '';
       quick(w, { at_time:v && v !== dflt ? v : null }, `שעה ${v || '—'}`); });

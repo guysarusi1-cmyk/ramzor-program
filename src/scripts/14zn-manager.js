@@ -6,7 +6,7 @@
 //   * messages to the staff (everybody or chosen people; portal or also e-mail) with who saw and who confirmed "קראתי"
 //   * the WhatsApp group of the framework: a shortcut only
 const mgr = { week:null, conv:null, kidsLoaded:false };
-const MGR_TABS = [['mhome', 'בית'], ['schedule', 'סידור העבודה'], ['timetable', 'לו"ז'], ['kids', 'הילדים'], ['chats', 'שיחות'], ['users', 'משתמשים']];          // (the messages to the staff: inside the home tab, Guy 2026-11-03)
+const MGR_TABS = [['schedule', 'סידור העבודה'], ['timetable', 'לו"ז'], ['kids', 'הילדים'], ['chats', 'שיחות'], ['users', 'משתמשים']];          // (the messages to the staff: inside the home tab, Guy 2026-11-03)
 const mgrIsMe = () => { try { return (portalMe() || {}).role === 'manager'; } catch(e){ return false; } };
 const mgrShort = iso => { const t = parseIso(iso); return t.getDate() + '/' + (t.getMonth() + 1); };
 const mgrWeekStart = () => { const t = isoDate(new Date()); return mgr.week || addDays(t, -dowOf(t)); };
@@ -17,39 +17,15 @@ async function mgrKids(){          // the children's names: the manager reads th
 }
 async function mgrRender(t, body){
   if(typeof sb !== 'undefined' && portalServerOn) sb = sbPersonal;          // (the timetable editor of the ahmash control reads with the personal session)
-  if(t === 'schedule') return mgrSchedule(body);
   if(t === 'timetable') return mgrTimetable(body);
   if(t === 'kids') return mgrKidsTab(body);
-  if(t === 'chats') return mgrChats(body);
+  if(t === 'chats'){          // (her messages to the staff live here, above the conversations: Guy 2026-11-04)
+    const group = String((portalLoad().waMsg || {}).group || '').trim();
+    body.innerHTML = `${group ? `<div class="mgr-links"><a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת הצוות</span></a></div>` : ''}<details class="pfold" data-fold="m-msg"${openFold('m-msg') ? ' open' : ''}><summary><span>הודעה לצוות</span></summary><div class="pfold-body" id="mgr-msgs"><div class="pnote">רק רגע...</div></div></details><div id="mgr-convs"></div>`;
+    wireFolds(body); mgrMessages(body.querySelector('#mgr-msgs')); return mgrChats(body.querySelector('#mgr-convs'));
+  }
   if(t === 'users') return mgrUsers(body);
-  return mgrHome(body);
-}
-// ---- home: the current week (Sunday–Saturday, Guy: "השבוע הנוכחי"), the timetable of the week, and the ways in
-async function mgrHome(body){
-  const st = portalLoad(), start = mgrWeekStart(), days = Array.from({ length:7 }, (_, i) => addDays(start, i)), mk = monthKeyOf(start), m = portalMonth(mk);
-  const thisWeek = start === addDays(isoDate(new Date()), -dowOf(isoDate(new Date())));
-  const fixed = await sbPersonal.from('timetable_fixed').select('weekday,items'), daily = await sbPersonal.from('timetable_day').select('day,items').gte('day', days[0]).lte('day', days[6]);
-  if(!body.isConnected) return;
-  const ttOf = d => ((daily.data || []).find(x => x.day === d) || (fixed.data || []).find(x => x.weekday === dowOf(d)) || {}).items || [];
-  const wk = mcalWeekOfDay(mk, start < mk + '-01' ? mk + '-01' : start);
-  const group = String((st.waMsg || {}).group || '').trim();
-  body.innerHTML = `
-    <div class="mcal-weeknav mgr-weeknav"><button type="button" class="mcal-wk" data-mw="-7" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b>${thisWeek ? 'השבוע הנוכחי' : 'שבוע'} <bdi dir="ltr">${mgrShort(days[0])}–${mgrShort(days[6])}</bdi></b><button type="button" class="mcal-wk" data-mw="7" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>
-    <div class="mgr-links">
-      ${liveCut() ? '' : '<button type="button" class="btn ghost" data-mgo="kids">תוכניות הילדים</button>'}
-      ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת הצוות</span></a>` : ''}
-    </div>
-    <details class="pfold" data-fold="m-msg"${openFold('m-msg') ? ' open' : ''}><summary><span>הודעה לצוות</span></summary><div class="pfold-body" id="mgr-msgs"><div class="pnote">רק רגע...</div></div></details>
-    <details class="pfold" data-fold="m-sched" open><summary><span>סידור העבודה השבוע</span></summary><div class="pfold-body">
-      ${m.published ? monthCalHtml(portalCtx(mk), m.assignments, { week:wk, rows:true, othersInCells:true }) : '<div class="pnote">הסידור של החודש עוד לא פורסם.</div>'}
-    </div></details>
-    <details class="pfold" data-fold="m-tt" open><summary><span>הלו"ז השבוע</span></summary><div class="pfold-body mgr-tt">
-      ${days.map(d => `<div class="mcal-wrow${d === isoDate(new Date()) ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(d)]}</b><span>${mgrShort(d)}</span></div><div class="mgr-tt-day">${ttOf(d).length ? ttOf(d).map(x => `<span class="mgr-tt-item"><bdi dir="ltr">${pEsc(x.t || '')}${x.end ? '–' + pEsc(x.end) : ''}</bdi> ${pEsc(x.n || '')}</span>`).join('') : '<span class="pnote">—</span>'}</div></div>`).join('')}
-    </div></details>`;
-  body.querySelectorAll('[data-mw]').forEach(b => b.addEventListener('click', () => { mgr.week = addDays(mgrWeekStart(), +b.dataset.mw); const nm = monthKeyOf(mgr.week); if(nm !== portalUi.month){ portalUi.month = nm; } mgrHome(body); }));
-  body.querySelectorAll('[data-mgo]').forEach(b => b.addEventListener('click', () => showPortal(b.dataset.mgo)));
-  wireFolds(body);
-  mgrMessages(body.querySelector('#mgr-msgs'));
+  return mgrSchedule(body);
 }
 // ---- the schedule: read only, a week at first
 function mgrSchedule(body){
@@ -57,6 +33,7 @@ function mgrSchedule(body){
   const wk = portalUi.mgrMonthView ? null : portalUi.mgrWeekMk === mk ? portalUi.mgrWeek : mk === monthKeyOf(today) ? mcalWeekOfDay(mk, today) : 0;
   body.innerHTML = `${monthNavHtml(mk)}<div class="pnote">צפייה בלבד.</div>${m.published ? mcalViewBarHtml(mk, wk, 'mgr-viewbar') + monthCalHtml(portalCtx(mk), m.assignments, { week:wk === null ? undefined : wk, rows:true, othersInCells:true }) : '<div class="pnote">הסידור של החודש עוד לא פורסם.</div>'}`;
   wireMonthNav(body);
+  { const seg = body.querySelector('#mgr-viewbar .mcal-seg'); if(seg){ seg.insertAdjacentHTML('afterend', `<button type="button" class="btn ghost mgr-share" id="mgr-share">${WA_SVG}<span>שיתוף</span></button>`); body.querySelector('#mgr-share').addEventListener('click', () => csShareSheet(mk, wk)); } }
   mcalViewBarWire(body, 'mgr-viewbar', mk, () => wk, (mm, w) => { portalUi.mgrMonthView = w === null; portalUi.mgrWeek = w; portalUi.mgrWeekMk = mm; portalUi.month = mm; }, () => portalRefresh());
 }
 // ---- the general timetable: the same editor as the ahmash control; the database tells the coordinator about her changes
@@ -78,7 +55,7 @@ async function mgrTimetableView(box){
   const [r, fixed, daily] = await Promise.all([sb.rpc('tv_timetable_today'), sbPersonal.from('timetable_fixed').select('weekday,items'), sbPersonal.from('timetable_day').select('day,items').gte('day', days[0]).lte('day', days[6])]);
   if(r.error) throw r.error;
   if(!box.isConnected) return;
-  const itemsOf = d => d === today ? (r.data.items || []) : ((daily.data || []).find(x => x.day === d) || (fixed.data || []).find(x => x.weekday === dowOf(d)) || {}).items || [];
+  const itemsOf = d => (d === today ? (r.data.items || []) : ((daily.data || []).find(x => x.day === d) || (fixed.data || []).find(x => x.weekday === dowOf(d)) || {}).items || []).filter(x => ttOn(x, d));
   const card = a => `<div class="mgr-ttv-item"><div class="mgr-ttv-time"><bdi dir="ltr">${pEsc(a.t || '')}${a.end ? '–' + pEsc(a.end) : ''}</bdi></div><div class="mgr-ttv-icon">${typeof ttArt === 'function' ? ttArt(a.i) : ''}</div><div class="mgr-ttv-name">${pEsc(a.n || '')}</div></div>`;
   const grid = list => list.length ? `<div class="mgr-ttv" style="--c:${list.length > 12 ? 4 : 3}">${list.map(card).join('')}</div>` : '<div class="pnote">אין לו"ז ליום הזה.</div>';
   const phone = matchMedia('(max-width:700px)').matches, pick = mgr.ttDay && days.includes(mgr.ttDay) ? mgr.ttDay : today;
@@ -203,9 +180,8 @@ async function mgrMessages(body){
       <textarea id="mm-text" rows="3" maxlength="1500" placeholder="מה רוצים לומר?"></textarea>
       <div class="mx-seg mgr-seg" role="group" aria-label="איך">${MGR_VIA.map(([k, w], i) => `<button type="button" data-mm-via="${k}" aria-pressed="${i === 0}">${w}</button>`).join('')}</div>
       <label class="oc-ordered"><input type="checkbox" id="mm-ack"> לבקש אישור "קראתי"</label>
-      <div class="mx-seg mgr-seg" role="group" aria-label="למי"><button type="button" data-mm-to="all" aria-pressed="true">לכל הצוות</button><button type="button" data-mm-to="some" aria-pressed="false">לחלק מהצוות</button></div>
       <div class="mm-groups">${MGR_GROUPS.map(([k, w], i) => `<label class="oc-ordered"><input type="checkbox" data-mm-grp="${k}"${i === 0 ? ' checked' : ''}> ${w}</label>`).join('')}</div>
-      <div class="mm-some" hidden>
+      <div class="mm-some">
         <label class="oc-ordered"><input type="checkbox" id="mm-ahm"> כל האחמ"שים</label>
         <details class="pfold mm-names"><summary><span>בחירת שמות</span><small id="mm-n"></small></summary><div class="pfold-body mm-list">${people.map(s => `<label class="oc-ordered"><input type="checkbox" data-mmp="${s.id}"> ${pEsc(s.display_name)}</label>`).join('')}</div></details>
       </div>
@@ -216,16 +192,15 @@ async function mgrMessages(body){
         <div class="pnote">${new Date(a.created_at).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' })} · ${(MGR_VIA.find(v => v[0] === a.via) || MGR_VIA[0])[1]} · ${a.audience ? `ל-${a.audience.length} אנשים` : 'לכל הצוות'}</div>
         <div>${pEsc(a.text)}</div>
         <ul class="mgr-readers">${list.map(id => { const r = rs.find(x => x.staff_id === id); return `<li><span>${pEsc(names[id] || '?')}</span><small>${r && r.ack_at ? 'קראתי ✓' : r ? 'ראה/תה' : 'עוד לא'}</small></li>`; }).join('')}</ul></div></details>`; }).join('') || '<div class="pnote">עוד לא נשלחו הודעות.</div>'}`;
-  let toAll = true, via = 'portal';
+  let via = 'portal';
   const $ = q => body.querySelector(q);
   const chosen = () => {
-    if(toAll){ const g = [...body.querySelectorAll('[data-mm-grp]:checked')].map(x => x.dataset.mmGrp); return active.filter(s => MGR_GROUPS.some(([k, , f]) => g.includes(k) && f(s))).map(s => s.id); }
-    const set = new Set([...body.querySelectorAll('[data-mmp]:checked')].map(x => x.dataset.mmp));
+    const g = [...body.querySelectorAll('[data-mm-grp]:checked')].map(x => x.dataset.mmGrp), set = new Set(active.filter(s => MGR_GROUPS.some(([k, , f]) => g.includes(k) && f(s))).map(s => s.id));
+    body.querySelectorAll('[data-mmp]:checked').forEach(x => set.add(x.dataset.mmp));
     if($('#mm-ahm').checked) active.filter(s => (srv.ahmash || {})[s.id] > 0).forEach(s => set.add(s.id));
     return [...set];
   };
   const count = () => { const n = body.querySelectorAll('[data-mmp]:checked').length; $('#mm-n').textContent = n ? `נבחרו ${n}` : ''; };
-  body.querySelectorAll('[data-mm-to]').forEach(b => b.addEventListener('click', () => { toAll = b.dataset.mmTo === 'all'; body.querySelectorAll('[data-mm-to]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); $('.mm-groups').hidden = !toAll; $('.mm-some').hidden = toAll; }));
   body.querySelectorAll('[data-mmp]').forEach(x => x.addEventListener('change', count));
   body.querySelectorAll('[data-mm-via]').forEach(b => b.addEventListener('click', () => { via = b.dataset.mmVia; body.querySelectorAll('[data-mm-via]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
   wireFolds(body);

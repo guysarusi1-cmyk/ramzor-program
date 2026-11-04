@@ -774,3 +774,48 @@ html[data-contrast=high] body[data-rlook=light] .toast{
 .mgr-ttv-days button[aria-pressed="true"]{ background:var(--color-primary, var(--gold)); color:var(--color-on-primary, #1b1b1b); border-color:transparent; }
 .mgr-ttv-week{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px; } .mgr-ttv-col{ display:flex; flex-direction:column; gap:6px; min-width:0; } .mgr-ttv-col > b{ text-align:center; font-size:14px; } .mgr-ttv-col.today > b{ color:var(--color-primary, var(--gold)); } .mgr-ttv-col .mgr-ttv-icon{ flex:none; height:34px; }
 .home-card.home-soon{ opacity:.6; cursor:default; }
+/* the round of 2026-11-04, evening */
+/* the manager's timetable: the picture keeps inside its frame, the words under it */
+.mgr-ttv-item{ min-height:92px; }
+.mgr-ttv-icon{ flex:none; height:44px; width:100%; overflow:hidden; font-size:30px; }
+.mgr-ttv-icon > *, .mgr-ttv-icon svg, .mgr-ttv-icon img{ max-width:100%; max-height:100%; width:auto; height:100%; }
+.mgr-ttv-icon .tvt2-emoji{ font-size:30px; line-height:44px; height:auto; }
+.mgr-ttv-name, .mgr-ttv-time{ flex:none; position:relative; }
+@media (max-width:700px){ .mgr-ttv-fit .mgr-ttv-item{ min-height:0; } .mgr-ttv-fit .mgr-ttv-icon{ flex:1 1 0; height:auto; min-height:0; } .mgr-ttv-fit .mgr-ttv-icon .tvt2-emoji{ font-size:24px; line-height:1; } }
+@media (min-width:701px){ .mgr-ttv-fit .mgr-ttv{ height:auto; grid-auto-rows:auto; } .mgr-ttv{ --c:6 !important; } }
+/* the editor: hours from left to right, how often under the row */
+.ctl-tt-times{ direction:ltr; }
+.ctl-tt-rep{ grid-column:1 / -1; display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:14px; }
+.ctl-tt-rep select{ min-height:36px; padding:2px 6px; border-radius:8px; font:inherit; background:var(--color-surface, var(--panel-2)); color:var(--color-text, var(--text)); border:1px solid var(--color-border-strong, var(--line)); }
+.ctl-tt-rep input{ width:52px; min-height:36px; text-align:center; }
+/* the share button of the manager's schedule: beside the view, the same height, not touching */
+.mgr-share{ align-self:stretch; margin-inline-start:16px; min-height:0; display:inline-flex; align-items:center; gap:6px; }
+.portal-shell[data-ptheme] .mcal-viewbar .mgr-share{ min-height:0; }
+#mgr-viewbar{ justify-content:flex-start; }
+/* the top of a page on a computer: the way home on the right, the settings and the look on the left */
+.ps-topbar{ display:none; }
+@media (min-width:1024px){ .ps-topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; } .ps-topbar .ps-link{ width:auto; } .ps-topbar-end{ display:inline-flex; align-items:center; gap:12px; } }
+/* on-call: the schedule on a computer */
+@media (min-width:701px){ .oc-wk{ gap:4px; } .oc-wk-cell .mcal-name{ font-size:14px; padding:2px; } .oc-wk-day{ font-size:13px; } .oc-wk-day b{ font-size:16px; } }
+/* the light look: "לא" is told from what was not marked */
+:is(.portal-shell, .mx-sheet)[data-ptheme=light]{ --p-no-bg:#F0C2BA; --p-no:#8E2F27; }
+/* the service girls' calendar: five days and a narrow weekend; a tool chosen is filled with its own colour */
+.svcal{ grid-template-columns:repeat(5, minmax(0, 1fr)) 38px; }
+.svcal-we{ align-items:center; justify-content:center; min-height:0; } .svcal-we .svcal-num{ font-size:11px; }
+.portal-shell[data-ptheme] .svcal-tools button.on.lv-yes{ background:var(--p-yes); border-color:var(--p-yes); color:#fff; }
+.portal-shell[data-ptheme] .svcal-tools button.on.lv-no{ background:var(--p-no); border-color:var(--p-no); color:#fff; }
+.portal-shell[data-ptheme] .svcal-tools button.on.lv-hours{ background:var(--p-can); border-color:var(--p-can); color:#fff; }
+/* the coordinator's side panel on a computer: all of it at once in the usual text, a scroll that reaches the end in larger text */
+@media (min-width:900px){
+  .portal-shell.wide .cs-side{ max-height:calc((100dvh - 20px) / 1.2); padding:8px 8px 12px; }
+  body.portal-big .portal-shell.wide .cs-side{ max-height:calc((100dvh - 20px) / 1.42); }
+  body.portal-huge .portal-shell.wide .cs-side{ max-height:calc((100dvh - 20px) / 1.7); }
+  .portal-shell.wide .cs-side .cs-names{ gap:3px; margin-bottom:6px; }
+  .portal-shell.wide .cs-side .cs-name{ padding:1px 7px 1px 2px; font-size:13px; gap:3px; min-height:0; }
+  .portal-shell.wide .cs-side .cs-name img{ width:16px; height:16px; }
+  .portal-shell[data-ptheme].wide .cs-side .cs-sort-btn{ min-height:26px; padding:0 8px; font-size:12px; margin-bottom:6px; }
+  .portal-shell.wide .cs-side .cs-others-fold{ margin-top:4px; } .portal-shell.wide .cs-side .cs-others-fold > summary{ min-height:28px; padding:2px 8px; font-size:13px; } .portal-shell.wide .cs-side .cs-others-fold .pfold-body{ padding:4px 6px; }
+  .portal-shell.wide .cs-side .cs-issues-panel{ margin-top:6px; padding-top:6px; }
+  .portal-shell[data-ptheme].wide .cs-side .cs-issues-panel .btn{ min-height:24px; padding:0 7px; font-size:12px; line-height:1.2; }
+  .portal-shell.wide .cs-side .pnote{ font-size:12px; margin:4px 0; }
+}

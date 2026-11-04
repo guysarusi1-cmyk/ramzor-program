@@ -53,11 +53,6 @@ function showAppHome(){
           <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'manager' ? 'ניהול' : portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
           <span class="home-card-sub">${portalServerOn && (portalMe() || {}).role === 'manager' ? 'סידור, לו"ז, שיחות ומשתמשים' : 'משמרות, העדפות והודעות'}</span>
         </button>`}
-        ${portalServerOn && liveCut() && (['therapist', 'manager'].includes((portalMe() || {}).role) || (srv.profile && srv.profile.therapist)) ? `<button type="button" class="home-card home-soon" id="apphome-therapy-soon" disabled>
-          <span class="apphome-emoji apphome-ico">${psIco('leaf')}</span>
-          <span class="home-card-title">פורטל הטיפול</span>
-          <span class="home-card-sub">בקרוב</span>
-        </button>` : ''}
         ${!liveCut() && typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
           <span class="apphome-emoji apphome-ico">${psIco('leaf')}</span>
           <span class="home-card-title">פורטל הטיפול</span>
@@ -118,17 +113,17 @@ const PS_ICON = { schedule:'M4 6.5h16v13H4zM8 3.5v4M16 3.5v4M4 10.5h16', prefs:'
 const psIco = k => `<svg class="ps-ico" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${PS_ICON[k] || PS_ICON.schedule}"></path></svg>`;
 function portalSideHtml(me, tabs, title, theme, leopardOk){
   const count = k => portalServerOn && typeof srvTabCount === 'function' ? srvTabCount(me, k) : 0;
-  const look = (v, w) => `<button type="button" data-plook="${v}" aria-pressed="${theme === v}">${w}</button>`;
+  const look = (v, w) => `<button type="button" data-plook="${v}" aria-pressed="${theme === v}">${w}</button>`, top = portalServerOn && me.role === 'manager';          // (the manager: the settings, the look and the way home at the top of the page, not at the bottom of a long side: Guy 2026-11-04)
   return `<aside class="ps-side" aria-label="אזורי הפורטל">
       <div class="ps-side-head"><b>${title}</b>${portalServerOn ? `<span>שלום ${pEsc(me.first)}</span>` : ''}</div>
       <nav class="ps-side-nav">${tabs.map(t => `<button type="button" data-pstab="${t[0]}" class="${t[0] === portalUi.tab ? 'active' : ''}"${t[0] === portalUi.tab ? ' aria-current="page"' : ''}>${psIco(t[0])}<span class="ps-word">${t[1]}</span>${count(t[0]) ? `<span class="ptab-count">${count(t[0])}</span>` : ''}</button>`).join('')}</nav>
       <div class="ps-side-foot">
-        ${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="ps-link" data-ps-go="therapy">${psIco('leaf')}<span>פורטל הטיפול</span></button>` : ''}
-        ${portalServerOn ? `<button type="button" class="ps-link" data-ps-go="gear">${psIco('gear')}<span>העדפות מערכת</span></button>` : ''}
+        ${portalServerOn && me.role === 'teacher' && typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="ps-link" data-ps-go="therapy">${psIco('leaf')}<span>פורטל הטיפול</span></button>` : ''}
+        ${top ? '' : `${portalServerOn ? `<button type="button" class="ps-link" data-ps-go="gear">${psIco('gear')}<span>העדפות מערכת</span></button>` : ''}
         <button type="button" class="ps-link" data-ps-go="home">${psIco('home')}<span>${portalServerOn && !ramzorPersonal ? 'יציאה' : 'מסך ראשי'}</span></button>
-        <div class="mx-seg ps-look" role="group" aria-label="מראה">${look('light', 'בהיר')}${look('dark', 'כהה')}${leopardOk ? look('leopard', 'נמר') : ''}</div>
+        <div class="mx-seg ps-look" role="group" aria-label="מראה">${look('light', 'בהיר')}${look('dark', 'כהה')}${leopardOk ? look('leopard', 'נמר') : ''}</div>`}
       </div>
-    </aside>`;
+    </aside>${top ? `<div class="ps-topbar"><button type="button" class="ps-link" data-ps-go="home">${psIco('home')}<span>מסך ראשי</span></button><span class="ps-topbar-end"><button type="button" class="ps-link" data-ps-go="gear">${psIco('gear')}<span>העדפות מערכת</span></button><span class="mx-seg ps-look" role="group" aria-label="מראה">${look('light', 'בהיר')}${look('dark', 'כהה')}</span></span></div>` : ''}`;
 }
 function showPortal(tab){
   const st = portalLoad(), me = portalMe();
@@ -149,7 +144,7 @@ function showPortal(tab){
       <div class="portal-top">
         <button type="button" class="back-btn portal-back${portalServerOn && !ramzorPersonal ? '' : ' is-home'}" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
         <h1 class="portal-title">${pTitle}</h1>
-        <span class="portal-top-actions">${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof ocAllowed === 'function' && ocAllowed() ? '<button type="button" class="portal-theme" id="portal-oncall" aria-label="כוננית סוף שבוע" title="כוננית סוף שבוע">📋</button>' : ''}${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof therapyAvailable === 'function' && therapyAvailable() ? '<button type="button" class="portal-theme" id="portal-therapy" aria-label="פורטל הטיפול" title="פורטל הטיפול">🌱</button>' : ''}${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
+        <span class="portal-top-actions">${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof ocAllowed === 'function' && ocAllowed() ? '<button type="button" class="portal-theme" id="portal-oncall" aria-label="כוננית סוף שבוע" title="כוננית סוף שבוע">📋</button>' : ''}${portalServerOn && me.role === 'teacher' && typeof therapyAvailable === 'function' && therapyAvailable() ? '<button type="button" class="portal-theme" id="portal-therapy" aria-label="פורטל הטיפול" title="פורטל הטיפול">🌱</button>' : ''}${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
       ${portalServerOn ? `<div class="portal-hello">שלום ${pEsc(me.first)}</div>` : `<label class="portal-as">צפייה כ:
         <select id="portal-persona">${st.instructors.filter(p => p.active).map(p => `<option value="${p.id}"${p.id === me.id ? ' selected' : ''}>${pEsc(instrName(p, st.instructors))}${p.role === 'coordinator' ? ' (רכזת)' : ''}</option>`).join('')}</select>

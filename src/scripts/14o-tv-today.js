@@ -6,7 +6,7 @@ async function loadTvToday(force){
   if(!force && Date.now() - tvTodayAt < 60 * 1000) return;
   tvTodayAt = Date.now();
   try { const r = await sb.rpc('tv_shifts_today'); if(!r.error) tvShifts = r.data; } catch(e){ /* keep the last one */ }
-  try { const r = await sb.rpc('tv_timetable_today'); if(!r.error) tvTimetable = r.data; } catch(e){ /* keep the last one */ }
+  try { const r = await sb.rpc('tv_timetable_today'); if(!r.error){ if(r.data && typeof ttOn === 'function') r.data.items = (r.data.items || []).filter(x => ttOn(x, r.data.day)); tvTimetable = r.data; } } catch(e){ /* keep the last one */ }
 }
 const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 const hm = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
