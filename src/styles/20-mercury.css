@@ -829,3 +829,5 @@ html[data-contrast=high] body[data-rlook=light] .toast{
 .mgr-ttv-icon{ container-type:size; display:flex; align-items:center; justify-content:center; }
 .mgr-ttv-icon .tvt2-emoji, .mgr-ttv-fit .mgr-ttv-icon .tvt2-emoji{ font-size:min(30px, 85cqh); line-height:1; width:auto; height:auto; max-height:none; }
 .ctl-icons-more{ margin-top:10px; } .ctl-icons-more > summary{ min-height:44px; display:flex; align-items:center; justify-content:center; border:1px solid var(--color-border-strong, var(--line)); border-radius:10px; font-weight:700; cursor:pointer; list-style:none; } .ctl-icons-more > summary::-webkit-details-marker{ display:none; }
+/* the sign-in: the title under the logo, in its middle */
+.mx-login .apphome-title{ text-align:center; font-size:22px; margin-top:4px; }
