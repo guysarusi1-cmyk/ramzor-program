@@ -214,7 +214,7 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
       ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת המדריכים</span></a>` : ''}
-      ${m.published ? `<button type="button" class="btn ghost" id="cs-share">${WA_SVG}<span>שיתוף תמונת סידור</span></button>` : ''}
+      ${m.published ? `<button type="button" class="btn ghost" id="cs-share">${WA_SVG}<span>${csPhone ? 'שיתוף' : 'שיתוף תמונת סידור'}</span></button>` : ''}
     </div>
     ${csPendingBarHtml(mk)}
     ${issues.length ? `<details class="pissues" id="cs-issues"${portalUi.csIssuesOpen ? ' open' : ''}><summary>${issues.length} דברים שדורשים תשומת לב</summary>${issues.map(csIssueHtml).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
@@ -270,6 +270,7 @@ function srvRenderCoordSchedule(body){
       if(who.startsWith('row:')) srvMoveToSlot(mk, c.dataset.key, who.slice(4), body); else if(who.startsWith('other:')) srvAddOtherToSlot(mk, c.dataset.key, who.slice(6), body); else srvAddToSlot(mk, c.dataset.key, who, body); });
   });
   srvDragScrollWire();
+  if(csPhone) csTouchDragWire(body, mk);
   body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); srvRemoveOther(b.dataset.otherRm, b.dataset.sid, body); }));
   body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('keydown', e => e.stopPropagation()));
   body.querySelectorAll('[data-cs-other]').forEach(b => {          // (a service girl or a teacher from the fold at the bottom of the panel)
@@ -282,7 +283,7 @@ function srvRenderCoordSchedule(body){
   body.querySelectorAll('[data-cs-sort]').forEach(b => b.addEventListener('click', () => { portalUi.csSort = b.dataset.csSort; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
-    const open = () => srvOpenSlot(mk, td.dataset.key, body);
+    const open = () => { if(Date.now() - csTouchDropAt < 500) return; srvOpenSlot(mk, td.dataset.key, body); };
     td.addEventListener('click', open); td.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
   });
   body.querySelectorAll('[data-flag-done]').forEach(b => b.addEventListener('click', async () => {
@@ -641,6 +642,48 @@ async function srvRemoveOther(rowId, sid, body){
 }
 // while a name is dragged the page can still be scrolled (Guy): with the mouse wheel, and by holding the name near the top or the bottom of the screen
 let srvDragScrollOn = false;
+// the phone: a name is moved with a finger. Hold it a moment, then drag: its name stays above the finger, and the whole shift under the finger is the target, its empty part too.
+// A quick tap still opens the shift, and a finger that moves at once scrolls the page. The move itself is the one of the computer, with its questions and warnings (Guy 2026-11-04).
+let csTouchDropAt = 0;
+function csCellAt(x, y){
+  const el = document.elementFromPoint(x, y); if(!el) return null;
+  let sh = el.closest('.mcal-wrow-shift');
+  if(!sh){ const row = el.closest('.mcal-wrow'); if(row && !el.closest('.mcal-wrow-day')){ let best = 1e9; row.querySelectorAll('.mcal-wrow-shift').forEach(s => { const r = s.getBoundingClientRect(), d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom)); if(d < best){ best = d; sh = s; } }); } }
+  return sh ? sh.querySelector('.mcal-cell.editable') : el.closest('.mcal-cell.editable');
+}
+function csTouchDragWire(body, mk){
+  const touchy = navigator.maxTouchPoints > 0 || 'ontouchstart' in window, ids = portalLoad().assignmentIds || {};
+  body.querySelectorAll('.mcal-cell.editable .mcal-name[data-iid]').forEach(n => {
+    const from = n.closest('.mcal-cell'), rowId = ids[`${from.dataset.key}|${n.dataset.iid}`]; if(!rowId) return;
+    if(touchy) n.removeAttribute('draggable');          // (the browser's own drag would fight the finger)
+    let timer = null, on = false, sx = 0, sy = 0, x = 0, y = 0, ghost = null, cur = null, vy = 0, raf = null;
+    const place = () => { if(!ghost) return; const w = ghost.offsetWidth, h = ghost.offsetHeight; ghost.style.left = Math.max(6, Math.min(innerWidth - w - 6, x - w / 2)) + 'px'; ghost.style.top = Math.max(6, y - h - 56) + 'px'; };
+    const aim = () => { const c = csCellAt(x, y); if(c !== cur){ if(cur) srvDropClear(cur); cur = c; } if(cur) srvDropShow(cur); };
+    const tick = () => { if(!on || !vy){ raf = null; return; } (document.scrollingElement || document.documentElement).scrollTop += vy; aim(); raf = requestAnimationFrame(tick); };
+    const begin = () => {
+      timer = null; on = true; srvDragWho = n.dataset.iid; srvDragRow = rowId; n.classList.add('dragging');
+      ghost = document.createElement('div'); ghost.className = 'cs-drag-ghost cs-finger-ghost'; ghost.textContent = n.firstChild ? n.firstChild.textContent : n.textContent; document.body.appendChild(ghost);
+      place(); aim(); if(navigator.vibrate) try { navigator.vibrate(15); } catch(e){}
+    };
+    const stop = () => { const key = cur ? cur.dataset.key : null; on = false; vy = 0; if(cur) srvDropClear(cur); cur = null; if(ghost) ghost.remove(); ghost = null; n.classList.remove('dragging'); srvDragWho = null; srvDragRow = null; return key; };
+    const redraw = () => { if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } };
+    n.addEventListener('touchstart', e => { if(e.touches.length !== 1) return; sx = x = e.touches[0].clientX; sy = y = e.touches[0].clientY; clearTimeout(timer); timer = setTimeout(begin, 220); }, { passive:true });
+    n.addEventListener('touchmove', e => {
+      const t = e.touches[0]; x = t.clientX; y = t.clientY;
+      if(!on){ if(Math.hypot(x - sx, y - sy) > 10){ clearTimeout(timer); timer = null; } return; }
+      e.preventDefault(); place(); aim();
+      const edge = 90, h = innerHeight; vy = y < edge ? -Math.ceil((edge - y) / 6) : y > h - edge ? Math.ceil((y - (h - edge)) / 6) : 0;
+      if(vy && !raf) raf = requestAnimationFrame(tick);
+    }, { passive:false });
+    n.addEventListener('touchend', async e => {
+      clearTimeout(timer); timer = null; if(!on) return;
+      if(e.cancelable) e.preventDefault(); csTouchDropAt = Date.now();
+      const key = stop(); if(key) await srvMoveToSlot(mk, key, rowId, body); redraw();
+    });
+    n.addEventListener('touchcancel', () => { clearTimeout(timer); timer = null; if(on){ stop(); redraw(); } });
+    n.addEventListener('contextmenu', e => { if(touchy) e.preventDefault(); });
+  });
+}
 function srvDragScrollWire(){
   if(srvDragScrollOn) return; srvDragScrollOn = true;
   const box = () => document.scrollingElement || document.documentElement;

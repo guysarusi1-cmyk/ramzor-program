@@ -706,3 +706,26 @@ html[data-contrast=high] body[data-rlook=light] .toast{
 }
 /* "פירוט" on the home cards: a button, so its faded word still has to be read on the light look */
 .mx-home[data-ptheme=light] .home-card-more{ opacity:.9; }
+/* the coordinator's schedule on a phone (Guy 2026-11-04). Only the phone: the computer stays as it is. */
+@media (max-width:700px){
+  /* no panel of the instructors' requests and no explanations on this tab */
+  .portal-shell.wide .cs-tab, .portal-shell.wide .cs-side, .portal-shell.wide .cs-help{ display:none !important; }
+  /* the two small buttons side by side; what else is there takes a row of its own */
+  .portal-shell.wide .pactions:has(#cs-share){ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:8px; }
+  .portal-shell.wide .pactions:has(#cs-share) > :not(#cs-openday):not(#cs-share){ grid-column:1 / -1; }
+  .portal-shell[data-ptheme].wide .pactions #cs-openday, .portal-shell[data-ptheme].wide .pactions #cs-share{ width:100%; min-width:0; min-height:44px; padding-inline:6px; font-size:15px; line-height:1.2; justify-content:center; }
+  /* a shift is all of its place in the day, its empty part too: the names' box fills it, and a shift alone in its line takes the line */
+  .cs-main .mcal-wrow-cells{ align-items:stretch; }
+  .cs-main .mcal-wrows .mcal-cell{ flex:1 1 auto; }
+  .cs-main .mcal-wrow-shift:last-child:nth-child(odd){ grid-column:1 / -1; }
+  .cs-main .mcal-wrow-shift:has(.drop-ok) .mcal-wrow-lbl{ color:var(--color-text, var(--p-text)); }
+  .cs-main .mcal-cell.editable .mcal-name[data-iid]{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+  /* large and very large text: the tabs stay in one line, inside the screen */
+  body:is(.portal-big, .portal-huge) .portal-shell.wide .portal-tabs{ flex-wrap:nowrap; justify-content:space-between; gap:0; overflow:visible; }
+  body:is(.portal-big, .portal-huge) .portal-shell[data-ptheme].wide .portal-tabs button{ flex:0 1 auto; min-width:0; padding-inline:2px; white-space:nowrap; }
+  body:is(.portal-big, .portal-huge) .portal-shell.wide .portal-tabs .ptab-count{ margin-inline-start:1px; min-width:14px; padding:0 2px; }
+  body:is(.portal-big, .portal-huge) .portal-shell.wide #cs-viewbar .mcal-weeknav{ max-width:100%; gap:4px; }
+  body:is(.portal-big, .portal-huge) .portal-shell.wide #cs-viewbar .mcal-weeknav b{ min-width:0; }
+}
+@media (max-width:340px){ body.portal-big .portal-shell.wide .portal-title{ grid-column:1 / -1; grid-row:2; } }          /* (the narrowest phones: as very large text does already) */
+.cs-finger-ghost{ top:0; left:0; z-index:900; font-size:17px; padding:6px 12px; }

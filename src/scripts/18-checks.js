@@ -2762,6 +2762,77 @@
         }
       } finally { contrastSet(wasContrast); await personalLeave(); showHub(); }
     });
+    // ---- the schedule tab of the coordinator on a phone: a finger moves a name, no side panels, the two small buttons, the tabs in large text (Guy 2026-11-04)
+    await step('coordinator phone', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('coordinator-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('coordinator phone: signs in', false, error ? error.message : 'no'); return; }
+      const phone = matchMedia('(max-width:700px)').matches, seen = id => { const e = document.querySelector(id); return !!e && !!e.getClientRects().length; };
+      const wide = () => document.documentElement.scrollWidth > innerWidth + 1 ? `${document.documentElement.scrollWidth} > ${innerWidth}` : '';
+      const realMove = srvMoveToSlot, realAsk = srvAskBeforePlacing, realConfirm = confirmSheet, realWrite = asgWrite;
+      try {
+        srvOpenPortal(); await sleep(300); portalUi.tab = 'schedule'; portalUi.month = monthKeyOf(srvToday()); showPortal('schedule'); await sleep(700);
+        if(!seen('#cs-share')){ check('(info) coordinator phone: skipped, no published schedule this month on the test server', true, ''); return; }
+        if(!phone){
+          check('the computer: the panel of the requests, the explanations and the long name of the share stay', (seen('.cs-tab') || seen('.cs-side')) && seen('.cs-help') && /שיתוף תמונת סידור/.test(document.querySelector('#cs-share').textContent), '');
+          return;
+        }
+        check('phone: no panel of the requests and no explanations on the schedule tab', !seen('.cs-tab') && !seen('.cs-side') && !seen('.cs-help'), '');
+        { const a = document.querySelector('#cs-openday').getBoundingClientRect(), b = document.querySelector('#cs-share').getBoundingClientRect(), sb = document.querySelector('#cs-share');
+          check('phone: "פתיחת יום לשיבוץ" and "שיתוף" side by side, nothing out of the screen, room for a finger', Math.abs(a.top - b.top) < 3 && a.height >= 44 && b.height >= 44 && !wide() && Math.min(a.left, b.left) >= 0 && Math.max(a.right, b.right) <= innerWidth, JSON.stringify([a.top, b.top, a.height, wide()]));
+          check('phone: the button is called "שיתוף", with the WhatsApp mark', sb.textContent.trim() === 'שיתוף' && !!sb.querySelector('svg'), sb.textContent); }
+        // a finger
+        const touch = (type, el, x, y) => { const t = new Touch({ identifier:1, target:el, clientX:x, clientY:y }), end = type === 'touchend' || type === 'touchcancel'; el.dispatchEvent(new TouchEvent(type, { bubbles:true, cancelable:true, touches:end ? [] : [t], targetTouches:end ? [] : [t], changedTouches:[t] })); };
+        const ids = portalLoad().assignmentIds || {}, names = [...document.querySelectorAll('.mcal-wrows .mcal-cell.editable .mcal-name[data-iid]')].filter(x => ids[`${x.closest('.mcal-cell').dataset.key}|${x.dataset.iid}`]);
+        const n = names[0], rows = [...document.querySelectorAll('.mcal-wrow')];
+        if(!n || rows.length < 2){ check('(info) coordinator phone: no name to drag this week', true, ''); return; }
+        const fromKey = n.closest('.mcal-cell').dataset.key, otherRow = rows.find(r => !r.contains(n) && r.querySelectorAll('.mcal-wrow-shift .mcal-cell.editable').length >= 2) || rows[1];
+        const shifts = [...otherRow.querySelectorAll('.mcal-wrow-shift')], short = shifts.slice(0, 2).sort((a, b) => a.querySelector('.mcal-cell').scrollHeight - b.querySelector('.mcal-cell').scrollHeight)[0];
+        let moved = null; srvMoveToSlot = async (...a) => { moved = a; };
+        const drag = async (x, y) => { const r = n.getBoundingClientRect(), sx = r.left + 8, sy = r.top + 6; touch('touchstart', n, sx, sy); await sleep(300); touch('touchmove', n, x, y); await sleep(60); };
+        short.scrollIntoView({ block:'center' }); await sleep(120); n.scrollIntoView({ block:'nearest' }); await sleep(120); short.scrollIntoView({ block:'nearest' }); await sleep(120);
+        const sr = short.getBoundingClientRect(), bx = sr.left + sr.width / 2, by = sr.bottom - 4;
+        await drag(bx, by);
+        const cellT = short.querySelector('.mcal-cell.editable'), ghost = document.querySelector('.cs-finger-ghost'), gr = ghost ? ghost.getBoundingClientRect() : null;
+        check('the finger: the name shows above the finger, inside the screen, and does not hide the place under the finger', !!ghost && gr.bottom < by - 20 && gr.left >= 0 && gr.right <= innerWidth && ghost.textContent.trim().length > 0, gr ? `${gr.bottom} / ${by}` : 'no ghost');
+        check('the finger: at the very bottom of the shift, past the names, that shift is the target, and only it', !!cellT && cellT.classList.contains('drop-ok') && document.querySelectorAll('.mcal-cell.drop-ok').length === 1, String(document.querySelectorAll('.mcal-cell.drop-ok').length));
+        check('the finger: the target has the colour of her wish for this very shift, as on the computer', cellT.classList.contains('drop-' + srvWishFor(n.dataset.iid, cellT.dataset.key)), cellT.className);
+        const other = shifts.find(x => x !== short), orr = other ? other.getBoundingClientRect() : null;
+        if(other){ touch('touchmove', n, orr.left + orr.width / 2, orr.top + 4); await sleep(60); check('the finger: the shift beside it, at its label, takes over at once', other.querySelector('.mcal-cell').classList.contains('drop-ok') && !cellT.classList.contains('drop-ok'), ''); touch('touchmove', n, bx, by); await sleep(60); }
+        touch('touchend', n, bx, by); await sleep(120);
+        check('the finger let go: the move is asked for that shift, the name and the marks are gone', !!moved && moved[1] === cellT.dataset.key && !document.querySelector('.cs-finger-ghost') && !document.querySelector('.mcal-cell.drop-ok') && !srvDragWho && !srvDragRow, JSON.stringify(moved && moved[1]));
+        check('the finger let go: no window of the shift opens by itself', !document.querySelector('.psheet'), '');
+        // scrolling: a finger that moves at once does not drag
+        moved = null; { const r = n.getBoundingClientRect(); touch('touchstart', n, r.left + 8, r.top + 6); await sleep(40); touch('touchmove', n, r.left + 8, r.top + 60); await sleep(320); touch('touchend', n, r.left + 8, r.top + 60); await sleep(60); }
+        check('a finger that moves at once scrolls: nothing is lifted, nothing moves', !moved && !document.querySelector('.cs-finger-ghost') && !srvDragWho, '');
+        srvMoveToSlot = realMove;
+        // the write that the move asks for (the test data stays as it is: the write is answered with a failure), and a failed save loses nothing
+        { const st = portalLoad(), rowId = ids[`${fromKey}|${n.dataset.iid}`], r0 = st.rows.find(x => x.id === rowId), k = cellT.dataset.key; let w = null;
+          if(r0 && r0.shift !== 'L' && !st.rows.some(x => x.id !== rowId && x.staff === r0.staff && x.day === splitKey(k).date)){
+            srvAskBeforePlacing = async () => true; confirmSheet = async () => true; asgWrite = async (...a) => { w = a; return { error:{ message:'test' } }; };
+            const day0 = r0.day, sh0 = r0.shift; await srvMoveToSlot(portalUi.month, k, rowId, document.getElementById('portal-body')); await sleep(150);
+            check('the move writes that same row to the new day', !!w && w[1] === 'update' && w[2] === rowId && w[3].day === splitKey(k).date, JSON.stringify(w && [w[1], w[3] && w[3].day]));
+            check('... and when the save fails the name stays where it was', r0.day === day0 && r0.shift === sh0, '');
+            asgWrite = realWrite;
+          } else check('(info) coordinator phone: the write was not tried, that person is already on that day', true, ''); }
+        srvAskBeforePlacing = realAsk; confirmSheet = realConfirm;
+        // a tap on a shift still opens it, with its actions
+        { const c = document.querySelector('.mcal-wrows .mcal-cell.editable'); await sleep(600); c.click(); await sleep(350); check('a tap on a shift opens it as before', !!document.querySelector('.psheet'), ''); document.querySelectorAll('.psheet').forEach(x => x.remove()); }
+        // the tabs in large text
+        for(const big of ['1', '2']){
+          try { localStorage.setItem('ramzor-portal-big', big); } catch(e){} applyPortalSize(); await sleep(250);
+          const c = document.querySelector('.portal-tabs .ptab-count'), was = c ? c.textContent : ''; if(c) c.textContent = '125'; await sleep(60);
+          const tabs = [...document.querySelectorAll('.portal-tabs [data-ptab]')].filter(b => b.getClientRects().length), rs = tabs.map(b => b.getBoundingClientRect()), nav = document.querySelector('.portal-tabs');
+          check(`the tabs in ${big === '1' ? 'large' : 'very large'} text: one line, inside the screen, nothing cut`, tabs.length >= 4 && rs.every(r => Math.abs(r.top - rs[0].top) < 4 && r.left >= 0 && r.right <= innerWidth + .5) && tabs.every(b => b.scrollWidth <= b.clientWidth + 1) && nav.scrollWidth <= nav.clientWidth + 1 && !wide(), JSON.stringify(rs.map(r => [Math.round(r.left), Math.round(r.right), Math.round(r.top)])));
+          if(c) c.textContent = was;
+        }
+      } finally {
+        srvMoveToSlot = realMove; srvAskBeforePlacing = realAsk; confirmSheet = realConfirm; asgWrite = realWrite;
+        try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
+        await personalLeave(); showHub();
+      }
+    });
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
