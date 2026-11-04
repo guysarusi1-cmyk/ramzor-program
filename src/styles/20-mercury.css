@@ -1,0 +1,837 @@
+/* ---------- Mercury's design system, first on the therapy portal (Guy 2026-10-30; his "מרקורי — הנחיות מפתחים למערכת העיצוב" v1.0) ----------
+   Calm, secure, curious: warm natural minimalism. Two themes here (light / dark; no leopard in this portal). Headings Rubik (Guy's choice), body Assistant.
+   Tokens: raw values live only in the two theme blocks below; everything else reads the semantic ones. The older --p-* and base variables
+   are bridged to them, so the existing rules of the portal take the new look at once; the rules after the bridge refine the components.
+   Scope: every staff portal (.portal-shell: the instructors', the coordinator's, the admin's, the therapy portal, the לומדה) and the sheets opened from them
+   (.mx-sheet, set in portalSheet). Three looks for staff: light, dark, leopard (Guy 2026-10-30: "מתחילים לעצב את כל האתר והאפליקציה"); the therapy portal
+   offers light and dark only. Class names stay (the checks use them). */
+.portal-shell, .mx-sheet, .mx-home{
+  --font-heading:'Rubik', Arial, sans-serif; --font-body:'Assistant', Arial, sans-serif;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:9999px;
+  --motion-instant:100ms; --motion-fast:200ms; --motion-base:300ms;
+  --ease-enter:cubic-bezier(0, 0, .2, 1); --ease-exit:cubic-bezier(.4, 0, 1, 1); --ease-standard:cubic-bezier(.4, 0, .2, 1);
+  /* dark ("לילה חם"): the default of this portal, as before */
+  --color-bg:#1C1A17; --color-surface:#24211D; --color-surface-alt:#211E1B; --color-surface-inset:#191714; --color-surface-raised:#2C2925;
+  --color-border:#3A362F; --color-border-strong:#4A453C; --color-text:#E9E4DA; --color-text-secondary:#A8A196;
+  --color-primary:#9DB08F; --color-primary-hover:#AEC0A1; --color-primary-soft:#2D3328; --color-on-primary:#1C1A17;
+  --color-success:#8FBF8A; --color-success-soft:#263126; --color-warning:#D2A05E; --color-warning-soft:#3A3122; --color-danger:#D98B85; --color-danger-soft:#3A2826;
+  --color-info:#8AACCB; --color-info-soft:#25303A; --color-link:#AEC0A1; --color-heading:#E9E4DA;
+  --shadow-card:none; --shadow-modal:none; --scrim:rgba(0, 0, 0, .55);
+}
+.portal-shell[data-ptheme=light], .mx-sheet[data-ptheme=light], .mx-home[data-ptheme=light]{
+  /* light ("בוקר בהיר") */
+  --color-bg:#FAF7F2; --color-surface:#FFFFFF; --color-surface-alt:#F4EFE7; --color-surface-inset:#F0EBE2; --color-surface-raised:#FFFFFF;
+  --color-border:#E7E0D3; --color-border-strong:#D6CCB9; --color-text:#2D2A24; --color-text-secondary:#6E675C;
+  --color-primary:#5C6F52; --color-primary-hover:#4C5E43; --color-primary-soft:#E7ECE2; --color-on-primary:#FFFFFF;
+  --color-success:#4F7A4C; --color-success-soft:#E6EFE4; --color-warning:#9A6B2F; --color-warning-soft:#F6EEDF; --color-danger:#A9504A; --color-danger-soft:#F7E9E6;
+  --color-info:#4A6E8C; --color-info-soft:#E6EDF3; --color-link:#4F6B48; --color-heading:#2D2A24;
+  --shadow-card:0 1px 3px rgba(45, 42, 36, .05), 0 4px 12px rgba(45, 42, 36, .06); --shadow-modal:0 8px 24px rgba(45, 42, 36, .12); --scrim:rgba(45, 42, 36, .35);
+}
+.portal-shell[data-ptheme=leopard], .mx-sheet[data-ptheme=leopard], .mx-home[data-ptheme=leopard]{
+  /* leopard: today's dark gold, redone on the new principles — a deep brown ground with faint rosettes (on the page behind, body.leopard-bg),
+     opaque cards so the text reads clearly, gold for the one main button and the headings */
+  --color-bg:#17100A; --color-surface:#22170E; --color-surface-alt:#2E2014; --color-surface-inset:#130D07; --color-surface-raised:#2A1C10;
+  --color-border:#58402A; --color-border-strong:#765535; --color-text:#F9F0DF; --color-text-secondary:#DCC7A2;
+  --color-primary:#E2B65C; --color-primary-hover:#ECC676; --color-primary-soft:#352612; --color-on-primary:#24140A;
+  --color-success:#A9C98B; --color-success-soft:#26301A; --color-warning:#EBB06A; --color-warning-soft:#3B2615; --color-danger:#E59A8C; --color-danger-soft:#3C2119;
+  --color-info:#9CC0DE; --color-info-soft:#1F2A33; --color-link:#ECC676; --color-heading:#E9C77A;
+  --shadow-card:none; --shadow-modal:0 8px 24px rgba(0, 0, 0, .45); --scrim:rgba(0, 0, 0, .6);
+}
+/* the bridge: the base and portal variables the existing rules read (as specific as the old light and leopard blocks, and after them, so it wins) */
+.portal-shell[data-ptheme], .mx-sheet, .mx-home{
+  --bg:var(--color-bg); --panel:var(--color-surface); --panel-2:var(--color-surface-alt); --line:var(--color-border); --text:var(--color-text); --muted:var(--color-text-secondary); --gold:var(--color-primary);
+  --p-bg:var(--color-bg); --p-panel:var(--color-surface); --p-panel2:var(--color-surface-alt); --p-line:var(--color-border); --p-text:var(--color-text); --p-muted:var(--color-text-secondary);
+  --p-yes:var(--color-success); --p-yes-bg:var(--color-success-soft); --p-no:var(--color-danger); --p-no-bg:var(--color-danger-soft);
+  --p-avoid:var(--color-warning); --p-avoid-bg:var(--color-warning-soft); --p-can:var(--color-info); --p-can-bg:var(--color-info-soft);
+  color:var(--color-text); font-family:var(--font-body); font-size:16px; line-height:1.65;
+}
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme=dark]){ background:#1C1A17; transition:background-color var(--motion-fast, 200ms) cubic-bezier(.4, 0, .2, 1); }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme=light]){ background:#FAF7F2; }
+.portal-shell[data-ptheme]{ background:transparent; border-radius:0; padding:0 0 90px; margin:0; }
+#view-therapy .portal-shell{ max-width:1200px; }
+
+/* type */
+.portal-shell[data-ptheme] h1, .portal-shell[data-ptheme] h2, .portal-shell[data-ptheme] h3, .mx-sheet h1, .mx-sheet h2, .mx-sheet h3{ font-family:var(--font-heading); font-weight:600; line-height:1.25; color:var(--color-heading); }
+.portal-shell[data-ptheme] .portal-title{ font-size:24px; font-weight:600; color:var(--color-heading); }
+.portal-shell[data-ptheme] .portal-hello{ font-weight:400; color:var(--color-text-secondary); font-size:15px; }
+.portal-shell[data-ptheme] .psec, .mx-sheet .psec{ font-family:var(--font-heading); font-weight:600; font-size:18px; color:var(--color-heading); margin:var(--space-6) 0 var(--space-3); }
+.portal-shell[data-ptheme] .pnote, .mx-sheet .pnote{ color:var(--color-text-secondary); font-size:15px; line-height:1.6; }
+.portal-shell[data-ptheme] .pnote-soft, .mx-sheet .pnote-soft{ border:0; padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] :focus-visible, .mx-sheet :focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
+
+/* buttons: primary (one per screen), secondary, text */
+.portal-shell[data-ptheme] .btn, .mx-sheet .btn{ background:var(--color-primary); color:var(--color-on-primary); border:1px solid transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-weight:600; font-size:16px;
+  min-height:40px; min-width:44px; padding:0 var(--space-6); display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2);
+  transition:background-color var(--motion-instant) var(--ease-standard), border-color var(--motion-instant) var(--ease-standard), transform var(--motion-instant) var(--ease-standard); }
+.portal-shell[data-ptheme] .btn:hover, .mx-sheet .btn:hover{ background:var(--color-primary-hover); }
+.portal-shell[data-ptheme] .btn:active, .mx-sheet .btn:active{ transform:scale(.98); }
+.portal-shell[data-ptheme] .btn.ghost, .mx-sheet .btn.ghost, .portal-shell[data-ptheme] .back-btn{ background:transparent; color:var(--color-text); border-color:var(--color-border-strong); }
+.portal-shell[data-ptheme] .btn.ghost:hover, .mx-sheet .btn.ghost:hover, .portal-shell[data-ptheme] .back-btn:hover{ background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:36px; padding:0 var(--space-4); font-size:15px; }
+.portal-shell[data-ptheme] .btn.danger, .mx-sheet .btn.danger{ background:transparent; color:var(--color-danger); border-color:transparent; }
+.portal-shell[data-ptheme] .btn.danger:hover, .mx-sheet .btn.danger:hover{ background:var(--color-danger-soft); }
+.portal-shell[data-ptheme] .btn:disabled, .mx-sheet .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+.portal-shell[data-ptheme] .back-btn{ font-family:var(--font-body); font-weight:600; font-size:15px; border-radius:var(--radius-sm); padding:0 var(--space-4); min-height:40px; margin:0; }
+@media (max-width:767px){ .portal-shell[data-ptheme] .btn, .mx-sheet .btn{ min-height:44px; font-size:17px; } .portal-shell[data-ptheme] .btn.small, .mx-sheet .btn.small{ min-height:44px; } }
+
+/* the tabs: quiet words, an underline under the one that is open */
+.portal-shell[data-ptheme] .portal-tabs{ background:transparent; border:0; border-bottom:1px solid var(--color-border); border-radius:0; padding:0; gap:var(--space-1); margin:0 0 var(--space-6); }
+.portal-shell[data-ptheme] .portal-tabs button, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary{ position:relative; flex:0 1 auto; background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:16px;
+  border-radius:var(--radius-sm) var(--radius-sm) 0 0; padding:var(--space-3) var(--space-4); min-height:44px; box-shadow:none; opacity:1; transition:color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
+.portal-shell[data-ptheme] .portal-tabs button:hover, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary:hover{ color:var(--color-text); background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] .portal-tabs button.active, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary.active{ color:var(--color-text); background:transparent; box-shadow:none; }
+.portal-shell[data-ptheme] .portal-tabs button.active::after, .portal-shell[data-ptheme] .portal-tabs .tab-more > summary.active::after{ content:''; position:absolute; inset-inline:var(--space-4); bottom:-1px; height:2px; border-radius:2px; background:var(--color-primary); }
+.portal-shell[data-ptheme] .tab-more-list{ background:var(--color-surface-raised); border-color:var(--color-border); box-shadow:var(--shadow-modal); border-radius:var(--radius-md); }
+.portal-shell[data-ptheme] .tab-more-list button{ border-radius:var(--radius-sm); }
+.portal-shell[data-ptheme] .tab-more-list button.active::after{ display:none; }
+.portal-shell[data-ptheme] .tab-more-list button.active{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .pcount, .mx-sheet .pcount{ background:var(--color-primary-soft); color:var(--color-text); font-weight:700; font-size:12px; border-radius:var(--radius-pill); }
+.portal-shell[data-ptheme] .th-stat .pcount, .portal-shell[data-ptheme] .th-ws-tabs .pcount{ background:var(--color-primary); color:var(--color-on-primary); }
+
+/* cards and folds */
+.portal-shell[data-ptheme] .pfold, .mx-sheet .pfold, .portal-shell[data-ptheme] .th-kid, .portal-shell[data-ptheme] .th-todo, .portal-shell[data-ptheme] .tp-row, .portal-shell[data-ptheme] .tp-goal, .portal-shell[data-ptheme] .th-kcard, .portal-shell[data-ptheme] .th-g, .portal-shell[data-ptheme] .th-goal,
+.portal-shell[data-ptheme] .obs-item, .mx-sheet .obs-item, .portal-shell[data-ptheme] .cr-goal, .portal-shell[data-ptheme] .cr-report, .portal-shell[data-ptheme] .th-assign-row{
+  background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.portal-shell[data-ptheme] .pfold > summary, .mx-sheet .pfold > summary{ font-family:var(--font-heading); font-weight:600; font-size:17px; padding:var(--space-4) var(--space-6); min-height:56px; color:var(--color-text); }
+.portal-shell[data-ptheme] .pfold > summary small{ font-family:var(--font-body); font-weight:400; font-size:14px; color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .pfold > summary::after, .mx-sheet .pfold > summary::after{ color:var(--color-text-secondary); transition:transform var(--motion-fast) var(--ease-standard); }
+.portal-shell[data-ptheme] .pfold-body, .mx-sheet .pfold-body{ padding:0 var(--space-6) var(--space-6); }
+.portal-shell[data-ptheme] details[open] > .pfold-body, .portal-shell[data-ptheme] details[open] > .tp-goal-body, .portal-shell[data-ptheme] details[open] > .tp-t-body, .mx-sheet details[open] > .pfold-body{ animation:mx-reveal var(--motion-base) var(--ease-enter); }
+@keyframes mx-reveal{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+.portal-shell[data-ptheme] .th-kid:hover, .portal-shell[data-ptheme] .th-kid:focus-visible, .portal-shell[data-ptheme] .th-todo:hover, .portal-shell[data-ptheme] .tp-row:hover{ border-color:var(--color-border-strong); background:var(--color-surface-alt); }
+.portal-shell[data-ptheme] .th-todo{ border-inline-start:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .th-kid.has-plan{ border-color:var(--color-border); }
+.portal-shell[data-ptheme] .th-av, .mx-sheet .th-av{ background:var(--color-primary-soft); border-color:var(--color-border); }
+
+/* chips and small marks */
+.portal-shell[data-ptheme] .th-chip, .mx-sheet .th-chip, .portal-shell[data-ptheme] .tp-now, .portal-shell[data-ptheme] .bk-theme, .mx-sheet .bk-theme, .portal-shell[data-ptheme] .bk-method, .mx-sheet .bk-method, .portal-shell[data-ptheme] .th-lib-cat, .portal-shell[data-ptheme] .th-lib-scope{
+  background:var(--color-surface-alt); color:var(--color-text-secondary); border:1px solid var(--color-border); border-radius:var(--radius-pill); font-weight:600; }
+.portal-shell[data-ptheme] .th-chip.on, .mx-sheet .th-chip.on, .portal-shell[data-ptheme] .tp-builder .th-chip.on, .portal-shell[data-ptheme] .tp-builder .pchoice button.on, .mx-sheet .bk-age.on, .portal-shell[data-ptheme] .cr-chips button.on{
+  background:var(--color-primary-soft); color:var(--color-text); border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .tp-now{ background:var(--color-primary-soft); color:var(--color-text); border-color:transparent; }
+.portal-shell[data-ptheme] .bk-draft, .mx-sheet .bk-draft{ background:var(--color-warning-soft); color:var(--color-warning); }
+.portal-shell[data-ptheme] .say-ico, .mx-sheet .say-ico{ color:var(--color-primary); }
+.portal-shell[data-ptheme] .tp-appr{ opacity:1; color:var(--color-text-secondary); }
+
+/* fields */
+.portal-shell[data-ptheme] input:not([type=checkbox]):not([type=radio]):not([type=file]), .portal-shell[data-ptheme] textarea, .portal-shell[data-ptheme] select,
+.mx-sheet input:not([type=checkbox]):not([type=radio]):not([type=file]), .mx-sheet textarea, .mx-sheet select{
+  background:var(--color-surface-inset); color:var(--color-text); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); font-family:var(--font-body); font-size:16px; min-height:44px;
+  transition:border-color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
+.portal-shell[data-ptheme] textarea, .mx-sheet textarea{ line-height:1.6; padding:10px 12px; }
+.portal-shell[data-ptheme] input:focus, .portal-shell[data-ptheme] textarea:focus, .portal-shell[data-ptheme] select:focus, .mx-sheet input:focus, .mx-sheet textarea:focus, .mx-sheet select:focus{ outline:2px solid var(--color-primary); outline-offset:1px; background:var(--color-surface); }
+.portal-shell[data-ptheme] ::placeholder, .mx-sheet ::placeholder{ color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .pfield, .mx-sheet .pfield{ font-weight:600; font-size:15px; color:var(--color-text); gap:var(--space-2); }
+.portal-shell[data-ptheme] input[type=checkbox], .mx-sheet input[type=checkbox]{ accent-color:var(--color-primary); }
+.portal-shell[data-ptheme] .th-avoid-field textarea{ border:1px solid var(--color-danger) !important; background:var(--color-danger-soft); }
+.portal-shell[data-ptheme] .th-avoid, .mx-sheet .th-avoid{ border:1px solid var(--color-danger); background:var(--color-danger-soft); }
+.portal-shell[data-ptheme] .th-avoid b, .mx-sheet .th-avoid b{ color:var(--color-danger); }
+
+/* the plan page: the side card (the child, the one main button, the links) and the goals */
+.therapy-shell[data-ptheme] .tp-page{ gap:var(--space-6); }
+.therapy-shell[data-ptheme] .tp-side{ display:flex; flex-direction:column; gap:var(--space-4); }
+.therapy-shell[data-ptheme] .tp-main-col{ display:flex; flex-direction:column; gap:var(--space-4); min-width:0; }
+.therapy-shell[data-ptheme] .th-ed-head h2{ font-size:24px; }
+.therapy-shell[data-ptheme] .th-status{ font-size:14px; color:var(--color-text-secondary); }
+.therapy-shell[data-ptheme] .tp-statebar{ background:var(--color-warning-soft); border:1px solid transparent; border-radius:var(--radius-md); font-size:15px; padding:var(--space-3) var(--space-4); }
+.therapy-shell[data-ptheme] .tp-goal{ overflow:hidden; } .therapy-shell[data-ptheme] .tp-goal.st-focus{ border-color:var(--color-border-strong); }
+.therapy-shell[data-ptheme] .tp-goal > summary{ padding:var(--space-4) var(--space-6); font-family:var(--font-heading); font-size:19px; }
+.therapy-shell[data-ptheme] .tp-goal > summary b{ font-weight:600; }
+.therapy-shell[data-ptheme] .tp-goal-body{ padding:0 var(--space-6) var(--space-6); gap:var(--space-4); }
+.therapy-shell[data-ptheme] .tp-target{ border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface-alt); padding:var(--space-3) var(--space-4); }
+.therapy-shell[data-ptheme] .tp-target > summary{ font-weight:600; align-items:center; }
+.therapy-shell[data-ptheme] .tp-stations li.goal{ color:var(--color-primary); font-weight:700; }
+.therapy-shell[data-ptheme] .tp-lbl{ font-size:13px; font-weight:600; color:var(--color-text-secondary); opacity:1; letter-spacing:.2px; }
+.therapy-shell[data-ptheme] .tp-int, .therapy-shell[data-ptheme] .tp-sg-i{ padding:var(--space-3) var(--space-4); border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:15px; }
+.therapy-shell[data-ptheme] .tp-sent{ display:flex; gap:6px; align-items:flex-start; margin-top:var(--space-2); padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); background:var(--color-primary-soft); opacity:1; font-size:15px; }
+.therapy-shell[data-ptheme] .tp-links{ justify-content:flex-start; }
+.therapy-shell[data-ptheme] .tp-links .btn.ghost{ border-color:transparent; color:var(--color-link); }
+.therapy-shell[data-ptheme] .tp-links .btn.ghost:hover{ background:var(--color-primary-soft); }
+.therapy-shell[data-ptheme] .tp-more-acts > summary{ border-color:var(--color-border-strong); border-radius:var(--radius-sm); }
+.therapy-shell[data-ptheme] .th-empty{ color:var(--color-text-secondary); }
+@media (min-width:1280px){
+  .therapy-shell[data-ptheme] .tp-page{ display:grid; grid-template-columns:280px minmax(0, 1fr); align-items:start; gap:var(--space-8); }
+  .therapy-shell[data-ptheme] .tp-side{ position:sticky; top:var(--space-6); padding:var(--space-6); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+  .therapy-shell[data-ptheme] .tp-side .th-ed-head{ flex-direction:column; align-items:flex-start; gap:var(--space-3); }
+  .therapy-shell[data-ptheme] .tp-side .th-status{ margin:0; }
+  .therapy-shell[data-ptheme] .tp-side .tp-links{ flex-direction:column; align-items:stretch; padding-top:var(--space-4); border-top:1px solid var(--color-border); }
+  .therapy-shell[data-ptheme] .tp-side .tp-links .btn{ justify-content:flex-start; }
+}
+
+/* the builder */
+.therapy-shell[data-ptheme] .tp-steps li{ border-bottom-color:var(--color-border); color:var(--color-text-secondary); opacity:1; }
+.therapy-shell[data-ptheme] .tp-steps li.done{ border-color:var(--color-primary); }
+.therapy-shell[data-ptheme] .tp-steps li.now{ border-color:var(--color-primary); color:var(--color-text); }
+.therapy-shell[data-ptheme] .tp-bigbtn, .therapy-shell[data-ptheme] .tp-tile, .therapy-shell[data-ptheme] .tp-name, .therapy-shell[data-ptheme] .tp-pick, .therapy-shell[data-ptheme] .tp-int-pick{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); }
+.therapy-shell[data-ptheme] .tp-bigbtn:hover, .therapy-shell[data-ptheme] .tp-tile:hover, .therapy-shell[data-ptheme] .tp-name:hover{ border-color:var(--color-border-strong); background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] .tp-name.on, .therapy-shell[data-ptheme] .tp-pick.on, .therapy-shell[data-ptheme] .tp-int-pick.on{ border-color:var(--color-primary); background:var(--color-primary-soft); }
+.therapy-shell[data-ptheme] .tp-rate button.on{ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
+.therapy-shell[data-ptheme] .tp-nav{ background:linear-gradient(transparent, var(--color-bg) 30%); }
+.therapy-shell[data-ptheme] .tp-gender{ border-color:var(--color-border-strong); }
+
+/* sheets opened from this portal */
+.mx-sheet{ background:var(--scrim); }
+.mx-sheet .sheet-card{ background:var(--color-surface-raised); border:1px solid var(--color-border); box-shadow:var(--shadow-modal); color:var(--color-text); animation:mx-sheet-in var(--motion-slow, 400ms) var(--ease-enter); }
+@keyframes mx-sheet-in{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+.mx-sheet .sheet-card h2{ font-size:20px; }
+
+/* the autosave line of "עוד" */
+.therapy-shell[data-ptheme] .tm-state{ display:inline-flex; align-items:center; gap:6px; font-size:14px; color:var(--color-text-secondary); min-height:24px; }
+.therapy-shell[data-ptheme] .tm-state.bad{ color:var(--color-warning); }
+
+/* the "עבודה | סקירה" switch, and the review */
+:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg{ display:inline-flex; padding:3px; gap:2px; border-radius:var(--radius-pill); background:var(--color-surface-alt); border:1px solid var(--color-border); align-self:flex-start; }
+:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button{ min-height:36px; padding:0 var(--space-4); border:0; border-radius:var(--radius-pill); background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-size:15px; font-weight:600; cursor:pointer;
+  transition:background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard); }
+:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
+.therapy-shell[data-ptheme] .tp-review{ display:flex; flex-direction:column; gap:var(--space-12); max-width:820px; }
+.therapy-shell[data-ptheme] .tp-review section{ display:flex; flex-direction:column; gap:var(--space-4); }
+.therapy-shell[data-ptheme] .tp-review h2{ font-size:22px; margin:0; } .therapy-shell[data-ptheme] .tp-review h3{ font-size:18px; margin:0; }
+.therapy-shell[data-ptheme] .tp-rv-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); }
+.therapy-shell[data-ptheme] .tp-rv-meta{ color:var(--color-text-secondary); font-size:15px; }
+.therapy-shell[data-ptheme] .tp-rv-goal{ display:flex; flex-direction:column; gap:var(--space-4); padding:var(--space-6); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.therapy-shell[data-ptheme] .tp-rv-list{ display:flex; flex-direction:column; gap:var(--space-2); margin:0; padding:0; list-style:none; }
+.therapy-shell[data-ptheme] .tp-rv-list li{ padding:var(--space-3) var(--space-4); border-radius:var(--radius-sm); background:var(--color-surface-alt); }
+.therapy-shell[data-ptheme] .tp-rv-part{ padding:var(--space-4); border-radius:var(--radius-md); background:var(--color-surface-alt); white-space:pre-line; }
+.therapy-shell[data-ptheme] .tp-rv-part.avoid{ background:var(--color-danger-soft); }
+.therapy-shell[data-ptheme] .tp-rv-part b{ display:block; margin-bottom:var(--space-1); }
+.therapy-shell[data-ptheme] .tp-rv-draft{ padding:var(--space-3) var(--space-4); border-radius:var(--radius-md); background:var(--color-warning-soft); font-size:15px; }
+
+/* the side menu on a computer (Guy 2026-10-30): the portal's title above, the areas in two groups, "מסך ראשי" and the look below */
+@media (min-width:1024px){          /* (the app sits in a phone-wide column; on a computer this portal takes the width, as the coordinator's does, and its own menu replaces the site's header) */
+  #protected-app:has(#view-therapy.active .therapy-shell){ max-width:none; padding-inline:24px; }
+  #protected-app:has(#view-therapy.active .therapy-shell) > #shared-header, #protected-app:has(#view-therapy.active .therapy-shell) > #shared-logout-row{ display:none; }
+}
+.therapy-shell[data-ptheme] .th-side-foot{ display:none; }
+.therapy-shell[data-ptheme] .th-nav-sep, .therapy-shell[data-ptheme] .th-nav-ico{ display:none; }
+@media (min-width:1024px){
+  .therapy-shell[data-ptheme] .th-frame{ display:grid; grid-template-columns:232px minmax(0, 1fr); gap:var(--space-8); align-items:start; }
+  .therapy-shell[data-ptheme] .th-side{ position:sticky; top:var(--space-4); display:flex; flex-direction:column; gap:var(--space-2); min-height:calc(100vh - 48px); padding:var(--space-4) 0; }
+  .therapy-shell[data-ptheme] .th-side .portal-top{ display:contents; }
+  .therapy-shell[data-ptheme] .th-side .portal-title{ order:1; text-align:start; font-size:22px; padding:0 var(--space-3); }
+  .therapy-shell[data-ptheme] .th-side .portal-hello{ order:2; padding:0 var(--space-3); margin:0 0 var(--space-4); }
+  .therapy-shell[data-ptheme] .th-side .portal-top > span{ display:none; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs{ order:3; flex-direction:column; flex-wrap:nowrap; border:0; margin:0; gap:2px; overflow:visible; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button{ display:flex; align-items:center; gap:var(--space-3); width:100%; text-align:start; border-radius:var(--radius-sm); padding:var(--space-2) var(--space-3); font-size:16px; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button.active{ background:var(--color-primary-soft); }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button.active::after{ display:none; }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs .pcount{ margin-inline-start:auto; margin-inline-end:0; }
+  .therapy-shell[data-ptheme] .th-nav-ico{ display:inline-flex; flex:none; width:20px; height:20px; color:var(--color-text-secondary); }
+  .therapy-shell[data-ptheme] .th-side .portal-tabs button.active .th-nav-ico{ color:var(--color-primary); }
+  .therapy-shell[data-ptheme] .th-nav-sep{ display:block; height:1px; margin:var(--space-3) var(--space-3); background:var(--color-border); }
+  .therapy-shell[data-ptheme] .th-side-foot{ order:5; margin-top:auto; display:flex; flex-direction:column; gap:var(--space-3); padding:var(--space-4) var(--space-3) 0; border-top:1px solid var(--color-border); }
+  .therapy-shell[data-ptheme] .th-side .back-btn{ order:4; }
+  .therapy-shell[data-ptheme] .th-side-foot .back-btn{ align-self:stretch; justify-content:flex-start; }
+  .therapy-shell[data-ptheme] .th-side > .portal-top .back-btn{ display:none; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .therapy-shell[data-ptheme] *, .therapy-shell[data-ptheme] *::before, .therapy-shell[data-ptheme] *::after, .mx-sheet *, .mx-sheet *::before, .mx-sheet *::after{ animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+}
+@media print{
+  body.printing #print-sheet .tp-review{ max-width:none; gap:8mm; color:#000; }
+  body.printing #print-sheet .tp-rv-goal, body.printing #print-sheet .tp-rv-part, body.printing #print-sheet .tp-rv-list li{ border:1px solid #bbb; box-shadow:none; background:#fff; break-inside:avoid; }
+  body.printing #print-sheet .mx-seg, body.printing #print-sheet .tp-rv-print{ display:none !important; }
+}
+/* the simplicity checker's round on the new look (2026-10-30) */
+.therapy-shell[data-ptheme] .th-page-title{ font-size:24px; margin:0 0 var(--space-6); }
+.therapy-shell[data-ptheme] .tp-more > summary{ flex-wrap:wrap; }
+.therapy-shell[data-ptheme] .tp-more .tm-state{ flex-basis:100%; font-family:var(--font-body); font-weight:400; }
+.therapy-shell[data-ptheme] .tp-more .tm-state:empty{ display:none; }
+.therapy-shell[data-ptheme] .pfield > .th-tpl-btn, .therapy-shell[data-ptheme] .pfield > #tm-suggest{ align-self:flex-start; width:auto; min-height:36px; margin:0; }
+.therapy-shell[data-ptheme] .tp-rv-print{ align-self:flex-start; }
+@media (min-width:1024px){ .therapy-shell[data-ptheme] .th-todo-list, .therapy-shell[data-ptheme] .tp-list{ max-width:840px; } }
+@media (max-width:767px){
+  :is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button, .therapy-shell[data-ptheme] .tp-filter .th-chip, .therapy-shell[data-ptheme] .pfield > .th-tpl-btn, .therapy-shell[data-ptheme] .pfield > #tm-suggest{ min-height:44px; }
+  .therapy-shell[data-ptheme] .tp-steps li{ min-width:0; flex:1 1 0; font-size:0; padding:8px 0 0; }          /* (a phone: a progress bar, the name only on the step that is open) */
+  .therapy-shell[data-ptheme] .tp-steps li.now{ flex:3 1 0; font-size:12px; }
+}
+/* the look on a phone (Guy 2026-10-30): the same switch, small, in the top row */
+.therapy-shell[data-ptheme] .th-look-sm{ justify-self:end; } .therapy-shell[data-ptheme] .th-look-sm button{ padding:0 10px; font-size:14px; }
+/* a phone or a tablet (Guy 2026-10-30): every area open as a tile with its icon, nothing folded under "עוד"; the daily ones first, the rest after a quiet line */
+@media (max-width:1023px){
+  .therapy-shell[data-ptheme] .portal-tabs.th-nav-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:var(--space-2); border:0; margin:0 0 var(--space-6); padding:0; overflow:visible; }
+  .therapy-shell[data-ptheme] .th-nav-grid button{ position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:72px; padding:var(--space-2);
+    background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); color:var(--color-text); font-size:15px; line-height:1.25; text-align:center; }
+  .therapy-shell[data-ptheme] .th-nav-grid button:hover{ background:var(--color-surface-alt); }
+  .therapy-shell[data-ptheme] .th-nav-grid button.active{ background:var(--color-primary-soft); border-color:var(--color-primary); }
+  .therapy-shell[data-ptheme] .th-nav-grid button.active::after{ display:none; }
+  .therapy-shell[data-ptheme] .th-nav-grid .th-nav-ico{ display:inline-flex; width:22px; height:22px; color:var(--color-text-secondary); }
+  .therapy-shell[data-ptheme] .th-nav-grid button.active .th-nav-ico{ color:var(--color-primary); }
+  .therapy-shell[data-ptheme] .th-nav-grid .pcount{ position:absolute; top:6px; inset-inline-start:6px; margin:0; background:var(--color-primary); color:var(--color-on-primary); }
+  .therapy-shell[data-ptheme] .th-nav-grid .th-nav-sep{ display:block; grid-column:1 / -1; height:1px; margin:var(--space-1) 0; background:var(--color-border); }
+}
+@media (max-width:480px){ .therapy-shell[data-ptheme] .portal-title{ font-size:19px; white-space:nowrap; } .therapy-shell[data-ptheme] .portal-top .back-btn{ padding:0 var(--space-3); font-size:14px; } }
+/* the second line inside a filled (primary) button takes the button's own text colour, never the grey of secondary text (Guy 2026-10-30: "מהמקום שעצרת" was almost invisible on the green) */
+.portal-shell[data-ptheme] .btn:not(.ghost):not(.danger) :is(small, .pnote, em, span:not(.pcount)), .mx-sheet .btn:not(.ghost):not(.danger) :is(small, .pnote, em, span:not(.pcount)){ color:var(--color-on-primary); opacity:.92; }
+/* the spiral's stations and the staff's thumbs on the new colours (a contrast check, 2026-10-30: white on the old green was 3.4:1) */
+.therapy-shell[data-ptheme] .tp-sp-st{ background:var(--color-surface); border-color:var(--color-border-strong); color:var(--color-text); }
+.therapy-shell[data-ptheme] .tp-sp-st:hover{ border-color:var(--color-primary); }
+.therapy-shell[data-ptheme] .tp-sp-st:focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
+.therapy-shell[data-ptheme] .tp-sp-st.now{ background:var(--color-primary); border-color:var(--color-primary); color:var(--color-on-primary); }
+.therapy-shell[data-ptheme] .tp-sp-st.goal{ border-color:var(--color-primary); color:var(--color-text); box-shadow:0 0 0 3px var(--color-primary-soft); }
+.therapy-shell[data-ptheme] .tp-sp-st.now.goal{ color:var(--color-on-primary); }
+.therapy-shell[data-ptheme] .tp-fb button, .mx-sheet .tp-fb button{ color:var(--color-text); border-color:var(--color-border-strong); }
+.therapy-shell[data-ptheme] .cr-mk-row .pchoice button.on, .mx-sheet .cr-mk-row .pchoice button.on{ background:var(--color-primary-soft); color:var(--color-text); border-color:var(--color-primary); }
+/* a phone: the portal opens on the menu of areas only; an area fills the screen, with "→ כל האזורים" back to the menu (Guy 2026-10-30) */
+.therapy-shell[data-ptheme] .th-page-title{ font-size:22px; margin:0 0 var(--space-4); }
+@media (max-width:1023px){
+  .therapy-shell[data-ptheme][data-thmenu="1"] #therapy-body{ display:none; }
+  .therapy-shell[data-ptheme][data-thmenu="0"] .th-nav-grid{ display:none; }
+  .therapy-shell[data-ptheme][data-thmenu="0"] .portal-hello{ display:none; }
+  .therapy-shell[data-ptheme] .th-to-menu{ margin:0 0 var(--space-3); }
+  .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--space-3); }
+  .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button{ min-height:96px; font-size:16px; }
+  .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid .th-nav-ico{ width:28px; height:28px; }
+}
+@media (min-width:1024px){ .therapy-shell[data-ptheme] .th-to-menu{ display:none; } }
+@media (max-width:1023px){ .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button.active{ background:var(--color-surface); border-color:var(--color-border); } .therapy-shell[data-ptheme][data-thmenu="1"] .th-nav-grid button.active .th-nav-ico{ color:var(--color-text-secondary); } }
+
+/* ---------- the staff portals on the new look (Guy 2026-10-30: the instructors', the coordinator's, the admin's and the לומדה, in light, dark and leopard) ----------
+   The older rules of 14-portal.css read the bridged --p-* variables; these replace their fixed colours (gold on dark) with the tokens. */
+.portal-shell[data-ptheme], .mx-sheet{ --p-gold:var(--color-primary); --p-accent:var(--color-warning); }
+.portal-shell[data-ptheme] .portal-top{ margin:var(--space-4) 0 var(--space-1); }
+.portal-shell[data-ptheme] .portal-theme{ width:44px; height:44px; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); font-size:19px; }
+.portal-shell[data-ptheme] .portal-theme:hover{ border-color:var(--color-border-strong); }
+.portal-shell[data-ptheme] .portal-hello{ margin:0 0 var(--space-4); }
+.portal-shell[data-ptheme] .ptab-count, .mx-sheet .ptab-count{ background:var(--color-primary); color:var(--color-on-primary); font-family:var(--font-body); min-width:20px; line-height:20px; border-radius:var(--radius-pill); font-size:12px; }
+.portal-shell[data-ptheme] .card, .portal-shell[data-ptheme] .pmine-row, .portal-shell[data-ptheme] .preq, .portal-shell[data-ptheme] .pnext-line, .portal-shell[data-ptheme] .cs-side, .mx-sheet .card, .mx-sheet .preq{
+  background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.portal-shell[data-ptheme] .pnext-line{ background:var(--color-primary-soft); border-color:transparent; box-shadow:none; padding:var(--space-3) var(--space-4); gap:var(--space-1) var(--space-3); }
+.portal-shell[data-ptheme] .pnext-line b{ font-family:var(--font-heading); font-weight:600; }
+.portal-shell[data-ptheme] .pnext-badge, .mx-sheet .pnext-badge{ background:var(--color-surface); color:var(--color-text); font-family:var(--font-body); font-weight:700; font-size:12px; box-shadow:none; border-radius:var(--radius-pill); padding:2px 10px; }
+.portal-shell[data-ptheme] .pmine-row.next{ border-color:var(--color-primary); animation:none; }
+.portal-shell[data-ptheme] .pmonth{ font-family:var(--font-heading); font-weight:600; }
+.portal-shell[data-ptheme] .pmonth button{ border-radius:var(--radius-md); border-color:var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .od-card{ border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface); box-shadow:var(--shadow-card); padding:var(--space-4); }
+.portal-shell[data-ptheme] .od-card.mine{ border-color:var(--color-success); background:var(--color-success-soft); box-shadow:none; }
+.portal-shell[data-ptheme] .od-card b{ font-family:var(--font-heading); font-weight:600; font-size:17px; }
+/* chosen things: the one I picked, my name, the open day: the primary colour with its own text colour (never dark text on the green) */
+.portal-shell[data-ptheme] .pchoice button.on, .mx-sheet .pchoice button.on, .portal-shell[data-ptheme] .ppick.on, .mx-sheet .ppick.on, .portal-shell[data-ptheme] .cs-name.on, .mx-sheet .cs-name.on,
+.portal-shell[data-ptheme] .pdays button.active, .mx-sheet .pdays button.active, .portal-shell[data-ptheme] .mcal-name.me{ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .mcal-name.me small{ color:var(--color-on-primary); opacity:.85; }
+.portal-shell[data-ptheme] .pgoal-opt.on, .mx-sheet .pgoal-opt.on{ border-color:var(--color-primary); background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .pchip.me{ outline-color:var(--color-primary); box-shadow:none; }
+.portal-shell[data-ptheme] .mcal-name.sel{ outline-color:var(--color-text); }
+.portal-shell[data-ptheme] .cs-pick-item:hover, .portal-shell[data-ptheme] .cs-pick-item:focus-visible{ border-color:var(--color-text); }
+.portal-shell[data-ptheme] .mcal-others.today, .portal-shell[data-ptheme] .mcal-num.today{ border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .mcal-cell.editable:hover, .portal-shell[data-ptheme] .mcal-cell.editable:focus-visible, .portal-shell[data-ptheme] .pboard td.editable:hover{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .pboard tr.today th, .portal-shell[data-ptheme] .pboard tr.today td{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .cs-tab:hover{ background:var(--color-primary-soft); }
+/* the wishes: the same four colours everywhere, from the tokens */
+.portal-shell[data-ptheme] .cs-pick-btn.sel-yes, .portal-shell[data-ptheme] .cs-pick-item.opt-yes{ background:var(--color-success-soft); color:var(--color-success); }
+.portal-shell[data-ptheme] .cs-pick-btn.sel-no, .portal-shell[data-ptheme] .cs-pick-item.opt-no{ background:var(--color-danger-soft); color:var(--color-danger); }
+.portal-shell[data-ptheme] .tab-key .wish-yes, .portal-shell[data-ptheme] .mcal-key.compact .wish-yes{ color:var(--color-success); }
+.portal-shell[data-ptheme] .tab-key .wish-no, .portal-shell[data-ptheme] .mcal-key.compact .wish-no{ color:var(--color-danger); }
+.portal-shell[data-ptheme] .lvbtn.lv-yes.active, .portal-shell[data-ptheme] .lvbtn.lv-avoid.active, .portal-shell[data-ptheme] .lvbtn.lv-no.active, .portal-shell[data-ptheme] .lvbtn.lv-hours.active{ color:var(--color-bg); }
+.portal-shell[data-ptheme] .lv-absent{ background:var(--color-surface-alt); color:var(--color-text-secondary); }
+/* notes across the top: viewing as somebody, filling for somebody, acting as the coordinator, last month's preferences */
+.portal-shell[data-ptheme] .adm-viewas{ background:var(--color-warning-soft); border:1px solid var(--color-warning); border-radius:var(--radius-md); }
+.portal-shell[data-ptheme] .adm-viewas.edit, .portal-shell[data-ptheme] .pprefs-past{ background:var(--color-info-soft); border:1px solid var(--color-info); border-radius:var(--radius-md); }
+.portal-shell[data-ptheme] .adm-viewas.act{ background:var(--color-danger-soft); border-color:var(--color-danger); }
+.portal-shell[data-ptheme] .cs-req.cs-long{ border-inline-start-color:var(--color-warning); }
+.portal-shell[data-ptheme] .cs-ask, .portal-shell[data-ptheme] button.cs-issue-kind{ color:var(--color-warning); }
+.portal-shell[data-ptheme] .duty-card{ border:1px solid var(--color-border); background:var(--color-surface); }
+.portal-shell[data-ptheme] .duty-card.mine{ border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .duty-kid.me{ color:var(--color-primary); }
+.portal-shell[data-ptheme] .adm-weight.changed{ background:var(--color-primary-soft); }
+.portal-shell[data-ptheme] .portal-problem{ color:var(--color-text-secondary); }
+/* the month calendar: morning, evening and night as three calm shades of the look (the old white and navy overlays were made for the dark look only) */
+.portal-shell[data-ptheme] .mcal-cell[data-shift=m]{ background:color-mix(in srgb, var(--color-warning-soft) 55%, var(--color-surface)); }
+.portal-shell[data-ptheme] .mcal-cell[data-shift=e]{ background:var(--color-surface-alt); border-top:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .mcal-cell[data-shift=n]{ background:var(--color-info-soft); border-top:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .mcal-cell.weekend[data-shift=m]{ background:color-mix(in srgb, var(--color-warning-soft) 85%, var(--color-border)); }
+.portal-shell[data-ptheme] .mcal-cell.weekend[data-shift=e]{ background:color-mix(in srgb, var(--color-surface-alt) 80%, var(--color-border)); }
+.portal-shell[data-ptheme] .mcal-cell.weekend[data-shift=n]{ background:color-mix(in srgb, var(--color-info-soft) 80%, var(--color-border)); }
+.portal-shell[data-ptheme] .mcal-num.weekend, .portal-shell[data-ptheme] .mcal-others.weekend{ background:color-mix(in srgb, var(--color-surface-alt) 80%, var(--color-border)); }
+/* the side menu of the instructors' and the coordinator's portals (14e portalSideHtml): on a computer it replaces the top row and the tabs; on a phone the tabs stay */
+.portal-shell[data-ptheme] > .ps-side{ display:none; }
+@media (min-width:1024px){
+  #protected-app:has(#view-portal.active .portal-shell > .ps-side){ max-width:none; padding-inline:24px; }
+  #protected-app:has(#view-portal.active .portal-shell > .ps-side) > #shared-header, #protected-app:has(#view-portal.active .portal-shell > .ps-side) > #shared-logout-row{ display:none; }
+  .portal-shell[data-ptheme]:has(> .ps-side){ display:grid; grid-template-columns:248px minmax(0, 1fr); column-gap:var(--space-8); align-items:start; max-width:1240px; margin-inline:auto; padding-top:var(--space-6); }
+  .portal-shell[data-ptheme].wide:has(> .ps-side){ max-width:1700px; }
+  .portal-shell[data-ptheme]:has(> .ps-side) > *{ grid-column:2; min-width:0; }
+  .portal-shell[data-ptheme]:has(> .ps-side) > .portal-top, .portal-shell[data-ptheme]:has(> .ps-side) > .portal-hello, .portal-shell[data-ptheme]:has(> .ps-side) > .portal-tabs{ display:none; }
+  .portal-shell[data-ptheme] > .ps-side{ grid-column:1; grid-row:1 / span 40; position:sticky; top:var(--space-4); display:flex; flex-direction:column; gap:var(--space-2); min-height:calc(100vh - 64px); box-sizing:border-box;
+    padding:var(--space-6) var(--space-4); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); }
+}
+.portal-shell[data-ptheme] .ps-side-head{ display:flex; flex-direction:column; gap:2px; padding:0 var(--space-3) var(--space-4); }
+.portal-shell[data-ptheme] .ps-side-head b{ font-family:var(--font-heading); font-weight:600; font-size:20px; color:var(--color-heading); }
+.portal-shell[data-ptheme] .ps-side-head span{ font-size:14px; color:var(--color-text-secondary); }
+.portal-shell[data-ptheme] .ps-side-nav{ display:flex; flex-direction:column; gap:2px; }
+.portal-shell[data-ptheme] .ps-side-nav button, .portal-shell[data-ptheme] .ps-link{ display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:44px; padding:0 var(--space-3); border:0; border-radius:var(--radius-sm);
+  background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:15px; text-align:start; cursor:pointer; transition:background-color var(--motion-instant) var(--ease-standard), color var(--motion-instant) var(--ease-standard); }
+.portal-shell[data-ptheme] .ps-side-nav button:hover, .portal-shell[data-ptheme] .ps-link:hover{ background:var(--color-surface-alt); color:var(--color-text); }
+.portal-shell[data-ptheme] .ps-side-nav button.active{ background:var(--color-primary-soft); color:var(--color-text); }
+.portal-shell[data-ptheme] .ps-side-nav button.active .ps-ico{ color:var(--color-primary); }
+.portal-shell[data-ptheme] .ps-side-nav .ps-word{ flex-grow:1; }
+.portal-shell[data-ptheme] .ps-ico{ flex:none; }
+.portal-shell[data-ptheme] .ps-side-foot{ margin-top:auto; padding-top:var(--space-6); display:flex; flex-direction:column; gap:2px; }
+.portal-shell[data-ptheme] .ps-look{ display:flex; margin-top:var(--space-3); padding:3px; gap:2px; border-radius:var(--radius-sm); background:var(--color-surface-alt); border:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .ps-look button{ flex:1; min-height:36px; border:0; border-radius:6px; background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:14px; cursor:pointer; }
+.portal-shell[data-ptheme] .ps-look button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
+
+/* the app's first screen (14e showAppHome): the person's look, a quiet title, the places as tiles with a line icon (Guy 2026-10-30) */
+body:has(#view-apphome.active .mx-home[data-ptheme=dark]){ background:#1C1A17; }
+body:has(#view-apphome.active .mx-home[data-ptheme=light]){ background:#FAF7F2; }
+.mx-home{ color:var(--color-text); text-align:start; padding-top:var(--space-6); padding-bottom:var(--space-12); }
+.mx-home .apphome-top{ display:flex; justify-content:flex-end; min-height:44px; }
+.mx-home .home-text-btn{ position:static; min-height:44px; padding:0 var(--space-2); color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:15px; }
+.mx-home .eyebrow-gold{ color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:14px; letter-spacing:0; }
+.mx-home .apphome-title{ font-family:var(--font-heading); font-weight:600; font-size:26px; line-height:1.25; color:var(--color-heading); margin:var(--space-1) 0 var(--space-6); }
+.mx-home .apphome-cards{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--space-3); }
+.mx-home .apphome-hello{ grid-column:1 / -1; color:var(--color-text-secondary); font-size:15px; margin:0 0 var(--space-1); }
+.mx-home .home-card{ display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-2); min-height:132px; padding:var(--space-4); text-align:start; background:var(--color-surface); color:var(--color-text);
+  border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); font-family:var(--font-body); transition:border-color var(--motion-instant) var(--ease-standard), background-color var(--motion-instant) var(--ease-standard); }
+.mx-home .home-card:hover{ border-color:var(--color-border-strong); background:var(--color-surface); }
+.mx-home .home-card:focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; }
+.mx-home .home-card-wrap:last-child:nth-child(odd of .home-card-wrap){ grid-column:1 / -1; }          /* (an odd tile out takes the whole row) */
+.mx-home .apphome-ico{ display:flex; align-items:center; justify-content:center; width:40px; height:40px; margin-bottom:var(--space-1); border-radius:var(--radius-md); background:var(--color-surface-alt); color:var(--color-primary); font-size:0; }
+.mx-home .home-card-title{ font-family:var(--font-heading); font-weight:600; font-size:17px; }
+.mx-home .home-card-sub{ font-size:14px; color:var(--color-text-secondary); line-height:1.45; }
+.mx-home .apphome-demo{ color:var(--color-text-secondary); }
+/* the bottom bar ("בית", "חזור") and the floating "חזור" on a computer: the colours of the look that is open (Guy 2026-10-30) */
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=dark]) :is(.bottom-nav, .nav-back-float){ background:#24211D; border-color:#3A362F; color:#A8A196; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=light]) :is(.bottom-nav, .nav-back-float){ background:#FFFFFF; border-color:#E7E0D3; color:#6E675C; box-shadow:none; }
+body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) :is(.bottom-nav, .nav-back-float){ background:#22170E; border-color:#4A3420; color:#D3BD97; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) .bottom-nav{ -webkit-backdrop-filter:none; backdrop-filter:none; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) :is(.bottom-nav-btn, .nav-back-float){ font-family:'Assistant', Arial, sans-serif; font-weight:600; font-size:13px; color:inherit; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) .nav-back-float{ font-size:15px; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=dark]) .bottom-nav-btn.active{ background:#2D3328; color:#E9E4DA; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=light]) .bottom-nav-btn.active{ background:#E7ECE2; color:#2D2A24; }
+body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) .bottom-nav-btn.active{ background:#352612; color:#F7ECD8; }
+/* the personal sign-in (14h srvLoginHtml): the same calm card, fields and one main button */
+body:has(#view-portal.active .mx-home[data-ptheme=dark]){ background:#1C1A17; }
+body:has(#view-portal.active .mx-home[data-ptheme=light]){ background:#FAF7F2; }
+.mx-login{ max-width:440px; margin-inline:auto; }
+.mx-login .card{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:var(--space-6); display:flex; flex-direction:column; gap:var(--space-3); color:var(--color-text); }
+.mx-login .pfield{ display:flex; flex-direction:column; gap:var(--space-2); font-weight:600; font-size:15px; }
+.mx-login input{ background:var(--color-surface-inset); color:var(--color-text); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); font-family:var(--font-body); font-size:16px; min-height:44px; padding:0 12px; }
+.mx-login input:focus{ outline:2px solid var(--color-primary); outline-offset:1px; }
+.mx-login .btn{ background:var(--color-primary); color:var(--color-on-primary); border:1px solid transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-weight:700; font-size:16px; min-height:48px; }
+.mx-login .btn.ghost{ background:transparent; color:var(--color-text); border-color:var(--color-border-strong); font-weight:600; }
+.mx-login .plogin-staff-link{ color:var(--color-link); }
+.mx-login .plogin-error{ color:var(--color-danger); }
+/* the לומדה's list (14zh): its own title row replaces the site's header, like the portals; the chosen buttons on the primary colour */
+#protected-app:has(:is(#view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme]) > #shared-header, #protected-app:has(:is(#view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme]) > #shared-logout-row{ display:none; }
+.portal-shell[data-ptheme] .ln-ibtn[aria-pressed="true"]{ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
+.portal-shell[data-ptheme] .ln-card-btn:hover{ border-color:var(--color-border-strong); background:var(--color-surface); }
+/* the question in the middle of the screen (05 confirmSheet) and the short messages at the bottom (toast), in a staff area's look (Guy 2026-10-30: "ההודעות שקופצות עדיין בעיצוב הישן") */
+.mx-sheet .sheet-card p, .mx-sheet .confirm-text{ color:var(--color-text-secondary); line-height:1.6; }
+.mx-sheet .confirm-actions .btn{ min-height:48px; }
+.mx-sheet .confirm-ok.danger{ background:var(--color-danger); color:var(--color-surface); border-color:var(--color-danger); }
+.mx-sheet .confirm-ok.danger:hover{ background:var(--color-danger); opacity:.92; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=dark]) .toast{ background:#2C2925; border-color:#4A453C; color:#E9E4DA; font-family:'Assistant', Arial, sans-serif; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=light]) .toast{ background:#2D2A24; border-color:#2D2A24; color:#FAF7F2; font-family:'Assistant', Arial, sans-serif; box-shadow:0 8px 24px rgba(45, 42, 36, .18); }
+body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) .toast{ background:#2A1C10; border-color:#6A4B2C; color:#F7ECD8; font-family:'Assistant', Arial, sans-serif; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) .toast-undo-btn{ font-family:'Assistant', Arial, sans-serif; font-weight:700; }
+/* "חודש | שבוע" above a month's calendar, and the week with ‹ › (14e mcalViewBarHtml, Guy 2026-11-03) */
+.mcal-viewbar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin:8px 0 12px; }
+.portal-shell[data-ptheme] .mcal-seg{ display:inline-flex; padding:3px; gap:2px; border-radius:var(--radius-pill); background:var(--color-surface-alt); border:1px solid var(--color-border); }
+.portal-shell[data-ptheme] .mcal-seg button{ min-height:36px; padding:0 16px; border:0; border-radius:var(--radius-pill); background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-weight:600; font-size:14px; cursor:pointer; }
+.portal-shell[data-ptheme] .mcal-seg button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
+.mcal-weeknav{ display:flex; align-items:center; gap:8px; }
+.mcal-weeknav b{ min-width:120px; text-align:center; font-family:var(--font-heading, inherit); font-weight:600; }
+.portal-shell[data-ptheme] .mcal-wk{ width:44px; height:44px; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); font-size:20px; cursor:pointer; }
+.sv-vac > h2.psec:first-child{ display:none; }          /* (the fold's own title says "בקשת חופשה") */
+/* the weekly view as rows (14e monthCalHtml opts.rows): a day per row, its shifts side by side */
+.mcal.mcal-wrows{ display:flex; flex-direction:column; gap:8px; }
+.mcal-wrow{ display:grid; grid-template-columns:56px minmax(0, 1fr); gap:8px; align-items:stretch; padding:8px; border-radius:12px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); }
+.mcal-wrow.today{ border-color:var(--color-primary, var(--gold)); }
+.mcal-wrow.weekend{ background:var(--color-surface-alt, var(--p-panel2)); }
+.mcal-wrow-day{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:13px; color:var(--color-text-secondary, var(--p-muted)); }
+.mcal-wrow-day b{ font-size:16px; color:var(--color-text, var(--p-text)); }
+.mcal-wrow-cells{ display:grid; grid-template-columns:repeat(auto-fit, minmax(84px, 1fr)); gap:6px; }
+.mcal-wrow-shift{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.mcal-wrow-lbl{ font-size:12px; font-weight:700; color:var(--color-text-secondary, var(--p-muted)); }
+.mcal-wrow-lbl small{ font-weight:400; }
+.mcal-wrows .mcal-cell{ min-height:36px; border-radius:8px; padding:4px; }
+.mcal-wrows .mcal-name{ font-size:13px; padding:2px 6px; }
+/* names never break in the middle of a word, also with the larger text (Guy 2026-11-03) */
+.mcal-name{ overflow-wrap:normal !important; word-break:normal; hyphens:none; overflow:hidden; text-overflow:ellipsis; }
+/* "תצוגת העדפות" and the weekend row of the weekly preferences (14zj, Guy 2026-11-03) */
+.pview-row{ display:flex; justify-content:flex-end; margin:0 0 8px; }
+.pview-btn{ min-height:36px !important; font-size:14px !important; }
+.pview-opt{ display:flex; flex-direction:column; gap:8px; margin:12px 0; font-weight:600; }
+.mx-sheet .pview-seg, .pview-seg{ display:flex; padding:3px; gap:2px; border-radius:var(--radius-pill, 999px); background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); }
+.pview-seg button{ flex:1; min-height:40px; border:0; border-radius:var(--radius-pill, 999px); background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; font-size:15px; cursor:pointer; }
+.pview-seg button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.pwlong{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0 4px; padding:8px; border-radius:12px; border:1px dashed var(--color-border-strong, var(--p-line)); }
+.pwlong-btn{ flex:1 1 180px; }
+.pwlong .ppick{ min-height:44px; padding:0 14px; border-radius:999px; border:1px solid var(--color-border-strong, var(--p-line)); background:transparent; color:inherit; font-family:inherit; font-weight:600; cursor:pointer; }
+/* the first screen (Guy 2026-11-03): larger icons and titles; the second line behind a quiet "פירוט" */
+.mx-home .home-card-wrap{ position:relative; display:flex; flex-direction:column; }
+.mx-home .home-card-wrap .home-card{ flex:1; min-height:140px; align-items:center; justify-content:center; text-align:center; gap:var(--space-3); padding:var(--space-6) var(--space-4) var(--space-8); }
+.mx-home .apphome-ico{ width:64px; height:64px; border-radius:var(--radius-lg); }
+.mx-home .apphome-ico svg{ width:34px; height:34px; }
+.mx-home .home-card-title{ font-size:19px; }
+.mx-home .home-card-wrap:not(.open) .home-card-sub{ display:none; }
+.mx-home .home-card-more{ position:absolute; bottom:6px; inset-inline:0; margin-inline:auto; width:max-content; min-height:28px; padding:0 10px; border:0; background:transparent; color:var(--color-text-secondary); opacity:.7; font-family:var(--font-body); font-size:12px; cursor:pointer; }
+.mx-home .home-card-more:hover, .mx-home .home-card-more:focus-visible{ opacity:1; }
+/* the settings (the gear): the options smaller than the titles (Guy 2026-11-03) */
+.mx-sheet:has([data-set-theme]) .sheet-card .pchoice button{ font-size:14px; min-height:40px; }
+.mx-sheet:has([data-set-theme]) .sheet-card .pnote{ font-size:13.5px; }
+.mx-sheet:has([data-set-theme]) .sheet-card summary{ font-size:16px; }
+/* a phone: "→ מסך ראשי" at the top of the instructors' portal goes — "בית" in the bottom bar does it (Guy 2026-11-03); "יציאה" stays */
+@media (max-width:700px){ .portal-shell[data-ptheme]:not(.wide) #portal-home.is-home{ visibility:hidden; } }
+/* "כוננית סוף שבוע" (14zl, Guy 2026-11-03) */
+.oc{ display:flex; flex-direction:column; gap:12px; }
+.oc-periods{ display:flex; flex-wrap:wrap; gap:6px; }
+.oc-period{ min-height:40px; padding:0 14px; border-radius:999px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; font-size:14px; cursor:pointer; }
+.oc-period.on{ background:var(--color-primary, var(--gold)); color:var(--color-on-primary, #1b1b1b); border-color:var(--color-primary, var(--gold)); }
+.oc-active{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; border-radius:12px; background:var(--color-primary-soft, var(--p-panel2)); }
+.oc-active.oc-none{ background:var(--color-warning-soft, var(--p-avoid-bg)); color:var(--color-warning, var(--p-avoid)); }
+.oc-active.oc-none b{ font-size:17px; }
+.oc-events{ display:flex; flex-direction:column; gap:6px; padding:12px 14px; border-radius:12px; border:1px solid var(--color-info, var(--p-can)); background:var(--color-info-soft, var(--p-can-bg)); }
+.oc-event{ display:flex; flex-direction:column; } .oc-event small{ color:var(--color-text-secondary, var(--p-muted)); }
+.oc-person{ display:flex; flex-direction:column; gap:8px; padding:12px; margin:8px 0; border-radius:12px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); }
+.oc-who{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; } .oc-who small{ color:var(--color-text-secondary, var(--p-muted)); }
+.oc-dir{ display:grid; grid-template-columns:52px minmax(0, 1fr); gap:6px 8px; align-items:center; padding-top:8px; border-top:1px dashed var(--color-border, var(--p-line)); }
+.oc-dir-lbl{ grid-row:span 3; font-weight:700; color:var(--color-text-secondary, var(--p-muted)); }
+.oc-need{ display:flex; flex-wrap:wrap; padding:3px; gap:2px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); }
+.oc-need button{ flex:1 1 auto; min-height:36px; padding:0 8px; border:0; border-radius:999px; background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; font-size:13px; cursor:pointer; }
+.oc-need button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.oc-need button[data-oc-need=need][aria-pressed=true]{ background:var(--color-warning-soft, var(--p-avoid-bg)); color:var(--color-warning, var(--p-avoid)); }
+.oc-field{ display:flex; align-items:center; gap:8px; font-size:14px; } .oc-field span{ min-width:42px; color:var(--color-text-secondary, var(--p-muted)); } .oc-field input{ flex:1; min-width:0; min-height:40px; }
+.oc-ordered{ display:flex; align-items:center; gap:8px; font-weight:600; min-height:40px; }
+.oc-ordered input{ width:20px; height:20px; }
+.oc-cell{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.oc-x, .oc-add{ min-width:28px; min-height:28px; border-radius:8px; border:1px solid var(--color-border-strong, var(--p-line)); background:transparent; color:inherit; font-size:15px; line-height:1; cursor:pointer; }
+.oc-add{ font-weight:700; color:var(--color-primary, var(--gold)); }
+/* "יומן הילדים" (14zm, Guy 2026-11-03) */
+.dg{ display:flex; flex-direction:column; gap:12px; }
+.dg-top{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.dg-ev{ display:grid; grid-template-columns:96px minmax(0, 1fr); gap:10px; width:100%; margin:4px 0; padding:10px 12px; text-align:start; border-radius:12px; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); color:inherit; font-family:inherit; font-size:15px; cursor:pointer; }
+.dg-today .dg-ev{ border-color:var(--color-primary, var(--gold)); background:var(--color-primary-soft, var(--p-panel2)); font-weight:600; }
+.dg-time{ color:var(--color-text-secondary, var(--p-muted)); font-variant-numeric:tabular-nums; }
+.dg-what{ display:flex; flex-direction:column; gap:2px; } .dg-what small{ color:var(--color-text-secondary, var(--p-muted)); font-weight:400; }
+.dg-day-h{ margin:12px 0 4px; font-weight:700; color:var(--color-text-secondary, var(--p-muted)); }
+.dg-wday{ padding:4px 0 8px; border-bottom:1px solid var(--color-border, var(--p-line)); } .dg-wday.today .dg-day-h{ color:var(--color-primary, var(--gold)); }
+.dg-empty{ color:var(--color-text-secondary, var(--p-muted)); padding:4px 0; }
+.dg-kind{ display:flex; padding:3px; gap:2px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); margin:8px 0; }
+.dg-kind button{ flex:1; min-height:40px; border:0; border-radius:999px; background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; cursor:pointer; }
+.dg-kind button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.dg-times, .dg-return{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.dg-return[hidden]{ display:none; }
+@media (max-width:420px){ .dg-ev{ grid-template-columns:1fr; gap:2px; } }
+/* "פורטל המנהלת" (14zn, Guy 2026-11-03) */
+.mgr-weeknav{ justify-content:center; margin:4px 0 12px; }
+.mgr-links{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+.mgr-tt-day{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.mgr-tt-item{ padding:4px 10px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); font-size:14px; }
+.mgr-kids{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
+.mgr-kid{ display:flex; flex-direction:column; gap:8px; }
+.mgr-kid-h{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; } .mgr-kid-h small{ color:var(--color-text-secondary, var(--p-muted)); }
+.mgr-goals{ margin:0; padding-inline-start:18px; font-size:14px; }
+.mgr-kid-acts{ display:flex; flex-wrap:wrap; gap:6px; }
+.mgr-conv{ display:flex; flex-direction:column; gap:2px; width:100%; text-align:start; cursor:pointer; color:inherit; font-family:inherit; }
+.mgr-conv small{ color:var(--color-text-secondary, var(--p-muted)); }
+.mgr-conv.fresh{ border-color:var(--color-primary, var(--gold)); }
+.mgr-chat-top{ display:flex; justify-content:flex-end; margin-bottom:8px; }
+.mgr-thread{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+.mgr-msg{ max-width:85%; padding:8px 12px; border-radius:12px; background:var(--color-surface, var(--p-panel)); border:1px solid var(--color-border, var(--p-line)); align-self:flex-start; }
+.mgr-msg.mine{ align-self:flex-end; background:var(--color-primary-soft, var(--p-panel2)); }
+.mgr-msg small{ display:block; color:var(--color-text-secondary, var(--p-muted)); }
+.mgr-compose{ display:flex; gap:8px; align-items:flex-end; } .mgr-compose textarea{ flex:1; }
+.mgr-new-msg{ display:flex; flex-direction:column; gap:10px; }
+.mgr-seg{ display:flex; padding:3px; gap:2px; border-radius:999px; background:var(--color-surface-alt, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); }
+.mgr-seg button{ flex:1; min-height:40px; border:0; border-radius:999px; background:transparent; color:var(--color-text-secondary, var(--p-muted)); font-family:inherit; font-weight:600; cursor:pointer; }
+.mgr-seg button[aria-pressed=true]{ background:var(--color-surface, var(--p-panel)); color:var(--color-text, var(--p-text)); box-shadow:var(--shadow-card, none); }
+.mgr-sent summary{ flex-wrap:wrap; } .mgr-sent summary small{ color:var(--color-text-secondary, var(--p-muted)); font-weight:400; }
+.mgr-readers{ list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:4px 12px; }
+.mgr-readers li{ display:flex; justify-content:space-between; gap:8px; } .mgr-readers small{ color:var(--color-text-secondary, var(--p-muted)); }
+/* the coordinator on a phone (Guy 2026-11-03): one week as rows, the shift opened by a tap; the side panel stays on the computer */
+@media (max-width:700px){
+  .portal-shell.wide .cs-layout{ display:block; }
+  .portal-shell.wide .cs-layout .cs-side{ display:none; }
+  .portal-shell.wide .mcal-wrows .mcal-cell.editable{ min-height:44px; cursor:pointer; }
+}
+/* many tabs on a phone (the coordinator's, the manager's): two rows rather than a tab cut at the edge */
+@media (max-width:700px){ .portal-shell[data-ptheme] .portal-tabs{ flex-wrap:wrap; overflow-x:visible; } .portal-shell[data-ptheme] .portal-tabs button{ padding:var(--space-2) var(--space-3); } }
+/* a demo for Guy (2026-11-03), the shift window of the coordinator only: on a computer it opens in the middle of the screen, not stuck to the bottom,
+   and its buttons stay in sight at the bottom of the window while its content scrolls (inside the window only; nothing covers the site) */
+@media (min-width:900px){
+  .sheet.psheet-center{ align-items:center; }
+  .sheet.psheet-center .sheet-card{ border-radius:18px; max-height:85vh; max-height:85dvh; }
+  body:has(.view.active .portal-shell.wide) .sheet.psheet-center .sheet-card{ max-height:calc(85dvh / 1.2); }
+  .sheet.psheet-center .confirm-actions{ position:sticky; bottom:-20px; margin-bottom:-20px; padding:10px 0 20px; background:var(--color-surface-raised, var(--panel)); z-index:1; border-top:1px solid var(--color-border, var(--line)); }
+}
+/* a button a window hides (e.g. "הוספה" before an instructor is chosen) stays hidden: the theme's .btn display must not bring it back */
+.psheet [hidden]{ display:none !important; }
+/* the timetable's hour: two short lists (00–23 : minutes) instead of a time box that a phone may show as AM/PM (Guy 2026-11-03) */
+.ctl-tt-row{ grid-template-columns:auto 46px 1fr auto; }
+.ctl-tt-time{ display:inline-flex; align-items:center; gap:2px; font-variant-numeric:tabular-nums; }
+.ctl-tt-time select{ min-height:42px; min-width:54px; padding:4px 6px; border-radius:10px; font:inherit; font-size:16px; background:var(--color-surface, var(--panel-2)); color:var(--color-text, var(--text)); border:1px solid var(--color-border, var(--line)); }
+.ctl-tt-moved{ animation:tt-moved 1.8s ease-out; border-radius:10px; }
+@keyframes tt-moved{ 0%, 40%{ box-shadow:0 0 0 2px var(--color-primary, var(--gold)); } 100%{ box-shadow:0 0 0 2px transparent; } }
+@media (prefers-reduced-motion:reduce){ .ctl-tt-moved{ animation:none; } }
+/* a chosen person in a new conversation: a ✓ too, so the choice shows on every screen and theme (Guy 2026-11-03) */
+.mc-people button.on::before{ content:'✓ '; font-weight:700; }
+/* the manager's messages: the groups and the names one under the other; the children folded, the name first */
+.mm-groups, .mm-some{ display:grid; gap:2px; margin:4px 0 8px; }
+.mm-names summary small{ margin-inline-start:auto; color:var(--color-text-secondary, var(--muted)); }
+.mm-list{ display:grid; gap:0; max-height:50vh; overflow-y:auto; }
+.mgr-new-msg{ display:grid; gap:8px; }
+.mgr-kid summary small{ margin-inline-start:auto; color:var(--color-text-secondary, var(--muted)); font-weight:400; }
+/* the diary's week: a board across, a column per day; on a phone it scrolls sideways inside itself (Guy 2026-11-03) */
+.dg-week-x{ display:grid; grid-template-columns:repeat(7, minmax(88px, 1fr)); gap:6px; overflow-x:auto; padding-bottom:6px; scroll-snap-type:x proximity; }
+.dg-week-x .dg-wday{ border-bottom:0; border-radius:12px; padding:6px; background:var(--color-surface, var(--p-panel2)); border:1px solid var(--color-border, var(--p-line)); scroll-snap-align:start; min-width:0; }
+.dg-week-x .dg-wday.today{ border-color:var(--color-primary, var(--gold)); }
+.dg-week-x .dg-ev{ grid-template-columns:1fr; gap:2px; padding:8px; font-size:.92em; }
+/* the bin on every event: faint, lit when the mouse is on it (on a phone always faint, a tap asks first) */
+.dg-ev-wrap{ position:relative; display:flex; align-items:stretch; gap:4px; }
+.dg-ev-wrap .dg-ev{ flex:1; min-width:0; }
+.dg-del{ flex:none; display:grid; place-items:center; width:36px; margin:4px 0; border:0; border-radius:10px; background:transparent; color:var(--color-text, var(--text)); opacity:.35; cursor:pointer; transition:opacity .15s, color .15s, background .15s; }
+.dg-del:hover, .dg-del:focus-visible{ opacity:1; color:var(--color-danger, #d9534f); background:var(--color-danger-soft, rgba(217, 83, 79, .12)); }
+.dg-week-x .dg-ev-wrap{ flex-direction:column; } .dg-week-x .dg-del{ width:auto; height:28px; margin:0; }
+/* the weekend's staff and taxis: by shift, the name on the right, arrival and return short on the left; time and address folded */
+.oc-views{ margin:10px 0; }
+.oc-group{ margin:10px 0; border:1px solid var(--color-border, var(--p-line)); border-radius:12px; overflow:hidden; }
+.oc-group-h{ padding:8px 12px; background:var(--color-surface, var(--p-panel2)); font-size:.95em; }
+.oc-group-h bdi{ color:var(--color-text-secondary, var(--p-muted)); margin-inline-start:6px; }
+.oc-p{ display:grid; grid-template-columns:minmax(64px, 26%) 1fr; gap:8px; align-items:start; padding:8px 12px; border-top:1px solid var(--color-border, var(--p-line)); }
+.oc-p-name{ display:grid; padding-top:6px; } .oc-p-name small{ color:var(--color-text-secondary, var(--p-muted)); }
+.oc-p-dirs{ display:grid; gap:4px; min-width:0; }
+.oc-d > summary{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; list-style:none; cursor:pointer; padding:2px 0; }
+.oc-d > summary::-webkit-details-marker{ display:none; }
+.oc-d-lbl{ min-width:42px; font-weight:600; font-size:.92em; } .oc-d-lbl::after{ content:' ▾'; opacity:.5; font-size:.8em; } .oc-d[open] .oc-d-lbl::after{ content:' ▴'; }
+.oc-need{ display:inline-flex; } .oc-need button{ padding:4px 10px; min-height:34px; font-size:.9em; }
+.oc-ordered-btn{ min-height:34px; padding:4px 10px; border-radius:999px; border:1px solid var(--color-border, var(--p-line)); background:transparent; color:inherit; font:inherit; font-size:.88em; cursor:pointer; }
+.oc-ordered-btn[aria-pressed="true"]{ background:var(--color-success-soft, rgba(76, 175, 80, .18)); border-color:var(--color-success, #4caf50); font-weight:600; }
+.oc-d-body{ display:grid; grid-template-columns:110px 1fr; gap:6px; padding:6px 0 4px; }
+@media (max-width:420px){ .oc-p{ grid-template-columns:1fr; } .oc-p-name{ padding-top:0; } .oc-d-body{ grid-template-columns:1fr; } }
+@media (min-width:760px){ .oc-p-dirs{ grid-template-columns:1fr 1fr; gap:4px 16px; } }          /* (a computer: arrival and return side by side, half the height) */
+@media (max-width:700px){ .dg-week-x{ grid-template-columns:repeat(7, minmax(128px, 1fr)); } }          /* (a phone: a day at a readable width, the week slides sideways) */
+/* the coordinator's shift window in the portal's own colours (it kept the old dark rows in a light theme); on a phone the name and hours
+   on one line, the buttons under them across the whole width — nothing runs out of its box (Guy 2026-11-03) */
+.mx-sheet .pedit-row{ background:var(--color-surface, var(--panel-2)); border-color:var(--color-border, var(--line)); color:var(--color-text, var(--text)); }
+.mx-sheet .pedit-row em{ color:var(--color-text-secondary, var(--muted)); }
+@media (max-width:700px){
+  .pedit-row:not(.editing){ flex-wrap:wrap; row-gap:6px; }
+  .pedit-row:not(.editing) > span:first-child{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pedit-row > .pedit-btns{ flex:1 1 100%; display:flex; gap:6px; margin:0; }
+  .pedit-row > .pedit-btns .btn{ flex:1; min-width:0; min-height:38px; padding:4px 6px; white-space:nowrap; }
+}
+/* the name being dragged with a finger: big, beside the finger */
+.cs-drag-ghost{ position:fixed; top:-200px; left:-200px; padding:10px 16px; border-radius:14px; font:700 20px/1.2 inherit; font-family:inherit; background:var(--color-primary, var(--gold)); color:var(--color-on-primary, #1b1b1b); box-shadow:0 8px 24px rgba(0, 0, 0, .35); white-space:nowrap; pointer-events:none; }
+/* the picture to share: two clear buttons, the week or the whole month */
+.cs-share-pick{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+.cs-share-pick .btn{ display:grid; gap:2px; min-height:64px; } .cs-share-pick .btn small{ font-weight:400; opacity:.85; }
+/* the coordinator's phone: no export to Excel and no printing (not for a phone: Guy 2026-11-03) */
+@media (max-width:700px){ #cs-xlsx, #cs-print{ display:none !important; } }
+/* the light theme: an option not chosen yet must not melt into the page (Guy 2026-11-03, across every portal and screen). The general border
+   (#E7E0D3) is kept for cards; everything one taps or fills — buttons, the shifts to mark, choices, toggles, fields — reads its own stronger border.
+   Only the border variables change, so a chosen option keeps its own colours, and the colours of the preferences stay as they are. */
+:is(.portal-shell, .mx-sheet, .mx-home)[data-ptheme=light] :is(button, select, textarea, input, [role=option], .mx-seg, .pchoice, .cs-pick-btn){
+  --color-border:#B5A991; --color-border-strong:#9F927A; --line:#B5A991; --p-line:#B5A991;
+}
+/* the light theme, "בלי צבעים": a shift marked "לא" stays faded (that is its meaning), but can still be read on the pale page */
+:is(.portal-shell, .mx-sheet)[data-ptheme=light] :is(.pcal.plain .pshift.lv-no, .pweek.plain .pshift.lv-no, .pcal.plain .plong.lv-no, .pplain-demo.lv-no){ opacity:.55; }
+/* the small switch of the preferences: "שבועי, בלי צבעים | חודשי, עם צבעים" */
+.pview-row{ display:flex; justify-content:center; margin:4px 0 10px; }
+.pview-seg button{ font-size:.85em; padding:4px 12px; min-height:34px; }
+/* the folded time and address: a visible little button (what is filled, in short, or "שעה וכתובת"), not only an arrow (Guy 2026-11-03) */
+.oc-d-lbl::after{ content:none !important; }
+.oc-d-more{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:4px; min-height:34px; padding:4px 10px; border-radius:999px; border:1px dashed var(--color-border-strong, var(--p-line)); color:var(--color-text-secondary, var(--p-muted)); font-size:.85em; max-width:100%; }
+.oc-d[open] .oc-d-more i{ display:inline-block; transform:rotate(180deg); }
+/* "בקרת ילדים": today's bonuses, and by each one who lost it today (Guy 2026-11-04) */
+.kq-bonus-today{ margin-top:6px; border:1px solid var(--line); border-radius:12px; padding:6px 10px; }
+.kq-bonus-today summary{ cursor:pointer; font-weight:700; min-height:36px; display:flex; align-items:center; }
+.kq-bt-row{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:6px 0; border-top:1px solid var(--line); }
+.kq-bt-row.now .kq-bt-text{ font-weight:800; }
+.kq-bt-row .bb-icon{ font-size:20px; } .kq-bt-text{ flex:1; }
+.kq-bt-out{ flex-basis:100%; font-size:13px; color:var(--yellow, #e0b000); display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.kq-bt-note{ display:block; margin-top:4px; opacity:.7; }
+/* the timetable editor: the start and the end of an activity side by side (Guy 2026-11-04) */
+.ctl-tt-times{ display:inline-flex; align-items:center; gap:2px; flex-wrap:wrap; }
+.ctl-tt-dash{ opacity:.6; padding:0 2px; }
+@media (max-width:520px){ .ctl-tt-row{ grid-template-columns:46px minmax(0, 1fr) auto; } .ctl-tt-row .ctl-tt-times{ grid-column:1 / -1; } }          /* (the picture small, the words get the room: Guy 2026-11-04) */
+/* the ahmash control: the children's diary of today, to read only */
+.ctl-dg-seg{ margin:4px 0 10px; }
+.ctl-dg-row{ display:grid; grid-template-columns:96px minmax(0, 1fr); gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+.ctl-dg-time{ font-weight:700; } .ctl-dg-what small{ display:block; opacity:.8; }
+.ctl-dg-note{ margin-top:8px; }
+/* the marker of the steps of the preferences: numbered, a tiny egg that hatches on the way (drawn in 14zj-simple-prefs.js) */
+.pweek-steps{ flex-wrap:wrap; gap:3px; }
+.pweek-steps i{ position:relative; display:inline-grid; place-items:center; width:26px; height:32px; border-radius:8px; background:transparent; font-style:normal; opacity:.55; }
+.pweek-steps i.done{ opacity:.85; }
+.pweek-steps i.on{ opacity:1; background:var(--color-primary-soft, var(--p-panel2)); box-shadow:0 0 0 1.5px var(--color-primary, var(--gold)); }
+.pweek-steps b{ font-size:10px; line-height:1; font-weight:700; color:var(--color-text, var(--p-text)); font-variant-numeric:tabular-nums; }
+.pw-egg{ width:20px; height:20px; display:block; overflow:visible; }
+.pw-egg .s{ stroke-width:1.1; stroke-linejoin:round; }
+.pw-egg .k{ fill:none; stroke:#7A5A2B; stroke-width:1.1; stroke-linecap:round; stroke-linejoin:round; }
+.pw-egg .h{ fill:#4A3418; stroke:#7A5A2B; stroke-width:.8; stroke-linejoin:round; }
+.pw-egg .c{ fill:#FFD84A; stroke:#C99A1E; stroke-width:.8; }
+.pw-egg .e{ fill:#2D2A24; }
+.pw-egg .b{ fill:#F08A24; }
+/* the day itself, in the process: a tap on it marks the whole day */
+.pwday-all{ display:block; width:100%; padding:4px 6px; margin:-4px -6px 2px; border:0; border-radius:8px; background:transparent; color:inherit; font:inherit; font-size:16px; text-align:start; cursor:pointer; }
+.pwday-all:hover, .pwday-all:focus-visible{ background:var(--color-primary-soft, var(--p-panel2)); }
+/* "שבוע-שבוע": the week with its arrows, above the calendar */
+.pweek-weeknav{ display:flex; justify-content:center; margin:6px 0 8px; }
+.pweek-weeknav .mcal-wk:disabled{ opacity:.35; cursor:default; }
+/* the bar at the bottom of the month opened from the process: one button */
+.pflow-bar .lvbtn{ flex:1; font-weight:700; }
+/* the two small questions: four answers, two by two on a phone */
+@media (max-width:520px){ .pconsent .pchoice{ flex-wrap:wrap; } .pconsent .pchoice button{ flex:1 1 40%; } }
+.pview-seg button{ white-space:nowrap; }
+.pweek-nav .btn{ white-space:nowrap; padding-inline:8px; }
+/* the steps ahead: the number plain to see, a small dot above it until the egg comes */
+.pweek-steps i, .pweek-steps i.done{ opacity:1; }
+.pw-dot{ display:block; width:8px; height:8px; margin:6px; border-radius:50%; background:var(--color-border-strong, var(--p-line)); }
+/* the week of the process: the shifts beside the day, not under it, so the seven days take as little of the screen as can be (Guy 2026-11-04) */
+.pwdays .pwday{ flex-wrap:nowrap; justify-content:flex-start; gap:8px; padding:5px 8px; }
+.pwdays .pwday-name{ flex:0 0 62px; width:62px; min-width:0; margin:0; padding:2px 4px; line-height:1.2; }
+.pwdays .pwday-name b, .pwdays .pwday-name small{ display:block; }
+.pwdays .pwday-name .pday-hrs{ font-size:11px; }
+.pwdays .pwday-shifts{ flex:1 1 0; min-width:0; gap:5px; }
+.pwdays .pwshift{ flex:1 1 0; min-width:0; padding:0 3px; }
+.pwdays .pwday-away{ flex:1 1 0; min-width:0; text-align:center; }
+/* the week of the process: going on and back in the bar at the bottom; the small tools at the end of the screen, side by side (Guy 2026-11-04) */
+.pweek-navbar{ width:100%; }
+.pweek-navbar .btn{ flex:1 1 0; min-width:0; min-height:48px; padding-inline:8px; white-space:nowrap; }
+.pweek-navbar .btn[disabled]{ opacity:.4; }
+.pweek-tools{ display:flex; justify-content:center; gap:8px; margin-top:12px; }
+.pweek-tools .btn{ min-height:44px; padding-inline:10px; white-space:nowrap; }
+.pweek-tools .pweek-q-btn{ flex:0 0 44px; padding-inline:0; }
+/* the high contrast of the device is made for the dark screens: it gave .sheet white text and a dark panel, and over the light look that was white words on a
+   white sheet (Guy reported it again and again, 2026-11-04: buttons not chosen looked empty). On the light look the look's own colours stay. */
+html[data-contrast=high] .mx-sheet[data-ptheme=light],
+html[data-contrast=high] body[data-rlook=light] #protected-app,
+html[data-contrast=high] body[data-rlook=light] .sheet:not(.mx-sheet),
+html[data-contrast=high] body[data-rlook=light] .toast{
+  --text:#2D2A24; --muted:#6E675C; --line:#B5A991; --panel:#FFFFFF; --panel-2:#F4EFE7;
+}
+/* "פירוט" on the home cards: a button, so its faded word still has to be read on the light look */
+.mx-home[data-ptheme=light] .home-card-more{ opacity:.9; }
+.portal-shell[data-ptheme=light] .mcal-head.mini{ opacity:.85; }
+/* the coordinator's schedule on a phone (Guy 2026-11-04). Only the phone: the computer stays as it is. */
+@media (max-width:700px){
+  /* no panel of the instructors' requests and no explanations on this tab */
+  .portal-shell.wide .cs-tab, .portal-shell.wide .cs-side, .portal-shell.wide .cs-help{ display:none !important; }
+  /* the two small buttons side by side; what else is there takes a row of its own */
+  .portal-shell.wide .pactions:has(#cs-share){ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:8px; }
+  .portal-shell.wide .pactions:has(#cs-share) > :not(#cs-openday):not(#cs-share){ grid-column:1 / -1; }
+  .portal-shell[data-ptheme].wide .pactions #cs-openday, .portal-shell[data-ptheme].wide .pactions #cs-share{ width:100%; min-width:0; min-height:44px; padding-inline:6px; font-size:15px; line-height:1.2; justify-content:center; }
+  /* a shift is all of its place in the day, its empty part too: the names' box fills it, and a shift alone in its line takes the line */
+  .cs-main .mcal-wrow-cells{ align-items:stretch; }
+  .cs-main .mcal-wrows .mcal-cell{ flex:1 1 auto; }
+  .cs-main .mcal-wrow-shift:last-child:nth-child(odd){ grid-column:1 / -1; }
+  .cs-main .mcal-wrow-shift:has(.drop-ok) .mcal-wrow-lbl{ color:var(--color-text, var(--p-text)); }
+  .cs-main .mcal-cell.editable .mcal-name[data-iid]{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+  /* large and very large text: the tabs stay in one line, inside the screen */
+  body:is(.portal-big, .portal-huge) .portal-shell.wide .portal-tabs{ flex-wrap:nowrap; justify-content:space-between; gap:0; overflow:visible; }
+  body:is(.portal-big, .portal-huge) .portal-shell[data-ptheme].wide .portal-tabs button{ flex:0 1 auto; min-width:0; padding-inline:2px; white-space:nowrap; }
+  body:is(.portal-big, .portal-huge) .portal-shell.wide .portal-tabs .ptab-count{ margin-inline-start:1px; min-width:14px; padding:0 2px; }
+  body:is(.portal-big, .portal-huge) .portal-shell.wide #cs-viewbar .mcal-weeknav{ max-width:100%; gap:4px; }
+  body:is(.portal-big, .portal-huge) .portal-shell.wide #cs-viewbar .mcal-weeknav b{ min-width:0; }
+}
+@media (max-width:340px){ body.portal-big .portal-shell.wide .portal-title{ grid-column:1 / -1; grid-row:2; } }          /* (the narrowest phones: as very large text does already) */
+.cs-finger-ghost{ top:0; left:0; z-index:900; font-size:17px; padding:6px 12px; }
+/* the taxis: a person is one folded line (Guy 2026-11-04) */
+.oc-p{ display:block; padding:0; }
+.oc-p > summary{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; padding:8px 12px; list-style:none; cursor:pointer; }
+.oc-p > summary::-webkit-details-marker{ display:none; }
+.oc-p > summary .oc-p-name{ flex:1 1 80px; min-width:0; padding-top:0; }
+.oc-p-more{ font-style:normal; opacity:.6; } .oc-p[open] .oc-p-more{ transform:rotate(180deg); }
+.oc-ords{ flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px; }
+.oc-need button{ white-space:nowrap; }
+.oc-ordered-btn[aria-pressed="false"]{ border-color:var(--color-border-strong, var(--p-line)); }
+.oc-p-body{ display:grid; gap:10px; padding:4px 12px 10px; }
+.oc-dir-h{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.oc-all-row{ display:flex; justify-content:flex-start; margin:8px 0; }
+@media (max-width:420px){ .oc-p{ grid-template-columns:none; } }
+/* the schedule of the on-call on a phone: two views; "שבוע" with the seven days side by side */
+.oc-sv{ display:flex; margin:8px 0; } .oc-sv button{ flex:1 1 0; white-space:nowrap; }
+.oc-wk-nav{ justify-content:center; margin:8px 0; } .oc-wk-nav b{ min-width:110px; }
+.oc-wk-title{ text-align:center; font-weight:700; margin:8px 0; }
+.oc-wk{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:2px; }
+.oc-wk-day{ display:flex; flex-direction:column; align-items:center; padding:3px 0; border-radius:6px; font-size:11px; background:var(--color-surface-alt, var(--p-panel2)); }
+.oc-wk-day b{ font-size:14px; } .oc-wk-day.today{ outline:2px solid var(--color-primary, var(--gold)); outline-offset:-2px; }
+.oc-wk-band{ grid-column:1 / -1; margin-top:6px; padding:2px 8px; border-radius:6px; font-size:13px; font-weight:700; background:var(--color-surface-alt, var(--p-panel2)); }
+.oc-wk-band bdi{ font-weight:400; color:var(--color-text-secondary, var(--p-muted)); }
+.oc-wk-cell{ display:flex; flex-direction:column; gap:2px; min-width:0; min-height:30px; padding:2px 1px; border:1px solid var(--color-border, var(--p-line)); border-radius:6px; }
+.oc-wk-cell.weekend{ background:var(--color-surface-alt, var(--p-panel2)); }
+.oc-wk-cell .mcal-name{ display:block; font-size:11.5px; line-height:1.25; padding:1px; overflow-wrap:anywhere; text-align:center; }
+.oc-wk-cell .oc-add, .oc-wk-cell .oc-x{ min-height:24px; padding:0 2px; }
+.oc-wk-cell.can{ position:relative; width:100%; background:transparent; color:inherit; font:inherit; cursor:pointer; padding-bottom:14px; border-style:dashed; border-color:var(--color-border-strong, var(--p-line)); }
+.oc-wk-cell.can.weekend{ background:var(--color-surface-alt, var(--p-panel2)); }
+.oc-wk-cell.can i{ position:absolute; bottom:0; inset-inline:0; text-align:center; font-style:normal; font-size:10px; opacity:.7; }
+.oc-edit{ display:flex; flex-direction:column; gap:6px; align-items:stretch; padding:8px; }
+.oc-edit .mcal-name{ display:flex; justify-content:space-between; align-items:center; font-size:16px; padding:4px 8px; }
+/* the manager's timetable: to look at, as on the kids' screen; on a phone the whole day fits the screen */
+.mgr-tt-mode{ display:flex; margin:8px 0; } .mgr-tt-mode button{ flex:1 1 0; }
+.mgr-ttv{ display:grid; grid-template-columns:repeat(var(--c, 3), minmax(0, 1fr)); grid-auto-rows:minmax(0, 1fr); gap:6px; height:100%; }
+.mgr-ttv-fit{ min-height:0; }
+.mgr-ttv-item{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; min-height:0; overflow:hidden; padding:3px; border-radius:10px; text-align:center; border:1px solid var(--color-border, var(--p-line)); background:var(--color-surface, var(--p-panel)); }
+.mgr-ttv-time{ font-size:12px; font-weight:700; color:var(--color-text-secondary, var(--p-muted)); }
+.mgr-ttv-icon{ flex:1 1 0; min-height:0; display:flex; align-items:center; justify-content:center; font-size:26px; line-height:1; } .mgr-ttv-icon svg, .mgr-ttv-icon img{ max-height:100%; max-width:44px; }
+.mgr-ttv-name{ font-size:13px; font-weight:600; line-height:1.15; overflow-wrap:anywhere; }
+.mgr-ttv-days{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:3px; margin-bottom:6px; }
+.mgr-ttv-days button{ display:flex; flex-direction:column; align-items:center; padding:3px 0; border-radius:8px; border:1px solid var(--color-border-strong, var(--p-line)); background:transparent; color:inherit; font:inherit; cursor:pointer; } .mgr-ttv-days small{ font-size:10.5px; }
+.mgr-ttv-days button[aria-pressed="true"]{ background:var(--color-primary, var(--gold)); color:var(--color-on-primary, #1b1b1b); border-color:transparent; }
+.mgr-ttv-week{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px; } .mgr-ttv-col{ display:flex; flex-direction:column; gap:6px; min-width:0; } .mgr-ttv-col > b{ text-align:center; font-size:14px; } .mgr-ttv-col.today > b{ color:var(--color-primary, var(--gold)); } .mgr-ttv-col .mgr-ttv-icon{ flex:none; height:34px; }
+.home-card.home-soon{ opacity:.6; cursor:default; }
+/* the round of 2026-11-04, evening */
+/* the manager's timetable: the picture keeps inside its frame, the words under it */
+.mgr-ttv-item{ min-height:92px; }
+.mgr-ttv-icon{ flex:none; height:44px; width:100%; overflow:hidden; font-size:30px; }
+.mgr-ttv-icon > *, .mgr-ttv-icon svg, .mgr-ttv-icon img{ max-width:100%; max-height:100%; width:auto; height:100%; }
+.mgr-ttv-icon .tvt2-emoji{ font-size:30px; line-height:44px; height:auto; }
+.mgr-ttv-name, .mgr-ttv-time{ flex:none; position:relative; }
+@media (max-width:700px){ .mgr-ttv-fit .mgr-ttv-item{ min-height:0; } .mgr-ttv-fit .mgr-ttv-icon{ flex:1 1 0; height:auto; min-height:0; } .mgr-ttv-fit .mgr-ttv-icon .tvt2-emoji{ font-size:24px; line-height:1; } }
+@media (min-width:701px){ .mgr-ttv-fit .mgr-ttv{ height:auto; grid-auto-rows:auto; } .mgr-ttv{ --c:6 !important; } }
+/* the editor: hours from left to right, how often under the row */
+.ctl-tt-times{ direction:ltr; }
+.ctl-tt-rep{ grid-column:1 / -1; display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:14px; }
+.ctl-tt-rep select{ min-height:36px; padding:2px 6px; border-radius:8px; font:inherit; background:var(--color-surface, var(--panel-2)); color:var(--color-text, var(--text)); border:1px solid var(--color-border-strong, var(--line)); }
+.ctl-tt-rep input{ width:52px; min-height:36px; text-align:center; }
+/* the share button of the manager's schedule: beside the view, the same height, not touching */
+.mgr-share{ align-self:stretch; margin-inline-start:16px; min-height:0; display:inline-flex; align-items:center; gap:6px; }
+.portal-shell[data-ptheme] .mcal-viewbar .mgr-share{ min-height:0; }
+#mgr-viewbar{ justify-content:flex-start; }
+/* the top of a page on a computer: the way home on the right, the settings and the look on the left */
+.ps-topbar{ display:none; }
+@media (min-width:1024px){ .ps-topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; } .ps-topbar .ps-link{ width:auto; } .ps-topbar-end{ display:inline-flex; align-items:center; gap:12px; } }
+/* on-call: the schedule on a computer */
+@media (min-width:701px){ .oc-wk{ gap:4px; } .oc-wk-cell .mcal-name{ font-size:14px; padding:2px; } .oc-wk-day{ font-size:13px; } .oc-wk-day b{ font-size:16px; } }
+/* the light look: "לא" is told from what was not marked */
+:is(.portal-shell, .mx-sheet)[data-ptheme=light]{ --p-no-bg:#EFAFA4; --p-no:#7E2018; --p-none-bg:#E4E2DD; --p-none:#55514A; }          /* (a clear red for "לא", a plain grey for what was not marked) */
+/* the service girls' calendar: five days and a narrow weekend; a tool chosen is filled with its own colour */
+.svcal{ grid-template-columns:repeat(5, minmax(0, 1fr)) 38px; }
+.svcal-we{ align-items:center; justify-content:center; min-height:0; } .svcal-we .svcal-num{ font-size:11px; }
+.portal-shell[data-ptheme] .svcal-tools button.on.lv-yes{ background:var(--p-yes); border-color:var(--p-yes); color:#fff; }
+.portal-shell[data-ptheme] .svcal-tools button.on.lv-no{ background:var(--p-no); border-color:var(--p-no); color:#fff; }
+.portal-shell[data-ptheme] .svcal-tools button.on.lv-hours{ background:var(--p-can); border-color:var(--p-can); color:#fff; }
+/* the coordinator's side panel on a computer: all of it at once in the usual text, a scroll that reaches the end in larger text */
+@media (min-width:900px){
+  .portal-shell.wide .cs-side{ max-height:calc((100dvh - 20px) / 1.2); padding:8px 8px 12px; }
+  body.portal-big .portal-shell.wide .cs-side{ max-height:calc((100dvh - 20px) / 1.42); }
+  body.portal-huge .portal-shell.wide .cs-side{ max-height:calc((100dvh - 20px) / 1.7); }
+  .portal-shell.wide .cs-side .cs-names{ gap:3px; margin-bottom:6px; }
+  .portal-shell.wide .cs-side .cs-name{ padding:1px 7px 1px 2px; font-size:13px; gap:3px; min-height:0; }
+  .portal-shell.wide .cs-side .cs-name img{ width:16px; height:16px; }
+  .portal-shell[data-ptheme].wide .cs-side .cs-sort-btn{ min-height:26px; padding:0 8px; font-size:12px; margin-bottom:6px; }
+  .portal-shell.wide .cs-side .cs-others-fold{ margin-top:4px; } .portal-shell.wide .cs-side .cs-others-fold > summary{ min-height:28px; padding:2px 8px; font-size:13px; } .portal-shell.wide .cs-side .cs-others-fold .pfold-body{ padding:4px 6px; }
+  .portal-shell.wide .cs-side .cs-issues-panel{ margin-top:6px; padding-top:6px; }
+  .portal-shell[data-ptheme].wide .cs-side .cs-issues-panel .btn{ min-height:24px; padding:0 7px; font-size:12px; line-height:1.2; }
+  .portal-shell.wide .cs-side .pnote{ font-size:12px; margin:4px 0; }
+}
+/* the coordinator's tabs on a computer: spread over the line */
+@media (min-width:701px){ .portal-shell[data-ptheme].wide .portal-tabs button{ flex:1 1 auto; justify-content:center; text-align:center; } }
+/* the pictures of the timetable: the whole picture, made smaller when the room is small, never cut */
+.mgr-ttv-icon{ position:relative; }
+.mgr-ttv-icon > svg, .mgr-ttv-icon > img{ position:absolute; inset:0; width:100%; height:100%; max-width:none; max-height:none; object-fit:contain; }
+.ps-topbar .ps-link{ white-space:nowrap; }
+/* (the pictures are letters of the emoji font: their size follows the room they have) */
+.mgr-ttv-icon{ container-type:size; display:flex; align-items:center; justify-content:center; }
+.mgr-ttv-icon .tvt2-emoji, .mgr-ttv-fit .mgr-ttv-icon .tvt2-emoji{ font-size:min(30px, 85cqh); line-height:1; width:auto; height:auto; max-height:none; }
+.ctl-icons-more{ margin-top:10px; } .ctl-icons-more > summary{ min-height:44px; display:flex; align-items:center; justify-content:center; border:1px solid var(--color-border-strong, var(--line)); border-radius:10px; font-weight:700; cursor:pointer; list-style:none; } .ctl-icons-more > summary::-webkit-details-marker{ display:none; }
+/* the sign-in: the title under the logo, in its middle */
+.mx-login .apphome-title{ text-align:center; font-size:22px; margin-top:4px; }
+/* the sign-in in the light look: the page behind it is light too (it was dark, and the dark title could not be read: Guy 2026-11-04) */
+body:has(.view.active .mx-login[data-ptheme=light]){ background:#FAF7F2; }
+body:has(.view.active .mx-login[data-ptheme=light])::before{ display:none; }
+.mx-login[data-ptheme=light]{ background:transparent; }

@@ -26,7 +26,7 @@
     }
     if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}${portalUi.prefsPast ? 'p' : ''}`;
     if(v.id === 'view-therapy' && typeof thp !== 'undefined') return `therapy:${thp.mode}|${thp.tab || ''}|${thp.editing || ''}|${thp.editing ? thp.wtab || '' : ''}`;
-    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control', 'view-learn':'learn' })[v.id] || 'hub';
+    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control', 'view-learn':'learn', 'view-oncall':'oncall', 'view-chats':'chats' })[v.id] || 'hub';
   }
   function snapshot(key){
     if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona, prefsPast:!!portalUi.prefsPast };
@@ -55,6 +55,8 @@
     if(key === 'manage' && typeof openManagement === 'function') return openManagement();
     if(key === 'control' && typeof showControl === 'function') return showControl();
     if(key === 'learn' && typeof showLearnHome === 'function') return showLearnHome();
+    if(key === 'oncall' && typeof showOncallScreen === 'function') return showOncallScreen();
+    if(key === 'chats' && typeof showChatsScreen === 'function') return showChatsScreen();
     if(key.startsWith('portal:') && snap){
       if(portalUi.editPrefs && !snap.editPrefs && typeof srvFlush === 'function'){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled for somebody is saved before leaving)
       const wasEditing = !!portalUi.editPrefs;
@@ -88,9 +90,11 @@
   let ignoreUntil = 0;                // the moment our own history.back() (taking the guard away) lands: not a Back of the person
   let muteScreenWatcher = false;      // while the app answers a Back press, the watcher stays quiet
   history.replaceState({ nav:'base' }, '');
+  const flowBack = () => typeof prefFlowCanBack === 'function' && prefFlowCanBack();          // (a step of the preferences process to go back to: 14zj)
+  const canGoBack = () => stack.length > 1 || flowBack();
   function syncGuard(){
-    if(stack.length > 1 && !guardOn){ history.pushState({ nav:'guard' }, ''); guardOn = true; }
-    else if(stack.length <= 1 && guardOn){ guardOn = false; ignoreUntil = Date.now() + 1200; history.back(); }
+    if(canGoBack() && !guardOn){ history.pushState({ nav:'guard' }, ''); guardOn = true; }
+    else if(!canGoBack() && guardOn){ guardOn = false; ignoreUntil = Date.now() + 1200; history.back(); }
   }
 
   let queued = false;
@@ -105,6 +109,7 @@
     if(!rootSet){ rootSet = true; stack = [key]; snaps = [snapshot(key)]; syncGuard(); updateBack(); return; }          // the first page after signing in is the start of the trail
     const top = stack[stack.length - 1];
     if(key === top){ snaps[snaps.length - 1] = snapshot(key); return; }
+    if(key === 'hub'){ const i = stack.findIndex(isRamzorFlow); if(i > 0){ stack.length = i; snaps.length = i; } }          // the Ramzor's home closes the protocol pages that were open before it (a protocol opened again later starts fresh)
     if(key === 'apphome' || (key === 'hub' && stack[0] !== 'apphome')){ stack = [key]; snaps = [snapshot(key)]; }          // home from anywhere: a new trail
     else if(stack.lastIndexOf(key) >= 0){ stack.length = stack.lastIndexOf(key) + 1; snaps.length = stack.length; snaps[snaps.length - 1] = snapshot(key); }          // a page already in the trail (an in-app "back" button, or a tab visited before): back to it
     else { stack.push(key); snaps.push(snapshot(key)); }
@@ -115,6 +120,7 @@
     if(Date.now() < ignoreUntil){ ignoreUntil = 0; return; }             // our own move (the guard taken away)
     guardOn = false;                                                      // (the person's Back took the guard)
     if(closeOpenSheet()){ syncGuard(); return; }                          // Back only closed a sheet: the page stays
+    if(typeof prefFlowBack === 'function' && prefFlowBack()){ syncGuard(); updateBack(); return; }          // one step back in the preferences process, same page
     if(stack.length <= 1){ syncGuard(); return; }                         // at the first page: the next Back leaves the app
     const top = stack[stack.length - 1], target = stack[stack.length - 2], snap = snaps[stack.length - 2];
     muteScreenWatcher = true;
@@ -139,14 +145,15 @@
       nav.insertBefore(b, nav.firstChild); backBtns.push(b);
     }
     // (no floating button on a wide screen any more: it covered things and the browser's back does the same: Guy 2026-10-26)
-    backBtns.forEach(b => b.addEventListener('click', () => { if(stack.length > 1) history.back(); }));
+    backBtns.forEach(b => b.addEventListener('click', () => { if(canGoBack()) history.back(); }));
   }
   function updateBack(){
-    const can = rootSet && stack.length > 1;
+    const can = rootSet && canGoBack();
     backBtns.forEach(b => { b.hidden = !can; });
     const nav = el('bottom-nav'); if(nav) nav.classList.toggle('has-back', can);
   }
   makeBack(); updateBack();
-  window.navCanGoBack = () => rootSet && stack.length > 1;          // (for the checks)
+  window.navCanGoBack = () => rootSet && canGoBack();          // (for the checks)
+  window.navRefresh = () => { syncGuard(); updateBack(); };          // (a step of the preferences process changed: the page is the same, Back has more or less to do)
   window.navTrail = () => stack.slice();
 })();

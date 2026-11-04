@@ -6,7 +6,16 @@
 // the text; ⭐ favourites first, then the most used. What Claude wrote is a draft until the admin approves it (a review screen, one after another).
 // A therapist who changes a Mercury template gets a copy in the center's library. Changing a template never changes a child's plan.
 const BANK_THEMES = PLAN_CATS;          // (14x: the ten themes)
-const BANK_AGES = [['2-5', 'גילאי 2–5'], ['5-8', 'גילאי 5–8'], ['8-12', 'גילאי 8–12']];
+// four age groups (Guy 2026-10-29, after the research report): every goal is written for one of them, and may be marked fit for an adjacent one too
+const BANK_AGES = [['2-5', 'גילאי 2–5'], ['6-9', 'גילאי 6–9'], ['10-12', 'גילאי 10–12'], ['13-15', 'גילאי 13–15']];
+const BANK_AGE_WORD = Object.assign({ '5-8':'גילאי 5–8', '8-12':'גילאי 8–12' }, Object.fromEntries(BANK_AGES));          // (+ the two of the first bank)
+const BANK_LEGACY = { '6-9':'5-8', '10-12':'5-8', '13-15':'5-8' };          // (the first bank had 2-5 and 5-8, and older children got 5-8)
+// how well a goal is grounded in research (the therapist only): tested / derived from a supported approach / a new adaptation not tested yet
+const BANK_EVIDENCE = { tested:'נבדק מחקרית', derived:'נגזר מגישה מבוססת', new:'התאמה חדשה, טרם נבדקה' };
+// the label opens a small dark bubble in its own colour with the reason (hover, or a tap / focus on a phone) — not the browser's white box
+const bankEvidenceTag = ev => ev && BANK_EVIDENCE[ev.level] ? `<span class="bk-ev bk-ev-${pEsc(ev.level)}" tabindex="0">${BANK_EVIDENCE[ev.level]}${ev.note ? `<span class="bk-ev-pop" role="tooltip">${pEsc(ev.note)}</span>` : ''}</span>` : '';
+// a sentence to say to the child: a round speech bubble in the portal's gold
+const SAY = '<svg class="say-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.2c-5.1 0-9.2 3.4-9.2 7.7 0 2.3 1.2 4.4 3.1 5.8-.2 1.5-1 2.9-2.2 3.9 2.1 0 4.1-.8 5.6-2 .9.2 1.8.3 2.7.3 5.1 0 9.2-3.4 9.2-7.9S17.1 3.2 12 3.2z"/></svg>';
 const BANK_METHODS0 = ['ARC', 'DDP/PACE', 'TF-CBT', 'Theraplay', 'ויסות חושי', 'NMT'];
 const BANK_PART_KINDS = ['avoid', 'signs', 'calm', 'routine'];
 const bankIsAdmin = () => !!(srv.profile && srv.profile.admin);
@@ -28,7 +37,9 @@ async function bankLoad(){
 
 // ---- the child's age band: the developmental age written in the plan (when the center turns it on), else the age in the list of children
 const bankAgeNum = v => { const m = String(v == null ? '' : v).replace(',', '.').match(/[0-9]+(?:\.[0-9]+)?/); return m ? parseFloat(m[0]) : null; };
-const bankBand = n => n == null ? '' : n < 5 ? '2-5' : n < 8 ? '5-8' : '8-12';          // (5 counts with 5-8, 8 with 8-12: Guy)
+const bankBand = n => n == null ? '' : n < 6 ? '2-5' : n < 10 ? '6-9' : n < 13 ? '10-12' : '13-15';          // (5 with 2-5, 9 with 6-9, 12 with 10-12)
+// does a goal fit this age group: written for it, marked fit for it ("also"), or a goal of the first bank in its 5-8 wording
+const bankFits = (x, age) => { if(!age || !bankHasAges(x)) return true; const a = x.content.ages; return !!(a[age] || (x.content.also || []).includes(age) || a[BANK_LEGACY[age]]); };
 function bankAgeOf(id, d){
   if(thp.mopts && thp.mopts.dev_age && d && bankAgeNum(d.dev_age) != null) return bankBand(bankAgeNum(d.dev_age));
   const c = roster.find(x => x.id === id); return bankBand(c ? bankAgeNum(c.age) : null);
@@ -47,7 +58,7 @@ function bankGender(text, gender){
     return b;
   });
 }
-const bankWording = (x, age) => { const a = (x.content && x.content.ages) || {}; return a[age] || a['5-8'] || a[Object.keys(a)[0]] || null; };
+const bankWording = (x, age) => { const a = (x.content && x.content.ages) || {}; return a[age] || a[BANK_LEGACY[age]] || a['5-8'] || a[Object.keys(a)[0]] || null; };
 const bankSig = g => { const s = [g.title, g.targets, g.interventions, g.sentences, g.why_staff, g.seen, g.needs, g.why].join('|'); let h = 0; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); };
 // the planet whose skill has the most words of the goal's title and skills (none if nothing matches)
 function bankPlanetFor(g){
@@ -65,7 +76,7 @@ function bankGoalFrom(x, age, gender){
     strengths:(c.strengths || []).slice(0, 4), skills:(c.skills || []).slice(0, 2), review_months:c.review || 3, methods:x.methods || [],
     scale:(c.scale || []).length ? { anchors:c.scale.map(G), now:null, target:null } : null });
   g.planet_id = bankPlanetFor(g);          // (a planet for now, by the goal's skill: Mercury 120; the final one in the design meeting)
-  const ages = c.ages || {}, used = ages[age] ? age : ages['5-8'] ? '5-8' : Object.keys(ages)[0] || age;
+  const ages = c.ages || {}, used = ages[age] ? age : ages[BANK_LEGACY[age]] ? BANK_LEGACY[age] : ages['5-8'] ? '5-8' : Object.keys(ages)[0] || age;
   g.bank = { id:x.id, age:used, method:w.method || '', edited:false };
   g.bank.sig = bankSig(g);
   return { goal:g, avoid:G(c.avoid || '') };
@@ -79,7 +90,7 @@ function bankList(kind, f){
   return (thp.library || []).filter(x => x.kind === kind && x.active
       && (!f.theme || bankThemesOf(x).includes(f.theme))
       && (!f.method || (x.methods || []).includes(f.method))
-      && (!f.age || !bankHasAges(x) || !!x.content.ages[f.age])
+      && bankFits(x, f.age)
       && (!q || `${x.title} ${x.description || ''} ${x.content ? JSON.stringify(x.content) : ''}`.includes(q)))
     .sort((a, b) => (fav.has(b.id) ? 1 : 0) - (fav.has(a.id) ? 1 : 0) || (n[b.id] || 0) - (n[a.id] || 0) || a.title.localeCompare(b.title, 'he'));
 }
@@ -90,9 +101,9 @@ const bankThemeChips = x => bankThemesOf(x).map(t => `<span class="bk-theme">${p
 function bankPreviewHtml(x, age){
   const c = x.content || {};
   if(c.v === 2){          // (the bank of the walkthrough: targets and interventions per age)
-    const w = c.ages[age] || c.ages['5-8'] || {};
-    return `<div class="bk-pv-row"><b>יעדים</b><span>${(w.targets || []).map(t => `<span class="bk-line">• ${pEsc(t.text)} <small>(לצוות: ${pEsc(t.staff)})</small></span>`).join('')}</span></div>
-      <div class="bk-pv-row"><b>דרכי התערבות</b><span>${(w.interventions || []).map(i => `<span class="bk-line"><b>${pEsc(i.name)}</b> ${pEsc(i.what)} <em class="tp-appr">${pEsc(i.approach)}</em><br><small>${pEsc(i.freq || '')} · ${(i.sentences || []).map(s => '💬 ' + pEsc(s)).join(' ')}</small></span>`).join('')}</span></div>
+    const w = bankWording(x, age) || {};
+    return `${c.evidence ? `<div class="bk-pv-row"><b>ביסוס</b><span>${bankEvidenceTag(c.evidence)}${c.evidence.note ? ` <small>${pEsc(c.evidence.note)}</small>` : ''}</span></div>` : ''}<div class="bk-pv-row"><b>יעדים</b><span>${(w.targets || []).map(t => `<span class="bk-line">• ${pEsc(t.text)} <small>(לצוות: ${pEsc(t.staff)})</small></span>`).join('')}</span></div>
+      <div class="bk-pv-row"><b>דרכי התערבות</b><span>${(w.interventions || []).map(i => `<span class="bk-line"><b>${pEsc(i.name)}</b> ${pEsc(i.what)} <em class="tp-appr">${pEsc(i.approach)}</em><br><small>${pEsc(i.freq || '')} · ${(i.sentences || []).map(s => SAY + pEsc(s)).join(' ')}</small>${i.avoid ? `<small class="tp-avoid">🚫 ${pEsc(i.avoid)}</small>` : ''}</span>`).join('')}</span></div>
       ${(c.strengths || []).length ? `<div class="bk-pv-row"><b>חוזקות</b><span>${c.strengths.map(pEsc).join(' · ')}</span></div>` : ''}`;
   }
   if(x.kind !== 'goal' && x.kind !== 'plan') return `<div class="bk-pv-text">${pEsc(bankHasAges(x) ? (bankWording(x, age) || '') : (x.description || ''))}</div>`;
@@ -106,7 +117,7 @@ function bankPreviewHtml(x, age){
     ${row('שיטה', pEsc(w.method))}${(c.strengths || []).length ? row('חוזקות', c.strengths.map(pEsc).join(' · ')) : ''}${(c.skills || []).length ? row('מיומנויות למעקב', c.skills.map(pEsc).join(' · ')) : ''}
     ${row('ממה להימנע', pEsc(c.avoid))}${c.review ? row('בדיקה מחדש', `בעוד ${c.review === 1 ? 'חודש' : c.review + ' חודשים'}`) : ''}`;
 }
-const bankAgeChips = (x, age) => bankHasAges(x) ? `<div class="bk-ages">${BANK_AGES.filter(([k]) => x.content.ages[k]).map(([k, w]) => `<button type="button" class="bk-age${k === age ? ' on' : ''}" data-bk-age="${k}">${w}</button>`).join('')}</div>` : '';
+const bankAgeChips = (x, age) => bankHasAges(x) ? `<div class="bk-ages">${Object.keys(x.content.ages).map(k => `<button type="button" class="bk-age${k === age ? ' on' : ''}" data-bk-age="${k}">${BANK_AGE_WORD[k] || k}</button>`).join('')}${(x.content.also || []).map(k => `<span class="bk-age-also">מתאים גם ל${(BANK_AGE_WORD[k] || k).replace('גילאי', 'גילאי')}</span>`).join('')}</div>` : '';
 const bankNote = () => '<details class="pfold bk-note"><summary><span>על הבנק</span></summary><div class="pfold-body">הנוסחים הם נקודת פתיחה, לא תחליף לשיקול דעת מקצועי. כל תוכנית מותאמת לילד/ה. נוסח שנבחר נעתק לתוכנית ונערך שם, והנוסח בבנק לא משתנה. "טיוטה" היא נוסח שעוד לא נבדק ואושר.</div></details>';
 
 // ---- choosing from the bank (a goal, a part, a whole plan) -> onPick(item, age)

@@ -2,6 +2,7 @@
 # from the version 2 bank, with a month of data for the spiral (observations marked to targets, incidents, 👍/👎, the therapist's ratings).
 # c6 and c7 belong to therapist-test@ (scheduling-test-therapist.sql). Output: supabase/scheduling-test-plans-reset.sql
 import io, json, glob, os
+import test_guard          # (TEST only: the SQL stops on any other database)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 goals = {}
 for f in sorted(glob.glob(os.path.join(ROOT, 'supabase', 'bank2', '*.json'))):
@@ -41,5 +42,5 @@ for cid, plan in [('c6', p6), ('c7', p7)]:
         out.append("  insert into public.intervention_feedback (child_id, goal_id, intervention_id, staff_id, value, note, at) values (%s, %s, %s, ins, 'up', 'דוגמה: עבד', now() - interval '5 days'), (%s, %s, %s, ins, 'down', null, now() - interval '12 days');" % (q(cid), q(g['id']), q(i['id']), q(cid), q(g['id']), q(i['id'])))
     out.append("  insert into public.incidents (child_id, author, at, shift, kind, intensity, before, helped, goal_id, seen_at) values (%s, ins, now() - interval '9 days', 'צהריים', 'flooding', 2, '{מעבר}', %s, %s, now());" % (q(cid), q('{' + g['interventions_list'][0]['name'] + '}'), q(g['id'])))
 out += ["  perform set_config('mercury.publishing', 'off', true);", "end $$;", "select 'test plans reset' as part, 'ok' as result, (select count(*) from public.child_plans) as plans;"]
-io.open(os.path.join(ROOT, 'supabase', 'scheduling-test-plans-reset.sql'), 'w', encoding='utf-8', newline='\n').write('\n'.join(out) + '\n')
+io.open(os.path.join(ROOT, 'supabase', 'scheduling-test-plans-reset.sql'), 'w', encoding='utf-8', newline='\n').write('\n'.join(test_guard.add(out)) + '\n')
 print('ok')

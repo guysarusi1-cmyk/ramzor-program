@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>תכנית הרמזור</title>
+<title>Mercury</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#12172A">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="הרמזור">
+<meta name="apple-mobile-web-app-title" content="Mercury">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +21,7 @@
   body{ padding-top:26px !important; }
   #env-banner{
     position:fixed; top:0; left:0; right:0; height:26px; z-index:100000; display:flex; align-items:center; justify-content:center;
-    background:#8a5a00; color:#fff; font:700 12px/1 'Rubik',sans-serif; letter-spacing:.04em; pointer-events:none;
+    background:#3B2F1E; color:#F0D9B0; border-bottom:1px solid #5A4527; font:600 12.5px/1 'Assistant','Rubik',sans-serif; pointer-events:none;          /* (a quiet strip on the new look: TEST only) */
   }
 </style>
 <div id="env-banner">סביבת בדיקות · נתוני דוגמה בלבד · לא האתר החי</div>
@@ -76,20 +76,32 @@
   <section class="view" id="view-apphome"></section>
   <section class="view" id="view-portal"></section>
   <section class="view" id="view-learn"></section>
+  <section class="view" id="view-oncall"></section>
+  <section class="view" id="view-chats"></section>
   <section class="view" id="view-control"></section>
   <section class="view" id="view-therapy"></section>
 
   <!-- ============ HUB (post-login landing page) ============ -->
   <section class="view active" id="view-hub">
     <div class="home-top">
+      <div class="home-main-row"><button type="button" class="home-main-back" id="hub-main-back" hidden>→ מסך ראשי</button></div>
+      <div class="home-bar">
+        <div class="home-bar-icons">
       <button type="button" class="home-icon-btn home-gear" id="hub-manage-gear" aria-label="הגדרות וניהול">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <button type="button" class="home-icon-btn home-a11y" id="hub-a11y-btn" aria-label="נגישות: גודל טקסט וניגודיות">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="7.2" r="1.3"/><path d="M7 10.2l5 1 5-1M12 11.2v3.6M9.5 19l2.5-4.2 2.5 4.2"/></svg>
       </button>
-      <button type="button" class="home-text-btn home-logout" id="hub-logout-link">יציאה</button>
+      <button type="button" class="home-icon-btn home-look" id="hub-look-btn" aria-label="מראה: בהיר, כהה או נמר" title="מראה">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      </button>
+        </div>
+        <div class="home-bar-words">
       <button type="button" class="home-text-btn home-portal" id="hub-portal-link" hidden>👥 לפורטל</button>
+      <button type="button" class="home-text-btn home-logout" id="hub-logout-link">יציאה</button>
+        </div>
+      </div>
       <h1 class="home-title">תכנית הרמזור</h1>
       <p class="home-slogan">"אני יכול לחשוב מה שאני רוצה, אני יכול להרגיש מה שאני רוצה, אבל לא תמיד כדאי שאתנהג איך שאני רוצה"</p>
     </div>
@@ -105,6 +117,11 @@
         <span class="home-card-title">שליטה במסך הילדים</span>
         <span class="home-card-sub">ניהול התצוגה והפידבקים לילדים</span>
       </button>
+      <button type="button" class="home-card home-control-card" id="hub-control-btn" hidden>
+        <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>
+        <span class="home-card-title">בקרת אחמ"ש</span>
+        <span class="home-card-sub">מי מוצג היום, בונוסים ולו"ז</span>
+      </button>
     </div>
 
     <button type="button" class="home-secondary" id="hub-learn-btn">
@@ -114,7 +131,6 @@
         <span class="home-secondary-sub">לומדים את העקרונות והכלים של התכנית</span>
       </span>
     </button>
-    <button type="button" class="home-control" id="hub-control-btn" hidden>🎛️ בקרת אחמ"ש</button>
     <button type="button" class="home-problem" id="hub-problem">משהו לא עובד? דיווח על תקלה</button>
     <button type="button" class="home-link" id="hub-install-link" hidden>התקנה כאפליקציה על מסך הבית</button>
   </section>
@@ -129,7 +145,7 @@
 
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
           <div class="bulb gold" style="width:40px; height:40px; margin:0; flex-shrink:0;"></div>
-          <div style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--gold);">זהב</div>
+          <div class="kq-word" style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--gold);">זהב</div>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px; padding-inline-start:50px;">
           <button class="btn ghost project-choice proj-star" id="kq-give-star-btn"><span class="pc-title">⭐ הענקת כוכב</span><span class="pc-sub">כל הכבוד על מה שעשית.</span></button>
@@ -141,10 +157,11 @@
 
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
           <div class="bulb yellow" style="width:40px; height:40px; margin:0; flex-shrink:0;"></div>
-          <div style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--yellow);">רמזור צהוב</div>
+          <div class="kq-word" style="font-family:'Rubik'; font-weight:800; font-size:16px; color:var(--yellow);">רמזור צהוב</div>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; padding-inline-start:50px;">
           <button class="btn ghost" id="kq-revoke-bonus-btn">🍬 גריעת בונוס</button>
+          <div id="kq-bonus-today"></div>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; padding-inline-start:50px; margin-top:24px;">
           <button class="btn ghost" id="kq-observe-btn">📝 תצפית לאיש/אשת הטיפול</button>

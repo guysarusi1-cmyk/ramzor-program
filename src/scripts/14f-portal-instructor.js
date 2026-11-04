@@ -144,6 +144,9 @@ function renderInstructorPrefs(body){
   const locked = portalServerOn && !srvPrefsOpen(mk);                                  // the database refuses changes after the closing time, so the screen does not offer them
   if(portalServerOn && me.role === 'instructor' && !locked && !submitted && prefStartFill(mk, me.id, prefs, days))
     toast(srv.prefStart === 'yes' ? 'כל המשמרות סומנו "כן", לפי ההגדרות שלך. משנים רק את מה שצריך' : 'כל המשמרות סומנו "לא", לפי ההגדרות שלך. משנים רק את מה שצריך');
+  if(portalServerOn && me.role === 'instructor' && !locked && !submitted) prefFixedDaysFill(mk, prefs, days);          // (the weekdays she never comes: her settings, Guy 2026-10-30)
+  if(portalServerOn && me.role === 'instructor' && !locked && !prefOther() && !portalUi.prefsPast) prefConsentAuto(mk, prefs, submitted);          // ("לא רלוונטי" follows the marks: 14zj)
+  if(prefWeekOn(me, locked, submitted)) return renderWeekPrefs(body, mk, m, prefs);          // ("שבוע אחרי שבוע": 14zj)
   const dl = m.deadline ? parseIso(m.deadline) : null;
   const fixedOn = date => portalServerOn ? prefs.fixed.find(f => f.day === date) : null;
   // the long weekend: one button under the Friday and the Saturday of a weekend (and, when the person switched it on in the settings, the small "only one of these" next to it)
@@ -155,10 +158,14 @@ function renderInstructorPrefs(body){
     return `<div class="plong-row">${srv.showLong ? `<button type="button" class="plong lv-${lv}" data-plong="${fri}" aria-label="${pEsc(SRV_LONG.label)} של ${dayLabel(fri)} והשבת שאחריו: ${pEsc(SRV_LONG.sub)}">${SRV_LONG.letter} ${pEsc(SRV_LONG.label)}</button>` : ''}${srv.pickOne ? `<button type="button" class="ppick${picked ? ' on' : ''}" data-ppick="${fri}" aria-pressed="${picked}" title="רק אחד מאלה">רק אחד</button>` : ''}</div>`;
   };
   let cells = '', neutral = 0;
-  for(let i = 0; i < lead; i++) cells += '<div class="pday blank"></div>';
+  // "שבוע-שבוע": the same calendar, one week of the month at a time (the whole month stays for looking, and for who is not filling for herself)
+  const oneWeek = portalServerOn && !srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !portalUi.prefsPast && !portalUi.prefsWholeMonth;
+  const allWeeks = oneWeek ? prefWeeksOf(mk) : null, wkIdx = oneWeek ? Math.max(0, Math.min(portalUi.prefWk || 0, allWeeks.length - 1)) : 0, wkShown = oneWeek ? allWeeks[wkIdx] : null;
+  for(let i = 0; i < (oneWeek ? wkShown.filter(d => d < days[0]).length : lead); i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
     const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
     if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`] && !prefNoNight(`${date}|${s.id}`) && !prefInsideLong(prefs, `${date}|${s.id}`)).length;
+    if(oneWeek && !wkShown.includes(date)) return;
     cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${barOn && [5, 6].includes(dowOf(date)) && days.includes(dowOf(date) === 5 ? date : addDays(date, -1)) ? ' linked' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${fx ? `<span class="pday-fixed">${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}</span>` : ''}
@@ -170,17 +177,10 @@ function renderInstructorPrefs(body){
     else if(portalServerOn && dowOf(date) === 5 && date === days[days.length - 1]) cells += longBar(date);
   });
   const marked = Object.keys(prefs.slots).length + prefs.absent.length + (portalServerOn ? Object.keys(prefs.hours).length : 0);
-  const fixedList = portalServerOn ? prefs.fixed.filter(f => daysOfMonth(mk).includes(f.day)) : [];
   const cons = prefs.consent || { extend:null, pull:null };
-  const choice = (name, v) => `<div class="pchoice" role="group"><button type="button" class="${cons[name] === true ? 'on' : ''}" data-consent="${name}:1"${locked ? ' disabled' : ''}>כן</button><button type="button" class="${cons[name] === false ? 'on' : ''}" data-consent="${name}:0"${locked ? ' disabled' : ''}>לא</button><button type="button" class="${cons[name] === 'ask' ? 'on' : ''}" data-consent="${name}:ask"${locked ? ' disabled' : ''}>תבדקו איתי</button></div>`;          // ("תבדקו איתי": the engine takes it as "no", the coordinator sees it and asks: Guy 2026-10-26)
+  const choice = (name, v) => `<div class="pchoice" role="group"><button type="button" class="${cons[name] === true ? 'on' : ''}" data-consent="${name}:1"${locked ? ' disabled' : ''}>כן</button><button type="button" class="${cons[name] === false ? 'on' : ''}" data-consent="${name}:0"${locked ? ' disabled' : ''}>לא</button><button type="button" class="${cons[name] === 'ask' ? 'on' : ''}" data-consent="${name}:ask"${locked ? ' disabled' : ''}>תבדקו איתי</button>${portalServerOn ? `<button type="button" class="${cons[name] === 'na' ? 'on' : ''}" data-consent="${name}:na"${locked ? ' disabled' : ''}>לא רלוונטי</button>` : ''}</div>`;          // ("תבדקו איתי": the engine takes it as "no", the coordinator sees it and asks: Guy 2026-10-26; "לא רלוונטי": 14zj)
   const levels = portalServerOn ? SRV_LEVEL_BUTTONS : LEVEL_BUTTONS;
   const goal = portalServerOn ? ((m.goals || {})[me.id] || null) : null, minInfo = portalServerOn ? fbMinimum(prefOther() ? (portalLoad().priv || {})[prefOther()] || {} : srv.profile, mk) : null;
-  let availHint = '';
-  if(portalServerOn && minInfo && minInfo.total){                  // a gentle word when the marks leave little room for the minimum
-    const free = days.filter(d => !fixedOn(d) && !prefs.absent.includes(d)).reduce((n, d) => n + ['m', 'e', 'n'].filter(id => ['yes', 'avoid'].includes(prefs.slots[`${d}|${id}`])).length, 0);          // (only "yes" and "can": a shift that was not marked is used only when there is no other way)
-    if(free < minInfo.total * 2) availHint = `<div class="pnote pnote-soft">${tx('hint_low', free, minInfo.total)}</div>`;
-  }
-  const neutralHint = portalServerOn && !locked && neutral > 0 ? `<div class="pnote pnote-soft" id="neutral-note">${tx('neutral_note', neutral)}</div>` : '';
   const goalBtn = (v, label, sub) => `<button type="button" class="pgoal-opt${(goal || '') === (v || '') ? ' on' : ''}" data-goal="${v || ''}"${locked ? ' disabled' : ''}><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
   const past = portalServerOn && !!portalUi.prefsPast;
   body.innerHTML = `
@@ -190,10 +190,9 @@ function renderInstructorPrefs(body){
     ${portalServerOn && !past && !locked && srvPrefsDeadlinePassed(mk) ? `<div class="pnote">${tx('late')}</div>` : ''}
     ${locked ? `<div class="pstatus ${submitted ? 'ok' : 'bad'}" id="prefs-locked">${tx('locked')}</div>`          // (closed: one line, and the marks are shown to read only — Guy 2026-10-28)
       : `<div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>`}
-    ${fixedList.length ? `<div class="pnote">הימים שאושרו לך או שהרכזת סימנה: ${fixedList.map(f => dayLabel(f.day) + ' (' + (FIXED_REASON[f.reason] || 'היעדרות') + ')').join(', ')}.</div>` : ''}
-    ${locked ? '' : `<details class="pfold" data-fold="prefhelp"${openFold('prefhelp') ? ' open' : ''}><summary><span>איך ממלאים? (לחצו להסבר)</span></summary><div class="pfold-body"><div class="pnote">${portalServerOn ? 'בהתחלה אף משמרת לא מסומנת. נשמח שתעברו על כל החודש: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "כן" אומר שתשמחו לקבל אותה, "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים. לחיצה נוספת על אותו סימון מחזירה את המשמרת למצב שלא סומן. משמרת שלא תסמנו נשבץ רק אם לא תהיה שום ברירה אחרת, אז כדאי לסמן "כן" או "יכול" בכל מה שמתאים לכם.' : 'כל המשמרות מסומנות "כן", כלומר שאתם זמינים. נשמח לדעת אם יש משמרות שפחות מתאימות לכם: בחרו למטה רמה, ואז לחצו על יום (לכל המשמרות שלו) או על משמרת בודדת. "יכול" אומר שאפשר, אבל פחות נוח, ו"לא" אומר שלא מתאים.'} ${[...DEFAULT_SHIFT_LEGEND(st.shiftTypes)].join(' · ')}${portalServerOn ? ` · 🕯️ = סופ"ש ארוך (${SRV_LONG.sub}). הוא כפתור אחד לכל סופ"ש, מתחת לשישי ולשבת, ולא תלוי בסימונים של שישי או של שבת. אם לא סימנתם אותו, לא נשבץ אתכם אליו. אם אתם זמינים רק בחלק מהשעות, בחרו "שעות אחרות" ולחצו על היום.` : ''}</div></div></details>`}
-    ${locked ? '' : availHint}${neutralHint}${portalServerOn && !locked && me.role === 'instructor' && !prefOther() ? prefFixedLineHtml() : portalServerOn && prefFixedKinds().size && !locked ? `<div class="pnote pnote-soft" id="nonight-note">${prefFixedNote()}</div>` : ''}
+    ${portalServerOn && !locked && me.role === 'instructor' && !prefOther() ? prefFixedLineHtml() : portalServerOn && prefFixedKinds().size && !locked ? `<div class="pnote pnote-soft" id="nonight-note">${prefFixedNote()}</div>` : ''}
     <div class="pshift-key" aria-label="שעות המשמרות">${portalLoad().shiftTypes.map(s => `<span><b>${pEsc(s.label)}</b> <bdi dir="ltr">${pEsc(s.start)}–${pEsc(s.end)}</bdi></span>`).join('')}</div>          
+    ${oneWeek ? `<div class="pweek-weeknav">${mcalWeekNavHtml(mk, wkIdx)}</div>` : ''}
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
     ${portalServerOn ? `
     <div class="pgoal">
@@ -216,6 +215,7 @@ function renderInstructorPrefs(body){
     ${locked ? '' : `<div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
     <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`}`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
+  if(oneWeek) body.querySelectorAll('[data-mwk]').forEach(b => { const to = wkIdx + parseInt(b.dataset.mwk, 10); if(to < 0 || to >= allWeeks.length) b.disabled = true; b.addEventListener('click', () => { portalUi.prefWk = to; renderInstructorPrefs(body); }); });
   { const fe = body.querySelector('#prefs-fixed-edit'); if(fe) fe.addEventListener('click', () => { portalUi.gearFold = Object.assign(portalUi.gearFold || {}, { prefs:true }); openPortalSettings(); }); }
   { const pp = body.querySelector('#prefs-past'), pe = body.querySelector('#prefs-past-end');
     if(pp) pp.addEventListener('click', () => { portalUi.prefsPast = true; renderInstructorPrefs(body); });
@@ -227,10 +227,10 @@ function renderInstructorPrefs(body){
   }));
   body.querySelectorAll('[data-consent]').forEach(b => b.addEventListener('click', () => {
     if(locked) return;
-    const [name, v] = b.dataset.consent.split(':'); prefs.consent[name] = v === 'ask' ? 'ask' : v === '1'; portalSave(); renderInstructorPrefs(body);
+    const [name, v] = b.dataset.consent.split(':'); prefConsentSet(mk, prefs, name, v); portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-pslot]').forEach(b => b.addEventListener('click', () => {
-    if(locked) return;
+    if(locked || prefPlainOn()) return;          // (without colours the taps are 14zj's)
     const shown = b.dataset.pslot.split('|')[0], key = prefKeyOf(b.dataset.pslot), date = key.split('|')[0], lv = portalUi.level;
     if(fixedOn(date) || fixedOn(shown)) return;
     if(prefInsideLong(prefs, key) && lv !== 'absent'){ toast(tx('long_inside')); return; }
@@ -241,7 +241,7 @@ function renderInstructorPrefs(body){
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-plong]').forEach(b => b.addEventListener('click', () => {          // the long weekend: kept on the Friday, independent of the other shifts
-    if(locked) return;
+    if(locked || prefPlainOn()) return;
     const fri = b.dataset.plong, key = `${fri}|l`, lv = portalUi.level;
     if(fixedOn(fri) || prefs.absent.includes(fri)) return;
     if(lv === 'hours' || lv === 'absent'){ toast(tx('long_levels')); return; }
@@ -258,7 +258,7 @@ function renderInstructorPrefs(body){
     portalSave(); renderInstructorPrefs(body);
   }));
   body.querySelectorAll('[data-pday]').forEach(b => b.addEventListener('click', () => {
-    if(locked) return;
+    if(locked || prefPlainOn()) return;
     const date = b.dataset.pday, lv = portalUi.level, keys = prefShiftsFor(date).map(s => prefKeyOf(`${date}|${s.id}`)).filter(k => !prefFixedNo(k) && !prefInsideLong(prefs, k));          // (a shift of a fixed preference changes only when it is pressed by itself)
     if(fixedOn(date)) return;
     if(lv === 'hours'){ openHoursSheet(date, prefs, () => renderInstructorPrefs(body)); return; }
@@ -288,6 +288,7 @@ function renderInstructorPrefs(body){
     }
     m.submitted[me.id] = true; portalSave(); toast(tx('submit_ok')); renderInstructorPrefs(body);
   });
+  prefMonthExtras(body, mk, prefs, locked, submitted);
 }
 // custom hours for one day: up to two ranges (whole hours); used only when they complete a full shift
 function openHoursSheet(date, prefs, done){
@@ -315,7 +316,15 @@ function canTakeShift(pid, key){
   const slot = buildSlots(mk, ctx.shiftTypes).find(s => s.key === key);
   if(!slot || slot.end <= Date.now()) return false;
   if(Object.keys(m.assignments).some(k => k.startsWith(date + '|') && (m.assignments[k] || []).includes(pid))) return false;      // already working that day
-  return portalServerOn || levelOf(ctx.prefs, pid, slot) !== 'no';          // (on the real system any instructor may offer to take a shift)
+  if(!portalServerOn) return levelOf(ctx.prefs, pid, slot) !== 'no';
+  if((portalPerson(pid) || {}).role !== 'instructor') return true;          // (the service girls: their own availability, checked by the database)
+  // an instructor: only who marked "כן" or "יכול" for this very shift, and no night next to a morning (= public.swap_ok, scheduling-v53.sql; Guy 2026-11-03)
+  const sid = slot.shift || splitKey(key).shiftId, lv = (((ctx.prefs || {})[pid] || {}).slots || {})[key];
+  if(!['yes', 'avoid'].includes(lv)) return false;
+  const on = (d, ids) => ids.some(id => ((portalMonth(monthKeyOf(d)).assignments || {})[`${d}|${id}`] || []).includes(pid));
+  if(['m', 's'].includes(sid) && on(addDays(date, -1), ['n'])) return false;
+  if(sid === 'n' && on(addDays(date, 1), ['m', 's'])) return false;
+  return true;
 }
 function renderInstructorSwaps(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)

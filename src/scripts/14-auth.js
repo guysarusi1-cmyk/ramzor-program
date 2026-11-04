@@ -51,7 +51,10 @@ document.getElementById('login-password').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter') document.getElementById('login-submit-btn').click();
 });
 
+// before anybody is signed out from a button, on every screen (Guy 2026-11-04). Only "התנתקות" signs out; "ביטול" or closing the window does not
+const askLogout = () => confirmSheet({ title:'התנתקות', text:'פעולה זו תנתק אותך מהמערכת. האם להמשיך?', okLabel:'התנתקות', cancelLabel:'ביטול' });
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
+  if(!(await askLogout())) return;
   if(typeof ramzorPersonal !== 'undefined' && ramzorPersonal) await personalLeave();          // (the personal sign-in: out of the portal and the Ramzor together)
   else await sb.auth.signOut();
   await checkAuth();
@@ -73,10 +76,24 @@ function activateDisplayView(){
   startCarousel();
 }
 
+// the manager of the framework looks at the Ramzor and changes nothing: whatever would write is stopped here, before the database (which refuses it too)
+function rzReadOnlyClient(real){
+  const no = () => { toast('צפייה בלבד'); const r = { data:null, error:{ message:'צפייה בלבד' } }, c = new Proxy(function(){}, { get:(_, k) => k === 'then' ? (f, g) => Promise.resolve(r).then(f, g) : () => c, apply:() => c }); return c; };
+  return new Proxy(real, { get(t, k){
+    if(k === 'rpc') return (n, a) => /^(tv_|diary_for_control$|my_|can_|is_)/.test(n) ? t.rpc(n, a) : no();
+    if(k === 'from') return n => { const q = t.from(n); return new Proxy(q, { get(o, m){ if(['insert', 'update', 'upsert', 'delete'].includes(m)) return no; const v = o[m]; return typeof v === 'function' ? v.bind(o) : v; } }); };
+    const v = t[k]; return typeof v === 'function' ? v.bind(t) : v; } });
+}
+const hubPlainBack = () => { try { return ['therapist', 'manager'].includes((portalMe() || {}).role) || !!(srv.profile && srv.profile.kind === 'therapist'); } catch(e){ return false; } };          // (no instructor portal to go to: just back, Guy 2026-11-04)
+const rzLookOnly = () => typeof srv !== 'undefined' && !!srv.me && portalServerOn && !!srv.meRow && srv.meRow.role === 'manager';
 function showHub(){
   document.body.classList.remove('portal-mode', 'leopard-bg');
+  if(rzLookOnly()) sb = rzReadOnlyClient(sbPersonal);
+  { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly(); if(kids) kids.hidden = rzLookOnly(); }
   stopCarousel();
-  const pl = document.getElementById('hub-portal-link'); if(pl) pl.hidden = !(typeof ramzorPersonal !== 'undefined' && ramzorPersonal);
+  { const pl = document.getElementById('hub-portal-link'), rp = typeof ramzorPersonal !== 'undefined' && ramzorPersonal, plain = rp && hubPlainBack();
+    if(pl) pl.hidden = !rp || plain;
+    const mb = document.getElementById('hub-main-back'); if(mb) mb.hidden = !rp || matchMedia('(max-width:700px)').matches; }          // (a computer: "מסך ראשי" at the top right, as in the portals; a phone has its own way back: Guy 2026-11-04)
   const cb = document.getElementById('hub-control-btn'); if(cb) cb.hidden = !(typeof canControl === 'function' && canControl());          // (the ahmash control: ahmash, coordinator, admin)
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-hub').classList.add('active');
@@ -89,6 +106,7 @@ document.getElementById('hub-daily-btn').addEventListener('click', ()=>{
   showStaffScreen('pick');
 });
 document.getElementById('hub-portal-link').addEventListener('click', () => { if(typeof srvOpenPortal === 'function') srvOpenPortal(); });
+document.getElementById('hub-main-back').addEventListener('click', () => showAppHome());
 document.getElementById('hub-control-btn').addEventListener('click', () => { if(typeof showControl === 'function') showControl(); });
 document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
   toast('לומדת הרמזור בקרוב! 🎓');
@@ -97,9 +115,7 @@ document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
 document.getElementById('hub-manage-gear').addEventListener('click', openManagement);
 // home screen's quiet "logout" link just triggers the existing logout button (hidden on this screen)
 document.getElementById('hub-logout-link').addEventListener('click', async ()=>{
-  // signing out means typing the password again, which nobody wants in the middle of an incident
-  const personal = typeof ramzorPersonal !== 'undefined' && ramzorPersonal;
-  if(await confirmSheet({ title:'לצאת מהמערכת?', text:personal ? 'בדרך כלל אין צורך לצאת: המכשיר זוכר אותך. אם יוצאים, בכניסה הבאה יישלח קוד חדש למייל.' : 'כדי להיכנס שוב יהיה צריך להקליד את הסיסמה.', okLabel:'כן, לצאת', cancelLabel:'להישאר' })) document.getElementById('logout-btn').click();
+  document.getElementById('logout-btn').click();
 });
 document.getElementById('manage-back-to-hub').addEventListener('click', ()=>{
   location.hash = '';

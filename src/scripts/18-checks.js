@@ -131,7 +131,8 @@
       const r = $('bottom-nav').getBoundingClientRect();
       check('bar sits at the bottom edge', Math.abs(r.bottom - innerHeight) < 2, 'bottom ' + r.bottom + ' vs ' + innerHeight);
       $('hub-daily-btn').click(); openGuidedScreen('red');
-      check('bar is hidden during a protocol', !visible($('bottom-nav')), 'visible');
+      await sleep(60);
+      check('during a protocol the bar shows חזור | בית | הבא (Guy 2026-11-03)', visible($('bottom-nav')) && visible($('bnav-next')) && visible($('bnav-home')), 'bar or "הבא" hidden');
       showHub();
     });
 
@@ -145,11 +146,12 @@
         check(`${key}: legend lists all ${total} steps`, items.length === total, items.length);
         check(`${key}: legend shows number + action only`, items.every((li, i) => li.querySelector('.gl-n').textContent === String(i + 1) && li.querySelector('.gl-t').textContent.length > 2) && !/העמקת ההבנה|אני רואה שאתה כועס|אני אתן לך שתי אזהרות/.test($('guided-legend-list').textContent), $('guided-legend-list').textContent.slice(0, 80));
         check(`${key}: step 1 is marked as current`, items[0].classList.contains('current') && items.filter(li => li.classList.contains('current')).length === 1, 'wrong current');
-        check(`${key}: the step list is hidden until the button is pressed`, visible($('guided-legend-btn')) && !visible($('guided-legend')), 'visibility wrong');
-        $('guided-legend-btn').click();
+        check(`${key}: the step list is open at first (Guy 2026-11-03)`, visible($('guided-legend-btn')) && visible($('guided-legend')), 'visibility wrong');
         const main = document.querySelector('#staff-screen-guided .guided-main').getBoundingClientRect(), side = $('guided-legend').getBoundingClientRect();
         check(`${key}: pressing it shows the list BESIDE the step, not over it`, visible($('guided-legend')) && visible($('guided-step-body')) && (side.right <= main.left + 2 || main.right <= side.left + 2), `list ${Math.round(side.left)}..${Math.round(side.right)} / step ${Math.round(main.left)}..${Math.round(main.right)}`);
-        check(`${key}: the next/back buttons still work with the list open`, visible($('guided-next-btn')) && $('guided-next-btn').getBoundingClientRect().right <= innerWidth + 1 && $('guided-next-btn').getBoundingClientRect().left >= -1, 'button cut off');
+        await sleep(60);
+        { const nb = visible($('guided-next-btn')) ? $('guided-next-btn') : $('bnav-next');          // (on a phone "הבא" is in the bottom bar)
+          check(`${key}: the next/back buttons still work with the list open`, !!nb && visible(nb) && nb.getBoundingClientRect().right <= innerWidth + 1 && nb.getBoundingClientRect().left >= -1, 'button cut off'); }
         document.querySelectorAll('#guided-legend-list [data-step]')[3].click();
         check(`${key}: tapping step 4 jumps there`, guidedStep === 3 && document.querySelector('#guided-legend-list li.current .gl-n').textContent === '4' && $('guided-counter').textContent.includes('4'), 'guidedStep=' + guidedStep);
         check(`${key}: the list stays open after choosing`, visible($('guided-legend')), 'closed');
@@ -309,6 +311,10 @@
       document.querySelector('.toast-undo-btn').click(); await sleep(1500);
       const revUndone = (await getActiveBonusRevocations()).length;
       check('revocation undo works (needs supabase/hardening.sql in this project)', revUndone === revBefore || revUndone === revAfter, 'unexpected ' + revUndone);
+      { const at = iso => new Date(iso), act = (made, now) => bonusRevocationActive({ revoked_at:made }, at(now));          // (Israel time is UTC+2 in November)
+        const r = [act('2026-11-04T08:00:00Z', '2026-11-04T19:59:00Z'), act('2026-11-04T08:00:00Z', '2026-11-04T20:00:00Z'), act('2026-11-04T20:30:00Z', '2026-11-05T10:00:00Z'), act('2026-11-04T20:30:00Z', '2026-11-05T20:00:00Z')];
+        check('a revocation holds until 22:00 of its day (one made after 22:00: until 22:00 the next day)', JSON.stringify(r) === '[true,false,true,false]', JSON.stringify(r)); }
+      check('the kids screen does not show who lost a bonus', typeof renderBonusesSlide === 'function' && !/getActiveBonusRevocations\(\)/.test(String(renderBonusesSlide)), 'still read');
       showHub();
     });
 
@@ -418,12 +424,12 @@
     await step('back button', async () => {
       const pressBack = async () => { history.back(); await sleep(350); };
       showHub(); await sleep(400);
-      const e0 = navTrail().length;
-      $('hub-daily-btn').click(); await sleep(100);
-      openLightFlow('red'); await sleep(100);
+      const e0 = navTrail().length, tr = ['hub:' + navTrail().join('>') + '/' + activeView()];
+      $('hub-daily-btn').click(); await sleep(100); tr.push('daily:' + navTrail().join('>') + '/' + activeView());
+      openLightFlow('red'); await sleep(100); tr.push('red:' + navTrail().join('>') + '/' + activeView());
       for(let i = 0; i < 2; i++) $('guided-next-btn').click();
       await sleep(100);
-      check('each new screen is a page in the trail (and Back has something to go back to)', navTrail().length === e0 + 2 && history.state && history.state.nav === 'guard', navTrail().join(' > '));
+      check('each new screen is a page in the trail (and Back has something to go back to)', navTrail().length === e0 + 2 && history.state && history.state.nav === 'guard', navTrail().join(' > ') + ` | ${tr.join(' ; ')} state=${JSON.stringify(history.state)}`);
       check('(setup) protocol is on step 3', guidedStep === 2, 'step ' + (guidedStep + 1));
       await pressBack(); check('Back: previous step of the protocol', visible($('staff-screen-guided')) && guidedStep === 1, 'step ' + (guidedStep + 1));
       await pressBack(); check('Back again: step 1', visible($('staff-screen-guided')) && guidedStep === 0, 'step ' + (guidedStep + 1));
@@ -437,7 +443,7 @@
       // the step list is not an overlay: Back goes back a step with it open
       $('hub-daily-btn').click(); await sleep(100);
       document.querySelector('[data-quick="red"]').click(); await sleep(100);
-      $('guided-next-btn').click(); $('guided-legend-btn').click(); await sleep(100);
+      $('guided-next-btn').click(); await sleep(100);          // (the step list is open at first)
       await pressBack();
       check('Back goes one step back even with the step list open (the list stays)', guidedStep === 0 && visible($('guided-legend')) && visible($('staff-screen-guided')), 'step ' + (guidedStep + 1));
       showHub(); await sleep(300);
@@ -502,7 +508,7 @@
     await step('small fixes', async () => {
       showHub(); $('hub-logout-link').click(); await sleep(150);
       const sheet = document.querySelector('.confirm-sheet');
-      check('logging out asks first', !!sheet && /לצאת/.test(sheet.textContent) && visible($('protected-app')), 'no question');
+      check('logging out asks first', !!sheet && /תנתק/.test(sheet.textContent) && visible($('protected-app')), 'no question');
       if(sheet) sheet.querySelector('.confirm-cancel').click();
       await sleep(100);
       check('"stay" keeps the person signed in', visible($('protected-app')), 'signed out');
@@ -682,7 +688,7 @@
       check('management: each child has a social-worker choice', !!sel && sel.value === '972500000001', sel && sel.value);
       sel.value = '972500000002'; sel.dispatchEvent(new Event('change')); await sleep(900);
       check('management: changing a child\'s worker is applied and saved', roster.find(c => c.id === 'c1').swName === 'רונית' && ((await getRoster()).find(c => c.id === 'c1').swPhone === '972500000002'), JSON.stringify(roster.find(c => c.id === 'c1')));
-      document.querySelector('.roster-sw[data-sw-for="c1"]').value = '972500000001'; document.querySelector('.roster-sw[data-sw-for="c1"]').dispatchEvent(new Event('change')); await sleep(900);
+      document.querySelector('.roster-sw[data-sw-for="c1"]').value = '972500000001'; document.querySelector('.roster-sw[data-sw-for="c1"]').dispatchEvent(new Event('change')); for(let i = 0; i < 40 && roster.find(c => c.id === 'c1').swName !== 'דנה'; i++) await sleep(150);          // (a slow answer of the server is not a failure)
       check('management: worker choice can be set back', roster.find(c => c.id === 'c1').swName === 'דנה', 'not restored');
 
       // ship picker
@@ -1170,7 +1176,7 @@
       const rows = [{ day:d1, shift:'N', from:'22:00', to:'08:00' }, { day:pick(0)[0], shift:'M', from:'07:00', to:'15:00' }];
       const fb = srvFeedbackFor({ first:'דנה' }, mk, { prefs, rows, profile:{ female:true }, goal:null });
       check('feedback: counts the requests that were met and the ones that were not', fb.asked === 4 && fb.honored === 3 && fb.unmet.length === 1, JSON.stringify([fb.asked, fb.honored, fb.unmet.length]));
-      check('feedback: the words say that we tried, and thank the person', /הצלחנו להיענות ל-3/.test(fb.text) && /ניסינו/.test(fb.text) && /תודה/.test(fb.text) && /אנחנו כאן בשבילך/.test(fb.text), fb.text.slice(0, 200));
+      check('feedback: the words say that we tried, and thank the person', /שובצת ב-\d+ מתוך \d+ המשמרות שסימנת/.test(fb.text) && /ניסינו/.test(fb.text) && /תודה/.test(fb.text) && /אנחנו כאן בשבילך/.test(fb.text), fb.text.slice(0, 200));
       check('feedback: nothing in it blames the person or sounds like a reprimand', !/אשמתך|לא עמדת|עליך לשפר|כשל|הפרת|חייב/.test(fb.text), fb.text);
       check('feedback: the shift that was not honoured is named with its day', fb.unmet[0].includes(dayLabel(d1)) && /לילה/.test(fb.unmet[0]), fb.unmet[0]);
       { const own = fbMinimum({ female:true, min_mid:1, min_nights:0, min_weekend:0 }, mk), wk = fbWeeks(mk);
@@ -1290,7 +1296,7 @@
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
       { const ids = [...document.querySelectorAll('#view-apphome .home-card')].map(b => b.id);
-        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 5 : 4) && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
+        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 6 : 5) && ids.includes('apphome-oncall') && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
       { const other = portalLoad().instructors.find(p => p.active && p.role === 'instructor' && p.id !== srv.me);
         portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.editPrefs = true;
         check('admin fills preferences: the screen writes the other person\'s preferences, only the preferences tab, also after the closing time', srvWho() === other.id && srvTabs(portalMe()).map(x => x[0]).join(',') === 'prefs' && srvPrefsOpen('2020-01'), [srvWho(), srvTabs(portalMe()).map(x => x[0]).join(',')].join(' / '));
@@ -1302,7 +1308,7 @@
         if(coord){
           adminActAs(coord.id); await sleep(200);
           const tabsC = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab);
-          check('admin in the coordinator\'s screen: her own tabs, with a banner of full control', tabsC.includes('schedule') && tabsC.includes('submissions') && tabsC.includes('settings') && !tabsC.includes('admin') && !!document.querySelector('.adm-viewas.act'), tabsC.join(','));
+          check('admin in the coordinator\'s screen: her own tabs, with a banner of full control', tabsC.includes('schedule') && tabsC.includes('submissions') && (matchMedia('(max-width:700px)').matches ? tabsC.join(',') === 'schedule,submissions,swaps' : tabsC.includes('settings')) && !tabsC.includes('admin') && !!document.querySelector('.adm-viewas.act'), tabsC.join(','));
           document.querySelector('[data-ptab="submissions"]').click(); await sleep(200);
           check('admin in the coordinator\'s screen: ... and it works (not "only to look")', portalUi.tab === 'submissions' && !!document.querySelector('.adm-viewas.act'), portalUi.tab);
           await adminViewAsEnd(); await sleep(150);
@@ -1311,7 +1317,8 @@
       document.getElementById('apphome-portal').click(); await sleep(300);
       check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
-      check('personal sign-in: ... and the management portal has the coordinator tabs', !!document.querySelector('[data-ptab="submissions"]') && !!document.querySelector('[data-ptab="settings"]') && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      check('personal sign-in: ... and the management portal has the coordinator tabs (on a phone the four of the day-to-day work only)', !!document.querySelector('[data-ptab="submissions"]') && !!document.querySelector('[data-ptab="settings"]') && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      if(!matchMedia('(max-width:700px)').matches){          // (the management tab: on the computer only, Guy 2026-11-03)
       document.querySelector('[data-ptab="admin"]') && document.querySelector('[data-ptab="admin"]').click(); await sleep(200);
       check('management portal: a "ניהול" tab with the staff details, looking as somebody, the system settings, building again and the full log', document.querySelectorAll('#portal-body details[data-afold]').length === 6 && !!document.querySelector('#portal-body details[data-afold="problems"]'), document.querySelectorAll('#portal-body details[data-afold]').length);
       { const other = portalLoad().instructors.find(p => p.active && p.id !== srv.me && p.role === 'instructor');
@@ -1319,6 +1326,7 @@
         check('management portal: looking as somebody shows a clear "only to look" bar, with the way back', !!document.querySelector('.adm-viewas') && !!document.getElementById('viewas-end'), 'no bar');
         document.getElementById('viewas-end').click(); await sleep(200);
         check('management portal: ... and the way back returns to the management tab', !portalUi.viewAs && portalUi.persona === srv.me && !!document.querySelector('[data-ptab="admin"].active'), String(portalUi.viewAs)); }
+      }
       srv.meRow.admin = false; portalUi.manager = false; showAppHome();
       await personalLeave();
       check('personal sign-in: leaving returns the Ramzor to the staff login of this device', sb === sbShared && !ramzorPersonal, 'still personal');
@@ -1334,7 +1342,7 @@
       showHub();
       check('ahmash control: the Ramzor home shows a small "בקרת אחמ״ש" button to the coordinator', !document.getElementById('hub-control-btn').hidden, 'hidden');
       document.getElementById('hub-control-btn').click(); await sleep(1500);
-      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 5 && !!document.querySelector('#view-control details[data-cfold="duties"]') && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
+      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the children diary, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 6 && !!document.querySelector('#view-control details[data-cfold="diary"]') && !!document.querySelector('#view-control details[data-cfold="duties"]') && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
       // the timetable of today: a change, read back as the kids TV reads it, then back to the fixed one
       const today = isoDate(new Date()), items = [{ t:'08:00', n:'ארוחת בוקר בדיקה', i:'breakfast' }, { t:'09:00', n:'גן', i:'school' }];
       let w = await sb.from('timetable_day').upsert({ day:today, items });
@@ -1394,6 +1402,7 @@
         await sbPersonal.from('prefs_consent').upsert({ staff_id:srv.me, month:firstOf(next), extend_morning:false, pull_to_sunday:false });
         await srvLoad();
       }
+      portalUi.prefsWholeMonth = true; srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (these checks look at the month with colours, also after a reload; the new default — week by week, no colours — is checked in "simple preferences")
       portalUi.persona = srv.me; portalUi.tab = 'prefs'; portalUi.pmonth = next; showPortal('prefs'); await sleep(100);
       check('portal server: the portal opens for the signed-in person (no demo selector, no demo tag)', !document.getElementById('portal-persona') && !document.querySelector('.portal-demo-tag') && /שלום/.test(document.querySelector('.portal-hello').textContent), 'demo bits shown');
       const prefsShut = !srvPrefsOpen(next);          // (after the 24th the month is closed: one line, the marks to read only — Guy 2026-10-28)
@@ -1418,7 +1427,7 @@
         check('portal server: choosing a goal marks it on the screen', portalMonth(next).goals[srv.me] === 'weekly45' && document.querySelector('[data-goal="weekly45"]').classList.contains('on'), JSON.stringify(portalMonth(next).goals));
         document.querySelector('[data-goal=""]').click(); await sleep(60);
         check('portal server: "אין לי העדפה מיוחדת" can be chosen, and it is the one marked when nothing else was chosen', !portalMonth(next).goals[srv.me] && document.querySelector('[data-goal=""]').classList.contains('on') && document.querySelectorAll('.pgoal-opt.on').length === 1, document.querySelectorAll('.pgoal-opt.on').length);
-        check('portal server: the whole screen starts neutral (nothing marked), with a note asking to fill the month', [...document.querySelectorAll('.pday:not(.absent) .pshift')].every(b => b.classList.contains('lv-neutral')) && !!document.getElementById('neutral-note') && /משמרות/.test(document.getElementById('neutral-note').textContent), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
+        check('portal server: the whole screen starts neutral (nothing marked), with no notes above it (Guy 2026-11-03)', [...document.querySelectorAll('.pday:not(.absent) .pshift')].every(b => b.classList.contains('lv-neutral')) && !document.getElementById('neutral-note'), document.querySelectorAll('.pshift:not(.lv-neutral)').length + ' marked / note ' + !!document.getElementById('neutral-note') + ' / ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots).slice(0, 300) + ' / absent ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).absent) + ' / fixed ' + JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).fixed).slice(0, 200));
         check('portal server: a locked day (vacation, sick leave...) has its reason written on it', [...document.querySelectorAll('.pday.fixed')].every(d => !!d.querySelector('.pday-fixed') && d.querySelector('.pday-fixed').textContent.trim().length > 1), document.querySelectorAll('.pday.fixed').length + ' locked days');
         check('portal server: the two small questions use the normal question style (no green/red)', ![...document.querySelectorAll('.pconsents button')].some(b => /rgb\(123, 224, 160\)|rgb\(255, 138, 128\)/.test(getComputedStyle(b).color)), [...document.querySelectorAll('.pconsents button')].map(b => getComputedStyle(b).color).join(' '));
         const day = daysOfMonth(next)[9], key = `${day}|n`;
@@ -1451,15 +1460,15 @@
           check('portal server: the long-weekend button spreads across the Friday and the Saturday columns', fr.left <= Math.min(fc.left, sc.left) + 3 && fr.right >= Math.max(fc.right, sc.right) - 3, JSON.stringify([fr.left, fr.right, fc.left, sc.left])); }
         check('portal server: the long weekend starts neutral and is not touched by marking the Friday', firstLong.classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], '');
         check('portal server: the shift of noon is called צהריים and marked צ', st.shiftTypes[1].label === 'צהריים' && document.querySelector(`[data-pslot="${sun}|e"] .ps-l`).textContent === 'צ' && !!document.querySelector('.pshift-key'), st.shiftTypes[1].label);
-        check('portal server: the explanation is folded away until it is asked for', document.querySelector('details[data-fold="prefhelp"]') && document.querySelector('details[data-fold="prefhelp"]').open === false, 'open');
+        check('portal server: no "איך ממלאים" explanation above the month (Guy 2026-11-03)', !document.querySelector('details[data-fold="prefhelp"]'), 'still there');
         check('portal server: the bottom buttons are כן / יכול / לא / שעות אחרות / נקה הכל (no absence, no all-month button)', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|') === 'כן|יכול|לא|שעות אחרות|נקה הכל', [...document.querySelectorAll('.plevelbar .lvbtn')].map(b => b.textContent).join('|'));
         document.querySelector('[data-plevel="no"]').click(); await sleep(50); document.querySelector(`[data-pday="${fri}"]`).click(); await sleep(50);
         check('portal server: marking the whole Friday "לא" does not change the long weekend (it stays neutral)', [...document.querySelectorAll(`[data-pslot^="${fri}|"]`)].every(b => b.classList.contains('lv-no')) && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-neutral') && !srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`], JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
         document.querySelector('[data-plevel="avoid"]').click(); await sleep(50); document.querySelector(`[data-plong="${fri}"]`).click(); await sleep(50);
         check('portal server: the long-weekend button takes the chosen level (יכול)', srvPrefsOf(portalMonth(next), srv.me).slots[`${fri}|l`] === 'avoid' && document.querySelector(`[data-plong="${fri}"]`).classList.contains('lv-avoid'), JSON.stringify(srvPrefsOf(portalMonth(next), srv.me).slots));
         { const sat = addDays(fri, 1), sl = () => srvPrefsOf(portalMonth(next), srv.me).slots, cell = k => document.querySelector(`[data-pslot="${k}"]`);
-          const inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(cell);
-          check('long weekend package: with "יכול" on it, Friday afternoon and night and Saturday morning and afternoon are locked inside it', inside.length >= 2 && inside.every(k => cell(k).classList.contains('in-long')), inside.map(k => k + ':' + cell(k).className).join(' '));
+          const inside = [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].filter(k => cell(k) && !cell(k).closest('.absent'));          // (a day of absence is "לא" by itself, outside the package)
+          check('long weekend package: with "יכול" on it, Friday afternoon and night and Saturday morning and afternoon are locked inside it', inside.length >= 2 && inside.every(k => cell(k).classList.contains('in-long')), inside.map(k => k + ':' + cell(k).className).join(' ') + ` | n=${document.querySelectorAll(`[data-pslot="${sat}|m"]`).length} l=${sl()[`${fri}|l`]} lf=${prefLongFri(`${sat}|m`)} in=${prefInsideLong(srvPrefsOf(portalMonth(next), srv.me), `${sat}|m`)} day=${(cell(`${sat}|m`).closest('.pday') || {}).className} wrap=${(cell(`${sat}|m`).closest('[id]') || {}).id} plain=${srv.prefPlain} weekly=${srv.prefWeekly}`);
           check('long weekend package: ... their own marks were replaced by it, and Friday morning stays free with its mark', !sl()[`${fri}|e`] && !sl()[`${fri}|n`] && !cell(`${fri}|m`).classList.contains('in-long') && sl()[`${fri}|m`] === 'no' && (!cell(`${sat}|n`) || !cell(`${sat}|n`).classList.contains('in-long')), JSON.stringify(sl()));
           document.querySelector('[data-plevel="yes"]').click(); await sleep(50); cell(`${fri}|e`).click(); await sleep(50);
           check('long weekend package: a locked shift cannot be chosen by itself', !sl()[`${fri}|e`] && cell(`${fri}|e`).classList.contains('in-long'), JSON.stringify(sl()[`${fri}|e`]));
@@ -1594,7 +1603,7 @@
           check('fill for a service girl: in the submissions tab a service girl has "מילוי זמינות"', !!fb, 'no button');
           if(fb){ const sid = fb.dataset.fillFor; fb.click(); await sleep(700);
             check('fill for a service girl: ... it opens her availability screen, for her', portalUi.tab === 'avail' && srvWho() === sid && !!document.querySelector('.adm-viewas.edit') && !!document.querySelector('#portal-body .svcal'), portalUi.tab + ' / ' + srvWho());
-            check('service girls: the availability is a monthly calendar: yes / no / other hours; Friday and Saturday in grey', !!document.querySelector('#portal-body [data-svtool="hours"]') && !!document.querySelector('#portal-body [data-svtool="no"]') && document.querySelectorAll('#portal-body .svcal-day.off').length >= 8, 'no calendar');
+            check('service girls: the availability is a monthly calendar: yes / no / other hours; Friday and Saturday in grey', !!document.querySelector('#portal-body [data-svtool="hours"]') && !!document.querySelector('#portal-body [data-svtool="no"]') && document.querySelectorAll('#portal-body .svcal-day.off').length >= 4, 'no calendar');
             const w = await sbPersonal.from('prefs_service').upsert({ staff_id:sid, day:'2099-01-05', opt:'early' });
             if(w.error && /policy|permission|row-level/i.test(w.error.message)) check('(info) fill for a service girl: the coordinator saves it after scheduling-v36.sql', true, '');
             else { check('fill for a service girl: the database keeps what the coordinator chose for her', !w.error, (w.error || {}).message); await sbPersonal.from('prefs_service').delete().eq('staff_id', sid).eq('day', '2099-01-05'); }
@@ -1605,7 +1614,7 @@
       // --- a service girl sees only her own place
       if(await asPerson('service')){
         portalUi.persona = srv.me; portalUi.tab = null; showPortal(); await sleep(100);
-        check('portal server: the service account gets its own tabs (availability, vacation) and no instructor preferences', !document.querySelector('[data-ptab="prefs"]') && !!document.querySelector('[data-ptab="avail"]') && !!document.querySelector('[data-ptab="vacation"]'), [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab).join(','));
+        check('portal server: the service account gets its own tabs (availability, "החלפות וחופשות") and no instructor preferences', !document.querySelector('[data-ptab="prefs"]') && !!document.querySelector('[data-ptab="avail"]') && /החלפות וחופשות/.test((document.querySelector('[data-ptab="swaps"]') || {}).textContent || ''), [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab).join(','));
       }
       await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null;
       portalUi.persona = 'c1'; portalUi.tab = null; portalUi.pmonth = portalUi.smonth = null; showHub();
@@ -1900,6 +1909,7 @@
     // ---- a published month: the coordinator's change waits for "שליחת עדכונים", then the person gets ONE message (scheduling-v45.sql).
     //      On a month of its own that has no schedule on the test server (made here and removed at the end)
     await step('send updates', async () => {
+      portalUi.csWeekOn = false;          // (the whole month: the changed name may be in another week than the phone's default one)
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', M = k => k + '-test@merkaz-cherum.local', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
       const enter = async kind => { await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; const { error } = await signInRetry(M(kind), PW); if(error) return false; portalServerOn = true; if(!(await srvLoad())) return false; portalUi.persona = srv.me; return true; };
@@ -1916,13 +1926,15 @@
         if(!srv.pendingOn){ check('(info) send updates: needs scheduling-v45.sql on the test server', true, ''); return; }
         const real = async () => { const q = await sbPersonal.from('assignment').select('id').eq('day', day).eq('shift', 'M').eq('staff_id', i2); return (q.data || []).length; };
         try { localStorage.removeItem('ramzor-pending-told'); } catch(e){}
+        showPortal('schedule'); await sleep(800);
+        const n0 = +((((document.querySelector('#cs-send') || {}).textContent || '').match(/\((\d+)\)/) || [])[1] || 0);          // (changes already waiting on the test server in other months, e.g. somebody's own trial: counted, never touched)
         const w = await asgWrite(mk, 'insert', null, { month:firstOf(mk), staff_id:i2, day, shift:'M', from_time:'07:00', to_time:'15:00', flags:['manual'] });
         check('send updates: at the first change an explanation: saved, but not sent until "שליחת עדכונים"', /עוד לא נשלח/.test((document.querySelector('.psheet') || {}).textContent || ''), 'no explanation');
         { const c = document.querySelector('.psheet [data-close]'); if(c){ c.click(); await sleep(100); } }
         check('send updates: a change of a published month is kept aside (the staff do not see it yet)', !w.error && (await real()) === 0, w.error ? w.error.message : 'already in the schedule');
         await srvReload(); showPortal('schedule'); await waitFor(async () => !!document.querySelector('#cs-send'), 60);
         const sendB = document.querySelector('#cs-send');
-        check('send updates: the coordinator sees "שליחת עדכונים" blinking, with "ביטול השינויים", and the waiting name dashed', !!sendB && sendB.classList.contains('blink') && /\(1\)/.test(sendB.textContent) && !!document.querySelector('#cs-discard') && !!document.querySelector(`.mcal-cell[data-key="${day}|m"] .mcal-name.pend`), sendB ? sendB.outerHTML.slice(0, 120) : 'no button ' + JSON.stringify({ pend:portalLoad().pending, on:srv.pendingOn, month:portalUi.month, mk, pub:portalMonth(mk).published, tab:portalUi.tab }));
+        check('send updates: the coordinator sees "שליחת עדכונים" blinking, with "ביטול השינויים", and the waiting name dashed', !!sendB && sendB.classList.contains('blink') && sendB.textContent.includes(`(${n0 + 1})`) && !!document.querySelector('#cs-discard') && !!document.querySelector(`.mcal-cell[data-key="${day}|m"] .mcal-name.pend`), sendB ? sendB.outerHTML.slice(0, 120) : 'no button ' + JSON.stringify({ pend:portalLoad().pending, on:srv.pendingOn, month:portalUi.month, mk, pub:portalMonth(mk).published, tab:portalUi.tab }));
         if(!sendB) return;
         document.querySelector('#cs-discard').click(); await answerSheet();
         check('send updates: "ביטול השינויים" throws the change away and offers "שחזור"', await waitFor(async () => !!document.querySelector('#cs-restore') && !document.querySelector('#cs-send'), 100), 'no restore');
@@ -1974,7 +1986,7 @@
         let t0 = performance.now(); const entered = await personalEnter(), tEnter = performance.now() - t0;
         check(`user journey (${kind}): signing in opens the first screen within 6 seconds (the two choices; only the portal for a service girl)`, entered && (activeView() === 'view-apphome' || (kind === 'service' && activeView() === 'view-portal')) && tEnter < 6000, activeView() + ' / ' + Math.round(tEnter) + ' ms');
         // the right person: the staff row linked to this e-mail, and its name in the greeting
-        const me = who[mail];
+        const me = who[mail] || { id:(await sbPersonal.rpc('my_staff_id')).data, name:(portalPerson(srv.me) || {}).first || '' };          // (a test person's e-mail may have been cleared in the management: the sign-in knows)
         check(`user journey (${kind}): the system knows who signed in (the person linked to this e-mail)`, !!me && srv.me === me.id, me ? me.id + ' vs ' + srv.me : 'no such e-mail in the staff');
         const card = document.getElementById('apphome-portal') || document.getElementById('apphome-manage');
         if(activeView() === 'view-apphome' && card) card.click();
@@ -2132,7 +2144,7 @@
           { const was = portalUi.csOpen, ws = portalUi.csSort; portalUi.csOpen = true; portalUi.csSort = 'count';
             const box = document.createElement('div'); box.innerHTML = srvSidePanelHtml(mk); const nums = [...box.querySelectorAll('.cs-name-count')].map(x => +x.textContent), c = srvShiftCounts(mk);
             portalUi.csSort = 'name'; const plain = document.createElement('div'); plain.innerHTML = srvSidePanelHtml(mk); portalUi.csSort = 'count';
-            check('instructors panel: by name with no numbers; "הצג את מספר המשמרות" shows the number by every name and puts the fewest first', !plain.querySelector('.cs-name-count') && /הצג את מספר המשמרות/.test(plain.textContent) && nums.length > 0 && nums.every((n, k) => k === 0 || nums[k - 1] <= n) && /הסתר את מספר המשמרות/.test(box.textContent) && [...box.querySelectorAll('[data-cs-person]')].every(b => +b.querySelector('.cs-name-count').textContent === ((c[b.dataset.csPerson] || {}).all || 0)), nums.join(','));
+            check('instructors panel: by name with no numbers; "הצג את מספר המשמרות" shows the number by every name and puts the fewest first', !plain.querySelector('.cs-name-count') && /לפי מספר משמרות/.test(plain.textContent) && nums.length > 0 && nums.every((n, k) => k === 0 || nums[k - 1] <= n) && /לפי שם/.test(box.textContent) && [...box.querySelectorAll('[data-cs-person]')].every(b => +b.querySelector('.cs-name-count').textContent === ((c[b.dataset.csPerson] || {}).all || 0)), nums.join(','));
             { const st2 = portalLoad(), sh = id => st2.shiftTypes.find(x => x.id === id), sun = daysOfMonth(mk).find(d => dowOf(d) === 0), mon = daysOfMonth(mk).find(d => dowOf(d) === 1);
               const a = srvOtherHours('service', sun, 'm', sh('m'), null), b = srvOtherHours('service', mon, 'e', sh('e'), null), c2 = srvOtherHours('teacher', mon, 'e', sh('e'), { '1':['08:00', '14:00'] }), d2 = srvOtherHours('teacher', sun, 'm', sh('m'), { '1':['08:00', '14:00'] });
               check('drag a service girl / teacher: Sunday 11-19 for a service girl, the shift\'s hours on other days; a teacher her fixed hours (none that day: refused)', a.from === '11:00' && a.to === '19:00' && b.from === sh('e').start && c2.from === '08:00' && c2.to === '14:00' && d2 === null, JSON.stringify([a, b, c2, d2]));
@@ -2163,8 +2175,10 @@
       if(!(await enter('coordinator'))){ check('therapy portal: the coordinator signs in', false, 'no'); return; }
       const probe = await sbPersonal.rpc('my_therapy_children');
       if(probe.error){ check('(info) therapy portal: skipped, scheduling-v31.sql was not run on this server', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; showHub(); return; }
-      const t2 = await sbPersonal.from('staff_private').select('staff_id').eq('email', M('instructor2')).single(), t1 = await sbPersonal.from('staff_private').select('staff_id').eq('email', M('instructor')).single();
-      const th = t2.data && t2.data.staff_id, plain = t1.data && t1.data.staff_id;
+      // who the two test instructors are: by their sign-in (the e-mails in the staff list may have been cleared in the management)
+      const idOf = async kind => { await sbPersonal.auth.signOut(); await signInRetry(M(kind), PW); return (await sbPersonal.rpc('my_staff_id')).data; };
+      const th = await idOf('instructor2'), plain = await idOf('instructor');
+      if(!(await enter('coordinator'))){ check('therapy portal: the coordinator signs in again', false, 'no'); return; }
       try {
         showAppHome(); await sleep(150);
         check('therapy portal: the app home has one card "פורטל הטיפול"', !!document.getElementById('apphome-therapy') && /פורטל הטיפול/.test(document.getElementById('apphome-therapy').textContent) && !document.getElementById('apphome-therapist'), 'cards wrong');
@@ -2181,6 +2195,10 @@
         await showTherapyPortal();
         const tabs = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         check('therapy portal: the coordinator has the children, her observations, "assign therapists" and who watched the videos (Mercury 86)', tabs.join(',') === (thp.v32 ? 'kids,myobs,assign,videos' : 'kids,assign') && document.querySelectorAll('#view-therapy [data-th-card]').length === roster.length, tabs.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-card]').length);
+        { const sh = () => document.querySelector('#view-therapy .therapy-shell').dataset.thmenu;
+          const m0 = sh(); document.querySelector('#view-therapy [data-th-tab="assign"]').click(); await sleep(150); const m1 = sh(), back = document.querySelector('#th-to-menu');
+          if(back){ back.click(); await sleep(120); } const m2 = sh();
+          check('therapy portal: it opens on the menu of areas (shown on a phone), an area replaces it and "→ כל האזורים" goes back (Guy 2026-10-30)', m0 === '1' && m1 === '0' && (thpWide() ? true : !!back && m2 === '1'), JSON.stringify([m0, m1, m2, !!back])); }
         document.querySelector('#view-therapy [data-th-tab="assign"]').click(); await sleep(150);
         const sel = document.querySelector('#view-therapy [data-th-assign="c1"]');
         check('therapy portal: the assign tab has a choice for every child, with the therapist already chosen', document.querySelectorAll('#view-therapy [data-th-assign]').length === roster.length && !!sel && sel.value === th, sel ? sel.value : 'none');
@@ -2236,7 +2254,17 @@
               interventions_list:[{ id:'i1', name:'נשימה', what:'נושמים יחד', approach:'ARC', sentences:['אחת', 'שתיים', 'שלוש'] }] });
             check('plans: a goal of the new kind keeps the old fields in sync for the older screens', g.focus === true && g.targets === 'פשוט' && /נשימה: נושמים יחד/.test(g.interventions) && g.sentences === 'אחת\nשתיים\nשלוש', JSON.stringify(g).slice(0, 160));
             const h = tpStaffGoalHtml('c1', g, true);
-            check('plans: the staff sees the plain target, the intervention with its approach (faint), 2 sentences and "עוד", and 👍/👎 (Q21, Q25-27)', /פשוט/.test(h) && !/מקצועי/.test(h) && /tp-appr/.test(h) && (h.match(/💬/g) || []).length === 3 && /<details><summary>עוד/.test(h) && /data-fb=/.test(h), '');
+            check('plans: the staff sees the plain target, the intervention with its approach (faint), 2 sentences and "עוד", and 👍/👎 (Q21, Q25-27)', /פשוט/.test(h) && !/מקצועי/.test(h) && /tp-appr/.test(h) && (h.match(/say-ico/g) || []).length === 3 && /<details><summary>עוד/.test(h) && /data-fb=/.test(h), '');
+            { const keep = thp.library; thp.library = [{ kind:'method', active:true, title:'ARC', description:'מה היא: מסגרת לעבודה אחרי טראומה. (Attachment, Regulation and Competency)\nלמי מתאימה: ...' }];
+              const a = tpApprHtml('ARC'), none = tpApprHtml('אחרת'); thp.library = keep;
+              check('plans: the approach tells the staff what it is in one line (a bubble under the mouse, a faint "מה זה?" on a phone), without the English name (Guy 2026-10-30)', /tp-apop[^>]*>מסגרת לעבודה אחרי טראומה\.</.test(a) && /tp-awhat"><summary>מה זה\?/.test(a) && !/Attachment|מה היא/.test(a) && /tp-appr/.test(none) && !/tp-awhat/.test(none), a.slice(0, 200)); }
+            { const side = thpTabsRow([['todo', 'משימות', 2], ['plans', 'תוכניות', 0], ['library', 'ספרייה', 0]], 'todo', 'data-x', '', true);
+              check('mercury: on a computer the side menu shows every area with an icon, the daily ones first and the rest after a quiet line, never "עוד" (Guy 2026-10-30)', (side.match(/th-nav-ico/g) || []).length === 3 && /th-nav-sep[\s\S]*ספרייה/.test(side) && !/tab-more/.test(side), side.slice(0, 160));
+              const more = tpMoreHtml('c1', {});
+              check('mercury: "עוד" has no "שמירה" any more, a status line instead (it saves by itself)', /id="tm-state"/.test(more) && !/tm-save/.test(more), '');
+              const keep = thp.plans.zz; thp.plans.zz = { published_version:3, published:{ summary:'תקציר קצר', avoid:'רעש', thinking:'מחשבה פנימית', goals:[{ id:'g1', title:'להירגע', status:'focus', targets_list:[{ id:'t1', text:'יעד', staff:'פשוט', scale:['1', '2', '3', '4', '5'], now:2, target:4 }], interventions_list:[{ id:'i1', name:'לנשום', what:'יחד', approach:'ARC', sentences:['אני כאן'] }] }, { id:'g2', title:'מטרה ממתינה', status:'waiting' }] } };
+              const rv = tpReviewBody('zz'); if(keep) thp.plans.zz = keep; else delete thp.plans.zz;
+              check('mercury: "סקירה" shows the published plan by importance (focus goal, what to know, a line per other goal) and hides the thinking helper', /גרסה 3/.test(rv) && rv.indexOf('במוקד') < rv.indexOf('מה חשוב לדעת') && /תקציר קצר/.test(rv) && /בהמתנה · <b>מטרה ממתינה/.test(rv) && !/מחשבה פנימית/.test(rv), rv.slice(0, 160)); }
             const since = new Date(2026, 0, 1), lv = tpSpiralLevels(g, g.targets_list[0], { steps:[], obs:[{ target_id:'t1', valence:'success', created_at:'2026-01-02T10:00:00' }], inc:[], fb:[], scale:[{ goal_id:'gx:t1', rated_on:'2026-01-04', value:4 }] }, since, 5);
             check('plans: the spiral: a success moves the target forward, the therapist\'s rating sets it (Q23)', lv[0].lv === 2 && lv[1].lv > 2 && lv[3].lv === 4 && lv.length === 5, JSON.stringify(lv)); }
           // a plain instructor: the guidance, without the thinking of the therapist
@@ -2320,7 +2348,7 @@
         await showTherapyPortal();
         const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         { const mt = document.querySelector('#view-therapy [data-th-tab="mine"]'); if(mt){ mt.click(); await sleep(80); } }
-        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary', 'chats'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3[1] === 'diary' && !t3.includes('oncall') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
         showAppHome(); await sleep(80);
         check('therapy portal: somebody with both roles still gets one card', !document.getElementById('apphome-therapist') && document.querySelectorAll('#apphome-therapy').length === 1, 'cards wrong');
         // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)
@@ -2349,7 +2377,11 @@
           { const w = 'מצליח/ה עם שלו/ה, עשה/תה, הוא/היא צריך/ה. אני שומר/ת. המטפל/ת';
             check('goal bank: the wording follows the child: בת', bankGender(w, 'f') === 'מצליחה עם שלה, עשתה, היא צריכה. אני שומר/ת. המטפל/ת', bankGender(w, 'f'));
             check('goal bank: ... בן, and unknown keeps the slashes', bankGender(w, 'm') === 'מצליח עם שלו, עשה, הוא צריך. אני שומר/ת. המטפל/ת' && bankGender(w, '') === w, bankGender(w, 'm'));
-            check('goal bank: the age bands (5 counts with 5-8, 8 with 8-12; unknown: all)', bankBand(4.5) === '2-5' && bankBand(5) === '5-8' && bankBand(7.9) === '5-8' && bankBand(8) === '8-12' && bankBand(null) === '' && bankBand(bankAgeNum('בן 6')) === '5-8', '');
+            check('goal bank: the four age groups (Guy 2026-10-29): 2-5, 6-9, 10-12, 13-15; unknown: all', bankBand(4.5) === '2-5' && bankBand(5) === '2-5' && bankBand(6) === '6-9' && bankBand(9.5) === '6-9' && bankBand(10) === '10-12' && bankBand(12) === '10-12' && bankBand(13) === '13-15' && bankBand(null) === '' && bankBand(bankAgeNum('בן 7')) === '6-9', '');
+            { const g3 = { kind:'goal', active:true, title:'ג3', content:{ v:2, main:'2-5', also:['6-9'], evidence:{ level:'derived', note:'הערה' }, ages:{ '2-5':{ targets:[], interventions:[{ id:'i1', name:'שם', what:'מה', freq:'', approach:'ARC', sentences:['אני פה'], avoid:'לא לצעוק' }] } } } };
+              check('goal bank: a goal fits its own age group and the adjacent one it is marked for, not the others; a goal of the first bank (5-8) fits the older groups', bankFits(g3, '2-5') && bankFits(g3, '6-9') && !bankFits(g3, '10-12') && bankFits({ content:{ ages:{ '5-8':{} } } }, '13-15'), '');
+              const pv = bankPreviewHtml(g3, '6-9');
+              check('goal bank: the preview shows how well the goal is grounded (the therapist) and what not to do by every intervention', /נגזר מגישה מבוססת/.test(pv) && /🚫 לא לצעוק/.test(pv), pv.slice(0, 200)); }
             const fake = { id:'00000000-0000-0000-0000-0000000000b1', kind:'goal', scope:'mercury', active:true, draft:true, title:'בדיקת בנק', themes:['ויסות רגשי'], methods:['ARC'],
               content:{ bank:1, review:1, scale:['1', '2', '3', '4', '5'], avoid:'לא לצעוק עליו/עליה', strengths:['סבלנות'], skills:['בקשת עזרה'],
                 ages:{ '2-5':{ targets:'קטן', steps:['צעד'], sentences:['משפט'] }, '5-8':{ targets:'נרגע/ת ב-3 מתוך 5', steps:['כש... ← מתקרבים', 'שני'], principles:'רוגע', sentences:['אני פה', 'מותר לכעוס'], seen:'רואים', needs:'צריך/ה', why:'מקצועי', why_staff:'פשוט', method:'ARC – ויסות' } } } };
@@ -2410,6 +2442,7 @@
         if(activeView() === 'view-apphome'){ await sleep(300); document.getElementById('apphome-portal').click(); }
         await waitFor(() => activeView() === 'view-portal' && !/טוען|جارٍ/.test(document.getElementById('portal-body').textContent), 60); await sleep(300);
         showPortal(); await sleep(400);          // (drawn again now that the language is Arabic: a real Arabic speaker has it from the first drawing)
+        document.querySelectorAll('.psheet').forEach(x => x.remove());          // (a window an earlier step left open, drawn in Hebrew before the switch)
         arMissing.clear(); arSweep();          // (only what this person's portal shows: not the screen of the step before, which was still in the page)
         check(`arabic (${kind}): the portal is in Arabic (title, tabs, greeting)`, /بوابة/.test(document.querySelector('.portal-title').textContent) && /الجدول/.test(document.querySelector('.portal-tabs').textContent) && /مرحبًا/.test(document.querySelector('.portal-hello').textContent), document.querySelector('.portal-title').textContent + ' / ' + document.querySelector('.portal-tabs').textContent);
         check(`arabic (${kind}): the sentences of the system are in Arabic`, /[؀-ۿ]/.test(tx('sch_unpub')) && !/[֐-׿]/.test(tx('sch_unpub')), tx('sch_unpub'));
@@ -2502,10 +2535,11 @@
         const mk = Object.keys(portalLoad().months).find(k => srvPrefsOpen(k));
         if(!mk) check('(info) fixed preferences: no month is open for preferences on the test server now, the board was not exercised', true, '');
         else {
+        portalUi.prefsWholeMonth = true; srv.prefWeekly = false; srv.prefPlain = false; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '0'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '0'); } catch(e){}          // (the month with colours, also after a reload)
         portalUi.pmonth = mk; showPortal('prefs'); await sleep(400);
         const day = daysOfMonth(mk).find(d => !srvPrefsOf(portalMonth(mk), srv.me).slots[`${d}|m`] && !srvPrefsOf(portalMonth(mk), srv.me).absent.includes(d) && document.querySelector(`[data-pslot="${d}|m"]`));
         const ms = day && document.querySelector(`[data-pslot="${day}|m"]`);
-        check('fixed preferences: her mornings start as "no" (red), with a sentence that explains it', !!ms && ms.classList.contains('lv-no') && /הבקרים מסומנים אצלך "לא"/.test(document.getElementById('portal-body').textContent), ms ? ms.className : 'no free morning');
+        check('fixed preferences: her mornings start as "no" (red), with a sentence that explains it', !!ms && ms.classList.contains('lv-no') && /הבקרים מסומנים אצלך "לא"|קבוע אצלך:[^.]*לא עושה בקרים/.test(document.getElementById('portal-body').textContent), ms ? ms.className : 'no free morning');
         if(day){
           portalUi.level = 'yes'; renderInstructorPrefs(document.getElementById('portal-body')); await sleep(100);
           document.querySelector(`[data-pday="${day}"]`).click(); await sleep(150);
@@ -2519,6 +2553,130 @@
       } finally {
         await sbPersonal.from('staff_settings').update({ fixed_no:[] }).eq('staff_id', srv.me); srv.fixedNo = []; portalUi.level = 'avoid';
         await personalLeave(); showHub();
+      }
+    });
+    // ---- the simpler preferences screen: week by week, without colours, guided other hours (Guy 2026-10-30, for רעות; 14zj)
+    await step('simple preferences', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('instructor-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('simple preferences: the instructor signs in', false, error ? error.message : 'no'); return; }
+      { const lum = c => { const m = String(c).match(/[\d.]+/g); if(!m) return null; const [r, g, b, a] = m.map(Number); if(a === 0) return null; return [r, g, b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0); };
+        const cr = (a, b) => (Math.max(a, b) + .05) / (Math.min(a, b) + .05), under = el => { for(let e = el.parentElement; e; e = e.parentElement){ const l = lum(getComputedStyle(e).backgroundColor); if(l !== null) return l; } return 1; };
+        const was = portalLoad().settings.theme, wasT = srv.portalTheme; portalLoad().settings.theme = 'light'; srv.portalTheme = 'light'; portalUi.tab = 'schedule'; showPortal('schedule'); await sleep(250);
+        document.getElementById('portal-gear').click(); await sleep(450);
+        const sh = [...document.querySelectorAll('.psheet')].pop(); sh.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(150);
+        const bad = [...sh.querySelectorAll('button')].filter(b => b.getBoundingClientRect().width).filter(b => { const cs = getComputedStyle(b), own = lum(cs.backgroundColor), u = under(b), box = Math.max(own === null ? 1 : cr(own, u), parseFloat(cs.borderTopWidth) ? cr(lum(cs.borderTopColor), u) : 1), txt = cr(lum(cs.color), own === null ? u : own); return txt < 3 || (box < 1.45 && parseFloat(cs.borderTopWidth) > 0); }).map(b => b.textContent.trim().slice(0, 16));
+        check('light theme: every button of the settings can be seen, chosen or not', sh.dataset.ptheme === 'light' && !bad.length, bad.join(' | '));
+        sh.remove(); portalLoad().settings.theme = was; srv.portalTheme = wasT; }
+      const mk = prefsMonthNow(), realOpen = srvPrefsOpen, realSave = portalSave, sim = !srvPrefsOpen(mk);
+      if(sim){ srvPrefsOpen = () => true; portalSave = () => {}; }          // (no month open on the test server now: the screen is tried as if it were, nothing is saved)
+      const m = portalMonth(mk), pr = srvPrefsOf(m, srv.me), saved = JSON.stringify(pr.slots), savedHours = JSON.stringify(pr.hours), wasSub = m.submitted[srv.me], was = [srv.prefWeekly, srv.prefPlain];
+      try {
+        const wks = prefWeeksOf(mk);
+        check('simple preferences: the weeks of the month run Sunday to Saturday, the first holds the 1st and the last the last day', wks.every(w => w.length === 7 && dowOf(w[0]) === 0) && wks[0].includes(daysOfMonth(mk)[0]) && wks[wks.length - 1].includes(daysOfMonth(mk).slice(-1)[0]), JSON.stringify(wks.map(w => w[0])));
+        const k0 = 'x|m', t = { slots:{} };
+        prefPlainTap(t, k0); const a = t.slots[k0]; prefPlainTap(t, k0); const b = t.slots[k0]; prefPlainTap(t, k0); const c = t.slots[k0]; prefPlainReset(t, k0);
+        check('simple preferences: without colours a tap = כן, another = לא, another = כן again, a long press = the dot again', a === 'yes' && b === 'no' && c === 'yes' && !(k0 in t.slots), JSON.stringify([a, b, c]));
+        delete m.submitted[srv.me]; srv.prefWeekly = true; srv.prefPlain = true; try { localStorage.setItem('ramzor-pref-weekly-' + srv.me, '1'); localStorage.setItem('ramzor-pref-plain-' + srv.me, '1'); } catch(e){} portalUi.prefsWholeMonth = false; portalUi.prefsPast = false;
+        try { localStorage.removeItem(pwPosKey(mk)); localStorage.setItem('ramzor-plain-help', '1'); } catch(e){}
+        portalUi.pmonth = mk; showPortal('prefs'); await sleep(300);
+        const pb = () => document.getElementById('portal-body');
+        check('simple preferences: week by week opens with "the shifts you do not do this month": morning, afternoon, night, and "דלג"', [...pb().querySelectorAll('[data-pwopt]')].map(x => x.textContent.replace(/קבוע בהגדרות/, '').trim()).join('|') === 'בוקר|צהריים|לילה' && !!pb().querySelector('#pw-skip'), pb().textContent.slice(0, 120));
+        pb().querySelector('#pw-skip').click(); await sleep(150);
+        check('... then the weekdays (7, may be skipped)', pb().querySelectorAll('[data-pwopt]').length === 7 && !!pb().querySelector('#pw-skip'), '');
+        pb().querySelector('#pw-skip').click(); await sleep(150);
+        const days = pb().querySelectorAll('.pwday'), dotsLeft = prefDotsOf(mk, pr, wks[0]).length, next = pb().querySelector('#pw-next');
+        check('... then week 1: seven days, the days of another month faded, and "השבוע הבא" closed while dots are left', days.length === 7 && pb().querySelectorAll('.pwday.out').length === wks[0].filter(d => !daysOfMonth(mk).includes(d)).length && (dotsLeft ? next.disabled && /עוד \d+ נקוד/.test(pb().textContent) : !next.disabled), JSON.stringify([days.length, dotsLeft, next.disabled]));
+        { const nb = pb().querySelector('.pweek-navbar'), tl = pb().querySelector('.pweek-tools'), r = id => pb().querySelector(id).getBoundingClientRect();
+          check('the week: in the bar fixed at the bottom "הקודם", "שעות אחרות", "השבוע הבא", in this order, nothing cut', !!nb && getComputedStyle(nb).position === 'fixed' && [...nb.querySelectorAll('button')].map(b => b.id).join() === 'pw-prev,pplain-hours,pw-next' && [...nb.querySelectorAll('button')].every(b => b.scrollWidth <= b.clientWidth + 1), [...nb.querySelectorAll('button')].map(b => b.scrollWidth + '/' + b.clientWidth).join());
+          check('... "לראות את כל החודש" and "?" side by side at the end of the screen, nothing cut', !!tl && !!tl.querySelector('#pw-month') && !!tl.querySelector('#pplain-q') && Math.abs(r('#pw-month').top - r('#pplain-q').top) < 3 && tl.scrollWidth <= tl.clientWidth + 1, ''); }
+        const sb = pb().querySelector('.pwshift.lv-neutral');
+        if(sb){
+          const key = sb.dataset.pslot; sb.click(); await sleep(120);
+          const y = pr.slots[key], yb = pb().querySelector(`[data-pslot="${key}"]`).classList.contains('lv-yes');
+          pb().querySelector(`[data-pslot="${key}"]`).click(); await sleep(120); const n = pr.slots[key];
+          const lb = pb().querySelector(`[data-pslot="${key}"]`); lb.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true })); await sleep(700); lb.dispatchEvent(new PointerEvent('pointerup', { bubbles:true }));
+          check('... on the screen: a tap = כן (bold), another = לא, a long press brings the dot back; stored as everybody\'s marks', y === 'yes' && yb && n === 'no' && !pr.slots[key] && !!pb().querySelector(`[data-pslot="${key}"].lv-neutral`), JSON.stringify([y, yb, n, pr.slots[key]]));
+        } else check('(info) simple preferences: week 1 has no shift waiting for a mark, the taps were not exercised on the screen', true, '');
+        document.querySelectorAll('.psheet').forEach(x => x.remove());          // (the short "איך מסמנים" help may still be open)
+        pb().querySelector('#pplain-hours').click(); await sleep(150);
+        const dayBtn = document.querySelector('.psheet [data-hgday]');
+        if(dayBtn){ const d = dayBtn.dataset.hgday; dayBtn.click(); await sleep(80); document.querySelector('.psheet [data-hg="other"]').click(); await sleep(80);
+          const q1 = document.querySelector('.psheet h2').textContent; document.querySelector('.psheet #phg-t').value = '09:00'; document.querySelector('.psheet [data-hg="next"]').click(); await sleep(80);
+          const q2 = document.querySelector('.psheet h2').textContent; document.querySelector('.psheet #phg-t').value = '15:00'; document.querySelector('.psheet [data-hg="save"]').click(); await sleep(120);
+          check('"שעות אחרות" guided: which day, then "מתי תוכלי להתחיל ב<day>?" and "מתי תרצי לסיים ב<day>?" on the time wheel; kept as other hours', /^מתי תוכל.? להתחיל ביום /.test(q1) && /^מתי תרצ.? לסיים ביום /.test(q2) && JSON.stringify(pr.hours[d]) === '[[9,15]]', JSON.stringify([q1, q2, pr.hours[d]]));
+        } else check('(info) simple preferences: no day of week 1 for other hours', true, '');
+        pb().querySelector('#pw-month').click(); await sleep(200);
+        const stepNow = () => pwGet(pwPosKey(mk), 'kinds');
+        check('"לראות את כל החודש" from the process: the month without colours, and at the bottom one button only, "חזרה לתהליך"', !!pb().querySelector('.pcal.plain') && !pb().querySelector('[data-plevel]') && !pb().querySelector('#pplain-hours') && pb().querySelectorAll('.plevelbar button').length === 1 && pb().querySelector('.plevelbar #pw-back-flow').textContent === 'חזרה לתהליך', pb().querySelector('.plevelbar') ? pb().querySelector('.plevelbar').textContent : 'no bar');
+        { const at = stepNow(); pb().querySelector('#pw-back-flow').click(); await sleep(200);
+          check('"חזרה לתהליך": back to the very step it was opened from', !portalUi.prefsWholeMonth && stepNow() === at && !!pb().querySelector('.pwdays'), String(stepNow())); }
+        // the marker: numbered, an egg that hatches
+        { const here = stepNow(), n = 2 + wks.length + 1, it = () => [...pb().querySelectorAll('.pweek-steps i')], at = it().findIndex(x => x.classList.contains('on'));
+          check('the marker of the steps: all the numbers show, the steps reached have the egg, the ones ahead a dot', it().length === n && it().every((x, i) => x.querySelector('b').textContent === String(i + 1) && (i <= at ? !!x.querySelector('svg') && !x.querySelector('.pw-dot') : !!x.querySelector('.pw-dot') && !x.querySelector('svg'))), String(at));
+          pwSet(pwPosKey(mk), 'kinds'); renderInstructorPrefs(pb()); await sleep(100);
+          const a1 = it().filter(x => x.querySelector('svg')).length, plain1 = !it()[0].querySelector('.c');
+          pwSet(pwPosKey(mk), 'end'); renderInstructorPrefs(pb()); await sleep(100);
+          check('... at the first step one egg only, at the last all of them, ending in the hatching chick', a1 === 1 && plain1 && it().every(x => !!x.querySelector('svg')) && !!it()[n - 1].querySelector('.c'), String(a1));
+          pwSet(pwPosKey(mk), here); renderInstructorPrefs(pb()); await sleep(100);
+          const seq = [0, 1, 2, 3, 4, 5, 6].map(i => pwEggOf(addMonths(mk, i)));
+          check('the eggs: seven kinds, each hatches into its own, another one every month, the same on every device', PW_EGG_NAMES.length === 7 && new Set(seq).size === 7 && pwEggOf(mk) === pwEggOf(mk) && new Set(PW_EGG_NAMES.map(k => pwEggHtml(7, k))).size === 7 && it()[0].querySelector('svg').dataset.egg === pwEggOf(mk), seq.join(',')); }
+        // a whole day
+        { const dayB = pb().querySelector('[data-pwday]');
+          if(dayB){ const d = dayB.dataset.pwday, ks = prefShiftsFor(d).map(x => `${d}|${x.id}`).filter(k => !prefFixedNo(k) && !prefInsideLong(pr, k));
+            ks.forEach(k => delete pr.slots[k]); renderInstructorPrefs(pb()); await sleep(100);
+            pb().querySelector(`[data-pwday="${d}"]`).click(); await sleep(150);
+            const y = ks.every(k => pr.slots[k] === 'yes');
+            pb().querySelector(`[data-pwday="${d}"]`).click(); await sleep(150);
+            const no = ks.every(k => pr.slots[k] === 'no');
+            pb().querySelector(`[data-pslot="${ks[0]}"]`).click(); await sleep(150);
+            check('a tap on the day marks all of it (כן, then לא), and a single shift still changes by itself', y && no && pr.slots[ks[0]] === 'yes' && (ks.length < 2 || pr.slots[ks[1]] === 'no'), JSON.stringify(ks.map(k => pr.slots[k]))); } }
+        // going back, one step at a time, keeping the choices; the question of the days
+        { pwSet(pwPosKey(mk), 'kinds'); renderInstructorPrefs(pb()); await sleep(120);
+          pb().querySelector('[data-pwopt="n"]').click(); await sleep(60); pb().querySelector('#pw-next').click(); await sleep(150);
+          const qText = pb().querySelector('.pweek-q h2').textContent, sub = pb().querySelector('.pweek-q .pnote').textContent;
+          check('the second question: its new words, and the small line', /^האם יש יום קבוע בשבוע שבו לא תגיע.? החודש\?$/.test(qText) && sub === 'כל המופעים של הימים שבחרת יסומנו מראש כ׳לא׳.', qText + ' | ' + sub);
+          pb().querySelector('[data-pwopt="3"]').click(); await sleep(60);
+          const wed = daysOfMonth(mk).filter(d => dowOf(d) === 3 && !pr.absent.includes(d) && !(pr.fixed || []).some(f => f.day === d));
+          check('a day chosen: all its shifts in all the month are "לא" at once, as the line says', wed.every(d => prefShiftsFor(d).every(x => pr.slots[`${d}|${x.id}`] === 'no')), JSON.stringify(wed));
+          check('"חזור" has somewhere to go in the process', navCanGoBack() && prefFlowCanBack(), '');
+          prefFlowBack(); await sleep(150);
+          check('"חזור" from the second question goes to the first, with its choice still on', stepNow() === 'kinds' && pb().querySelector('[data-pwopt="n"]').classList.contains('on'), String(stepNow()));
+          pb().querySelector('#pw-next').click(); await sleep(150);
+          check('... and forward again, the day chosen is still on', stepNow() === 'days' && pb().querySelector('[data-pwopt="3"]').classList.contains('on'), '');
+          pb().querySelector('[data-pwopt="3"]').click(); await sleep(60);
+          const fri0 = daysOfMonth(mk).find(d => dowOf(d) === 3);
+          check('taken back: the day waits for a mark again, only its night stays "לא" (the first question keeps it)', !pr.slots[`${fri0}|m`] && pr.slots[`${fri0}|n`] === 'no', JSON.stringify([pr.slots[`${fri0}|m`], pr.slots[`${fri0}|n`]]));
+          pwSet(pwPosKey(mk), 'kinds'); renderInstructorPrefs(pb()); await sleep(100); pb().querySelector('[data-pwopt="n"]').click(); await sleep(60); }
+        // "לא רלוונטי" follows the marks
+        { const allK = Object.keys(pr.slots); const keep = JSON.stringify(pr.slots), keepC = JSON.stringify(pr.consent);
+          allK.forEach(k => { pr.slots[k] = 'no'; }); pr.consent.extend = null; pr.consent.pull = null; try { localStorage.removeItem(prefConsentAutoKey(mk)); } catch(e){}
+          pwSet(pwPosKey(mk), 'end'); renderInstructorPrefs(pb()); await sleep(150);
+          check('"לא רלוונטי": marked by itself with no morning and no Saturday night chosen', pr.consent.extend === 'na' && pr.consent.pull === 'na' && pb().querySelector('[data-consent="extend:na"]').classList.contains('on') && pb().querySelector('[data-consent="pull:na"]').classList.contains('on'), JSON.stringify(pr.consent));
+          const d1 = daysOfMonth(mk)[0], sat1 = daysOfMonth(mk).find(d => dowOf(d) === 6); pr.slots[`${d1}|m`] = 'yes'; renderInstructorPrefs(pb()); await sleep(120);
+          check('... a morning chosen: the first question opens again, the second stays', pr.consent.extend === null && pr.consent.pull === 'na', JSON.stringify(pr.consent));
+          pr.slots[`${sat1}|n`] = 'yes'; renderInstructorPrefs(pb()); await sleep(120);
+          check('... a Saturday night chosen: the second opens too', pr.consent.pull === null, JSON.stringify(pr.consent));
+          pb().querySelector('[data-consent="pull:na"]').click(); await sleep(120); renderInstructorPrefs(pb()); await sleep(80);
+          check('... pressed by hand it stays', pr.consent.pull === 'na', JSON.stringify(pr.consent));
+          pr.slots = JSON.parse(keep); pr.consent = JSON.parse(keepC); try { localStorage.removeItem(prefConsentAutoKey(mk)); } catch(e){} }
+        // "שבוע-שבוע": one week across, with the arrows
+        { srv.prefWeekly = false; srv.prefPlain = false; portalUi.prefsWholeMonth = false; portalUi.prefWk = 0; portalUi.level = 'yes'; renderInstructorPrefs(pb()); await sleep(200);
+          const nums = () => [...pb().querySelectorAll('.pcal .pday-num')].map(x => x.textContent).join(',');
+          const n1 = nums(), sw = [...pb().querySelectorAll('[data-pview]')].map(x => x.textContent).join('|');
+          check('the switch: "שלב שלב, בלי יכול" and "שבוע-שבוע"', sw === 'שלב שלב, בלי יכול|שבוע-שבוע', sw);
+          check('"שבוע-שבוע": the calendar with one week only, the days side by side, with "יכול"', pb().querySelectorAll('.pcal .pday:not(.blank)').length <= 7 && !!pb().querySelector('[data-plevel="avoid"]') && getComputedStyle(pb().querySelector('.pcal')).display === 'grid', n1);
+          pb().querySelector('[data-mwk="1"]').click(); await sleep(200);
+          check('... the arrow moves to the next week, and back', nums() !== n1 && portalUi.prefWk === 1, nums());
+          pb().querySelector('[data-mwk="-1"]').click(); await sleep(200);
+          check('... and at the first week there is no going before it', nums() === n1 && pb().querySelector('[data-mwk="-1"]').disabled, nums());
+          check('... the special bar of the process is not here', !pb().querySelector('#pw-back-flow') && pb().querySelectorAll('.plevelbar button').length > 1, '');
+          srv.prefWeekly = true; srv.prefPlain = true; portalUi.prefWk = 0; }
+      } finally {
+        pr.slots = JSON.parse(saved); pr.hours = JSON.parse(savedHours); if(wasSub) m.submitted[srv.me] = wasSub; srv.prefWeekly = was[0]; srv.prefPlain = was[1]; portalUi.prefsWholeMonth = false;
+        try { localStorage.removeItem(pwPosKey(mk)); } catch(e){}
+        if(sim){ srvPrefsOpen = realOpen; portalSave = realSave; } else { portalSave(); await srvFlush(); } await personalLeave(); showHub();
       }
     });
     // ---- swaps of the service girls, only among themselves (scheduling-v28.sql)
@@ -2555,6 +2713,392 @@
       }
     });
     // ---- very large text (the gear: "טקסט גדול מאוד"): every tab and folded part still fits the screen, for an instructor, a service girl and the coordinator
+    // ---- every word on every screen can be read, in each look, with the high contrast of the device on and off (Guy 2026-11-04: white on white in the sheets)
+    await step('readable looks', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)';
+      const rgba = c => { const x = /^color\(/.test(c) ? 255 : 1, m = String(c).replace(/^color\(srgb/, '').match(/[\d.]+/g) || []; return { r:(+m[0] || 0) * x, g:(+m[1] || 0) * x, b:(+m[2] || 0) * x, a:m[3] === undefined ? 1 : +m[3] }; };
+      const lum = c => [c.r, c.g, c.b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0);
+      const over = (top, under, a) => ({ r:top.r * a + under.r * (1 - a), g:top.g * a + under.g * (1 - a), b:top.b * a + under.b * (1 - a), a:1 });
+      // what is really behind an element: its layers up the page, null when a picture is there
+      const behind = el => { const layers = []; for(let e = el; e; e = e.parentElement){ const cs = getComputedStyle(e); if(cs.backgroundImage !== 'none') return null; const c = rgba(cs.backgroundColor); if(c.a > 0){ layers.push(c); if(c.a === 1) break; } } let b = { r:255, g:255, b:255, a:1 }; layers.reverse().forEach(c => { b = over(c, b, c.a); }); return b; };
+      const scan = root => { const bad = []; document.getAnimations().forEach(a => { try { a.finish(); } catch(e){} });
+        root.querySelectorAll('*').forEach(el => {
+          if(el.closest('svg, option, script, style') || !el.getClientRects().length) return;
+          const own = [...el.childNodes].some(x => x.nodeType === 3 && /[\p{L}\p{N}]/u.test(x.textContent)); if(!own) return;
+          const cs = getComputedStyle(el); if(cs.visibility === 'hidden') return;
+          const bg = behind(el); if(!bg) return;
+          let op = 1; for(let e = el; e; e = e.parentElement) op *= +getComputedStyle(e).opacity;
+          if(op < .05) return;
+          const fg0 = rgba(cs.color), fg = over(fg0, bg, fg0.a * op), a = lum(fg), b = lum(bg), r = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+          const low = el.closest('[disabled], .lv-no, .out, .svcal-day.off') ? 1.5 : 3;
+          if(r < low) bad.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} "${el.textContent.trim().slice(0, 14)}" ${r.toFixed(1)}`);
+        });
+        return bad; };
+      // pressed, hovered, in focus: a script cannot press, so every rule of those states that changes a colour is put on the elements it is for, measured and taken off
+      const stateRules = []; { const walk = rules => [...rules].forEach(r => { if(r.cssRules && r.media){ if(matchMedia(r.media.mediaText).matches) walk(r.cssRules); return; } if(!r.selectorText || !/:(hover|active|focus)/.test(r.selectorText)) return; const color = r.style.color, back = r.style.backgroundColor || r.style.background; if(color || back) r.selectorText.split(',').filter(x => /:(hover|active|focus)/.test(x)).forEach(x => stateRules.push({ sel:x.replace(/:(hover|active|focus-visible|focus-within|focus)/g, '').trim() || '*', color, back })); });
+        [...document.styleSheets].forEach(ss => { try { walk(ss.cssRules); } catch(e){} }); }
+      const stateScan = root => { const bad = []; stateRules.forEach(r => { let els = []; try { els = [...root.querySelectorAll(r.sel)].slice(0, 2); } catch(e){ return; }
+        els.forEach(el => { if(!el.getClientRects().length || el.disabled) return; if(/ghost|danger/.test(el.className) && !/ghost|danger/.test(r.sel)) return;          // (they have state rules of their own, which win)
+          const keep = el.getAttribute('style'); el.style.setProperty('transition', 'none', 'important'); if(r.color) el.style.setProperty('color', r.color, 'important'); if(r.back) el.style.setProperty('background', r.back, 'important');
+          const found = scan(el.parentElement || el).filter(x => x.includes(`"${el.textContent.trim().slice(0, 14)}"`)); if(found.length) bad.push(`${r.sel.slice(-34)} ${found[0]}`); if(keep === null) el.removeAttribute('style'); else el.setAttribute('style', keep); }); }); return bad; };
+      const lookSet = t => { srv.portalTheme = t; portalLoad().settings.theme = t === 'leopard' ? 'light' : t; };
+      const contrastSet = on => { a11y.contrast = on; applyA11y(); };
+      const view = () => document.querySelector('.view.active');
+      const tabsScan = async (sel, key, into) => { const ids = [...view().querySelectorAll(sel)].map(b => b.dataset[key]);
+        into.push(...scan(view()));
+        for(const id of ids){ const b = [...view().querySelectorAll(sel)].find(x => x.dataset[key] === id); if(!b) continue; b.click(); await sleep(450); view().querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(30); into.push(...scan(view()).map(x => `${id}: ${x}`)); into.push(...stateScan(view()).map(x => `state ${id}: ${x}`)); } };
+      const wasContrast = !!a11y.contrast;
+      try {
+        for(const kind of ['instructor', 'coordinator', 'service', 'manager', 'therapist']){
+          await sbPersonal.auth.signOut();
+          const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW);
+          if(error || !(await personalEnter())){ check(`readable looks (${kind}): signs in`, false, error ? error.message : 'no'); continue; }
+          const was = { p:srv.portalTheme, t:portalLoad().settings.theme };
+          for(const look of ['light', 'dark'].concat(kind === 'coordinator' ? ['leopard'] : [])) for(const hc of [false, true]){
+            contrastSet(hc); lookSet(look); const bad = [];
+            if(personalRamzorKind()){ showAppHome(); await sleep(250); bad.push(...scan(view()).map(x => `home: ${x}`)); }
+            if(!personalIsTherapistOnly()){
+              srvOpenPortal(); await sleep(450); await tabsScan('[data-ptab]', 'ptab', bad);
+              const g = document.getElementById('portal-gear');
+              if(g){ g.click(); await sleep(350); const sh = [...document.querySelectorAll('.psheet')].pop(); if(sh){ sh.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(60); bad.push(...scan(sh).map(x => `gear: ${x}`)); sh.remove(); } }
+            }
+            if(ocAllowed()){ showOncallScreen(); await sleep(800); bad.push(...scan(view()).map(x => `oncall: ${x}`)); const sv = view().querySelector('[data-oc-view="sched"]'); if(sv){ sv.click(); await sleep(800); bad.push(...scan(view()).map(x => `oncall sched: ${x}`)); oc.view = 'list'; } }
+            if(look !== 'leopard' && typeof therapyAvailable === 'function' && therapyAvailable()){ await showTherapyPortal(); await sleep(500); await tabsScan('[data-th-tab]', 'thTab', bad); }
+            // windows opened from the screens, the question window and the small message, the Ramzor's staff screens, the training list
+            const sheet = async (name, open) => { try { await open(); await sleep(350); const sh = [...document.querySelectorAll('.psheet, .confirm-sheet')].pop(); if(sh){ sh.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(40); bad.push(...scan(sh).map(x => `${name}: ${x}`)); bad.push(...stateScan(sh).map(x => `state ${name}: ${x}`)); } } catch(e){ bad.push(`${name}: failed ${e.message}`); } document.querySelectorAll('.psheet, .confirm-sheet').forEach(x => x.remove()); };
+            if(kind === 'coordinator'){ srvOpenPortal(); await sleep(400); portalUi.tab = 'schedule'; portalUi.month = monthKeyOf(srvToday()); showPortal('schedule'); await sleep(600);
+              await sheet('shift window', () => { const c = document.querySelector('.mcal-cell.editable'); if(c) c.click(); });
+              await sheet('share window', () => { const b = document.getElementById('cs-share'); if(b) b.click(); });
+              await sheet('hide window', () => { const b = document.getElementById('cs-others'); if(b) b.click(); }); }
+            if(kind !== 'therapist' && kind !== 'manager'){ srvOpenPortal(); await sleep(350); await sheet('problem window', () => { const b = document.getElementById('portal-problem'); if(b) b.click(); }); }
+            await sheet('question window', () => { confirmSheet({ title:'כותרת לבדיקה', text:'טקסט לבדיקה', okLabel:'אישור', cancelLabel:'ביטול' }); });
+            { toast('הודעה לבדיקה'); await sleep(120); const t = document.querySelector('.toast'); if(t){ bad.push(...scan(t.parentElement || document.body).filter(x => x.includes('הודעה לבדיקה')).map(x => `toast: ${x}`)); } document.querySelectorAll('.toast').forEach(x => x.remove()); }
+            if(personalRamzorKind() && kind !== 'service' && look !== 'leopard'){
+              showHub(); ramzorLookApply(); await sleep(250); bad.push(...scan(view()).map(x => `hub: ${x}`)); bad.push(...stateScan(view()).map(x => `state hub: ${x}`));
+              const hb = document.getElementById('hub-daily-btn'); if(hb){ hb.click(); ramzorLookApply(); await sleep(350); bad.push(...scan(view()).map(x => `daily: ${x}`)); }
+              showHub(); await sleep(60); const kb = document.getElementById('hub-kids-btn'); if(kb && !kb.hidden){ kb.click(); ramzorLookApply(); await sleep(500); bad.push(...scan(view()).map(x => `kids control: ${x}`)); }
+              showHub(); await sleep(60); const cb = document.getElementById('hub-control-btn'); if(cb && !cb.hidden){ cb.click(); ramzorLookApply(); await sleep(700); bad.push(...scan(view()).map(x => `ahmash: ${x}`)); }
+              showHub(); await sleep(60); if(kind === 'coordinator'){ document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-manage').classList.add('active'); ramzorLookApply(); await sleep(200); bad.push(...scan(view()).map(x => `management: ${x}`)); showHub(); await sleep(60); ramzorLookApply(); }
+            }
+            if(kind === 'coordinator' && look !== 'leopard'){ showLearnHome(); await sleep(250); bad.push(...scan(view()).map(x => `learn: ${x}`)); }
+            const u = [...new Set(bad)];
+            check(`readable looks: ${kind}, ${look}${hc ? ', high contrast' : ''}`, !u.length, `${u.length}: ${u.slice(0, 14).join(' | ')}`);
+          }
+          srv.portalTheme = was.p; portalLoad().settings.theme = was.t; contrastSet(wasContrast);
+        }
+      } finally { contrastSet(wasContrast); await personalLeave(); showHub(); }
+    });
+    // ---- the schedule tab of the coordinator on a phone: a finger moves a name, no side panels, the two small buttons, the tabs in large text (Guy 2026-11-04)
+    await step('coordinator phone', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('coordinator-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('coordinator phone: signs in', false, error ? error.message : 'no'); return; }
+      const phone = matchMedia('(max-width:700px)').matches, seen = id => { const e = document.querySelector(id); return !!e && !!e.getClientRects().length; };
+      const wide = () => document.documentElement.scrollWidth > innerWidth + 1 ? `${document.documentElement.scrollWidth} > ${innerWidth}` : '';
+      const realMove = srvMoveToSlot, realAsk = srvAskBeforePlacing, realConfirm = confirmSheet, realWrite = asgWrite;
+      try {
+        srvOpenPortal(); await sleep(300); portalUi.tab = 'schedule'; portalUi.month = monthKeyOf(srvToday()); showPortal('schedule'); await sleep(700);
+        if(!seen('#cs-share')){ check('(info) coordinator phone: skipped, no published schedule this month on the test server', true, ''); return; }
+        if(!phone){
+          check('the computer: the panel of the requests, the explanations and the long name of the share stay', (seen('.cs-tab') || seen('.cs-side')) && seen('.cs-help') && /שיתוף תמונת סידור/.test(document.querySelector('#cs-share').textContent), '');
+          { const t = [...document.querySelectorAll('.portal-tabs [data-ptab]')].map(b => b.getBoundingClientRect()), nav = document.querySelector('.portal-tabs').getBoundingClientRect(); check('the tabs on a computer are spread over the line', t.length >= 5 && Math.max(...t.map(r => r.right)) - Math.min(...t.map(r => r.left)) > nav.width * .9, `${t.length}`); }
+          portalUi.csOpen = true; showPortal('schedule'); await sleep(500);
+          { const sd = document.querySelector('.cs-side'), so = document.querySelector('.cs-sort-btn'); check('the panel: "לפי מספר משמרות", and in the usual text no scroll inside it', /לפי מספר משמרות/.test(so.textContent) && sd.scrollHeight <= sd.clientHeight + 2, `${sd.scrollHeight} / ${sd.clientHeight}`);
+            try { localStorage.setItem('ramzor-portal-big', '2'); } catch(e){} applyPortalSize(); await sleep(200); sd.scrollIntoView({ block:'start' }); await sleep(120); csSideFit(); await sleep(60); sd.scrollTop = 1e6; await sleep(60); const r = sd.getBoundingClientRect(); check('... in very large text it scrolls to its very end, inside the screen', r.bottom <= innerHeight + 1 && Math.abs(sd.scrollTop + sd.clientHeight - sd.scrollHeight) < 3, `${r.bottom} / ${innerHeight}`); try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); portalUi.csOpen = false; }
+          return;
+        }
+        check('the admin on a phone has all the tabs, the coordinator three', srvTabs(Object.assign({}, portalMe(), { admin:true })).length > 4 && srvTabs(Object.assign({}, portalMe(), { admin:false })).length === 3, '');
+        check('phone: no panel of the requests and no explanations on the schedule tab', !seen('.cs-tab') && !seen('.cs-side') && !seen('.cs-help'), '');
+        { const a = document.querySelector('#cs-openday').getBoundingClientRect(), b = document.querySelector('#cs-share').getBoundingClientRect(), sb = document.querySelector('#cs-share');
+          check('phone: "פתיחת יום לשיבוץ" and "שיתוף" side by side, nothing out of the screen, room for a finger', Math.abs(a.top - b.top) < 3 && a.height >= 44 && b.height >= 44 && !wide() && Math.min(a.left, b.left) >= 0 && Math.max(a.right, b.right) <= innerWidth, JSON.stringify([a.top, b.top, a.height, wide()]));
+          check('phone: the button is called "שיתוף", with the WhatsApp mark', sb.textContent.trim() === 'שיתוף' && !!sb.querySelector('svg'), sb.textContent); }
+        // the picture of the month: a calendar small enough for WhatsApp to leave it sharp, and everyone is in it
+        { const mk0 = portalUi.month, said = [], real = CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText = function(t, ...a){ said.push(String(t)); return real.call(this, t, ...a); };
+          let pic = null; try { pic = csMonthCanvas(mk0); } finally { CanvasRenderingContext2D.prototype.fillText = real; }
+          const st0 = portalLoad(), text = said.join(' | '), rowsM = (st0.rows || []).filter(r => monthKeyOf(r.day) === mk0), who = [...new Set(rowsM.map(r => r.staff))].map(id => { const p = st0.instructors.find(x => x.id === id); return p ? instrName(p, st0.instructors) : null; }).filter(Boolean);
+          const others = rowsM.filter(r => { const p = st0.instructors.find(x => x.id === r.staff); return p && ['service', 'teacher'].includes(p.role); });
+          check('the picture of the month: 1600 at most on its long side, not a tall list', !!pic && pic.width === 1600 && pic.height <= 1600, pic ? `${pic.width}x${pic.height}` : 'none');
+          check('... everyone who works this month is in it, the teachers and the service girls too', who.every(n => text.includes(n)), who.filter(n => !text.includes(n)).join(', '));
+          check('... the seven days by name, every date, and the hours of the three shifts at the top', DOW_NAMES.every(n => said.includes(n)) && daysOfMonth(mk0).every(d => said.includes(`${DOW_SHORT[dowOf(d)]} ${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`)) && /בוקר \d+ עד \d+/.test(text) && /לילה \d+ עד \d+/.test(text), said.slice(0, 6).join(' | '));
+          check('... the hours by the teachers and the service girls', !others.length || / \d+ עד \d+/.test(said.filter(t => !/בוקר|צהריים|לילה/.test(t)).join(' ')), String(others.length)); }
+        // a finger
+        const touch = (type, el, x, y) => { const t = new Touch({ identifier:1, target:el, clientX:x, clientY:y }), end = type === 'touchend' || type === 'touchcancel'; el.dispatchEvent(new TouchEvent(type, { bubbles:true, cancelable:true, touches:end ? [] : [t], targetTouches:end ? [] : [t], changedTouches:[t] })); };
+        const ids = portalLoad().assignmentIds || {}, names = [...document.querySelectorAll('.mcal-wrows .mcal-cell.editable .mcal-name[data-iid]')].filter(x => ids[`${x.closest('.mcal-cell').dataset.key}|${x.dataset.iid}`]);
+        const n = names[0], rows = [...document.querySelectorAll('.mcal-wrow')];
+        if(!n || rows.length < 2){ check('(info) coordinator phone: no name to drag this week', true, ''); return; }
+        const fromKey = n.closest('.mcal-cell').dataset.key, otherRow = rows.find(r => !r.contains(n) && r.querySelectorAll('.mcal-wrow-shift .mcal-cell.editable').length >= 2) || rows[1];
+        const shifts = [...otherRow.querySelectorAll('.mcal-wrow-shift')], short = shifts.slice(0, 2).sort((a, b) => a.querySelector('.mcal-cell').scrollHeight - b.querySelector('.mcal-cell').scrollHeight)[0];
+        let moved = null; srvMoveToSlot = async (...a) => { moved = a; };
+        const drag = async (x, y) => { const r = n.getBoundingClientRect(), sx = r.left + 8, sy = r.top + 6; touch('touchstart', n, sx, sy); await sleep(300); touch('touchmove', n, x, y); await sleep(60); };
+        short.scrollIntoView({ block:'center' }); await sleep(120); n.scrollIntoView({ block:'nearest' }); await sleep(120); short.scrollIntoView({ block:'nearest' }); await sleep(120);
+        const sr = short.getBoundingClientRect(), bx = sr.left + sr.width / 2, by = sr.bottom - 4;
+        await drag(bx, by);
+        const cellT = short.querySelector('.mcal-cell.editable'), ghost = document.querySelector('.cs-finger-ghost'), gr = ghost ? ghost.getBoundingClientRect() : null;
+        check('the finger: the name shows above the finger, inside the screen, and does not hide the place under the finger', !!ghost && gr.bottom < by - 20 && gr.left >= 0 && gr.right <= innerWidth && ghost.textContent.trim().length > 0, gr ? `${gr.bottom} / ${by}` : 'no ghost');
+        check('the finger: at the very bottom of the shift, past the names, that shift is the target, and only it', !!cellT && cellT.classList.contains('drop-ok') && document.querySelectorAll('.mcal-cell.drop-ok').length === 1, String(document.querySelectorAll('.mcal-cell.drop-ok').length));
+        check('the finger: the target has the colour of her wish for this very shift, as on the computer', cellT.classList.contains('drop-' + srvWishFor(n.dataset.iid, cellT.dataset.key)), cellT.className);
+        const other = shifts.find(x => x !== short), orr = other ? other.getBoundingClientRect() : null;
+        if(other){ touch('touchmove', n, orr.left + orr.width / 2, orr.top + 4); await sleep(60); check('the finger: the shift beside it, at its label, takes over at once', other.querySelector('.mcal-cell').classList.contains('drop-ok') && !cellT.classList.contains('drop-ok'), ''); touch('touchmove', n, bx, by); await sleep(60); }
+        touch('touchend', n, bx, by); await sleep(120);
+        check('the finger let go: the move is asked for that shift, the name and the marks are gone', !!moved && moved[1] === cellT.dataset.key && !document.querySelector('.cs-finger-ghost') && !document.querySelector('.mcal-cell.drop-ok') && !srvDragWho && !srvDragRow, JSON.stringify(moved && moved[1]));
+        check('the finger let go: no window of the shift opens by itself', !document.querySelector('.psheet'), '');
+        // scrolling: a finger that moves at once does not drag
+        moved = null; { const r = n.getBoundingClientRect(); touch('touchstart', n, r.left + 8, r.top + 6); await sleep(40); touch('touchmove', n, r.left + 8, r.top + 60); await sleep(320); touch('touchend', n, r.left + 8, r.top + 60); await sleep(60); }
+        check('a finger that moves at once scrolls: nothing is lifted, nothing moves', !moved && !document.querySelector('.cs-finger-ghost') && !srvDragWho, '');
+        srvMoveToSlot = realMove;
+        // the write that the move asks for (the test data stays as it is: the write is answered with a failure), and a failed save loses nothing
+        { const st = portalLoad(), rowId = ids[`${fromKey}|${n.dataset.iid}`], r0 = st.rows.find(x => x.id === rowId), k = cellT.dataset.key; let w = null;
+          if(r0 && r0.shift !== 'L' && !st.rows.some(x => x.id !== rowId && x.staff === r0.staff && x.day === splitKey(k).date)){
+            srvAskBeforePlacing = async () => true; confirmSheet = async () => true; asgWrite = async (...a) => { w = a; return { error:{ message:'test' } }; };
+            const day0 = r0.day, sh0 = r0.shift; await srvMoveToSlot(portalUi.month, k, rowId, document.getElementById('portal-body')); await sleep(150);
+            check('the move writes that same row to the new day', !!w && w[1] === 'update' && w[2] === rowId && w[3].day === splitKey(k).date, JSON.stringify(w && [w[1], w[3] && w[3].day]));
+            check('... and when the save fails the name stays where it was', r0.day === day0 && r0.shift === sh0, '');
+            asgWrite = realWrite;
+          } else check('(info) coordinator phone: the write was not tried, that person is already on that day', true, ''); }
+        srvAskBeforePlacing = realAsk; confirmSheet = realConfirm;
+        // a tap on a shift still opens it, with its actions
+        { const c = document.querySelector('.mcal-wrows .mcal-cell.editable'); await sleep(600); c.click(); await sleep(350); check('a tap on a shift opens it as before', !!document.querySelector('.psheet'), ''); document.querySelectorAll('.psheet').forEach(x => x.remove()); }
+        // the tabs in large text
+        for(const big of ['1', '2']){
+          try { localStorage.setItem('ramzor-portal-big', big); } catch(e){} applyPortalSize(); await sleep(250);
+          const c = document.querySelector('.portal-tabs .ptab-count'), was = c ? c.textContent : ''; if(c) c.textContent = '125'; await sleep(60);
+          const tabs = [...document.querySelectorAll('.portal-tabs [data-ptab]')].filter(b => b.getClientRects().length), rs = tabs.map(b => b.getBoundingClientRect()), nav = document.querySelector('.portal-tabs');
+          check(`the tabs in ${big === '1' ? 'large' : 'very large'} text: one line, inside the screen, nothing cut`, tabs.length >= 3 && rs.every(r => Math.abs(r.top - rs[0].top) < 4 && r.left >= 0 && r.right <= innerWidth + .5) && tabs.every(b => b.scrollWidth <= b.clientWidth + 1) && nav.scrollWidth <= nav.clientWidth + 1 && !wide(), JSON.stringify(rs.map(r => [Math.round(r.left), Math.round(r.right), Math.round(r.top)])));
+          if(c) c.textContent = was;
+        }
+      } finally {
+        srvMoveToSlot = realMove; srvAskBeforePlacing = realAsk; confirmSheet = realConfirm; asgWrite = realWrite;
+        try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
+        await personalLeave(); showHub();
+      }
+    });
+    // ---- the on-call screen: a card of the first screen, one folded line per person, "הוזמן לכולם", two views on a phone; the text size of the therapist (Guy 2026-11-04)
+    await step('oncall round', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', phone = matchMedia('(max-width:700px)').matches;
+      const enter = async kind => { await sbPersonal.auth.signOut(); const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW); return !error && await personalEnter(); };
+      try {
+        for(const kind of ['instructor', 'service']){
+          if(!(await enter(kind))){ check(`oncall round: ${kind} signs in`, false, ''); continue; }
+          if(personalRamzorKind()){ showAppHome(); await sleep(150); }
+          check(`no right, no card: ${kind}`, !document.getElementById('apphome-oncall') && !document.getElementById('portal-oncall') && !ocAllowed(), '');
+        }
+        if(await enter('therapist')){
+          await sleep(200);
+          check('the therapist comes in to the first screen, with the cards of the therapy portal and of the on-call', document.querySelector('.view.active').id === 'view-apphome' && !!document.getElementById('apphome-oncall') && !!document.getElementById('apphome-therapy'), document.querySelector('.view.active').id);
+          await showTherapyPortal(); await sleep(100);
+          check('the therapy portal has no on-call tab, and no conversations tab', !document.querySelector('[data-th-tab="oncall"]') && !document.querySelector('[data-th-tab="chats"]'), '');
+          showAppHome(); await sleep(120); { const c = document.getElementById('apphome-chats'); check('the conversations are a card of their own', !!c, ''); if(c){ c.click(); await sleep(700); check('... it opens its screen', document.querySelector('.view.active').id === 'view-chats' && !document.querySelector('#view-chats .pstatus.bad') && !!document.querySelector('#chats-screen *'), document.querySelector('.view.active').id); } }
+          window.__asLive = true; showAppHome(); await sleep(120); check('live: the social worker has the Ramzor, the on-call and the conversations, and no therapy portal', !!document.getElementById('apphome-ramzor') && !!document.getElementById('apphome-oncall') && !!document.getElementById('apphome-chats') && !document.getElementById('apphome-therapy'), ''); window.__asLive = false;
+          await showTherapyPortal(); await sleep(100);
+          try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
+          const set = document.querySelector('[data-th-tab="settings"]'); if(set){ set.click(); await sleep(400); } else { thp.tab = 'settings'; thpRender(); await sleep(300); }
+          const bs = [...document.querySelectorAll('[data-th-big]')];
+          check('the therapist settings: the three sizes, "רגיל" until she chooses', bs.map(b => b.textContent).join('|') === 'טקסט רגיל|טקסט גדול|טקסט גדול מאוד' && bs[0].classList.contains('on'), bs.length);
+          if(bs[1]){ bs[1].click(); await sleep(300); check('... a choice takes hold and stays', document.body.classList.contains('portal-big') && localStorage.getItem('ramzor-portal-big') === '1' && document.querySelector('[data-th-big="1"]').classList.contains('on'), '');
+            const wide = document.documentElement.scrollWidth > innerWidth + 1; check('... nothing wider than the screen', !wide, String(document.documentElement.scrollWidth)); }
+          try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
+        } else check('oncall round: the therapist signs in', false, '');
+        if(!(await enter('coordinator'))){ check('oncall round: the coordinator signs in', false, ''); return; }
+        showAppHome(); await sleep(150);
+        check('the coordinator: a card on the first screen', !!document.getElementById('apphome-oncall'), '');
+        srvOpenPortal(); await sleep(300);
+        check('... and no on-call tab in her portal', !document.querySelector('[data-ptab="oncall"]'), '');
+        showAppHome(); await sleep(100); document.getElementById('apphome-oncall').click(); await sleep(900);
+        check('the card opens it to work in, not only to look at', !document.querySelector('#view-oncall .adm-viewas'), '');
+        check('the card opens its own screen, in the look of the person', document.querySelector('.view.active').id === 'view-oncall' && !!document.querySelector('#view-oncall .portal-shell[data-ptheme] .oc'), document.querySelector('.view.active').id);
+        // the taxis, on a made-up list: the far weekend of the panel, two real people, written to the server and taken away
+        await renderOncall(document.getElementById('oc-screen')); await sleep(1500);          // (what the card asked for has come in, so it does not draw over the list below)
+        const box = document.getElementById('oc-screen'), d = oc.data, p = d.periods[d.periods.length - 1].kind === 'weekend' ? d.periods[d.periods.length - 1] : d.periods[3], ids = Object.values(d.names).filter(s => s.active && s.kind === 'instructor').slice(0, 3).map(s => s.id), day = p.from_day;
+        await sbPersonal.from('oncall_trip').delete().eq('period_key', p.key);
+        const fake = Object.assign({}, d, { period:p, trips:[], events:[], rows:ids.map((id, i) => ({ id:'t' + i, staff_id:id, day, shift:'M', from_time:'07:00', to_time:'15:00' })) });
+        oc.key = p.key; oc.view = 'list'; ocPaint(box, fake); await sleep(60);
+        const rows = () => [...box.querySelectorAll('.oc-p')], line = i => rows()[i], who = i => line(i).dataset.ocPerson.split('|')[0], w0 = who(0), w2 = who(2);
+        check('the taxis: one folded line for each person, nothing marked, both choices there', rows().length === 3 && rows().every(x => !x.open && x.querySelectorAll('[data-oc-all]').length === 2 && !x.querySelector('[data-oc-all][aria-pressed="true"]')), String(rows().length));
+        line(0).querySelector('[data-oc-all="need"]').click(); await sleep(250);
+        line(1).querySelector('[data-oc-all="none"]').click(); await sleep(250);
+        check('... "צריך מונית": still folded, with "הוזמן" for arrival and for return in the line', !line(0).open && line(0).querySelectorAll('summary [data-oc-ord]').length === 2 && line(0).querySelector('[data-oc-all="need"]').getAttribute('aria-pressed') === 'true', JSON.stringify([line(0).open, line(0).querySelectorAll('summary [data-oc-ord]').length, line(0).querySelector('[data-oc-all="need"]').getAttribute('aria-pressed'), (document.querySelector('.toast') || {}).textContent, fake.trips.length, p.key, p.kind, !!p.updated_at]));
+        check('... "לא צריך מונית": no "הוזמן"', !line(1).querySelector('[data-oc-ord]') && line(1).querySelector('[data-oc-all="none"]').getAttribute('aria-pressed') === 'true', '');
+        line(0).querySelector('[data-oc-ord$="|out"]').click(); await sleep(250);
+        check('... one way marked by itself', line(0).querySelector('[data-oc-ord$="|out"]').getAttribute('aria-pressed') === 'true' && line(0).querySelector('[data-oc-ord$="|in"]').getAttribute('aria-pressed') === 'false', '');
+        line(0).querySelector('summary').click(); await sleep(120);
+        check('... opened: each way with its time and address, and no second choice of a taxi', line(0).open && line(0).querySelectorAll('[data-oc-time]').length === 2 && line(0).querySelectorAll('[data-oc-place]').length === 2 && line(0).querySelector('[data-oc-time]').value === '07:00' && !line(0).querySelector('.oc-p-body .oc-need'), '');
+        box.querySelector('[data-oc-all-ordered]').click(); await sleep(500);
+        const saved = (await sbPersonal.from('oncall_trip').select('staff_id,need,ordered,dir').eq('period_key', p.key)).data || [];
+        check('"הוזמן לכולם": saved for who needs a taxi, both ways', saved.filter(t => t.staff_id === w0 && t.ordered).length === 2, JSON.stringify(saved));
+        check('... and for nobody else', !saved.some(t => t.staff_id !== w0 && t.ordered) && !saved.some(t => t.staff_id === w2), JSON.stringify(saved));
+        check('... the button says it is done', box.querySelector('[data-oc-all-ordered]').getAttribute('aria-pressed') === 'true', '');
+        box.querySelector('[data-oc-all-ordered]').click(); await sleep(500);
+        { const s2 = (await sbPersonal.from('oncall_trip').select('staff_id,ordered,dir').eq('period_key', p.key)).data || []; const stay = s2.filter(t => t.staff_id === w0 && t.ordered);
+          check('pressed again: it takes back what it marked, and what was marked by hand before stays', stay.length === 1 && stay[0].dir === 'out', JSON.stringify(s2)); }
+        await sbPersonal.from('oncall_trip').delete().eq('period_key', p.key);
+        await sbPersonal.from('oncall_event').delete().eq('period_key', p.key);
+        // the schedule
+        oc.key = d.period.key; oc.view = 'sched'; oc.wkStart = null; oc.schedView = 'week'; await renderOncall(box); await sleep(200);
+        {
+          const sv = () => [...box.querySelectorAll('[data-oc-sv]')].map(b => b.textContent).join('|'), days = () => [...box.querySelectorAll('.oc-wk-day')];
+          check('two views only, on a phone and on a computer', sv() === 'שבוע|סוף השבוע הקרוב' && !box.querySelector('#oc-viewbar, .oc-viewbar'), sv());
+          { const ds = days(), r = ds.map(x => x.getBoundingClientRect()); check('"שבוע": seven days side by side, Sunday on the right, inside the screen', ds.length === 7 && ds[0].textContent.startsWith(DOW_SHORT[0]) && r.every((x, i) => !i || (x.right <= r[i - 1].left + 3 && Math.abs(x.top - r[0].top) < 2)) && document.documentElement.scrollWidth <= innerWidth + 1, String(document.documentElement.scrollWidth)); }
+          oc.wkStart = '2026-12-27'; await renderOncall(box); await sleep(200);
+          check('... over the end of the year', days().map(x => x.querySelector('span').textContent).join(' ') === '27/12 28/12 29/12 30/12 31/12 1/1 2/1', days().map(x => x.textContent).join(' '));
+          box.querySelector('[data-oc-wk="7"]').click(); await sleep(700);
+          check('... the arrow goes a week on', days()[0].querySelector('span').textContent === '3/1', days()[0].textContent);
+          box.querySelector('[data-oc-wk="-7"]').click(); await sleep(700); oc.wkStart = null; await renderOncall(box); await sleep(200);
+          { const c = [...box.querySelectorAll('[data-oc-cell]')].find(x => x.querySelector('.mcal-name')); if(c){ c.click(); await sleep(250); const sh = [...document.querySelectorAll('.psheet')].pop(); check('a tap on a shift of the weekend: its names with remove and add', !!sh && !!sh.querySelector('[data-oc-un]') && !!sh.querySelector('[data-oc-add]'), ''); sh.remove(); } else check('(info) oncall round: no shift to open in the week', true, ''); }
+          await renderOncall(box); await sleep(200);
+          box.querySelector('[data-oc-sv="weekend"]').click(); await sleep(150);
+          { const f = ocFridayOf(isoDate(new Date())), rs = [...box.querySelectorAll('.mcal-wrow')], lbl = i => [...rs[i].querySelectorAll('.mcal-wrow-lbl')].map(x => x.textContent);
+            check('"סוף השבוע הקרוב": Thursday night to Sunday morning, as the system counts it', rs.length === 4 && rs[0].textContent.includes(ocShort(addDays(f, -1))) && lbl(0).length === 1 && !!document.querySelector('.oc-wk-title') && rs[3].textContent.includes(ocShort(addDays(f, 2))) && !lbl(3).includes(ocShiftWord('N')), JSON.stringify(rs.map((_, i) => lbl(i)))); }
+        }
+      } finally { oc.view = 'list'; oc.wkStart = null; oc.schedView = 'week'; oc.key = null; try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); await personalLeave(); showHub(); }
+    });
+    // ---- the manager towards the live version: the first screen, one question before signing out, the timetable, the users to look at, the Ramzor to look at (Guy 2026-11-04)
+    await step('manager round', async () => {
+      if(!PORTAL_ENABLED) return;
+      await sbPersonal.auth.signOut();
+      const { error } = await signInRetry('manager-test@merkaz-cherum.local', '@config(testPersonalPassword)');
+      if(error || !(await personalEnter())){ check('manager round: she signs in', false, error ? error.message : 'no'); return; }
+      const phone = matchMedia('(max-width:700px)').matches, active = () => document.querySelector('.view.active').id, titles = () => [...document.querySelectorAll('#view-apphome .home-card-title')].map(x => x.textContent);
+      try {
+        await sleep(200);
+        check('she comes in to the first screen, not to a tab', active() === 'view-apphome', active());
+        check('... the cards: "הרמזור", "ניהול", "כוננית סוף שבוע"', ['הרמזור', 'ניהול', 'כוננית סוף שבוע'].every(t => titles().includes(t)) && !titles().includes('פורטל המדריך'), titles().join('|'));
+        // signing out asks, and "ביטול" stays
+        document.getElementById('apphome-logout').click(); await sleep(150);
+        { const sh = document.querySelector('.confirm-sheet'); check('signing out: the question and its two answers', !!sh && sh.querySelector('.confirm-text').textContent === 'פעולה זו תנתק אותך מהמערכת. האם להמשיך?' && sh.querySelector('.confirm-ok').textContent === 'התנתקות' && sh.querySelector('.confirm-cancel').textContent === 'ביטול', sh ? sh.textContent : 'none');
+          if(sh){ sh.querySelector('.confirm-cancel').click(); await sleep(250); } const s = await sbPersonal.auth.getSession(); check('... "ביטול" stays signed in', !!s.data.session && active() === 'view-apphome', active()); }
+        // what the coming live version leaves out
+        window.__asLive = true; showAppHome(); await sleep(120);
+        check('live: no therapy portal at all', !titles().includes('פורטל הטיפול') && !document.getElementById('apphome-therapy'), titles().join('|'));
+        srvOpenPortal(); await sleep(300);
+        check('live: no "הילדים" tab', !document.querySelector('[data-ptab="kids"]'), '');
+        window.__asLive = false; showAppHome(); await sleep(100); srvOpenPortal(); await sleep(400);
+        check('on the test site the children stay', !!document.querySelector('[data-ptab="kids"]'), '');
+        { const h = document.getElementById('portal-home'); check('no "יציאה" inside her portal', !h || !/יציאה/.test(h.textContent), h ? h.textContent : ''); }
+        { const tabs = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab); check('no "בית" tab: she starts on the schedule', tabs[0] === 'schedule' && !tabs.includes('mhome'), tabs.join(',')); }
+        portalUi.tab = 'schedule'; portalUi.month = monthKeyOf(srvToday()); showPortal('schedule'); await sleep(350);
+        { const sh = document.getElementById('mgr-share'), seg = document.querySelector('#mgr-viewbar .mcal-seg'); if(sh){ const a = sh.getBoundingClientRect(), b = seg.getBoundingClientRect(); check('the schedule: "שיתוף" with the WhatsApp mark, left of the view, the same height, not touching', sh.textContent.trim() === 'שיתוף' && !!sh.querySelector('svg') && a.right < b.left - 4 && Math.abs(a.height - b.height) < 3, `${a.right} ${b.left} ${a.height} ${b.height}`); } else check('(info) manager round: this month is not published', true, ''); }
+        portalUi.tab = 'chats'; showPortal('chats'); await sleep(700);
+        check('the messages to the staff are in "שיחות", with no choice of all or some', !!document.querySelector('#mgr-msgs #mm-send') && !document.querySelector('[data-mm-to]') && !!document.querySelector('.mm-groups') && !document.querySelector('.mm-some').hidden, '');
+        // the timetable
+        portalUi.tab = 'timetable'; showPortal('timetable'); await sleep(900);
+        const ttr = await sbPersonal.rpc('tv_timetable_today'), n = ((ttr.data || {}).items || []).length;
+        check('the timetable: "לו"ז" and "עריכה", and the day as on the kids screen', document.querySelectorAll('[data-mtt]').length === 2 && document.querySelectorAll('.mgr-ttv-item').length === n, `${document.querySelectorAll('.mgr-ttv-item').length} / ${n}`);
+        if(phone){ await sleep(200); const clip = [...document.querySelectorAll('.mgr-ttv-name, .mgr-ttv-time')].filter(x => x.getBoundingClientRect().bottom > x.closest('.mgr-ttv-item').getBoundingClientRect().bottom + 1 || x.scrollWidth > x.clientWidth + 1), nav = document.querySelector('.bottom-nav'), last = [...document.querySelectorAll('.mgr-ttv-item')].pop();
+          check('... on a phone: all of it on the screen, no scrolling, nothing cut', document.documentElement.scrollWidth <= innerWidth + 1 && !clip.length && (!last || last.getBoundingClientRect().bottom <= (nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : innerHeight) + 1), `${clip.length} cut`); }
+        { const it = [...document.querySelectorAll('.mgr-ttv-item')].slice(0, 4), bad = it.filter(x => x.querySelector('.mgr-ttv-name').getBoundingClientRect().top < x.querySelector('.mgr-ttv-icon').getBoundingClientRect().bottom - 1 || [...x.querySelectorAll('.mgr-ttv-icon *')].some(e => e.getBoundingClientRect().bottom > x.querySelector('.mgr-ttv-name').getBoundingClientRect().top + 1)); check('... the words under the picture, the picture inside its frame', !bad.length, String(bad.length)); }
+        { const w = document.querySelector('[data-mtv="week"]'); if(w){ w.click(); await sleep(600); check('... the week', phone ? document.querySelectorAll('[data-mtd]').length === 7 : document.querySelectorAll('.mgr-ttv-col').length === 7, ''); } }
+        document.querySelector('[data-mtt="edit"]').click(); await sleep(800);
+        { const r0 = document.querySelector('.ctl-tt-row'); if(r0){ check('the editor: the start on the left, the end on the right', r0.querySelector('[data-tt-time]').getBoundingClientRect().left < r0.querySelector('[data-tt-end]').getBoundingClientRect().left, ''); check('the editor: how often, for each activity', !!r0.querySelector('[data-tt-rep]'), ''); const ic = r0.querySelector('.ctl-tt-icon').getBoundingClientRect(), tx = r0.querySelector('input[type=text]').getBoundingClientRect(); check('the editor: the picture small, the words get the room', ic.width <= 50 && tx.width > ic.width * 2, `${ic.width} / ${tx.width}`); } }
+        { const b = document.querySelector('[data-tt-icon]'); if(b){ b.click(); await sleep(250); const sh = [...document.querySelectorAll('.psheet')].pop(), more = sh.querySelector('.ctl-icons-more'), ids = [...more.querySelectorAll('[data-icon]')].map(x => x.dataset.icon);
+            check('pictures: "עוד תמונות" folded, five subjects, fifty pictures, none twice', !more.open && more.querySelectorAll('.psec').length === 5 && ids.length === 50 && new Set(ids.concat(TT_ICON_LIST.map(x => x[0]))).size === 50 + TT_ICON_LIST.length, String(ids.length));
+            more.open = true; await sleep(60); more.querySelector('[data-icon="pizza"]').click(); await sleep(200); check('... one of them can be chosen', ctl.ttEdit.items[0].i === 'pizza' && ttIcon('pizza')[2] === '🍕', ctl.ttEdit.items[0].i); ctl.ttEdit = null; document.querySelectorAll('.psheet').forEach(x => x.remove()); await ctlTimetable(document.getElementById('mgr-tt')); await sleep(200); } }
+        // the end is offered, and a kept end is not touched
+        { const was = ctl.ttEdit.items; ctl.ttEdit.items = [{ t:'08:00', n:'א', i:'other', end:'08:30' }, { t:'10:00', n:'ב', i:'other', endAuto:true }, { t:'12:00', n:'ג', i:'other' }];
+          const box = document.getElementById('mgr-tt'); ctlTimetableDraw(box); await sleep(60);
+          const row = i => box.querySelectorAll('[data-row]')[i], setStart = async (i, h) => { const s = row(i).querySelector('[data-tt-time] [data-tt-h]'); s.value = h; s.dispatchEvent(new Event('change', { bubbles:true })); await sleep(60); };
+          await setStart(1, '11');
+          check('the end: offered as the start of the next one', ctl.ttEdit.items[1].end === '12:00', JSON.stringify(ctl.ttEdit.items[1]));
+          check('... an end set before stays', ctl.ttEdit.items[0].end === '08:30', JSON.stringify(ctl.ttEdit.items[0]));
+          { const s = row(1).querySelector('[data-tt-end] [data-tt-h]'); s.value = ''; s.dispatchEvent(new Event('change', { bubbles:true })); await sleep(40); await setStart(2, '13'); check('... emptied by hand it stays empty, it is not a must', !ctl.ttEdit.items[1].end, JSON.stringify(ctl.ttEdit.items[1])); }
+          { const real = Element.prototype.scrollIntoView; let to = null, top = null; Element.prototype.scrollIntoView = function(o){ to = this; top = this.getBoundingClientRect().top; return real.call(this, o); };
+            await setStart(0, '14'); Element.prototype.scrollIntoView = real;
+            check('a moved activity: the screen goes to its new place, not the old one', !!to && to.querySelector('[data-tt-name]').value === 'א' && to === row(2) && !(to.getAnimations() || []).length === false || (!!to && to === row(2)), to ? to.querySelector('[data-tt-name]').value : 'no scroll'); }
+          ctl.ttEdit.items = was; ctl.ttEdit = null; }
+        check('how often: every 2 weeks from a day, on that day and two weeks on, not the week between or before', ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-04') && ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-18') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-11') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-10-21'), '');
+        check('how often: the first Wednesday of the month', ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-04') && !ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-11') && ttOn({ rep:{ k:'month', nth:1 } }, '2026-12-02'), '');
+        check('how often: once and weekly always show on their day', ttOn({ rep:{ k:'once' } }, '2026-11-04') && ttOn({ rep:{ k:'week' } }, '2026-11-04') && ttOn({}, '2026-11-04'), '');
+        // how often, through the screen and into the database (what was there is put back exactly)
+        { const day = ctl.tt ? ctl.tt.day : isoDate(new Date()), wd = dowOf(day), name = 'בדיקת תדירות', d0 = (await sbPersonal.from('timetable_day').select('items').eq('day', day).maybeSingle()).data, f0 = (await sbPersonal.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle()).data;
+          try {
+            portalUi.tab = 'timetable'; mgr.ttMode = 'edit'; ctl.ttEdit = null; showPortal('timetable'); await sleep(900);
+            const box = document.getElementById('mgr-tt'); document.getElementById('tt-add').click(); await sleep(120);
+            const row = [...box.querySelectorAll('[data-row]')].pop(), h = row.querySelector('[data-tt-time] [data-tt-h]'); h.value = '23'; h.dispatchEvent(new Event('change', { bubbles:true })); await sleep(120);
+            const r2 = [...box.querySelectorAll('[data-row]')].pop(); r2.querySelector('[data-tt-name]').value = name;
+            const sel = r2.querySelector('[data-tt-rep]'); check('a new activity starts as once', sel.value === 'once', sel.value); sel.value = 'nw'; sel.dispatchEvent(new Event('change', { bubbles:true })); await sleep(120);
+            [...box.querySelectorAll('[data-row]')].pop().querySelector('[data-tt-name]').value = name; document.getElementById('tt-save').click(); await sleep(1400);
+            const dn = (await sbPersonal.from('timetable_day').select('items').eq('day', day).maybeSingle()).data, fn = (await sbPersonal.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle()).data, it = ((dn || {}).items || []).find(x => x.n === name), fx = ((fn || {}).items || []).find(x => x.n === name);
+            check('how often: kept for today, and in the fixed timetable of the day with its every 2 weeks', !!it && !!fx && fx.rep && fx.rep.k === 'nw' && fx.rep.n === 2 && fx.rep.from === day, JSON.stringify([it, fx]));
+            const tv = await sbPersonal.rpc('tv_timetable_today'); check('... the kids screen reads it, and shows it on its day only', ((tv.data || {}).items || []).some(x => x.n === name) && ttOn(fx || {}, day) && !ttOn(fx || {}, addDays(day, 7)), '');
+          } finally {
+            if(d0) await sbPersonal.from('timetable_day').upsert({ day, items:d0.items }); else await sbPersonal.from('timetable_day').delete().eq('day', day);
+            if(f0) await sbPersonal.from('timetable_fixed').upsert({ weekday:wd, items:f0.items }); else await sbPersonal.from('timetable_fixed').delete().eq('weekday', wd);
+            mgr.ttMode = 'view'; ctl.ttEdit = null;
+          } }
+        // the users
+        portalUi.tab = 'users'; showPortal('users'); await sleep(400);
+        const groups = [...document.querySelectorAll('#portal-body .psec')].map(x => x.textContent);
+        check('"משתמשים": instructors, the coordinator, the social workers, no service girls', groups.includes('מדריכים') && groups.includes('רכזת') && groups.includes('מטפלות'), groups.join('|'));
+        { const ins = portalLoad().instructors.find(p => p.role === 'instructor' && p.active), b = document.querySelector(`[data-mu="${ins.id}"]`); b.click(); await sleep(500);
+          check('... an instructor: her screen, with the line that says it is only to look', !!document.querySelector('.adm-viewas') && !!document.querySelector('[data-ptab="prefs"]'), '');
+          const tab = document.querySelector('[data-ptab="prefs"]'); tab.click(); await sleep(400); const slots = (await sbPersonal.from('prefs_slot').select('staff_id').eq('staff_id', ins.id).limit(1));
+          check('... she may read the preferences of another (scheduling-v59.sql)', !slots.error, slots.error ? slots.error.message : '');
+          const w = await sbPersonal.from('prefs_submission').delete().eq('staff_id', ins.id).eq('month', '1999-01-01').select('staff_id'), u = await sbPersonal.from('prefs_slot').update({ level:'yes' }).eq('staff_id', ins.id).select('staff_id');
+          check('... and the database changes nothing for her', !(u.data || []).length, JSON.stringify(u.error || (u.data || []).length));
+          const body = document.getElementById('portal-body'), anyBtn = body.querySelector('[data-pslot], [data-pview], button:not([data-pmonth])'); if(anyBtn){ const wasS = JSON.stringify(portalMonth(portalUi.month || monthKeyOf(srvToday())).prefs || {}); anyBtn.click(); await sleep(150); check('... a tap changes nothing there', JSON.stringify(portalMonth(portalUi.month || monthKeyOf(srvToday())).prefs || {}) === wasS, ''); }
+          document.getElementById('viewas-end').click(); await sleep(400);
+          check('... and back to the list', portalUi.tab === 'users' && !portalUi.viewAs && !!document.querySelector('[data-mu]'), String(portalUi.tab)); }
+        { const c = portalLoad().instructors.find(p => p.role === 'coordinator' && p.active && !p.admin), b = c && document.querySelector(`[data-mu="${c.id}"]`); if(b){ b.click(); for(let i = 0; i < 60 && !document.getElementById('viewas-end'); i++) await sleep(150); await sleep(300); check('... the coordinator: her tabs', !!document.querySelector('[data-ptab="schedule"]') && !!document.querySelector('.adm-viewas') && !document.querySelector('#portal-body .pstatus.bad'), ''); document.getElementById('viewas-end').click(); await sleep(400); } }
+        { const t = portalLoad().instructors.find(p => p.role === 'therapist' && p.active), b = t && document.querySelector(`[data-mu="${t.id}"]`); if(b){ b.click(); await sleep(900); check('... a social worker: the on-call, to look at, not the therapy portal', active() === 'view-oncall' && !!document.querySelector('#view-oncall .adm-viewas'), active()); document.getElementById('oc-home-back').click(); await sleep(300); } }
+        // the on-call, as a social worker
+        showAppHome(); await sleep(100); document.getElementById('apphome-oncall').click(); await sleep(900);
+        check('the on-call opens for her (scheduling-v59.sql)', !!document.querySelector('#view-oncall .oc') && !document.querySelector('#view-oncall .pstatus.bad'), '');
+        // the Ramzor, to look at
+        showAppHome(); await sleep(100); document.getElementById('apphome-ramzor').click(); await sleep(500);
+        check('the Ramzor: no link to an instructor portal', document.getElementById('hub-portal-link').hidden, '');
+        check('... on a computer "מסך ראשי" at the top right, on a phone the bar at the bottom', phone ? document.getElementById('hub-main-back').hidden : !document.getElementById('hub-main-back').hidden && document.getElementById('hub-main-back').getBoundingClientRect().right > innerWidth / 2, '');
+        if(!phone){ document.getElementById('hub-main-back').click(); await sleep(150); check('... and it goes back to the first screen', active() === 'view-apphome', active()); document.getElementById('apphome-ramzor').click(); await sleep(300); }
+        check('the Ramzor opens for her, with no management and no control of the kids screen', active() === 'view-hub' && document.getElementById('hub-manage-gear').hidden && document.getElementById('hub-kids-btn').hidden, active());
+        { const r = await sb.from('child_state').update({ stars:0 }).eq('child_id', 'none'); check('... whatever would write is stopped', !!r.error && /צפייה/.test(r.error.message), JSON.stringify(r.error)); const q = await sb.from('roster').select('id').limit(1); check('... reading works', !q.error && (q.data || []).length === 1, JSON.stringify(q.error)); }
+      } finally { window.__asLive = false; document.querySelectorAll('.toast').forEach(x => x.remove()); const g = document.getElementById('hub-manage-gear'), k = document.getElementById('hub-kids-btn'); await personalLeave(); sb = sbShared || sb; if(g) g.hidden = false; if(k) k.hidden = false; showHub(); }
+    });
+    // ---- a service girl from start to end, what no other step covers: other hours kept and read again, the team's schedule, what she may not touch, what the coordinator gets (Guy 2026-11-04)
+    await step('service round', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', enter = async kind => { await sbPersonal.auth.signOut(); const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW); return !error && await personalEnter(); };
+      if(!(await enter('service'))){ check('service round: she signs in', false, ''); return; }
+      const rgbOf = c => (String(c).match(/[\d.]+/g) || []).map(Number), next = addMonths(monthKeyOf(srvToday()), 1), me = srv.me, other = portalLoad().instructors.find(p => p.active && p.role === 'instructor'), mk0 = monthKeyOf(srvToday());
+      try {
+        check('she comes in with her own role and tabs', (portalMe() || {}).role === 'service' && !!document.querySelector('[data-ptab="schedule"]') && !!document.querySelector('[data-ptab="avail"]'), (portalMe() || {}).role);
+        portalUi.tab = 'schedule'; portalUi.smonth = mk0; showPortal('schedule'); await sleep(500);
+        { const folds = [...document.querySelectorAll('#portal-body details')], team = folds.find(x => /הצוות כולו/.test(x.textContent)); if(team){ team.open = true; await sleep(250); } const mine = folds.find(x => /המשמרות שלי/.test(x.textContent));
+          check('the schedule: her own shifts and the whole team', !!mine && !!team && (!portalMonth(mk0).published || !!team.querySelector('.mcal-name, .mcal-cell')), ''); }
+        if(srvPrefsOpen(next)){
+          const day = daysOfMonth(next).find(d => dowOf(d) === 1);
+          portalUi.pmonth = next; showPortal('avail'); await sleep(700);
+          check('the calendar: five days and one narrow column for the weekend', [...document.querySelectorAll('.svcal-head')].map(x => x.textContent).join('|') === `${DOW_SHORT.slice(0, 5).join('|')}|סופ"ש`, [...document.querySelectorAll('.svcal-head')].map(x => x.textContent).join('|'));
+          document.querySelector('[data-svtool="no"]').click(); await sleep(350);
+          { const c = rgbOf(getComputedStyle(document.querySelector('[data-svtool="no"]')).backgroundColor); check('"לא" chosen: filled red', c[0] > c[1] + 40, String(c)); }
+          { let flash = false; const box = document.getElementById('portal-body'), mo = new MutationObserver(() => { if(/רק רגע/.test(box.textContent)) flash = true; }); mo.observe(box, { childList:true, subtree:true }); const y = scrollY, first = document.querySelector('[data-svslot]'), k = first.dataset.svslot.split('|')[0]; first.click(); await sleep(700); mo.disconnect(); check('a choice: the calendar does not blink or jump', !flash && Math.abs(scrollY - y) < 2, `${flash} ${y} ${scrollY}`); await sbPersonal.from('prefs_service').delete().eq('staff_id', me).eq('day', k); }
+          document.querySelector('[data-svtool="hours"]').click(); await sleep(300);
+          document.querySelector(`[data-svslot="${day}|early"]`).click(); await sleep(200);
+          { const sh = document.querySelector('.psheet'); sh.querySelector('#svh-from').value = '9'; sh.querySelector('#svh-to').value = '13'; sh.querySelector('#svh-go').click(); await sleep(800); }
+          const h = await sbPersonal.from('prefs_hours').select('from_time,to_time').eq('staff_id', me).eq('day', day);
+          check('other hours: kept', (h.data || []).length === 1 && String(h.data[0].from_time).startsWith('09:00'), JSON.stringify(h.data));
+          showPortal('schedule'); await sleep(200); portalUi.pmonth = next; showPortal('avail'); await sleep(700);
+          check('... and there again when the screen is opened anew', /09:00–13:00/.test((document.querySelector(`[data-svday="${day}"]`) || {}).textContent || ''), '');
+          await sbPersonal.from('prefs_hours').delete().eq('staff_id', me).eq('day', day); await sbPersonal.from('prefs_service').delete().eq('staff_id', me).eq('day', day);
+          const st0 = await sbPersonal.from('prefs_submission').upsert({ staff_id:me, month:firstOf(next), submitted_at:new Date().toISOString() });
+          check('she can hand it in', !st0.error, JSON.stringify(st0.error));
+        } else check('(info) service round: the month is not open on the test server, the hours were not tried', true, '');
+        if(other){
+          const r1 = await sbPersonal.from('prefs_slot').select('staff_id').eq('staff_id', other.id).limit(1), r2 = await sbPersonal.from('prefs_service').select('staff_id').neq('staff_id', me).limit(1);
+          check('she does not see what others asked for', !(r1.data || []).length && !(r2.data || []).length, JSON.stringify([r1.data, r2.data]));
+          const w = await sbPersonal.from('prefs_service').upsert({ staff_id:other.id, day:firstOf(next), opt:'none' });
+          check('she cannot change anybody else', !!w.error, '');
+          const t = await sbPersonal.from('child_plans').select('child_id').limit(1);
+          check('... and sees nothing of the therapy', !(t.data || []).length, JSON.stringify(t.error || t.data));
+        }
+        if(await enter('coordinator')){
+          portalUi.tab = 'submissions'; portalUi.smonth = next; portalUi.pmonth = next; showPortal('submissions'); await sleep(900);
+          const nm = (portalPerson(me) || {}).first, row = [...document.querySelectorAll('#portal-body .preq, #portal-body [data-sub], #portal-body details, #portal-body .card')].find(x => nm && x.textContent.includes(nm));
+          check('the coordinator gets it: she is on the list of the submissions', !!row || (document.getElementById('portal-body').textContent || '').includes(nm), String(nm));
+          await sbPersonal.from('prefs_submission').delete().eq('staff_id', me).eq('month', firstOf(next));
+        }
+      } finally { await personalLeave(); showHub(); }
+    });
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;
       const PW = '@config(testPersonalPassword)', waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ if(await fn()) return true; await sleep(150); } return false; };
@@ -2647,6 +3191,11 @@
       // the quiet hours
       tvQuietTick(); const q = document.getElementById('tv-quiet');
       check('tv today: the quiet screen ("good night" / "good morning") is shown exactly in the quiet hours', !!q && q.hidden === !tvQuietNow(), String(tvQuietNow()));
+      { const real = israelNow, at = (m, d) => { israelNow = () => ({ minutes:m, date:d || '2026-11-04' }); return tvQuietNow(); };          // (MORNING-NIGHT-SPEC: by the framework's clock)
+        const r = [at(329), at(330), at(449), at(450), at(1169), at(1170), at(0), at(330, '2026-11-07')];
+        israelNow = real;
+        check('tv today: morning 05:30–07:30, the day 07:30–19:30, good night 19:30–05:30, the same on Saturday', JSON.stringify(r) === JSON.stringify(['night', 'morning', 'morning', null, null, 'night', 'night', 'morning']), JSON.stringify(r));
+        check('tv today: the morning shows the three steps and then breakfast apart — a sandwich, cornflakes on Saturday', /שוטפים פנים ומצחצחים שיניים[\s\S]*מתלבשים[\s\S]*נועלים נעליים[\s\S]*ואז[\s\S]*ארוחת בוקר/.test(TV_QUIET_HTML.morning(false)) && /סנדוויץ/.test(TV_QUIET_HTML.morning(false)) && /קורנפלקס/.test(TV_QUIET_HTML.morning(true)) && !/קורנפלקס/.test(TV_QUIET_HTML.morning(false)), ''); }
       stopCarousel(); showHub(); PORTAL_TV_LIVE = liveWas; refreshPortalSlides();
       if(q){ q.hidden = true; q.innerHTML = ''; } tvQuietShown = null;
     });

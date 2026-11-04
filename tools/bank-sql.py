@@ -3,6 +3,7 @@
 # Safe to run the SQL again: an existing template keeps what was changed in it (only an old one with no content is filled).
 # Run: python tools/bank-sql.py
 import io, json, glob, os, re, sys
+import test_guard          # (TEST only: the SQL stops on any other database)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AGES = ['2-5', '5-8', '8-12']
@@ -87,5 +88,5 @@ for s in sorted(strengths):
 out.append("")
 out.append("select 'scheduling_v42_bank' as part, 'ok' as result, (select count(*) from public.mercury_library where scope = 'mercury' and kind = 'goal' and content ? 'ages') as goals, (select count(*) from public.mercury_library where draft) as drafts;")
 with io.open(os.path.join(ROOT, 'supabase', 'scheduling-v42-bank.sql'), 'w', encoding='utf-8', newline='\n') as h:
-    h.write('\n'.join(out) + '\n')
+    h.write('\n'.join(test_guard.add(out)) + '\n')
 print('ok: %d themes, %d goals' % (len(themes), len(titles)))

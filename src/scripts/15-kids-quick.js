@@ -12,6 +12,7 @@ const KIDS_QUICK_TITLES = {
 
 function kidsQuickShowColorPicker(){
   document.getElementById('kids-quick-pick-color').style.display = 'block';
+  kqBonusToday();
   document.getElementById('kids-quick-pick-child').style.display = 'none';
   document.getElementById('kids-quick-moon-panel').style.display = 'none';
   document.getElementById('kids-quick-yellow-intro').style.display = 'none';
@@ -26,6 +27,9 @@ function kidsQuickShowChildPicker(mode){
   document.getElementById('kids-quick-yellow-list').style.display = 'none';
   document.getElementById('kids-quick-child-title').textContent = KIDS_QUICK_TITLES[mode] || 'בחרו ילד/ה';
   const el = document.getElementById('kids-quick-roster');
+  { let rem = document.getElementById('kq-yellow-reminder');          // (the yellow light: its reminder above the children, folded at first — Guy 2026-11-03)
+    if(mode === 'yellow'){ if(!rem){ rem = document.createElement('details'); rem.id = 'kq-yellow-reminder'; rem.className = 'kq-yellow-reminder'; el.parentNode.insertBefore(rem, el); } rem.open = false; rem.innerHTML = `<summary>תזכורת: רמזור צהוב</summary><div class="kq-yellow-reminder-body">${yellowReminderHtml()}</div>`; }
+    else if(rem) rem.remove(); }
   if(!roster.length){ el.innerHTML = '<div class="empty">אין ילדים ברשימה</div>'; return; }
   el.innerHTML = roster.map(c => `<span class="chip" data-id="${c.id}">${displayName(c)}</span>`).join('');
   el.querySelectorAll('.chip').forEach(chip=>{
@@ -79,9 +83,11 @@ document.getElementById('gold-give-star-btn').addEventListener('click', ()=> ope
 document.getElementById('gold-moon-journey-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-moon-journey-btn', 'gold'));
 document.getElementById('gold-brick-btn').addEventListener('click', ()=> openKidsQuickFrom('kq-brick-btn', 'gold'));
 document.getElementById('kids-quick-back-to-color').addEventListener('click', ()=>{
-  if(kidsQuickMode === 'yellow'){
-    document.getElementById('kids-quick-pick-child').style.display = 'none';
-    document.getElementById('kids-quick-yellow-intro').style.display = 'block';
+  if(kidsQuickMode === 'yellow' && kqOrigin === 'protocol'){
+    kqOrigin = null;
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-staff').classList.add('active');
+    showStaffScreen('guided');
   } else if(kqOrigin === 'gold'){
     kqOrigin = null;
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -97,10 +103,9 @@ document.getElementById('kids-quick-back-to-hub').addEventListener('click', show
 // the "גריעת בונוס" action itself — shared by the control area's own button and by the last step of
 // the guided yellow protocol, so both reach exactly the same screen
 let kqOrigin = null; // 'protocol' when entered from the guided yellow protocol (back returns there)
-function kidsQuickOpenRevokeIntro(){
-  document.getElementById('kids-quick-pick-color').style.display = 'none';
-  document.getElementById('kids-quick-yellow-intro').style.display = 'block';
-  document.getElementById('kq-yellow-protocol').innerHTML = yellowReminderHtml();
+function kidsQuickOpenRevokeIntro(){          // (straight to the children, the reminder folded above them: Guy 2026-11-03)
+  document.getElementById('kids-quick-yellow-intro').style.display = 'none';
+  kidsQuickShowChildPicker('yellow');
 }
 document.getElementById('kq-revoke-bonus-btn').addEventListener('click', ()=>{
   kqOrigin = null;
@@ -122,3 +127,13 @@ document.getElementById('kq-pick-child-for-revoke-btn').addEventListener('click'
 });
 document.getElementById('kids-quick-yellow-list-back').addEventListener('click', ()=> kidsQuickShowChildPicker('yellow'));
 
+// today's bonuses on the staff's phone, and by each one who lost it today (until 22:00): the only place this is shown (Guy, BONUSES-SPEC, 2026-11-04)
+async function kqBonusToday(){
+  const box = document.getElementById('kq-bonus-today'); if(!box) return;
+  try { if(typeof loadBonusDay === 'function') await loadBonusDay(); } catch(e){}
+  const list = bonusesForToday(bonusesDaily, false).concat(bonusesForToday(bonusesWeekly, true));
+  if(!list.length){ box.innerHTML = ''; return; }
+  const by = groupRevocationsByBonus(await getActiveBonusRevocations());
+  const n = Object.values(by).reduce((t, l) => t + l.length, 0);
+  box.innerHTML = `<details class="kq-bonus-today"><summary>🍬 הבונוסים של היום${n ? ` · ${n} נגרעו` : ''}</summary>${list.map(b => `<div class="kq-bt-row${isBonusTimeActive(b) ? ' now' : ''}"><span class="bb-icon">${bonusIcon(b)}</span><span class="kq-bt-text">${b.text}</span>${(by[b.id] || []).length ? `<span class="kq-bt-out">לא היום: ${by[b.id].join(' ')}</span>` : ''}</div>`).join('')}<small class="kq-bt-note">גריעה בתוקף עד 22:00.</small></details>`;
+}

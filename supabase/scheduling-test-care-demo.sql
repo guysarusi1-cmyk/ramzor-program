@@ -1,5 +1,12 @@
 -- TEST project only: examples for the therapist portal of therapist-test@ (her children c6-c9), so that "מה דורש אותי" shows every kind of item.
 -- Safe to run again (it adds a few more examples). Run after scheduling-v43.sql.
+-- safety: TEST only. On any other database this stops here, before any change (the marker: supabase/test-marker.sql, run once on TEST)
+do $$ begin
+  if to_regclass('ops.environment') is null or not exists (select 1 from ops.environment where name = 'test') then
+    raise exception 'עצירה: זה לא מסד הבדיקות (TEST). לא שונה דבר.';
+  end if;
+end $$;
+
 do $$
 declare ins uuid; ins2 uuid; v int;
 begin

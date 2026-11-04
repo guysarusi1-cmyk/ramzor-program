@@ -78,7 +78,8 @@ async function srvLoad(){
     srvAll(() => sbPersonal.from('schedule').select('month,status').gte('month', from).lte('month', to)),
     sbPersonal.from('notices').select('id,text,kind,seen,created_at').eq('to_staff', meId).order('created_at', { ascending:false }).limit(40).then(r => { if(r.error) throw r.error; return r.data || []; }),          // (only her own: the coordinator may read everybody's notices; and only the last 40)
     srvAll(() => sbPersonal.from('prefs_hours').select('staff_id,day,from_time,to_time').gte('day', from).lte('day', to)),
-    srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday,extend_ask,pull_ask').gte('month', from).lte('month', to))
+    srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday,extend_ask,pull_ask,extend_na,pull_na').gte('month', from).lte('month', to))
+      .catch(() => srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday,extend_ask,pull_ask').gte('month', from).lte('month', to)))          // (a project without scheduling-v58.sql)
       .catch(() => srvAll(() => sbPersonal.from('prefs_consent').select('staff_id,month,extend_morning,pull_to_sunday').gte('month', from).lte('month', to)))          // (a project without scheduling-v39.sql: no "תבדקו איתי")
   ]);
   const st = {
@@ -101,7 +102,7 @@ async function srvLoad(){
   });
   abs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); if(r.reason === 'self') pr.absent.push(r.day); else pr.fixed.push({ day:r.day, reason:r.reason, note:r.note }); });      // (a vacation, sick leave... that the coordinator entered cannot be changed here)
   hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); (pr.hours[r.day] = pr.hours[r.day] || []).push([parseInt(r.from_time, 10), parseInt(r.to_time, 10) || 24]); });
-  cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_ask ? 'ask' : r.extend_morning, pull:r.pull_ask ? 'ask' : r.pull_to_sunday }; });
+  cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_na ? 'na' : r.extend_ask ? 'ask' : r.extend_morning, pull:r.pull_na ? 'na' : r.pull_ask ? 'ask' : r.pull_to_sunday }; });
   subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
   let goalRows = []; try { goalRows = await srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,goal').gte('month', from).lte('month', to)); } catch(e){ goalRows = []; }          // (the goal column comes with scheduling-v5.sql; until then there is none)
   goalRows.forEach(r => { const m = st.months[monthOf(r.month)]; if(m && r.goal) m.goals[r.staff_id] = r.goal; });
@@ -208,7 +209,8 @@ async function srvSyncPrefs(mk){
   }
   if(p.consent.extend !== null && p.consent.pull !== null){          // the two consents are asked again every month; saved once both are answered
     const ce = p.consent.extend, cp = p.consent.pull, row = { staff_id:srvWho(), month:firstOf(mk), extend_morning:ce === true, pull_to_sunday:cp === true, answered_at:new Date().toISOString() };
-    r = await sbPersonal.from('prefs_consent').upsert(Object.assign({}, row, { extend_ask:ce === 'ask', pull_ask:cp === 'ask' }));          // ("תבדקו איתי" = no for the engine: scheduling-v39.sql)
+    r = await sbPersonal.from('prefs_consent').upsert(Object.assign({}, row, { extend_ask:ce === 'ask', pull_ask:cp === 'ask', extend_na:ce === 'na', pull_na:cp === 'na' }));          // ("לא רלוונטי" = no for the engine too: scheduling-v58.sql)
+    if(r.error && /extend_na|pull_na/i.test(r.error.message || '')) r = await sbPersonal.from('prefs_consent').upsert(Object.assign({}, row, { extend_ask:ce === 'ask', pull_ask:cp === 'ask' }));          // ("תבדקו איתי" = no for the engine: scheduling-v39.sql)
     if(r.error && /extend_ask|pull_ask|column/i.test(r.error.message || '')) r = await sbPersonal.from('prefs_consent').upsert(row);
     if(r.error) throw r.error;
   }
@@ -256,10 +258,16 @@ async function srvSubmit(mk, note, goal){
 // ---- the screens in server mode
 function srvTabs(me){
   if(srvEditingFor()) return me.role === 'service' ? [['avail', 'זמינות']] : [['prefs', 'העדפות']];          // (filling for somebody: only that tab — a service girl's availability, an instructor's preferences)
-  if(portalAsCoord(me)) return [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);          // (the admin: one more tab, 14s-portal-admin.js)
-  if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
-  if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];
-  if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['swaps', 'החלפות'], ['vacation', 'חופשה'], ['inbox', 'הודעות']];          // (swaps: only among the service girls)
+  if(portalAsCoord(me)){
+    const all = [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['diary', 'יומן הילדים'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);
+    const phone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
+    const kept = all.filter(t => t[0] !== 'diary' || !liveCut());          // (the children's diary is not part of the coming live version)
+    return phone && !me.admin ? kept.filter(t => ['schedule', 'submissions', 'swaps'].includes(t[0])) : kept;          // (on a phone: סידור, הגשות, החלפות only; the on-call screen is a card of the first screen — the rest on the computer: Guy 2026-11-03)
+  }          // (the admin: one more tab, 14s-portal-admin.js)
+  if(me.role === 'manager') return MGR_TABS.filter(t => t[0] !== 'kids' || !liveCut());          // (the manager of the framework: 14zn)
+  if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
+  if(me.role === 'instructor') return [['schedule', 'הסידור'], ['prefs', 'העדפות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps and the vacation in one tab: Guy 2026-11-03)
+  if(me.role === 'service') return [['schedule', 'הסידור'], ['avail', 'זמינות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (swaps: only among the service girls)
   return [['schedule', 'הסידור'], ['hours', 'שעות'], ['inbox', 'הודעות']];          // teachers
 }
 // what waits for the coordinator in a tab, as a number on it (Guy 2026-10-28): swaps to decide and urgent ones, vacation requests,
@@ -280,9 +288,13 @@ function srvRenderTab(me, body, t){
     if(t === 'submissions') return srvRenderSubmissions(body);
     if(t === 'swaps') return srvRenderCoordSwaps(body);
     if(t === 'vacations') return srvRenderCoordVacations(body);
+    if(t === 'oncall') return renderOncall(body);          // (the weekend on-call panel, shared with the social workers: 14zl)
+    if(t === 'chats') return mgrChats(body);          // (the conversations with the manager and the social workers: 14zn)
+    if(t === 'diary') return renderDiary(body);          // (the children's diary: every child, Guy 2026-11-04 — 14zm, scheduling-v57.sql)
     if(t === 'settings') return srvRenderCoordSettings(body);
     return srvRenderCoordSchedule(body);
   }
+  if(me.role === 'manager') return mgrRender(t, body);
   if(t === 'schedule') return srvRenderSchedule(body);
   if(t === 'inbox') return srvRenderInbox(body);
   if(t === 'vacation') return srvRenderVacation(body);
@@ -290,21 +302,35 @@ function srvRenderTab(me, body, t){
   if(t === 'hours') return srvRenderTeacherHours(body);
   if(t === 'open') return srvRenderOpenShifts(body);
   if(t === 'prefs' && me.role === 'instructor') return renderInstructorPrefs(body);
+  if(['instructor', 'service'].includes(me.role)){          // "החלפות וחופשות" (Guy 2026-11-03): my requests, the open swap requests, and the vacation request — all folded at first
+    body.innerHTML = `<div id="sv-swaps"></div><details class="pfold" data-fold="vac"${openFold('vac') ? ' open' : ''}><summary><span>בקשת חופשה</span></summary><div class="pfold-body sv-vac" id="sv-vac"></div></details>`;
+    body.querySelector('[data-fold="vac"]').addEventListener('toggle', e => { portalUi.fold.vac = e.target.open; });
+    renderInstructorSwaps(body.querySelector('#sv-swaps')); srvRenderVacation(body.querySelector('#sv-vac')); return;
+  }
   return renderInstructorSwaps(body);
 }
 async function srvRenderInbox(body){
   const st = portalLoad();
   if(!body.textContent.trim()) body.innerHTML = '<div class="pnote">טוען…</div>';          // (not a blank screen while the messages come)
-  const an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);
+  let an = await sbPersonal.from('announcements').select('id,created_at,text,need_ack').order('created_at', { ascending:false }).limit(10);
+  if(an.error) an = await sbPersonal.from('announcements').select('created_at,text').order('created_at', { ascending:false }).limit(10);          // (before scheduling-v52.sql)
+  let reads = []; if(!an.error && (an.data || []).some(a => a.id)){ try { const r = await sbPersonal.from('announcement_read').select('ann_id,ack_at').eq('staff_id', srv.me); reads = r.data || []; } catch(e){} }
   if(!body.isConnected) return;                                   // (the person went to another screen while this one was loading)
   // the coordinator's messages first; then her updates, the same text only once (with how many times), the latest 7 and the rest under "עוד" (Guy 2026-10-28)
   const when = d => new Date(d).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' });
   const groups = []; st.notices.forEach(n => { const g = groups.find(x => x.text === n.text); if(g){ g.n++; if(!n.seen) g.fresh = true; } else groups.push({ text:n.text, at:n.at, kind:n.kind, n:1, fresh:!n.seen }); });
   const one = g => `<div class="pannounce ${g.kind}"><small>${when(g.at)}${g.fresh ? ' · חדש' : ''}${g.n > 1 ? ` · ${g.n} פעמים` : ''}</small><div>${pEsc(g.text)}</div></div>`;
   const ann = an.data || [];
-  body.innerHTML = `<h2 class="psec">הודעות מהרכזת</h2>${ann.length ? ann.map(a => `<div class="pannounce"><small>${when(a.created_at)}</small><div>${pEsc(a.text)}</div></div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}
+  const acked = id => reads.some(r => r.ann_id === id && r.ack_at);
+  body.innerHTML = `<h2 class="psec">הודעות</h2>${ann.length ? ann.map(a => `<div class="pannounce"><small>${when(a.created_at)}</small><div>${pEsc(a.text)}</div>${a.need_ack ? (acked(a.id) ? '<small class="pst pst-approved">קראתי ✓</small>' : `<button type="button" class="btn small" data-ann-ack="${a.id}">קראתי</button>`) : ''}</div>`).join('') : '<div class="pnote">אין הודעות חדשות כרגע.</div>'}
     <h2 class="psec">העדכונים שלך</h2>${groups.length ? groups.slice(0, 7).map(one).join('') + (groups.length > 7 ? `<details class="pfold" data-fold="inbox-more"><summary><span>עוד ${groups.length - 7} עדכונים</span></summary><div class="pfold-body">${groups.slice(7).map(one).join('')}</div></details>` : '') : '<div class="pnote">אין עדכונים חדשים כרגע.</div>'}`;
   st.notices.forEach(n => { if(!n.seen){ n.seen = true; } }); portalSave();             // (opening the inbox is reading it)
+  { const fresh = ann.filter(a => a.id && !reads.some(r => r.ann_id === a.id)).map(a => ({ ann_id:a.id, staff_id:srv.me }));          // (seen: the sender sees who saw; scheduling-v52.sql)
+    if(fresh.length && !portalUi.viewAs) sbPersonal.from('announcement_read').upsert(fresh, { onConflict:'ann_id,staff_id', ignoreDuplicates:true }).then(() => {}, () => {}); }
+  body.querySelectorAll('[data-ann-ack]').forEach(b => b.addEventListener('click', async () => {          // ("קראתי" is a separate, explicit step)
+    const r = await sbPersonal.from('announcement_read').upsert({ ann_id:b.dataset.annAck, staff_id:srv.me, ack_at:new Date().toISOString() });
+    if(r.error){ toast('לא נשמר'); return; } toast('תודה'); srvRenderInbox(body);
+  }));
 }// ---- swaps: the three people's steps go through the database's own functions (it checks who may do what)
 async function srvReload(){ await srvFlush(); await srvLoad(); }
 async function srvReloadSafe(){ try { await srvReload(); } catch(e){ /* the screen refreshes on the next action; a failed refresh must not break what the person is doing */ } }
@@ -337,7 +363,8 @@ function srvLoginHtml(step, email, again){
         <div class="login-or"><span>כניסה ראשונה, או ששכחתם את הסיסמה?</span></div>
         <button type="button" class="btn ghost" id="plogin-send">שלחו לי קוד למייל</button>
         ${staffLink}`;
-  return `<div class="plogin"><div class="eyebrow-gold">מרכז חירום</div><h1 class="apphome-title">כניסה אישית</h1>
+  let look = 'dark'; try { if(localStorage.getItem('ramzor-portal-theme') === 'light') look = 'light'; } catch(e){}          // (the sign-in wears the new look, light or dark as last chosen on this device)
+  return `<div class="plogin mx-home mx-login" data-ptheme="${look}"><div class="mx-brand-wrap"><div class="mx-brand-logo" role="img" aria-label="Mercury"></div><div class="eyebrow-gold mx-brand">Mercury 1.2</div></div><h1 class="apphome-title">כניסה אישית</h1>
     <div class="card">${inner}
       <div id="plogin-error" class="plogin-error" role="alert"></div>
     </div></div>`;
@@ -419,7 +446,7 @@ const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' ||
 // ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
 let ramzorPersonal = false;
-const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist'].includes(srv.profile.kind)) || ['instructor', 'coordinator'].includes((portalMe() || {}).role);
+const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist', 'manager'].includes(srv.profile.kind)) || ['instructor', 'coordinator', 'manager'].includes((portalMe() || {}).role);
 async function personalEnter(){
   portalServerOn = true; portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoadFirst())) return false;
@@ -429,7 +456,6 @@ async function personalEnter(){
   if(!personalRamzorKind()){ srvOpenPortal(); return true; }          // (service girls and teachers: only the portal)
   sb = sbPersonal; ramzorPersonal = true;
   try { await initRoster(); await initMiniLists(); renderManageRoster(); } catch(e){ /* the Ramzor data loads again on the next screen */ }
-  if(personalIsTherapistOnly() && typeof therapyAvailable === 'function' && therapyAvailable()){ await showTherapyPortal(); return true; }          // (straight to the therapy portal)
   showAppHome();
   return true;
 }

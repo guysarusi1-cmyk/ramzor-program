@@ -71,11 +71,19 @@ async function thpLoad(){
   thp.loaded = true;
 }
 
+// the size of the text: the same three choices as in everybody's settings, kept the same way; "רגיל" until she chooses (Guy 2026-11-04)
+function thpTextSizeHtml(){
+  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}
+  return `<div class="pfield th-text-size"><span>גודל הכתב</span><div class="pchoice wrap">${[['0', 'טקסט רגיל'], ['1', 'טקסט גדול'], ['2', 'טקסט גדול מאוד']].map(([k, w]) => `<button type="button" class="${big === k ? 'on' : ''}" data-th-big="${k}">${w}</button>`).join('')}</div></div>`;
+}
 // the tabs of each portal
 function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
-    t.push(['todo', 'משימות'], ['mine', 'הילדים שלי']);
+    t.push(['todo', 'משימות']);
+    if(isTherapistMe() || (srv.profile && srv.profile.admin)) t.push(['diary', 'יומן הילדים']);
+    if(!(typeof chatsOwnScreen === 'function' && chatsOwnScreen())) t.push(['chats', 'שיחות']);          // (the social workers have them as a card on the first screen)          // (the social workers' urgent areas: Guy 2026-11-03; 14zl, 14zm)
+    t.push(['mine', 'הילדים שלי']);
     if(thp.v32) t.push(['plans', 'תוכניות טיפוליות']);          // (the plans, one goal at a time: 14zf)
     t.push(['kids', 'כל הילדים']);          // (every child as the staff sees it, read only: Mercury decision 87)
     if(canStaffPortal() && thp.v32) t.push(['myobs', 'התצפיות שלי']);
@@ -94,8 +102,18 @@ function thpTabs(){
   return t;
 }
 // a row of tabs: 4 visible, the rest under "עוד" (Guy, after the simplicity checker: tabs must fit a phone). tabs = [[key, word, badge]]
-function thpTabsRow(tabs, active, attr, cls){
-  const btn = ([k, w, n]) => `<button type="button" role="tab" ${attr}="${k}" class="${k === active ? 'active' : ''}">${w}${n ? ` <span class="pcount">${n}</span>` : ''}</button>`;
+// the side menu on a computer (Guy 2026-10-30): every area shown, an icon by each word, the daily work first and the rest after a quiet line
+const thpWide = () => { try { return matchMedia('(min-width:1024px)').matches; } catch(e){ return false; } };
+const THP_DAILY = ['todo', 'oncall', 'diary', 'chats', 'mine', 'plans', 'kids', 'myobs'];
+const THP_ICO = { chats:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>', diary:'<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2.5v3M16 2.5v3M4 9h16M8 13h3M8 17h6"/>', oncall:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4"/>', todo:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>', mine:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/>',
+  plans:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6v2.5H9zM8.5 11h7M8.5 15h5"/>', kids:'<circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19.5c.9-3.1 3-4.8 5.5-4.8s4.6 1.7 5.5 4.8M15 14.8c2.6-.3 4.6 1.2 5.4 4"/>',
+  myobs:'<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>', library:'<path d="M5 4.5h5.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H5zM19 4.5h-5.5a2 2 0 0 0-1 .3"/><path d="M19 4.5v13.9h-5.4a1.6 1.6 0 0 0-1.1.5"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>', assign:'<path d="M10 14a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
+  videos:'<rect x="3.5" y="6" width="12" height="12" rx="2"/><path d="M15.5 10.5l5-3v9l-5-3"/>', overview:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>', archive:'<rect x="3.5" y="4.5" width="17" height="4.5" rx="1"/><path d="M5 9v10.5h14V9M10 13h4"/>' };
+function thpTabsRow(tabs, active, attr, cls, side){
+  const ico = k => side && THP_ICO[k] ? `<svg class="th-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${THP_ICO[k]}</svg>` : '';
+  const btn = ([k, w, n]) => `<button type="button" role="tab" ${attr}="${k}" class="${k === active ? 'active' : ''}">${ico(k)}${w}${n ? ` <span class="pcount">${n}</span>` : ''}</button>`;
+  if(side){ const sep = tabs.findIndex(t => !THP_DAILY.includes(t[0])); return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist" aria-orientation="vertical">${tabs.map((t, i) => (i === sep && i > 0 ? '<span class="th-nav-sep" role="separator"></span>' : '') + btn(t)).join('')}</nav>`; }
   if(tabs.length <= 5) return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist">${tabs.map(btn).join('')}</nav>`;
   const rest = tabs.slice(4), hidden = rest.find(t => t[0] === active), n = rest.reduce((s, t) => s + (+t[2] || 0), 0);
   return `<nav class="portal-tabs${cls ? ' ' + cls : ''}" role="tablist">${tabs.slice(0, 4).map(btn).join('')}
@@ -106,7 +124,7 @@ async function showTherapyPortal(){
   thp.mode = canTherapistPortal() ? 'therapist' : 'staff';
   portalActivateView('view-therapy');
   const view = document.getElementById('view-therapy');
-  thp.tab = null; thp.editing = null; thp.wtab = null; thp.q = ''; thp.planChild = null;          // (every entry starts on the first tab of this portal)
+  thp.tab = null; thp.editing = null; thp.wtab = null; thp.q = ''; thp.planChild = null; thp.navMenu = true;          // (every entry starts on the first tab of this portal; on a phone, on the menu of areas: Guy 2026-10-30)
   view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}"><div class="pnote">טוען...</div></div>`;
   if(typeof roster !== 'undefined' && !roster.length && typeof initRoster === 'function'){ try { await initRoster(); } catch(e){} }          // (a therapist who came in by a refresh: the children were not loaded yet)
   await thpLoad();
@@ -138,12 +156,12 @@ function thpTodo(){
 }
 function thpTodoHtml(){
   const items = thpTodo();
-  if(!items.length) return '<div class="th-empty"><span aria-hidden="true">🌿</span><b>הכול מעודכן</b><small>אין כרגע משהו שמחכה לך.</small></div>';
   const card = l => { const x = l[0], c = roster.find(k => k.id === x.id);          // (one card per child, a line per item: the checker, principle 5)
     return `<div class="th-todo th-todo-card">${c ? thpAvatar(c) : ''}<span class="th-kid-text"><b class="ar-keep">${pEsc(x.name)}</b>${l.map(y => `<button type="button" class="th-todo-line" data-todo-kid="${pEsc(y.id)}" data-todo-tab="${y.tab}"><span aria-hidden="true">${y.emoji}</span> ${pEsc(y.text)}<span class="th-todo-go" aria-hidden="true">‹</span></button>`).join('')}</span></div>`; };
   const byKid = l => { const m = new Map(); l.forEach(x => { if(!m.has(x.id)) m.set(x.id, []); m.get(x.id).push(x); }); return [...m.values()]; };
-  const groups = [['דחוף', items.filter(x => x.order <= 1), true], ['השבוע', items.filter(x => x.order >= 2 && x.order <= 3), true], ['לידיעה', items.filter(x => x.order >= 4), false]];          // (by urgency, in groups: Q44)
-  return groups.filter(g => g[1].length).map(([w, l, open]) => `<details class="pfold th-todo-group"${open ? ' open' : ''}><summary><span>${w}</span><span class="pcount">${l.length}</span></summary><div class="pfold-body th-todo-list">${byKid(l).map(card).join('')}</div></details>`).join('');
+  const groups = [['דחוף', items.filter(x => x.order <= 1)], ['השבוע', items.filter(x => x.order >= 2 && x.order <= 3)], ['לידיעה', items.filter(x => x.order >= 4)]];          // (by urgency, in groups: Q44)
+  // the three are always there, folded at first; an empty one says so (Guy 2026-11-03)
+  return groups.map(([w, l]) => `<details class="pfold th-todo-group"><summary><span>${w}</span>${l.length ? `<span class="pcount">${l.length}</span>` : ''}</summary><div class="pfold-body th-todo-list">${l.length ? byKid(l).map(card).join('') : '<div class="pnote">אין כרגע.</div>'}</div></details>`).join('');
 }
 // ---- "הילדים שלי": the status of every child, at a glance
 function thpStatusCard(c){
@@ -160,7 +178,7 @@ function thpStaffCard(c){
     <div class="th-kcard-head">${thpAvatar(c)}<b class="ar-keep">${pEsc(displayName(c))}</b>${g ? `<button type="button" class="btn ghost small" data-th-kid="${pEsc(c.id)}">עוד</button>` : ''}</div>
     ${thpVideoBtnHtml(c.id)}${careCardHtml(c)}
     ${g ? `${strengths.length ? `<div class="th-chips ar-keep">${strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}
-      ${focus.map(x => tpIsV2(x) ? `<div class="th-kfocus">${tpStaffGoalHtml(c.id, x, true)}</div>` : `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}${x.sentences ? `<div class="th-ksent ar-keep"><span aria-hidden="true">💬</span> ${pEsc(x.sentences)}</div>` : ''}${careWeekLine(c.id, x.id)}</div>`).join('')}
+      ${focus.map(x => tpIsV2(x) ? `<div class="th-kfocus">${tpStaffGoalHtml(c.id, x, true)}</div>` : `<div class="th-kfocus"><b class="ar-keep">${pEsc(x.title)}</b>${x.interventions ? `<div class="ar-keep">${pEsc(x.interventions)}</div>` : ''}${x.sentences ? `<div class="th-ksent ar-keep">${SAY}${pEsc(x.sentences)}</div>` : ''}${careWeekLine(c.id, x.id)}</div>`).join('')}
       ${ct.avoid ? `<div class="th-avoid"><b>ממה להימנע</b><div class="ar-keep">${pEsc(ct.avoid)}</div></div>` : ''}
       ${!ct.avoid && !focus.length ? '<div class="pnote">אין כרגע מטרות במוקד. "עוד" פותח את כל התוכנית.</div>' : ''}`
       : '<div class="th-kcard-none">עוד אין תוכנית טיפולית</div>'}
@@ -199,7 +217,7 @@ function thpRender(){
   else if(thp.tab === 'mine'){
     const list = thpScope();
     inner = list.length ? `<div class="th-kids">${list.map(thpStatusCard).join('')}</div>` : '<div class="pnote">עוד לא שויכו אלייך ילדים. השיוך נעשה אצל הרכזת או מנהל המערכת.</div>';
-  } else if(thp.tab === 'settings') inner = obsNotifyHtml();
+  } else if(thp.tab === 'settings') inner = thpTextSizeHtml() + obsNotifyHtml();
   else if(thp.tab === 'kids') inner = thpStaffKidsHtml();
   else if(thp.tab === 'myobs') inner = thpMyObsHtml();
   else if(thp.tab === 'library') inner = planLibraryHtml();
@@ -207,6 +225,9 @@ function thpRender(){
   else if(thp.tab === 'videos') inner = thpVideosHtml();
   else if(thp.tab === 'overview') inner = thpOverviewHtml() + bankOverviewHtml();
   else if(thp.tab === 'archive') inner = '<div id="cr-archive"><div class="pnote">טוען...</div></div>';
+  else if(thp.tab === 'oncall') inner = '<div id="th-oncall"><div class="pnote">טוען...</div></div>';
+  else if(thp.tab === 'diary') inner = '<div id="th-diary"><div class="pnote">טוען...</div></div>';
+  else if(thp.tab === 'chats') inner = '<div id="th-chats"><div class="pnote">טוען...</div></div>';
   else if(thp.tab === 'assign'){
     const opts = sel => `<option value="">ללא</option>${thp.therapists.map(t => `<option value="${t.id}"${sel === t.id ? ' selected' : ''}>${pEsc(t.display_name)}</option>`).join('')}`;
     inner = `<div class="pnote">לכל ילד איש/אשת טיפול אחראי/ת אחד/ת. רק הוא/היא רואה את המידע הטיפולי של הילד ובונה את התוכנית שלו. כל שינוי נרשם.</div>
@@ -215,14 +236,23 @@ function thpRender(){
       ${thp.subs ? thpSubsHtml() : ''}`;
   }
   const todoN = ther && thp.v32 ? thpTodo().length : 0;
-  view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${portalLoad().settings.theme || 'dark'}" data-thmode="${thp.mode}">
-      <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1><span></span></div>
+  const side = thpWide(), look = portalLoad().settings.theme === 'light' ? 'light' : 'dark';          // (no leopard in this portal: Guy 2026-10-30)
+  view.innerHTML = `<div class="portal-shell therapy-shell" data-ptheme="${look}" data-thmode="${thp.mode}" data-thmenu="${thp.navMenu && !thp.planChild && !thp.editing ? 1 : 0}"><div class="th-frame">
+      <aside class="th-side" aria-label="פורטל הטיפול">
+      <div class="portal-top"><button type="button" class="back-btn portal-back" id="therapy-home">→ מסך ראשי</button><h1 class="portal-title">פורטל הטיפול</h1>${side ? '<span></span>' : `<div class="mx-seg th-look-sm" role="group" aria-label="מראה">${[['light', 'בהיר'], ['dark', 'כהה']].map(([k, w]) => `<button type="button" data-th-look="${k}" aria-pressed="${look === k}">${w}</button>`).join('')}</div>`}</div>
       <div class="portal-hello">שלום ${pEsc(me.first || '')}</div>
-      ${tabs.length > 1 ? thpTabsRow(tabs.map(t => [t[0], t[1], t[0] === 'todo' ? todoN : 0]), thp.tab, 'data-th-tab') : ''}
-      <div id="therapy-body">${inner}</div>
-    </div>`;
-  view.querySelector('#therapy-home').addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); });
-  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thp.planChild = null; thpRender(); }));
+      ${tabs.length > 1 ? thpTabsRow(tabs.map(t => [t[0], t[1], t[0] === 'todo' ? todoN : 0]), thp.tab, 'data-th-tab', side ? '' : 'th-nav-grid', true) : ''}
+      </aside>
+      <div id="therapy-body">${side ? `<div class="ps-topbar th-topbar"><button type="button" class="back-btn" id="therapy-home2">→ מסך ראשי</button><span class="ps-topbar-end"><span class="mx-seg" role="group" aria-label="מראה">${[['light', 'בהיר'], ['dark', 'כהה']].map(([k, w]) => `<button type="button" data-th-look="${k}" aria-pressed="${look === k}">${w}</button>`).join('')}</span></span></div>` : ''}${!side && tabs.length > 1 ? '<button type="button" class="btn ghost small th-to-menu" id="th-to-menu">→ כל האזורים</button>' : ''}${!thp.planChild && (tabs.find(t => t[0] === thp.tab) || [])[1] ? `<h2 class="th-page-title">${pEsc(tabs.find(t => t[0] === thp.tab)[1])}</h2>` : ''}${inner}</div>
+    </div></div>`;          // (on a computer the tabs row is gone, so every screen says its name: the simplicity checker)
+  view.querySelectorAll('#therapy-home, #therapy-home2').forEach(b => b.addEventListener('click', () => { if(typeof personalRamzorKind === 'function' && !personalRamzorKind()) srvOpenPortal(); else showAppHome(); }));
+  view.querySelectorAll('[data-th-look]').forEach(b => b.addEventListener('click', () => {          // (kept on this device; the other portals' own choice, the leopard included, is not touched)
+    portalLoad().settings.theme = b.dataset.thLook; try { localStorage.setItem('ramzor-portal-theme', b.dataset.thLook); } catch(e){}
+    const sh = view.querySelector('.therapy-shell'); sh.dataset.ptheme = b.dataset.thLook;          // (only the colours change: an open builder or sheet stays where it is — the simplicity checker)
+    view.querySelectorAll('[data-th-look]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); document.querySelectorAll('.mx-sheet').forEach(s => { s.dataset.ptheme = b.dataset.thLook; }); }));
+  if(!thp.mqOn){ thp.mqOn = true; try { matchMedia('(min-width:1024px)').addEventListener('change', () => { if(document.querySelector('#view-therapy.active')) thpRender(); }); } catch(e){} }          // (a window made wider or narrower: the menu follows)
+  view.querySelectorAll('[data-th-tab]').forEach(b => b.addEventListener('click', () => { thp.tab = b.dataset.thTab; thp.editing = null; thp.wtab = null; thp.planChild = null; thp.navMenu = false; thpRender(); window.scrollTo(0, 0); }));
+  { const tm = view.querySelector('#th-to-menu'); if(tm) tm.addEventListener('click', () => { thp.navMenu = true; thp.planChild = null; thp.editing = null; thpRender(); window.scrollTo(0, 0); }); }          // (a phone: back to the menu of areas)
   const body = view.querySelector('#therapy-body');
   const wireKids = box => box.querySelectorAll('[data-th-kid]').forEach(b => b.addEventListener('click', () => { if(ther && thp.tab !== 'kids' && thp.v32 && planCanEdit(b.dataset.thKid)) planOpenEditor(b.dataset.thKid, 'plan'); else thpOpenChild(b.dataset.thKid); }));          // (in "כל הילדים": the staff's view of the child)
   wireKids(body);
@@ -241,8 +271,11 @@ function thpRender(){
   });
   if(thp.tab === 'library') planWireLibrary(body);
   if(thp.tab === 'archive') careArchiveHtml(body.querySelector('#cr-archive'));
+  if(thp.tab === 'oncall') renderOncall(body.querySelector('#th-oncall'));
+  if(thp.tab === 'diary') renderDiary(body.querySelector('#th-diary'));
+  if(thp.tab === 'chats') mgrChats(body.querySelector('#th-chats'));
   if(thp.tab === 'overview'){ const rv = body.querySelector('#bk-review'); if(rv) rv.addEventListener('click', () => { const s = bankReview(0); const close = s.close; s.close = () => { close(); thpRender(); }; }); }
-  if(thp.tab === 'settings') obsWireNotify(body);
+  if(thp.tab === 'settings'){ obsWireNotify(body); body.querySelectorAll('[data-th-big]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-portal-big', b.dataset.thBig); } catch(e){} applyPortalSize(); thpRender(); })); }
   if(thp.editing && ther && thp.v32 && planCanEdit(thp.editing)) planOpenEditor(thp.editing);
   { const add = view.querySelector('#sub-add'); if(add) add.addEventListener('click', async () => {
       const therapist = view.querySelector('#sub-away').value, substitute = view.querySelector('#sub-by').value, until = view.querySelector('#sub-until').value;

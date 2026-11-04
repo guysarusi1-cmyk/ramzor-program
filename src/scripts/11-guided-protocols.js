@@ -202,7 +202,7 @@ function setGuidedLegend(open){
 const closeGuidedLegend = () => setGuidedLegend(false);
 document.getElementById('guided-legend-btn').addEventListener('click', () => setGuidedLegend(!document.getElementById('staff-screen-guided').classList.contains('legend-open')));
 function openGuidedScreen(key){
-  closeGuidedLegend();
+  setGuidedLegend(true);          // (the list of all the steps is open at first: Guy 2026-11-03)
   guidedKey = key;
   guidedStep = 0;
   renderGuidedStep();

@@ -6,7 +6,7 @@ async function loadTvToday(force){
   if(!force && Date.now() - tvTodayAt < 60 * 1000) return;
   tvTodayAt = Date.now();
   try { const r = await sb.rpc('tv_shifts_today'); if(!r.error) tvShifts = r.data; } catch(e){ /* keep the last one */ }
-  try { const r = await sb.rpc('tv_timetable_today'); if(!r.error) tvTimetable = r.data; } catch(e){ /* keep the last one */ }
+  try { const r = await sb.rpc('tv_timetable_today'); if(!r.error){ if(r.data && typeof ttOn === 'function') r.data.items = (r.data.items || []).filter(x => ttOn(x, r.data.day)); tvTimetable = r.data; } } catch(e){ /* keep the last one */ }
 }
 const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 const hm = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
@@ -45,27 +45,38 @@ function renderShiftsLive(){
 function renderTimetableLive(){
   const el = document.getElementById('tv-timetable'), list = (tvTimetable && tvTimetable.items) || [];
   if(!list.length){ el.innerHTML = '<div class="empty">אין לו"ז להיום</div>'; return; }
-  const n = nowMin(); let current = -1; list.forEach((a, i) => { if(hm(a.t) <= n) current = i; });
+  // "now" by the hours (Guy 2026-11-04, SCHEDULE-SPEC): from its start to its end — or, with no end written, to the next activity that starts later;
+  // two activities at the same time (different groups) are both "now"
+  const n = nowMin(), endOf = (a, i) => a.end ? hm(a.end) : (() => { const nx = list.slice(i + 1).find(b => hm(b.t) > hm(a.t)); return nx ? hm(nx.t) : hm(a.t) + 60; })();
+  const phase = (a, i) => n >= hm(a.t) && n < endOf(a, i) ? ' now' : n >= endOf(a, i) ? ' past' : '';
   el.className = 'tv-timetable tvt2';
   el.style.setProperty('--tvt-cols', list.length > 8 ? 6 : list.length > 4 ? 4 : list.length);
-  el.innerHTML = `${tvTimetable.title ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${i === current ? ' now' : i < current ? ' past' : ''}">
-      <div class="tvt2-time">${escapeHtml(a.t)}</div><div class="tvt2-icon">${ttArt(a.i)}</div><div class="tvt2-name">${escapeHtml(a.n)}</div></div>`).join('')}</div>`;
+  el.innerHTML = `${tvTimetable.title ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${phase(a, i)}">
+      <div class="tvt2-time"><bdi dir="ltr">${escapeHtml(a.t)}${a.end ? '–' + escapeHtml(a.end) : ''}</bdi></div><div class="tvt2-icon">${ttArt(a.i)}</div><div class="tvt2-name">${escapeHtml(a.n)}</div></div>`).join('')}</div>`;
 }
 // the picture of an activity (the drawings of 14p-timetable-art.js when there is one, else the emoji)
 const ttArt = id => (typeof TT_ART !== 'undefined' && TT_ART[id]) || `<span class="tvt2-emoji">${ttIcon(id)[2]}</span>`;
 
-// ---- the quiet hours: after bedtime a "good night" screen until 05:00, then the morning routine until 07:30
+// ---- the quiet hours (Guy's spec of 31.10, Mercury-Work-Manager plans/MORNING-NIGHT-SPEC.md): every day of the week 05:30–07:30 the morning,
+// 07:30–19:30 the day's timetable, 19:30–05:30 "good night" — by the framework's own clock (Israel), not the server's
+const tvClock = () => typeof israelNow === 'function' ? israelNow() : { minutes:nowMin(), date:isoDate(new Date()) };
 function tvQuietNow(){
-  const n = nowMin(), bed = ((tvTimetable && tvTimetable.items) || []).filter(a => a.i === 'bedtime').map(a => hm(a.t)).sort((a, b) => b - a)[0];
-  if(n >= hm('05:00') && n < hm('07:30')) return 'morning';
-  if(n < hm('05:00') || (bed != null && n >= bed + 15)) return 'night';
+  const n = tvClock().minutes;
+  if(n >= hm('05:30') && n < hm('07:30')) return 'morning';
+  if(n >= hm('19:30') || n < hm('05:30')) return 'night';
   return null;
 }
+// the morning: the whole sequence at once — getting ready (washing the face with the teeth first, Guy 2026-11-04; dressing; shoes), and only then breakfast, apart (a sandwich; cornflakes on Saturday).
+// An order to see, without reading: no tracking, no locking, nothing to press.
 const TV_QUIET_HTML = {
-  night:`<div class="tvq tvq-night"><div class="tvq-stars" aria-hidden="true">${Array.from({ length:40 }, (_, i) => `<i style="left:${(i * 47) % 100}%; top:${(i * 29) % 100}%; animation-delay:${(i % 7) * -0.6}s"></i>`).join('')}</div>
+  night:() => `<div class="tvq tvq-night"><div class="tvq-stars" aria-hidden="true">${Array.from({ length:40 }, (_, i) => `<i style="left:${(i * 47) % 100}%; top:${(i * 29) % 100}%; animation-delay:${(i % 7) * -0.6}s"></i>`).join('')}</div>
       <div class="tvq-moon" aria-hidden="true">🌙</div><div class="tvq-title">לילה טוב</div><div class="tvq-row" aria-hidden="true">😴 🧸 ⭐ 💤</div></div>`,
-  morning:`<div class="tvq tvq-morning"><div class="tvq-sun" aria-hidden="true">🌞</div><div class="tvq-title">בוקר טוב!</div>
-      <div class="tvq-steps"><div><span>💦</span>שוטפים פנים</div><div><span>🦷</span>מצחצחים שיניים</div><div><span>👕</span>מחליפים בגדים</div><div><span>👟</span>נועלים נעליים</div></div></div>`
+  morning:sat => `<div class="tvq tvq-morning"><div class="tvq-sun" aria-hidden="true">🌞</div><div class="tvq-title">בוקר טוב!</div>
+      <div class="tvq-flow">
+        <div class="tvq-steps tvq-ready"><div><b>1</b><span>💦🦷</span>שוטפים פנים ומצחצחים שיניים</div><div><b>2</b><span>👕</span>מתלבשים</div><div><b>3</b><span>👟</span>נועלים נעליים</div></div>
+        <div class="tvq-then"><span aria-hidden="true">⬅</span>ואז</div>
+        <div class="tvq-steps tvq-eat"><div><span>${sat ? '🥣' : '🥪'}</span>ארוחת בוקר<small>${sat ? 'קורנפלקס' : 'סנדוויץ\''}</small></div></div>
+      </div></div>`
 };
 let tvQuietTimer = null, tvQuietShown = null;
 function tvQuietTick(){
@@ -73,8 +84,8 @@ function tvQuietTick(){
   const view = document.getElementById('view-display'); if(!view) return;
   let el = document.getElementById('tv-quiet');
   if(!el){ el = document.createElement('div'); el.id = 'tv-quiet'; el.hidden = true; view.appendChild(el); }
-  const mode = tvQuietNow();
-  if(mode !== tvQuietShown){ tvQuietShown = mode; el.innerHTML = mode ? TV_QUIET_HTML[mode] : ''; el.hidden = !mode; }
+  const mode = tvQuietNow(), sat = dowOf(tvClock().date) === 6, key = mode && mode + (sat ? ':sat' : '');
+  if(key !== tvQuietShown){ tvQuietShown = key; el.innerHTML = mode ? TV_QUIET_HTML[mode](sat) : ''; el.hidden = !mode; }
 }
 function startTvQuiet(){ stopTvQuiet(); if(!PORTAL_TV_LIVE) return; loadTvToday(true).then(tvQuietTick); tvQuietTimer = setInterval(() => { loadTvToday().then(tvQuietTick); }, 60 * 1000); }
 function stopTvQuiet(){ clearInterval(tvQuietTimer); tvQuietTimer = null; }

@@ -12,7 +12,7 @@ const PLAN_BLANK = /\[[^\]\n]{1,40}\]/;          // (a place to fill in a whole-
 const PLAN_PARTS = [['avoid', 'ממה להימנע', 'מצבים או מילים שמעוררים את הילד/ה'], ['signs', 'אותות מוקדמים', 'איך הילד/ה נראה/ית לפני שזה מתפרץ'],
   ['calm', 'מה עוזר להירגע', 'דרכים שעובדות ברגעי קושי'], ['routine', 'שגרה יומית מיוחדת', 'שינה, אוכל וכדומה (בלי פרטים רפואיים רגישים)']];
 const PLAN_KIND_WORD = { goal:'מטרות', todo:'מה הצוות עושה', avoid:'ממה להימנע', signs:'אותות מוקדמים', calm:'מה עוזר להירגע', routine:'שגרה יומית', strength:'חוזקות', skill:'מיומנויות', plan:'תוכניות שלמות', method:'שיטות טיפול' };
-const PLAN_CATS = ['ביטחון ויציבות', 'ויסות רגשי', 'היקשרות וקשר עם מבוגר', 'זהות ודימוי עצמי', 'מעברים ושגרה', 'קשרים חברתיים', 'למידה ותפקוד', 'התנהגות מסכנת וגבולות', 'שינה ואכילה', 'אובדן ופרידה'];          // (the themes of the bank, trauma informed: Guy, decision 97)
+const PLAN_CATS = ['ביטחון ויציבות', 'ויסות רגשי', 'היקשרות וקשר עם מבוגר', 'זהות ודימוי עצמי', 'מעברים ושגרה', 'קשרים חברתיים', 'למידה ותפקוד', 'התנהגות מסכנת וגבולות', 'שינה ואכילה', 'אובדן ופרידה', 'קליטה וימים ראשונים', 'גוף, היגיינה ופרטיות', 'מסכים וחיים דיגיטליים'];          // (the themes of the bank, trauma informed: Guy, decision 97)
 const planCanEdit = id => !!(srv.profile && (srv.profile.admin || (srv.profile.therapist && thp.mine.includes(id))));
 const thpLib = kind => (thp.library || []).filter(x => x.kind === kind && x.active);
 

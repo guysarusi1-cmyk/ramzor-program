@@ -91,8 +91,8 @@ async function srvLoadCoord(){
   rows(ph).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; });
   rows(pm).forEach(r => { if(st.priv[r.staff_id]) Object.assign(st.priv[r.staff_id], r); });
   st.waMsg = (wm && !wm.error && wm.data && wm.data.value) || {};
-  st.voices = {}; st.fixedNo = {}; st.langs = {};
-  rows(sv).forEach(r => { if(r.voice) st.voices[r.staff_id] = r.voice; if((r.fixed_no || []).length) st.fixedNo[r.staff_id] = r.fixed_no; if(r.lang) st.langs[r.staff_id] = r.lang; });
+  st.voices = {}; st.fixedNo = {}; st.langs = {}; st.simple = {};
+  rows(sv).forEach(r => { if(r.pref_weekly || r.pref_plain) st.simple[r.staff_id] = { w:!!r.pref_weekly, p:!!r.pref_plain }; if(r.voice) st.voices[r.staff_id] = r.voice; if((r.fixed_no || []).length) st.fixedNo[r.staff_id] = r.fixed_no; if(r.lang) st.langs[r.staff_id] = r.lang; });
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; rows(sr).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; });
   st.buildReqs = rows(br); st.openReqs = rows(orq);
@@ -202,6 +202,9 @@ function srvRenderCoordSchedule(body){
   const keep = csKeepScroll(body);          // (after a change the screen stays where it was: Guy 2026-10-25)
   const group = String((st.waMsg || {}).group || '').trim();
   const pend = {}; st.rows.forEach(r => { const a = r.pending && (st.assignmentIds || {})[r.id]; if(a) pend[a.key + '|' + r.staff] = true; });
+  const csPhone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
+  if(portalUi.csWeekOn === undefined && csPhone){ const t = srvToday(); portalUi.csWeekOn = true; portalUi.csWeekMk = mk; portalUi.csWeek = monthKeyOf(t) === mk ? mcalWeekOfDay(mk, t) : 0; }          // (a phone: one week, the current one — Guy 2026-11-03)
+  const wk = portalUi.csWeekOn ? (portalUi.csWeekMk === mk ? portalUi.csWeek : 0) : null;          // (the month is her default on a computer; "שבוע" shows one week, Guy 2026-11-03)
   body.innerHTML = `
     ${monthNavHtml(mk, `<span class="pchip ${m.published ? 'lv-yes' : 'lv-avoid'}">${has ? SRV_STATUS_WORD[m.status] : 'אין סידור'}</span>`)}
     ${srvBuildBoxHtml(mk)}
@@ -211,18 +214,20 @@ function srvRenderCoordSchedule(body){
       <button type="button" class="btn ghost" id="cs-print">הדפסה / PDF</button>
       ${m.published ? '<button type="button" class="btn ghost" id="cs-openday">פתיחת יום לשיבוץ</button>' : ''}
       ${group ? `<a class="btn ghost wa-group" href="${pEsc(waGroupUrl(group))}"${waTarget()}>${WA_SVG}<span>קבוצת המדריכים</span></a>` : ''}
+      ${m.published ? `<button type="button" class="btn ghost" id="cs-share">${WA_SVG}<span>${csPhone ? 'שיתוף' : 'שיתוף תמונת סידור'}</span></button>` : ''}
     </div>
     ${csPendingBarHtml(mk)}
     ${issues.length ? `<details class="pissues" id="cs-issues"${portalUi.csIssuesOpen ? ' open' : ''}><summary>${issues.length} דברים שדורשים תשומת לב</summary>${issues.map(csIssueHtml).join('')}</details>` : '<div class="pstatus ok">אין דברים שדורשים תשומת לב ✓</div>'}
     ${m.published ? srvOdFoldHtml(mk) : ''}
     ${srvCountFoldHtml(mk)}
     <div class="cs-note-row"><button type="button" class="btn ghost small" id="cs-others">הסתר מורות/בנות שירות${csHiddenMode() ? ` · <small>${({ teacher:'המורות מוסתרות', service:'בנות השירות מוסתרות', both:'שתיהן מוסתרות' })[csHiddenMode()]}</small>` : ''}</button></div>
-    <div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, pend, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
+    ${mcalViewBarHtml(mk, wk, 'cs-viewbar')}<div class="cs-layout"><div class="cs-main">${monthCalHtml(ctx, m.assignments, { week:wk === null ? undefined : wk, rows:csPhone && wk !== null, edit:true, drag:true, otherRm:!!portalUi.csOthersRm, colour:true, pend, ahmash:srv.ahmash, sel:portalUi.csOpen ? portalUi.csPerson : null, others:false, othersInCells:csHiddenMode() !== 'both', hideRoles:csHiddenMode() === 'teacher' ? ['teacher'] : csHiddenMode() === 'service' ? ['service'] : [] })}</div>${srvSidePanelHtml(mk, issues)}</div>` : ''}
     ${srvHelpFoldHtml(m, has)}`;
   keep();
   wireMonthNav(body);
   srvBuildWire(body, mk);
   if(!has) return;
+  mcalViewBarWire(body, 'cs-viewbar', mk, () => wk, (mm, w) => { portalUi.csWeekOn = w !== null; portalUi.csWeek = w; portalUi.csWeekMk = mm; portalUi.month = mm; }, () => portalRefresh());
   { const iss = body.querySelector('#cs-issues'); if(iss) iss.addEventListener('toggle', () => { portalUi.csIssuesOpen = iss.open; }); }          // (stays open after "טופל": Guy)
   csIssuesWire(body, mk);
   { const cf = body.querySelector('#cs-count'); if(cf) cf.addEventListener('toggle', () => { portalUi.csCount = cf.open; }); }
@@ -235,17 +240,27 @@ function srvRenderCoordSchedule(body){
   const csOpen = document.getElementById('cs-open'), csClose = document.getElementById('cs-close');
   if(csOpen) csOpen.addEventListener('click', () => { portalUi.csOpen = true; srvRenderCoordSchedule(body); });
   if(csClose) csClose.addEventListener('click', () => { portalUi.csOpen = false; portalUi.csPerson = null; srvRenderCoordSchedule(body); });
+  // a finger hides what it drags: on a touch screen the dragged name is drawn big, above and beside the finger (Guy 2026-11-03)
+  const lift = (e, el) => {
+    try {
+      if(!matchMedia('(pointer:coarse)').matches || !e.dataTransfer.setDragImage) return;
+      const g = document.createElement('div'); g.className = 'cs-drag-ghost'; g.textContent = el.firstChild ? el.firstChild.textContent : el.textContent;
+      document.body.appendChild(g);
+      e.dataTransfer.setDragImage(g, g.offsetWidth + 28, g.offsetHeight + 36);          // (the finger below and to the side of it)
+      setTimeout(() => g.remove(), 0);
+    } catch(x){}
+  };
   // drag a name from the panel into a shift of the schedule
   body.querySelectorAll('.cs-name[data-cs-person]').forEach(b => {
     b.setAttribute('draggable', 'true');
-    b.addEventListener('dragstart', e => { srvDragWho = b.dataset.csPerson; e.dataTransfer.setData('text/plain', b.dataset.csPerson); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
+    b.addEventListener('dragstart', e => { srvDragWho = b.dataset.csPerson; e.dataTransfer.setData('text/plain', b.dataset.csPerson); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); lift(e, b); });
     b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   body.querySelectorAll('.mcal-cell.editable .mcal-name[data-iid]').forEach(n => {          // (a name in the calendar is dragged to another shift: it moves there; Guy 2026-10-25)
     const cell = n.closest('.mcal-cell'), rowId = (portalLoad().assignmentIds || {})[`${cell.dataset.key}|${n.dataset.iid}`];
     if(!rowId) return;
     n.setAttribute('draggable', 'true');
-    n.addEventListener('dragstart', e => { e.stopPropagation(); srvDragWho = n.dataset.iid; srvDragRow = rowId; e.dataTransfer.setData('text/plain', 'row:' + rowId); e.dataTransfer.effectAllowed = 'move'; n.classList.add('dragging'); });
+    n.addEventListener('dragstart', e => { e.stopPropagation(); srvDragWho = n.dataset.iid; srvDragRow = rowId; e.dataTransfer.setData('text/plain', 'row:' + rowId); e.dataTransfer.effectAllowed = 'move'; n.classList.add('dragging'); lift(e, n); });
     n.addEventListener('dragend', () => { srvDragWho = null; srvDragRow = null; n.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   body.querySelectorAll('.mcal-cell.editable').forEach(c => {
@@ -254,12 +269,13 @@ function srvRenderCoordSchedule(body){
     c.addEventListener('drop', e => { e.preventDefault(); srvDropClear(c); const who = e.dataTransfer.getData('text/plain') || (srvDragRow ? 'row:' + srvDragRow : srvDragWho); if(!who) return;
       if(who.startsWith('row:')) srvMoveToSlot(mk, c.dataset.key, who.slice(4), body); else if(who.startsWith('other:')) srvAddOtherToSlot(mk, c.dataset.key, who.slice(6), body); else srvAddToSlot(mk, c.dataset.key, who, body); });
   });
-  srvDragScrollWire();
+  srvDragScrollWire(); csSideFit();
+  if(csPhone) csTouchDragWire(body, mk);
   body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); srvRemoveOther(b.dataset.otherRm, b.dataset.sid, body); }));
   body.querySelectorAll('[data-other-rm]').forEach(b => b.addEventListener('keydown', e => e.stopPropagation()));
   body.querySelectorAll('[data-cs-other]').forEach(b => {          // (a service girl or a teacher from the fold at the bottom of the panel)
     b.setAttribute('draggable', 'true');
-    b.addEventListener('dragstart', e => { srvDragWho = 'other:' + b.dataset.csOther; e.dataTransfer.setData('text/plain', srvDragWho); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); });
+    b.addEventListener('dragstart', e => { srvDragWho = 'other:' + b.dataset.csOther; e.dataTransfer.setData('text/plain', srvDragWho); e.dataTransfer.effectAllowed = 'copy'; b.classList.add('dragging'); lift(e, b); });
     b.addEventListener('dragend', () => { srvDragWho = null; b.classList.remove('dragging'); body.querySelectorAll('.mcal-cell[class*="drop-"]').forEach(c => srvDropClear(c)); if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } });
   });
   { const of = body.querySelector('#cs-others-fold'); if(of) of.addEventListener('toggle', () => { portalUi.csOthersOpen = of.open; }); }
@@ -267,7 +283,7 @@ function srvRenderCoordSchedule(body){
   body.querySelectorAll('[data-cs-sort]').forEach(b => b.addEventListener('click', () => { portalUi.csSort = b.dataset.csSort; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('[data-cs-person]').forEach(b => b.addEventListener('click', () => { portalUi.csPerson = portalUi.csPerson === b.dataset.csPerson ? null : b.dataset.csPerson; srvRenderCoordSchedule(body); }));
   body.querySelectorAll('.mcal-cell.editable').forEach(td => {
-    const open = () => srvOpenSlot(mk, td.dataset.key, body);
+    const open = () => { if(Date.now() - csTouchDropAt < 500) return; srvOpenSlot(mk, td.dataset.key, body); };
     td.addEventListener('click', open); td.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
   });
   body.querySelectorAll('[data-flag-done]').forEach(b => b.addEventListener('click', async () => {
@@ -287,7 +303,120 @@ function srvRenderCoordSchedule(body){
     toast(openShifts.length ? `הסידור פורסם. ${openShifts.length} משמרות פתוחות הופיעו למדריכים, ובקשות להצטרף יגיעו אלייך לאישור` : 'הסידור פורסם', openShifts.length ? 6000 : 0); srvRenderCoordSchedule(body);          // (each person sees how her requests went in her own schedule screen, so no separate message is sent)
   });
   document.getElementById('cs-xlsx').addEventListener('click', () => { downloadScheduleXlsx(ctx, m.assignments); toast('קובץ האקסל נוצר'); });
+  { const shb = document.getElementById('cs-share'); if(shb) shb.addEventListener('click', () => csShareSheet(mk, wk)); }          // (a picture of the week or the month for WhatsApp: Guy 2026-11-03)
   document.getElementById('cs-print').addEventListener('click', () => printSchedule(ctx, m.assignments));
+}
+
+// ---- a picture of the published schedule — the week or the month — to send in WhatsApp (Guy 2026-11-03). Only what the staff already see:
+// with changes waiting for "שליחת עדכונים" it asks to send them first. No private details: names and hours only. She chooses the recipient.
+function csShareSheet(mk, wk){
+  const st = portalLoad(), m = portalMonth(mk);
+  if(!m.published){ toast('אפשר לשתף רק סידור שפורסם'); return; }
+  if((st.rows || []).some(r => r.pending && monthKeyOf(r.day) === mk)){ toast('יש שינויים שעוד לא נשלחו. קודם "שליחת עדכונים", ואז שיתוף.', 5000); return; }
+  const t = srvToday(), w = Number.isInteger(wk) ? wk : monthKeyOf(t) === mk ? mcalWeekOfDay(mk, t) : 0;
+  const sh = portalSheet(`<h2>שיתוף תמונת סידור</h2><div class="pnote">התמונה נפתחת לשיתוף. בוחרים את הנמען בוואטסאפ.</div>
+    <div class="cs-share-pick"><button type="button" class="btn" data-cs-img="week">תמונה שבועית<small>${pEsc(mcalWeekLabel(mk, w))}</small></button><button type="button" class="btn" data-cs-img="month">תמונה חודשית<small>כל ${pEsc(monthLabel(mk))}</small></button></div>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+  sh.querySelectorAll('[data-cs-img]').forEach(b => b.addEventListener('click', async () => { sh.close(); await csShareImage(mk, b.dataset.csImg === 'week' ? w : null); }));
+}
+// the month as a picture: a calendar, a square at most 1600 on its long side. WhatsApp brings every picture down to about that size, so a tall list came out blurred;
+// here nothing is scaled, the letters stay sharp (Guy 2026-11-04). Everyone is in it, the teachers and the service girls with their hours.
+function csMonthCanvas(mk){
+  const st = portalLoad(), days = daysOfMonth(mk), lead = dowOf(days[0]), weeks = Math.ceil((lead + days.length) / 7);
+  const W = 1600, MAX = 1600, mar = 16, cw = (W - mar * 2) / 7, head = 136, dowH = 36, foot = 34, c = document.createElement('canvas'), g = c.getContext('2d');
+  const hh = x => String(parseInt(x, 10)), type = id => (st.shiftTypes || []).find(s => s.id === id) || {}, roleOf = id => (st.instructors.find(x => x.id === id) || {}).role;
+  const nm = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
+  const SH = [{ code:'M', id:'m', bg:'#FFF1CC' }, { code:'A', id:'e', bg:'#DFEBDC' }, { code:'N', id:'n', bg:'#DDE3F1' }].map(s => Object.assign(s, { label:type(s.id).label || '', from:hh(type(s.id).start || '0'), to:hh(type(s.id).end || '0') }));
+  const inCol = (r, code) => r.shift === code || (code === 'M' && r.shift === 'S') || (code === 'A' && r.shift === 'L');
+  const INK = '#1F1C17', OTHER = '#1F4E79';
+  // the people of a shift, the instructors first; hours by a name only when they are not the hours of the shift
+  const people = (d, s) => { const rs = (st.rows || []).filter(r => r.day === d && inCol(r, s.code)), own = r => r.from && r.to && (hh(r.from) !== s.from || hh(r.to) !== s.to) ? ` ${hh(r.from)} עד ${hh(r.to)}` : '';
+    const rank = r => ({ teacher:1, service:2 })[roleOf(r.staff)] || 0;
+    return rs.slice().sort((x, y) => rank(x) - rank(y)).map(r => rank(r) ? { t:nm(r.staff) + (r.from && r.to ? ` ${hh(r.from)} עד ${hh(r.to)}` : ''), c:OTHER } : { t:nm(r.staff) + own(r), c:INK }); };
+  // words go on from the right and down; a name is never cut. Returns the lines, each a list of [word, colour, x from the right]
+  const flow = (label, list, fs, width) => { const lines = [[]]; g.font = `700 ${fs}px Assistant, Arial`; let x = g.measureText(label + ' ').width; lines[0].push([label, INK, 0, true]); g.font = `400 ${fs}px Assistant, Arial`;
+    if(!list.length) lines[0].push(['—', INK, x]);
+    list.forEach((p, i) => { const t = p.t + (i < list.length - 1 ? ', ' : ''), w = g.measureText(t).width; if(x && x + w > width){ lines.push([]); x = 0; } lines[lines.length - 1].push([t, p.c, x]); x += w; });
+    return lines; };
+  const layout = fs => { const lh = Math.round(fs * 1.22), dateH = Math.round(fs * 1.5), inner = cw - 12; const cells = {}; const rowH = Array(weeks).fill(0);
+    days.forEach((d, i) => { const blocks = SH.map(s => ({ s, lines:flow(s.label, people(d, s), fs, inner) })), h = dateH + blocks.reduce((t, b) => t + b.lines.length * lh + 6, 0) + 4, w = Math.floor((lead + i) / 7); cells[d] = blocks; rowH[w] = Math.max(rowH[w], h); });
+    return { fs, lh, dateH, cells, rowH, H:head + dowH + rowH.reduce((a, b) => a + b, 0) + foot }; };
+  g.direction = 'rtl'; g.textAlign = 'right';
+  let L = null; for(let fs = 20; fs >= 13; fs--){ L = layout(fs); if(L.H <= MAX) break; }
+  c.width = W; c.height = L.H; g.direction = 'rtl'; g.textAlign = 'right'; g.textBaseline = 'alphabetic';
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W, L.H);
+  g.fillStyle = INK; g.font = '600 46px Rubik, Assistant, Arial'; g.fillText(`סידור העבודה · ${monthLabel(mk)}`, W - mar - 4, 56);
+  // which shift is which, and its hours, once at the top ("7 עד 15": no range to turn round in Hebrew)
+  { let x = W - mar - 4; g.font = '700 26px Assistant, Arial'; SH.forEach(s => { const t = `${s.label} ${s.from} עד ${s.to}`, w = g.measureText(t).width + 28; g.fillStyle = s.bg; g.fillRect(x - w, 76, w, 42); g.strokeStyle = '#6E675C'; g.lineWidth = 1; g.strokeRect(x - w + .5, 76.5, w - 1, 41); g.fillStyle = INK; g.fillText(t, x - 14, 106); x -= w + 12; }); }
+  let y = head;
+  DOW_NAMES.forEach((n, i) => { const x = W - mar - (i + 1) * cw; g.fillStyle = i >= 5 ? '#D9CDB8' : '#EDE6D8'; g.fillRect(x, y, cw, dowH); g.fillStyle = INK; g.font = '700 22px Assistant, Arial'; g.textAlign = 'center'; g.fillText(n, x + cw / 2, y + 26); g.textAlign = 'right'; });
+  y += dowH;
+  for(let w = 0; w < weeks; w++){
+    const h = L.rowH[w];
+    for(let i = 0; i < 7; i++){
+      const d = days[w * 7 + i - lead], x = W - mar - (i + 1) * cw;
+      g.strokeStyle = '#8F8574'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, cw - 1, h - 1);
+      if(!d){ g.fillStyle = '#F2EEE6'; g.fillRect(x + 1, y + 1, cw - 2, h - 2); continue; }
+      const right = x + cw - 6; let ly = y + L.fs + 3;
+      g.fillStyle = INK; g.font = `800 ${L.fs + 2}px Assistant, Arial`; g.fillText(`${DOW_SHORT[i]} ${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`, right, ly);
+      ly = y + L.dateH;
+      L.cells[d].forEach(b => { const bh = b.lines.length * L.lh + 4; g.fillStyle = b.s.bg; g.fillRect(x + 2, ly, cw - 4, bh);
+        b.lines.forEach((line, k) => line.forEach(([t, col, dx, bold]) => { g.fillStyle = col; g.font = `${bold ? 700 : 400} ${L.fs}px Assistant, Arial`; g.fillText(t, right - dx, ly + (k + 1) * L.lh - Math.round(L.lh * .24)); }));
+        ly += bh + 2; });
+    }
+    y += h;
+  }
+  g.fillStyle = OTHER; g.font = '400 20px Assistant, Arial'; g.fillText('בכחול: מורות ובנות שירות, עם השעות שלהן', W - mar - 4, y + 25);
+  return c;
+}
+async function csShareCanvas(c, mk, week){
+  const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+  const file = new File([blob], `schedule-${mk}${week === null ? '' : '-w' + (week + 1)}.png`, { type:'image/png' });
+  try { if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'סידור העבודה' }); return; } } catch(e){ if(e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); toast('התמונה נשמרה. אפשר לצרף אותה בוואטסאפ.');
+}
+async function csShareImage(mk, week){
+  if(week === null) return csShareCanvas(csMonthCanvas(mk), mk, null);
+  const st = portalLoad(), days = daysOfMonth(mk), lead = dowOf(days[0]), list = week === null ? days : days.filter((_, i) => Math.floor((lead + i) / 7) === week);
+  const nm = id => { const p = portalPerson(id); return p ? instrName(p, st.instructors) : '?'; };
+  const roleOf = id => (st.instructors.find(x => x.id === id) || {}).role;
+  const hh = x => String(parseInt(x, 10));
+  const cols = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה']];
+  const inCol = (r, code) => r.shift === code || (code === 'M' && r.shift === 'S') || (code === 'A' && r.shift === 'L');
+  // the instructors, then the teachers and the service girls with their hours (Guy 2026-11-03)
+  const cell = (d, code) => {
+    const rs = (st.rows || []).filter(r => r.day === d && inCol(r, code));
+    return { main:rs.filter(r => roleOf(r.staff) === 'instructor').map(r => nm(r.staff)),
+             other:rs.filter(r => ['teacher', 'service'].includes(roleOf(r.staff))).sort((x, y) => (roleOf(x.staff) === 'teacher' ? 0 : 1) - (roleOf(y.staff) === 'teacher' ? 0 : 1)).map(r => nm(r.staff) + (r.from && r.to ? ` ${hh(r.from)} עד ${hh(r.to)}` : '')) };          // ("8 עד 14": no range to turn round in Hebrew)
+  };
+  const W = 1080, headH = 150, lineH = 34, pad = 22, colW = (W - 80 - 170) / 3;
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  // names never cut: a name that does not fit goes to the next line of its cell
+  const wrap = (names, font) => { g.font = font; const out = []; let cur = '';
+    names.forEach(n => { const t = cur ? cur + ', ' + n : n; if(cur && g.measureText(t).width > colW - 16){ out.push(cur + ','); cur = n; } else cur = t; });
+    if(cur) out.push(cur); return out; };
+  const F_MAIN = '400 25px Assistant, Arial', F_OTHER = '400 22px Assistant, Arial';
+  const rows = list.map(d => { const cs = cols.map(([code]) => { const x = cell(d, code); return { main:wrap(x.main, F_MAIN), other:wrap(x.other, F_OTHER) }; });
+    const lines = Math.max(1, ...cs.map(x => x.main.length + x.other.length)); return { d, cs, h:Math.max(74, pad * 2 + lines * lineH - 6) }; });
+  const H = headH + rows.reduce((t, r) => t + r.h, 0) + 70; c.width = W; c.height = H;
+  g.direction = 'rtl'; g.fillStyle = '#FAF7F2'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#2D2A24'; g.textAlign = 'right'; g.font = '600 44px Rubik, Assistant, Arial'; g.fillText(`סידור העבודה · ${monthLabel(mk)}`, W - 40, 64);
+  g.font = '400 30px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(week === null ? 'כל החודש' : `שבוע ${mcalWeekLabel(mk, week).replace('–', ' עד ')}`, W - 40, 108);          // (left to right inside: the range does not turn round)
+  g.font = '700 28px Assistant, Arial'; g.fillStyle = '#5C6F52'; cols.forEach(([, w], i) => g.fillText(w, W - 40 - 170 - i * colW, headH - 8));
+  let y = headH;
+  rows.forEach((r, i) => {
+    g.fillStyle = i % 2 ? '#FFFFFF' : '#F4EFE7'; g.fillRect(30, y + 4, W - 60, r.h - 6);
+    g.fillStyle = '#2D2A24'; g.font = '700 28px Assistant, Arial'; g.fillText(`${DOW_SHORT[dowOf(r.d)]} ${parseIso(r.d).getDate()}/${parseIso(r.d).getMonth() + 1}`, W - 44, y + pad + 24);
+    r.cs.forEach((x, ci) => {
+      const xr = W - 40 - 170 - ci * colW; let ly = y + pad + 24;
+      if(!x.main.length && !x.other.length){ g.font = F_MAIN; g.fillStyle = '#2D2A24'; g.fillText('—', xr, ly); return; }
+      g.font = F_MAIN; g.fillStyle = '#2D2A24'; x.main.forEach(t => { g.fillText(t, xr, ly); ly += lineH; });
+      g.font = F_OTHER; g.fillStyle = '#7A6F5E'; x.other.forEach(t => { g.fillText(t, xr, ly); ly += lineH; });
+    });
+    y += r.h;
+  });
+  if(rows.some(r => r.cs.some(x => x.other.length))){ g.font = '400 22px Assistant, Arial'; g.fillStyle = '#7A6F5E'; g.fillText('בצבע הבהיר: מורות ובנות שירות, עם השעות שלהן', W - 40, y + 44); }
+  await csShareCanvas(c, mk, week);
 }
 
 // what Guy took off the coordinator's screen (2026-10-23): composition, personal minimums, the day colleague, a service girl's day off
@@ -381,6 +510,7 @@ function srvOpenSlot(mk, key, body){
   const others = () => portalLoad().rows.filter(r => r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')) && ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role !== 'instructor'));
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
   const wrap = portalSheet('<div id="slot-body"></div>');
+  wrap.classList.add('psheet-center');          // (a demo for Guy, this window only: on a computer in the middle of the screen, its buttons always in sight — 20-mercury.css)
   let editing = null, replacing = null;                          // (the row whose hours are being changed by hand; the row whose person is being replaced)
   const timeOpts = sel => Array.from({ length:48 }, (_, i) => { const v = String(Math.floor(i / 2)).padStart(2, '0') + (i % 2 ? ':30' : ':00'); return `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`; }).join('');
   const draw = () => {
@@ -566,6 +696,56 @@ async function srvRemoveOther(rowId, sid, body){
 }
 // while a name is dragged the page can still be scrolled (Guy): with the mouse wheel, and by holding the name near the top or the bottom of the screen
 let srvDragScrollOn = false;
+// the phone: a name is moved with a finger. Hold it a moment, then drag: its name stays above the finger, and the whole shift under the finger is the target, its empty part too.
+// A quick tap still opens the shift, and a finger that moves at once scrolls the page. The move itself is the one of the computer, with its questions and warnings (Guy 2026-11-04).
+let csTouchDropAt = 0;
+function csCellAt(x, y){
+  const el = document.elementFromPoint(x, y); if(!el) return null;
+  let sh = el.closest('.mcal-wrow-shift');
+  if(!sh){ const row = el.closest('.mcal-wrow'); if(row && !el.closest('.mcal-wrow-day')){ let best = 1e9; row.querySelectorAll('.mcal-wrow-shift').forEach(s => { const r = s.getBoundingClientRect(), d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom)); if(d < best){ best = d; sh = s; } }); } }
+  return sh ? sh.querySelector('.mcal-cell.editable') : el.closest('.mcal-cell.editable');
+}
+// the side panel on a computer: what fits has no scroll of its own; what does not, scrolls inside the part of it that is on the screen, so its end can be reached from anywhere on the page
+function csSideFit(){
+  const sd = document.querySelector('.view.active .cs-side'); if(!sd || !sd.getClientRects().length || matchMedia('(max-width:760px)').matches) return;
+  const z = parseFloat(getComputedStyle(sd.closest('.portal-shell')).zoom) || 1, cap = (innerHeight - 20) / z; sd.style.maxHeight = cap + 'px';
+  if(sd.scrollHeight <= sd.clientHeight + 1) return;
+  sd.style.maxHeight = Math.max(160, (innerHeight - Math.max(sd.getBoundingClientRect().top, 10) - 10) / z) + 'px';
+}
+window.addEventListener('scroll', csSideFit, { passive:true }); window.addEventListener('resize', csSideFit);
+function csTouchDragWire(body, mk){
+  const touchy = navigator.maxTouchPoints > 0 || 'ontouchstart' in window, ids = portalLoad().assignmentIds || {};
+  body.querySelectorAll('.mcal-cell.editable .mcal-name[data-iid]').forEach(n => {
+    const from = n.closest('.mcal-cell'), rowId = ids[`${from.dataset.key}|${n.dataset.iid}`]; if(!rowId) return;
+    if(touchy) n.removeAttribute('draggable');          // (the browser's own drag would fight the finger)
+    let timer = null, on = false, sx = 0, sy = 0, x = 0, y = 0, ghost = null, cur = null, vy = 0, raf = null;
+    const place = () => { if(!ghost) return; const w = ghost.offsetWidth, h = ghost.offsetHeight; ghost.style.left = Math.max(6, Math.min(innerWidth - w - 6, x - w / 2)) + 'px'; ghost.style.top = Math.max(6, y - h - 56) + 'px'; };
+    const aim = () => { const c = csCellAt(x, y); if(c !== cur){ if(cur) srvDropClear(cur); cur = c; } if(cur) srvDropShow(cur); };
+    const tick = () => { if(!on || !vy){ raf = null; return; } (document.scrollingElement || document.documentElement).scrollTop += vy; aim(); raf = requestAnimationFrame(tick); };
+    const begin = () => {
+      timer = null; on = true; srvDragWho = n.dataset.iid; srvDragRow = rowId; n.classList.add('dragging');
+      ghost = document.createElement('div'); ghost.className = 'cs-drag-ghost cs-finger-ghost'; ghost.textContent = n.firstChild ? n.firstChild.textContent : n.textContent; document.body.appendChild(ghost);
+      place(); aim(); if(navigator.vibrate) try { navigator.vibrate(15); } catch(e){}
+    };
+    const stop = () => { const key = cur ? cur.dataset.key : null; on = false; vy = 0; if(cur) srvDropClear(cur); cur = null; if(ghost) ghost.remove(); ghost = null; n.classList.remove('dragging'); srvDragWho = null; srvDragRow = null; return key; };
+    const redraw = () => { if(srvRenderAfterDrag){ const rb = srvRenderAfterDrag; srvRenderAfterDrag = null; if(rb.isConnected) srvRenderCoordSchedule(rb); } };
+    n.addEventListener('touchstart', e => { if(e.touches.length !== 1) return; sx = x = e.touches[0].clientX; sy = y = e.touches[0].clientY; clearTimeout(timer); timer = setTimeout(begin, 220); }, { passive:true });
+    n.addEventListener('touchmove', e => {
+      const t = e.touches[0]; x = t.clientX; y = t.clientY;
+      if(!on){ if(Math.hypot(x - sx, y - sy) > 10){ clearTimeout(timer); timer = null; } return; }
+      e.preventDefault(); place(); aim();
+      const edge = 90, h = innerHeight; vy = y < edge ? -Math.ceil((edge - y) / 6) : y > h - edge ? Math.ceil((y - (h - edge)) / 6) : 0;
+      if(vy && !raf) raf = requestAnimationFrame(tick);
+    }, { passive:false });
+    n.addEventListener('touchend', async e => {
+      clearTimeout(timer); timer = null; if(!on) return;
+      if(e.cancelable) e.preventDefault(); csTouchDropAt = Date.now();
+      const key = stop(); if(key) await srvMoveToSlot(mk, key, rowId, body); redraw();
+    });
+    n.addEventListener('touchcancel', () => { clearTimeout(timer); timer = null; if(on){ stop(); redraw(); } });
+    n.addEventListener('contextmenu', e => { if(touchy) e.preventDefault(); });
+  });
+}
 function srvDragScrollWire(){
   if(srvDragScrollOn) return; srvDragScrollOn = true;
   const box = () => document.scrollingElement || document.documentElement;
@@ -611,8 +791,8 @@ function srvPersonRequestsHtml(p, mk){
     ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
     ${longs.length ? `<div class="cs-req cs-long"><b>סופ"ש ארוך</b><div class="cs-req-days">${longs.map(([d, lv]) => `<div class="cs-req-day"><span class="cs-req-date">${pEsc(dayLabel(d))}</span><span class="mcal-name wish-${lv === 'avoid' ? 'can' : lv}">${lv === 'yes' ? 'כן' : lv === 'avoid' ? 'יכול' : 'לא'}</span></div>`).join('')}</div></div>` : ''}
     ${(pr.pick || []).length ? `<div class="cs-req cs-long"><b>רק אחד מסופי השבוע</b><span>${pr.pick.slice().sort().map(f => pEsc(dayLabel(f))).join(' · ')}</span></div>` : ''}
-    <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
-    <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.extend === 'na' ? 'לא רלוונטי' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
+    <div class="cs-req"><b>משיכה משבת לילה עד 11:00</b><span>${cons.pull === true ? 'מסכים/ה' : cons.pull === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.pull === 'na' ? 'לא רלוונטי' : cons.pull === false ? 'לא' : 'לא ענה/תה'}</span></div>
     ${goal ? `<div class="cs-req"><b>יעד</b><span>${GOAL[goal] || goal}</span></div>` : ''}
     ${note ? `<div class="cs-req"><b>הערה</b><span>${pEsc(note)}</span></div>` : ''}
   </div>`;
@@ -625,7 +805,7 @@ function srvSidePanelHtml(mk, issues){
   const others = st.instructors.filter(p => p.active && ['service', 'teacher'].includes(p.role)).sort((a, b) => (a.role === b.role ? 0 : a.role === 'teacher' ? -1 : 1) || String(instrName(a, st.instructors)).localeCompare(String(instrName(b, st.instructors)), 'he'));          // (dragged into the calendar: Guy 2026-10-25)
   return `<aside class="cs-side" aria-label="בקשות המדריכים">
     <div class="cs-side-top"><h3 class="cs-side-title">בקשות המדריכים</h3>${sel ? '' : mcalKeyHtml(true)}<button type="button" class="cs-close" id="cs-close" aria-label="קיפול">✕</button></div>
-    <button type="button" class="btn ghost small cs-sort-btn${byCount ? ' on' : ''}" data-cs-sort="${byCount ? 'name' : 'count'}" aria-pressed="${byCount}">${byCount ? 'הסתר את מספר המשמרות' : 'הצג את מספר המשמרות'}</button>
+    <button type="button" class="btn ghost small cs-sort-btn${byCount ? ' on' : ''}" data-cs-sort="${byCount ? 'name' : 'count'}" aria-pressed="${byCount}">${byCount ? 'לפי שם' : 'לפי מספר משמרות'}</button>
     <div class="cs-names">${list.map(p => `<button type="button" class="cs-name${sel && sel.id === p.id ? ' on' : ''}${m.submitted[p.id] ? '' : ' missing'}" data-cs-person="${p.id}" title="${m.submitted[p.id] ? 'הגיש/ה' : 'עוד לא הגיש/ה'} · ${(cnt[p.id] || {}).all || 0} משמרות"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span>${byCount ? `<b class="cs-name-count">${(cnt[p.id] || {}).all || 0}</b>` : ''}</button>`).join('')}</div>
     ${sel ? srvPersonRequestsHtml(sel, mk) : '<div class="pnote">לחיצה על שם מציגה את הבקשות שלו/ה לחודש שמוצג, ומסמנת את השמות שלו/ה בסידור.</div>'}
     ${others.length ? `<details class="pfold cs-others-fold" id="cs-others-fold"${portalUi.csOthersOpen ? ' open' : ''}><summary><span>בנות שירות ומורות</span></summary><div class="pfold-body">

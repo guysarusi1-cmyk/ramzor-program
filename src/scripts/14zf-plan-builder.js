@@ -10,7 +10,7 @@ const TP_STATUS = { focus:'במוקד', waiting:'בהמתנה', achieved:'הוש
 const tpFocusMax = () => Math.max(1, Math.min(3, +((thp.mopts || {}).focus_max) || 1));
 const tpStatusOf = g => g.status || (g.focus ? 'focus' : 'waiting');
 const tpIsV2 = g => Array.isArray(g.targets_list);
-const tpBankAge = id => { const b = bankAgeOf(id, ((thp.plans[id] || {}).draft) || {}); return b === '8-12' ? '5-8' : b; };          // (over 8: the 5-8 wording until there is a group, Q33)
+const tpBankAge = id => bankAgeOf(id, ((thp.plans[id] || {}).draft) || {});          // (the four age groups: Guy 2026-10-29)
 const tpGoalsV2 = () => (thp.library || []).filter(x => x.kind === 'goal' && x.active && x.content && x.content.v === 2);
 const tpUid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 const tpDraftOf = id => { const r = thp.plans[id] || {}; return JSON.parse(JSON.stringify(r.draft || r.published || planEmpty())); };
@@ -24,11 +24,11 @@ function tpSync(g){
   }
   return g;
 }
-async function tpSave(id, d){
+async function tpSave(id, d, quiet){          // (quiet: the autosave of "עוד" says it on its own line)
   (d.goals || []).forEach(tpSync);
   const dates = (d.goals || []).filter(g => tpStatusOf(g) === 'focus' && g.review_date).map(g => g.review_date).sort();
   const ok = await planSave(id, d, dates[0] || (thp.plans[id] || {}).review_date || null);
-  if(!ok) toast('השמירה נכשלה. אפשר לנסות שוב בעוד רגע');
+  if(!ok && !quiet) toast('השמירה נכשלה. אפשר לנסות שוב בעוד רגע');
   return ok;
 }
 
@@ -55,7 +55,7 @@ function tpWireList(body){
   body.querySelectorAll('[data-tp-kid]').forEach(b => b.addEventListener('click', () => { thp.planChild = b.dataset.tpKid; thpRender(); }));
 }
 // open a child's plan from anywhere (the child's workspace, "משימות")
-function tpOpenPlan(id){ thp.tab = 'plans'; thp.planChild = id; thp.editing = null; thp.wtab = null; thpRender(); }
+function tpOpenPlan(id){ thp.tab = 'plans'; thp.planChild = id; thp.editing = null; thp.wtab = null; thp.planView = 'work'; thpRender(); }
 
 // ---- the plan page: read first; the focus goals, then waiting / achieved / stopped (folded); "עוד"; ONE main button
 function tpGoalCard(id, g, i, can){
@@ -63,13 +63,13 @@ function tpGoalCard(id, g, i, can){
   const targets = v2 ? g.targets_list.map((t, k) => `<details class="tp-target"><summary><span>יעד ${k + 1} – ${pEsc(t.text)}</span>${t.now ? `<em class="tp-now">עכשיו ${t.now}${t.target ? ' · רוצים ' + t.target : ''}</em>` : ''}</summary>
       <div class="tp-t-body"><div><span class="tp-lbl">לצוות:</span> ${pEsc(t.staff || '')}</div>${(t.scale || []).length ? `<ol class="tp-stations">${t.scale.map((s, j) => `<li class="${t.now === j + 1 ? 'now' : ''}${t.target === j + 1 ? ' goal' : ''}">${pEsc(s)}</li>`).join('')}</ol>` : ''}</div></details>`).join('')
     : (g.targets ? `<div class="tp-legacy"><span class="tp-lbl">יעדים:</span> ${pEsc(g.targets)}</div>` : '');
-  const ints = v2 ? (g.interventions_list || []).map(x => `<div class="tp-int"><span><b>${pEsc(x.name)}</b> ${pEsc(x.what)}${x.freq ? ` <small>(${pEsc(x.freq)})</small>` : ''}${(x.sentences || []).length ? `<span class="tp-sent">${x.sentences.map(s => '💬 ' + pEsc(s)).join('<br>')}</span>` : ''}</span><em class="tp-appr">${pEsc(x.approach || '')}</em></div>`).join('')
+  const ints = v2 ? (g.interventions_list || []).map(x => `<div class="tp-int"><span><b>${pEsc(x.name)}</b> ${pEsc(x.what)}${x.freq ? ` <small>(${pEsc(x.freq)})</small>` : ''}${(x.sentences || []).length ? `<span class="tp-sent">${x.sentences.map(s => SAY + pEsc(s)).join('<br>')}</span>` : ''}${x.avoid ? `<small class="tp-avoid">🚫 ${pEsc(x.avoid)}</small>` : ''}</span><em class="tp-appr">${pEsc(x.approach || '')}</em></div>`).join('')
     : (g.interventions ? `<div class="tp-legacy"><span class="tp-lbl">מה עושים:</span> ${pEsc(g.interventions)}</div>` : '');
   const acts = can ? `<div class="tp-acts">${v2 ? `<button type="button" class="btn ghost small" data-tp-edit="${i}">עריכה</button>` : ''}
       <details class="tp-more-acts"><summary aria-label="עוד פעולות">⋯</summary><div>${v2 ? `<button type="button" class="btn ghost small" data-tp-route="${i}">פתיחה במסלול</button>` : ''}
       ${st !== 'achieved' ? `<button type="button" class="btn ghost small" data-tp-ach="${i}">✓ הושגה</button>` : ''}${st === 'focus' ? `<button type="button" class="btn ghost small" data-tp-st="${i}" data-to="waiting">להמתנה</button>` : ''}
       ${st === 'waiting' || st === 'stopped' ? `<button type="button" class="btn ghost small" data-tp-st="${i}" data-to="focus">למוקד</button>` : ''}${st !== 'stopped' && st !== 'achieved' ? `<button type="button" class="btn ghost small" data-tp-stop="${i}">הפסקה</button>` : ''}</div></details></div>` : '';
-  return `<details class="tp-goal st-${st}"${st === 'focus' ? ' open' : ''}><summary><b>מטרה ${i + 1} – ${pEsc(g.title || 'בלי שם')}</b>${g.planet_id ? '<span class="tp-planet" title="כוכב במסע">🪐</span>' : ''}</summary>
+  return `<details class="tp-goal st-${st}"${st === 'focus' ? ' open' : ''}><summary><b>מטרה ${i + 1} – ${pEsc(g.title || 'בלי שם')}</b>${g.bank && g.bank.evidence ? bankEvidenceTag(g.bank.evidence) : ''}${g.planet_id ? '<span class="tp-planet" title="כוכב במסע">🪐</span>' : ''}</summary>
     <div class="tp-goal-body">${targets}${ints ? `<div class="tp-ints"><span class="tp-lbl">דרכי התערבות</span>${ints}</div>` : ''}
       ${(g.strengths || []).length ? `<div class="th-chips">${g.strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}
       ${st === 'stopped' && g.stop_reason ? `<div class="pnote">הופסקה: ${pEsc(g.stop_reason)}</div>` : ''}${st === 'achieved' && g.achieved_at ? `<div class="pnote">הושגה ${pEsc(dayLabel(g.achieved_at))} 🎉</div>` : ''}
@@ -84,17 +84,21 @@ async function tpPlanPage(id, box){
   const main = !can ? '' : changed ? '<button type="button" class="btn tp-main" id="tp-publish">פרסום</button>' : '<button type="button" class="btn tp-main" id="tp-new">+ מטרה חדשה</button>';          // (a goal being built: "להמשיך" in the status bar only)
   const bar = can && (changed || building || !row.published_version) ? `<div class="tp-statebar" role="status">${!row.published_version && !changed ? '<span>עוד לא פורסמה תוכנית</span>' : changed ? `<span><b>בטיוטה:</b> ${diff.length === 1 ? 'שינוי אחד שלא פורסם' : diff.length + ' שינויים שלא פורסמו'}</span>` : '<span>הכול פורסם</span>'}
       ${building ? `<span class="tp-sb-build">· מטרה אחת בבנייה <button type="button" class="btn ghost small" id="tp-resume2">להמשיך</button><button type="button" class="btn ghost small" id="tp-drop">לבטל</button></span>` : ''}</div>` : '';
-  box.innerHTML = `<div class="tp-page"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התוכניות</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : careName(id))}</h2></div>
+  if(can && thp.planView === 'review'){ tpReviewPage(id, box); return; }          // ("סקירה": a clean reading view, Guy 2026-10-30)
+  box.innerHTML = `<div class="tp-page"><div class="tp-side"><div class="th-ed-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התוכניות</button><div class="th-child-head">${c ? thpAvatar(c) : ''}<h2 class="ar-keep">${pEsc(c ? displayName(c) : careName(id))}</h2></div>
       <span class="th-status">${row.published_version ? 'פורסמה גרסה ' + row.published_version : 'עוד לא פורסמה'}</span></div>
-    ${vd && vd.status === 'draft' ? `<div id="tp-video">${thpVideoPanelHtml(id)}</div>` : ''}
+    ${can ? tpViewSwitchHtml('work') : ''}
     ${bar}${main}${can && changed ? `<button type="button" class="btn ghost small tp-second" id="tp-new2">+ מטרה חדשה</button>` : ''}
+    <div class="tp-links">${row.published_version ? '<button type="button" class="btn ghost small" id="tp-versions">גרסאות קודמות</button>' : ''}<button type="button" class="btn ghost small" id="tp-docs">מסמכים</button>
+      ${can && row.published_version ? `<button type="button" class="btn ghost small" id="tp-video-new"${vOld ? '' : ' disabled'} title="נוצר סרטון חדש מהתוכנית שפורסמה">🎬 סרטון חדש</button>` : ''}</div></div>
+    <div class="tp-main-col">
+    ${vd && vd.status === 'draft' ? `<div id="tp-video">${thpVideoPanelHtml(id)}</div>` : ''}
     ${group('focus').length ? group('focus').map(x => tpGoalCard(id, x.g, x.i, can)).join('') : `<div class="th-empty"><span aria-hidden="true">🎯</span><b>עוד אין מטרה במוקד</b><small>${can ? 'בונים מטרה אחת, צעד אחר צעד: "+ מטרה חדשה".' : 'איש/אשת הטיפול האחראי/ת בונה את התוכנית.'}</small></div>`}
     ${[['waiting', 'בהמתנה'], ['achieved', 'הושגו'], ['stopped', 'הופסקו']].map(([s, w]) => group(s).length ? `<details class="pfold"><summary><span>${w}</span><span class="pcount">${group(s).length}</span></summary><div class="pfold-body">${group(s).map(x => tpGoalCard(id, x.g, x.i, can)).join('')}</div></details>` : '').join('')}
-    ${can ? tpMoreHtml(id, d) : ''}
-    <div class="tp-links">${row.published_version ? '<button type="button" class="btn ghost small" id="tp-versions">גרסאות קודמות</button>' : ''}<button type="button" class="btn ghost small" id="tp-docs">מסמכים</button>
-      ${can && row.published_version ? `<button type="button" class="btn ghost small" id="tp-video-new"${vOld ? '' : ' disabled'} title="נוצר סרטון חדש מהתוכנית שפורסמה">🎬 סרטון חדש</button>` : ''}</div></div>`;
+    ${can ? tpMoreHtml(id, d) : ''}</div></div>`;
   const $ = s => box.querySelector(s), on = (s, f) => { const el = $(s); if(el) el.addEventListener('click', f); };
   on('#tp-back', () => { thp.planChild = null; thpRender(); });
+  tpWireViewSwitch(id, box);
   const fresh = () => { if(!building){ tpBuilder(id, null); return; }          // (never erase a goal being built by default or by a tap outside: the checker, round 3)
     const s2 = portalSheet(`<h2>יש מטרה שבבנייה</h2><div class="cs-rebuild-opts"><button type="button" class="btn" data-fr="keep"><b>להמשיך אותה</b><small>מהמקום שעצרת</small></button>
       <button type="button" class="btn ghost danger" data-fr="new"><b>להתחיל מטרה חדשה</b><small>המטרה שבבנייה תימחק</small></button></div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>חזרה</button></div>`);
@@ -137,34 +141,100 @@ async function tpPlanPage(id, box){
   box.querySelectorAll('[data-tp-route]').forEach(b => b.addEventListener('click', () => { const g = tpDraftOf(id).goals[+b.dataset.tpRoute]; tpBuilder(id, tpStateFromGoal(id, g)); }));
   tpWireMore(id, box, () => tpPlanPage(id, box));
 }
+// ---- "עבודה | סקירה" (Guy 2026-10-30): the review is a clean reading view for a team meeting or supervision: the PUBLISHED plan, everything
+// by importance (the focus goals in full, what the staff needs to know, then a line for every other goal), no buttons, the thinking helper hidden
+function tpViewSwitchHtml(v){ return `<div class="mx-seg" role="group" aria-label="תצוגה">${[['work', 'עבודה'], ['review', 'סקירה']].map(([k, w]) => `<button type="button" data-tp-view="${k}" aria-pressed="${v === k}">${w}</button>`).join('')}</div>`; }
+function tpWireViewSwitch(id, box){ box.querySelectorAll('[data-tp-view]').forEach(b => b.addEventListener('click', () => { if(thp.planView === b.dataset.tpView || (!thp.planView && b.dataset.tpView === 'work')) return; thp.planView = b.dataset.tpView; tpPlanPage(id, box); })); }
+function tpReviewBody(id){
+  const c = roster.find(x => x.id === id), row = thp.plans[id] || {}, p = row.published, name = c ? displayName(c) : careName(id);
+  const head = `<div class="tp-rv-title"><h2 class="ar-keep">תוכנית טיפולית · ${pEsc(name)}</h2><div class="tp-rv-meta">${row.published_version ? 'גרסה ' + row.published_version : 'עוד לא פורסמה'}${row.review_date ? ' · בדיקה מחדש ' + pEsc(dayLabel(row.review_date)) : ''}</div></div>`;
+  if(!p) return `${head}<div class="pnote">עוד אין תוכנית שפורסמה. הסקירה מציגה את מה שהצוות רואה, אחרי "פרסום".</div>`;
+  const goals = (p.goals || []).filter(g => g.title || tpIsV2(g)), num = g => goals.indexOf(g) + 1;
+  const goalHtml = g => {
+    const targets = tpIsV2(g) ? `<div><span class="tp-lbl">יעדים</span><ul class="tp-rv-list">${g.targets_list.map(t => `<li><b>${pEsc(t.text)}</b>${t.now ? `<div class="tp-rv-meta">עכשיו: ${pEsc((t.scale || [])[t.now - 1] || String(t.now))}${t.target ? ` ← רוצים: ${pEsc((t.scale || [])[t.target - 1] || String(t.target))}` : ''}</div>` : ''}${t.staff ? `<div class="tp-rv-meta">לצוות: ${pEsc(t.staff)}</div>` : ''}</li>`).join('')}</ul></div>`
+      : g.targets ? `<div><span class="tp-lbl">יעדים</span><div class="tp-rv-part">${pEsc(g.targets)}</div></div>` : '';
+    const ints = tpIsV2(g) ? ((g.interventions_list || []).length ? `<div><span class="tp-lbl">דרכי התערבות</span><ul class="tp-rv-list">${g.interventions_list.map(x => `<li><b>${pEsc(x.name)}</b> ${pEsc(x.what || '')}${x.freq ? ` <span class="tp-rv-meta">(${pEsc(x.freq)})</span>` : ''}${x.approach ? ` <em class="tp-appr">${pEsc(x.approach)}</em>` : ''}${(x.sentences || []).map(s => `<div class="tp-sent">${SAY}${pEsc(s)}</div>`).join('')}${x.avoid ? `<div class="tp-avoid">🚫 ${pEsc(x.avoid)}</div>` : ''}</li>`).join('')}</ul></div>` : '')
+      : g.interventions ? `<div><span class="tp-lbl">מה עושים</span><div class="tp-rv-part">${pEsc(g.interventions)}</div></div>` : '';
+    return `<article class="tp-rv-goal"><h3>מטרה ${num(g)} – ${pEsc(g.title || 'בלי שם')}${g.bank && g.bank.evidence ? bankEvidenceTag(g.bank.evidence) : ''}</h3>${g.why_staff ? `<div class="tp-rv-meta">${pEsc(g.why_staff)}</div>` : ''}${targets}${ints}
+      ${(g.strengths || []).length ? `<div class="th-chips">${g.strengths.map(s => `<span class="th-chip">${pEsc(s)}</span>`).join('')}</div>` : ''}${g.review_date ? `<div class="tp-rv-meta">בדיקה מחדש של המטרה: ${pEsc(dayLabel(g.review_date))}</div>` : ''}</article>`;
+  };
+  const focus = goals.filter(g => tpStatusOf(g) === 'focus'), rest = goals.filter(g => tpStatusOf(g) !== 'focus');
+  const parts = [['summary', 'תקציר לצוות']].concat(PLAN_PARTS.map(([k, w]) => [k, w])).filter(([k]) => p[k]);
+  const restLine = g => { const s = tpStatusOf(g); return `<li>${s === 'achieved' ? `הושגה${g.achieved_at ? ' ' + pEsc(dayLabel(g.achieved_at)) : ''}` : s === 'stopped' ? 'הופסקה' : 'בהמתנה'} · <b>${pEsc(g.title || 'בלי שם')}</b>${s === 'stopped' && g.stop_reason ? ` · ${pEsc(g.stop_reason)}` : ''}</li>`; };
+  return `${head}
+    <section><h2>במוקד</h2>${focus.length ? focus.map(goalHtml).join('') : '<div class="pnote">אין עכשיו מטרה במוקד.</div>'}</section>
+    ${parts.length ? `<section><h2>מה חשוב לדעת</h2>${parts.map(([k, w]) => `<div class="tp-rv-part${k === 'avoid' ? ' avoid' : ''}"><b>${w}</b>${pEsc(p[k])}</div>`).join('')}</section>` : ''}
+    ${rest.length ? `<section><h2>מטרות נוספות</h2><ul class="tp-rv-list">${rest.map(restLine).join('')}</ul></section>` : ''}`;
+}
+function tpReviewPage(id, box){
+  const changed = tpDiff(thp.plans[id] || {}).length > 0;
+  box.innerHTML = `<div class="tp-review"><div class="tp-rv-head"><button type="button" class="btn ghost small" id="tp-back">→ כל התוכניות</button>${tpViewSwitchHtml('review')}</div>
+    ${changed ? '<div class="tp-rv-draft" role="status">יש בטיוטה שינויים שעוד לא פורסמו. הסקירה מציגה את מה שהצוות רואה עכשיו.</div>' : ''}
+    ${tpReviewBody(id)}<button type="button" class="btn ghost small tp-rv-print" id="tp-rv-print">הדפסה / PDF</button></div>`;
+  box.querySelector('#tp-back').addEventListener('click', () => { thp.planChild = null; thp.planView = 'work'; thpRender(); });
+  tpWireViewSwitch(id, box);
+  box.querySelector('#tp-rv-print').addEventListener('click', () => {          // (prints exactly the review)
+    let el = document.getElementById('print-sheet'); if(!el){ el = document.createElement('div'); el.id = 'print-sheet'; document.body.appendChild(el); }
+    el.innerHTML = `<div class="th-print tp-review">${tpReviewBody(id)}<div class="th-print-meta">הודפס ${pEsc(dayLabel(isoDate(new Date())))}</div></div>`;
+    document.body.classList.add('printing');
+    const done = () => { document.body.classList.remove('printing'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done); try { window.print(); } catch(e){ done(); } setTimeout(done, 60000);
+  });
+}
 // "עוד": the summary (with a suggestion), "ברגעים קשים" (what to avoid stands out, signs, what calms), routine, the child's gender, a file
 function tpMoreHtml(id, d){
-  const part = (k, w, cls) => `<label class="pfield${cls ? ' ' + cls : ''}">${w} <button type="button" class="btn ghost small th-tpl-btn" data-tpl="${k}">📚</button><textarea id="tm-${k}" rows="2">${pEsc(d[k] || '')}</textarea></label>`;
-  return `<details class="pfold tp-more"><summary><span>עוד</span><small>תקציר, ברגעים קשים, שגרה ועוד</small></summary><div class="pfold-body">
+  const part = (k, w, cls) => `<label class="pfield${cls ? ' ' + cls : ''}">${w} <button type="button" class="btn ghost small th-tpl-btn" data-tpl="${k}">📚 נוסחים מוכנים</button><textarea id="tm-${k}" rows="2">${pEsc(d[k] || '')}</textarea></label>`;
+  return `<details class="pfold tp-more"><summary><span>עוד</span><small>תקציר, ברגעים קשים, שגרה ועוד</small><span class="tm-state" id="tm-state" role="status" aria-live="polite"></span></summary><div class="pfold-body">
     <label class="pfield">תקציר לצוות <button type="button" class="btn ghost small" id="tm-suggest">הצעה</button><textarea id="tm-summary" rows="3" placeholder="כמה משפטים: מה חשוב לדעת עכשיו">${pEsc(d.summary || '')}</textarea></label>
     <h3 class="psec">ברגעים קשים</h3>${part('avoid', 'ממה להימנע', 'th-avoid-field')}${part('signs', 'אותות מוקדמים')}${part('calm', 'מה עוזר להירגע')}
     ${part('routine', 'שגרה יומית מיוחדת')}
     <label class="pfield">הילד/ה (לנוסחים)<select id="tm-gender"><option value="">לא צוין</option><option value="m"${d.gender === 'm' ? ' selected' : ''}>בן</option><option value="f"${d.gender === 'f' ? ' selected' : ''}>בת</option></select></label>
     <details class="pfold"><summary><span>עוזר חשיבה (לא מוצג לצוות)</span></summary><div class="pfold-body"><textarea id="tm-think" rows="3">${pEsc(d.thinking || '')}</textarea></div></details>
-    <div class="pfield"><span>קובץ מצורף</span>${d.file ? `<span class="pnote">📎 ${pEsc(d.file.name)}</span>` : ''}<input type="file" id="tm-file" accept=".pdf,.doc,.docx"></div>
-    <button type="button" class="btn" id="tm-save">שמירה</button></div></details>`;
+    <div class="pfield"><span>קובץ מצורף</span><span class="pnote" id="tm-file-name">${d.file ? '📎 ' + pEsc(d.file.name) : ''}</span><input type="file" id="tm-file" accept=".pdf,.doc,.docx"></div></div></details>`;          // (no "שמירה": everything here saves by itself, Guy 2026-10-30)
 }
+// "עוד" saves by itself (Guy 2026-10-30): a second after the typing stops and on leaving a field; still a draft until "פרסום".
+// No connection: what was written is kept on this device and tried again every few seconds (and when the connection is back); a file is uploaded as soon as it is chosen.
 function tpWireMore(id, box, after){
-  const s = box.querySelector('#tm-save'); if(!s) return;
-  box.querySelectorAll('.tp-more .th-tpl-btn').forEach(b => b.addEventListener('click', () => { const ta = box.querySelector('#tm-' + b.dataset.tpl);
-    bankPick(b.dataset.tpl, { age:tpBankAge(id), onPick:(x, age) => { ta.value = bankJoin(ta.value, bankPartText(x, age, box.querySelector('#tm-gender').value)); } }); }));
-  box.querySelector('#tm-suggest').addEventListener('click', async () => { const d = tpDraftOf(id), f = (d.goals || []).filter(g => tpStatusOf(g) === 'focus'), nm = careName(id);
-    const t = box.querySelector('#tm-summary');
+  const st = box.querySelector('#tm-state'); if(!st) return;
+  const KEY = 'ramzor-tm-' + id, el = k => box.querySelector('#tm-' + k);
+  const vals = () => { const v = k => el(k).value.trim(); return { summary:v('summary'), avoid:v('avoid'), signs:v('signs'), calm:v('calm'), routine:v('routine'), gender:el('gender').value, thinking:v('think') }; };
+  const show = (t, bad) => { st.textContent = t; st.classList.toggle('bad', !!bad); };
+  let timer = null, busy = false, again = false, retry = null;
+  const publishNow = () => {          // (the first unpublished change: the main button becomes "פרסום", as after a save before)
+    const nb = box.querySelector('#tp-new'); if(!nb || box.querySelector('#tp-publish') || !tpDiff(thp.plans[id] || {}).length) return;
+    nb.insertAdjacentHTML('afterend', '<button type="button" class="btn tp-main" id="tp-publish">פרסום</button>'); nb.classList.remove('tp-main'); nb.classList.add('ghost', 'small', 'tp-second');
+    box.querySelector('#tp-publish').addEventListener('click', () => tpPublish(id));
+  };
+  const save = async () => {
+    clearTimeout(timer); timer = null; if(!document.body.contains(st)) return;
+    if(busy){ again = true; return; }
+    const v = vals(); busy = true; show('שומר...');
+    let ok = false; try { ok = await tpSave(id, Object.assign(tpDraftOf(id), v), true); } catch(e){}
+    busy = false;
+    if(ok){ try { localStorage.removeItem(KEY); } catch(e){} clearInterval(retry); retry = null; show('✓ נשמר אוטומטית · בטיוטה, עד "פרסום"'); publishNow(); }
+    else { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} show('לא נשמר עדיין, אין חיבור. נשמר במכשיר, וננסה שוב', true);
+      if(!retry) retry = setInterval(() => { if(!document.body.contains(st)){ clearInterval(retry); return; } save(); }, 8000); }
+    if(again){ again = false; save(); }
+  };
+  const queue = () => { clearTimeout(timer); timer = setTimeout(save, 1000); };
+  box.querySelectorAll('.tp-more textarea, .tp-more select').forEach(f => { f.addEventListener('input', queue); f.addEventListener('change', save); f.addEventListener('blur', () => { if(timer) save(); }); });
+  window.addEventListener('online', () => { if(retry) save(); });
+  { let pend = null; try { pend = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){}          // (written here before without a connection: back in the fields, and saved)
+    if(pend){ ['summary', 'avoid', 'signs', 'calm', 'routine'].forEach(k => { if(typeof pend[k] === 'string') el(k).value = pend[k]; }); if(typeof pend.thinking === 'string') el('think').value = pend.thinking; if(pend.gender != null) el('gender').value = pend.gender; save(); } }
+  box.querySelectorAll('.tp-more .th-tpl-btn').forEach(b => b.addEventListener('click', () => { const ta = el(b.dataset.tpl);
+    bankPick(b.dataset.tpl, { age:tpBankAge(id), onPick:(x, age) => { ta.value = bankJoin(ta.value, bankPartText(x, age, el('gender').value)); save(); } }); }));
+  el('suggest').addEventListener('click', async () => { const d = tpDraftOf(id), f = (d.goals || []).filter(g => tpStatusOf(g) === 'focus'), nm = careName(id);
+    const t = el('summary');
     if(t.value.trim() && !(await confirmSheet({ title:'להחליף את התקציר בהצעה?', text:'ההצעה נבנית מהמטרה שבמוקד. אפשר לערוך אותה אחר כך.', okLabel:'כן, להחליף', cancelLabel:'חזרה' }))) return;
-    t.value = f.length ? `כרגע במוקד: ${f.map(g => g.title).join(', ')}. ${f.map(g => g.why_staff || '').filter(Boolean).join(' ')} ${d.avoid ? 'חשוב לזכור ממה להימנע.' : ''}`.replace(/\s+/g, ' ').trim() : `${nm}: [מה חשוב לדעת עכשיו].`; });
-  s.addEventListener('click', async () => {
-    const d = tpDraftOf(id), v = k => box.querySelector('#tm-' + k).value.trim();
-    Object.assign(d, { summary:v('summary'), avoid:v('avoid'), signs:v('signs'), calm:v('calm'), routine:v('routine'), gender:box.querySelector('#tm-gender').value, thinking:v('think') });
-    const fin = box.querySelector('#tm-file'), f = fin.files && fin.files[0];
-    if(f){ if(f.size > 20 * 1024 * 1024){ toast('הקובץ גדול מדי (עד 20MB)'); return; }
-      const path = `plans/${id}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-60)}`, up = await sbPersonal.storage.from('mercury').upload(path, f, { upsert:false, contentType:f.type || undefined });
-      if(up.error){ toast('ההעלאה נכשלה'); return; } d.file = { path, name:f.name }; }
-    if(await tpSave(id, d)){ toast('נשמר בטיוטה'); after(); }
+    t.value = f.length ? `כרגע במוקד: ${f.map(g => g.title).join(', ')}. ${f.map(g => g.why_staff || '').filter(Boolean).join(' ')} ${d.avoid ? 'חשוב לזכור ממה להימנע.' : ''}`.replace(/\s+/g, ' ').trim() : `${nm}: [מה חשוב לדעת עכשיו].`; save(); });
+  el('file').addEventListener('change', async () => {
+    const f = el('file').files && el('file').files[0]; if(!f) return;
+    if(f.size > 20 * 1024 * 1024){ show('הקובץ גדול מדי (עד 20MB). אפשר לבחור קובץ קטן יותר', true); el('file').value = ''; return; }
+    show('מעלה את הקובץ...');
+    const path = `plans/${id}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-60)}`;
+    let up = null; try { up = await sbPersonal.storage.from('mercury').upload(path, f, { upsert:false, contentType:f.type || undefined }); } catch(e){ up = { error:e }; }
+    if(up.error){ show('ההעלאה נכשלה. אפשר לבחור את הקובץ שוב', true); el('file').value = ''; return; }
+    tpDraftOf(id).file = { path, name:f.name }; el('file-name').textContent = '📎 ' + f.name; el('file').value = ''; save();
   });
 }
 // what the draft changes against the published plan, in words (the goal being built is not counted): the status bar and the publish window
@@ -199,7 +269,7 @@ function tpEditGoal(id, gi, after){
   const sh = portalSheet(`<h2>עריכה: ${pEsc(g.title)}</h2>
     <label class="pfield">שם המטרה<input type="text" id="te-title" maxlength="80" value="${pEsc(g.title)}"></label>
     ${(g.targets_list || []).map((t, k) => `<div class="tp-ed-block"><b>יעד ${k + 1}</b><label class="pfield">מקצועי<textarea data-te-t="${k}" data-f="text" rows="2">${pEsc(t.text)}</textarea></label><label class="pfield">לצוות<input type="text" data-te-t="${k}" data-f="staff" value="${pEsc(t.staff || '')}"></label></div>`).join('')}
-    ${(g.interventions_list || []).map((x, k) => `<div class="tp-ed-block"><b>${pEsc(x.name)}</b><label class="pfield">מה עושים<textarea data-te-i="${k}" data-f="what" rows="2">${pEsc(x.what)}</textarea></label><label class="pfield">תדירות<input type="text" data-te-i="${k}" data-f="freq" value="${pEsc(x.freq || '')}"></label>
+    ${(g.interventions_list || []).map((x, k) => `<div class="tp-ed-block"><b>${pEsc(x.name)}</b><label class="pfield">מה עושים<textarea data-te-i="${k}" data-f="what" rows="2">${pEsc(x.what)}</textarea></label><label class="pfield">תדירות<input type="text" data-te-i="${k}" data-f="freq" value="${pEsc(x.freq || '')}"></label><label class="pfield">מה לא לעשות<input type="text" data-te-i="${k}" data-f="avoid" value="${pEsc(x.avoid || '')}"></label>
       <label class="pfield">משפטים (משפט בכל שורה)<textarea data-te-i="${k}" data-f="sentences" rows="2">${pEsc((x.sentences || []).join('\n'))}</textarea></label></div>`).join('')}
     <label class="pfield">בדיקה מחדש של המטרה<input type="date" id="te-review" value="${pEsc(g.review_date || '')}"></label>
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="te-save">שמירה</button></div>`);
@@ -216,14 +286,14 @@ const TP_STEPS = [['start', 'התחלה'], ['pick', 'בחירה'], ['goal', 'מ�
 function tpStateFromGoal(id, g){
   const x = (thp.library || []).find(y => y.id === g.library_id), age = (g.bank && g.bank.age) || tpBankAge(id);
   return { step:'targets', editIndex:(tpDraftOf(id).goals || []).findIndex(y => y.id === g.id), goalId:g.id, libId:g.library_id || null, title:g.title, theme:g.theme || '', age,
-    targets:(g.targets_list || []).map(t => Object.assign({}, t)), ints:(g.interventions_list || []).map(i => Object.assign({}, i, { sentencesAll:((x && ((x.content.ages[age] || {}).interventions || []).find(b => b.id === i.id)) || {}).sentences || i.sentences })),
+    targets:(g.targets_list || []).map(t => Object.assign({}, t)), ints:(g.interventions_list || []).map(i => Object.assign({}, i, { sentencesAll:((x && ((bankWording(x, age) || {}).interventions || []).find(b => b.id === i.id)) || {}).sentences || i.sentences })),
     strengths:(g.strengths || []).slice(), planet:g.planet_id || '', status:tpStatusOf(g), why:g.why_staff || '' };
 }
 async function tpBuilder(id, state){
   const s = state ? JSON.parse(JSON.stringify(state)) : { step:'start', age:tpBankAge(id), targets:[], ints:[], strengths:[], planet:'' };
-  if(!s.age) s.age = tpBankAge(id) || '5-8';
+  if(!s.age || s.age === '5-8' || s.age === '8-12') s.age = tpBankAge(id) || '6-9';
   const body = document.getElementById('therapy-body'); if(!body) return;
-  let gender = (tpDraftOf(id).gender) || ''; const G = t => bankGender(t || '', gender), lib = () => s.libId ? (thp.library || []).find(y => y.id === s.libId) : null, ageW = () => { const x = lib(); return x ? (x.content.ages[s.age] || x.content.ages['5-8'] || {}) : {}; };
+  let gender = (tpDraftOf(id).gender) || ''; const G = t => bankGender(t || '', gender), lib = () => s.libId ? (thp.library || []).find(y => y.id === s.libId) : null, ageW = () => { const x = lib(); return x ? (bankWording(x, s.age) || {}) : {}; };
   const persist = async () => { const d = tpDraftOf(id); d.builder = Object.assign({}, s); await planSave(id, d, (thp.plans[id] || {}).review_date || null); };
   const go = async step => { s.step = step; await persist(); draw(); };
   const c = roster.find(x => x.id === id);
@@ -238,13 +308,15 @@ async function tpBuilder(id, state){
       const nGoals = n => n === 1 ? 'מטרה אחת' : n + ' מטרות';          // (only what exists is offered: the checker, principle 10)
       if(s.entry === 'theme') inner = `<h2>איזו תמה?</h2><div class="tp-grid">${PLAN_CATS.map(t => [t, tpGoalsV2().filter(x => bankThemesOf(x).includes(t)).length]).filter(x => x[1]).map(([t, n]) => `<button type="button" class="tp-tile" data-theme="${pEsc(t)}"><b>${pEsc(t)}</b><small>${nGoals(n)}</small></button>`).join('') || '<div class="pnote">עוד אין מטרות בבנק. אפשר "משהו משלי".</div>'}</div>`;
       else if(s.entry === 'method') inner = `<h2>איזו שיטה?</h2><div class="tp-grid">${bankMethods().map(m => [m, tpGoalsV2().filter(x => (x.methods || []).includes(m)).length]).filter(x => x[1]).map(([m, n]) => { const card = (thp.library || []).find(y => y.kind === 'method' && y.title === m);
-        return `<div class="tp-tile-wrap"><button type="button" class="tp-tile" data-method="${pEsc(m)}"><b>${pEsc(m)}</b><small>${nGoals(n)}</small></button>${card ? `<details class="tp-mcard"><summary>מה זו?</summary><div>${pEsc(card.description || '')}</div></details>` : ''}</div>`; }).join('') || '<div class="pnote">עוד אין מטרות בבנק. אפשר "משהו משלי".</div>'}</div>`;
+        return `<div class="tp-tile-wrap"><button type="button" class="tp-tile" data-method="${pEsc(m)}"><b>${pEsc(m)}</b><small>${nGoals(n)}</small></button>${card ? `<span class="tp-mpop" role="tooltip">${pEsc(card.description || '')}</span><details class="tp-mcard"><summary>מה זו?</summary><div>${pEsc(card.description || '')}</div></details>` : ''}</div>`; }).join('') || '<div class="pnote">עוד אין מטרות בבנק. אפשר "משהו משלי".</div>'}</div>`;
       else inner = `<h2>חיפוש</h2><input type="search" id="tb-q" class="th-search" placeholder="למשל: מעברים, להירגע, פרידה" value="${pEsc(s.q || '')}"><div id="tb-res"></div>`;
       inner += nav(false);
     }
     else if(s.step === 'goal'){
       const l = tpGoalsV2().filter(x => s.entry === 'theme' ? bankThemesOf(x).includes(s.theme) : s.entry === 'method' ? (x.methods || []).includes(s.method) : `${x.title} ${x.description || ''} ${JSON.stringify(x.content)}`.includes(s.q || ''));
-      inner = `<h2>איזו מטרה?</h2><div class="tp-names">${l.map(x => `<button type="button" class="tp-name${s.libId === x.id ? ' on' : ''}" data-goal="${x.id}">${pEsc(G(x.title))}${x.draft ? ' <small class="bk-draft" title="נוסח שמנהל המערכת עוד לא בדק">נוסח בבדיקה</small>' : ''}</button>`).join('') || '<div class="pnote">אין מטרות כאן עדיין.</div>'}</div>
+      l.sort((a, b) => (bankFits(b, s.age) ? 1 : 0) - (bankFits(a, s.age) ? 1 : 0));          // (the goals of the child's age group first)
+      const ageWord = x => { const k = Object.keys(x.content.ages || {})[0]; return k && !(x.content.ages[s.age] || (x.content.also || []).includes(s.age)) ? ` <small class="tp-age-tag">${pEsc(BANK_AGE_WORD[k] || k)}</small>` : ''; };
+      inner = `<h2>איזו מטרה?</h2><div class="tp-names">${l.map(x => `<button type="button" class="tp-name${s.libId === x.id ? ' on' : ''}" data-goal="${x.id}">${pEsc(G(x.title))}${ageWord(x)}${bankEvidenceTag(x.content.evidence)}${x.draft ? ' <small class="bk-draft" title="נוסח שמנהל המערכת עוד לא בדק">נוסח בבדיקה</small>' : ''}</button>`).join('') || '<div class="pnote">אין מטרות כאן עדיין.</div>'}</div>
         ${l.some(x => x.draft) ? '<div class="pnote">"נוסח בבדיקה" = נוסח שעוד לא נבדק ואושר. אפשר להשתמש בו ולערוך.</div>' : ''}
         <details class="pfold"><summary><span>משהו משלי</span></summary><div class="pfold-body"><input type="text" id="tb-own-title" maxlength="80" placeholder="שם המטרה" value="${s.libId ? '' : pEsc(s.title || '')}"><button type="button" class="btn small" id="tb-own-go">המשך עם המטרה שלי</button></div></details>${nav(false)}`;
     }
@@ -252,9 +324,9 @@ async function tpBuilder(id, state){
       const w = ageW(), sel = new Set(s.targets.map(t => t.id)), bank = (w.targets || []);
       const mean = (t, k) => t[k] ? `<div class="tp-rate-mean">${t[k]} = ${pEsc((t.scale || [])[t[k] - 1] || '')}</div>` : '<div class="tp-rate-mean dim">בוחרים מספר, ורואים כאן מה הוא אומר</div>';          // (the meaning of the number: the UX reviewer, finding 2)
       const row = (t, k, w) => `<div role="group" aria-label="${w}"><span>${w}</span>${[1, 2, 3, 4, 5].map(v => `<button type="button" class="${t[k] === v ? 'on' : ''}" aria-pressed="${t[k] === v}" aria-label="${w} ${v}: ${pEsc((t.scale || [])[v - 1] || '')}" data-rate="${pEsc(t.id)}" data-k="${k}" data-v="${v}">${v}</button>`).join('')}</div>${mean(t, k)}`;
-      const ratings = t => `<div class="tp-rate">${row(t, 'now', 'איפה עכשיו')}${row(t, 'target', 'לאן רוצים להגיע')}</div>`;
+      const ratings = t => tpSpiralPick(t);          // (a real spiral to tap, instead of two rows of 1-5: Guy 2026-10-29)
       const scaleEd = t => `<details class="tp-scale-ed"><summary>הספירלה של היעד (5 תחנות)</summary>${[0, 1, 2, 3, 4].map(k => `<input type="text" data-scale="${pEsc(t.id)}" data-k="${k}" value="${pEsc((t.scale || [])[k] || '')}" placeholder="${k + 1}">`).join('')}</details>`;
-      inner = `<h2>יעדים <small>(1–3)</small></h2>${s.age !== tpBankAge(id) || bankAgeOf(id, {}) === '8-12' ? '<div class="pnote">לילדים מעל 8: בינתיים מוצג הנוסח של גילאי 5–8.</div>' : ''}
+      inner = `<h2>יעדים <small>(1–3)</small></h2>${lib() && !lib().content.ages[s.age] ? `<div class="pnote">המטרה נכתבה ל${pEsc(BANK_AGE_WORD[Object.keys(lib().content.ages)[0]] || '')}, ומוצג הנוסח שלה.</div>` : ''}
         ${bank.map(t => { const on = sel.has(t.id), mine = s.targets.find(x => x.id === t.id) || t;
           return `<div class="tp-pick${on ? ' on' : ''}"><label><input type="checkbox" data-target="${pEsc(t.id)}"${on ? ' checked' : ''}> <span><b>${pEsc(G(t.text))}</b><small>לצוות: ${pEsc(G(t.staff))}</small></span></label>${on ? scaleEd(mine) + ratings(mine) : ''}</div>`; }).join('')}
         ${s.targets.filter(t => t.own).map(t => `<div class="tp-pick on"><span><b>${pEsc(t.text)}</b><small>לצוות: ${pEsc(t.staff)}</small></span>${scaleEd(t)}${ratings(t)}<button type="button" class="btn ghost small" data-own-x="${pEsc(t.id)}">הסרה</button></div>`).join('')}
@@ -265,7 +337,7 @@ async function tpBuilder(id, state){
       const w = ageW(), tids = new Set(s.targets.map(t => t.id)), all = (w.interventions || []);
       let l = s.showAll ? all : all.filter(x => (x.targets || []).some(t => tids.has(t)));
       const by = s.sortAppr ? [...new Set(l.map(x => x.approach))] : null, sel = new Set(s.ints.map(x => x.id));
-      const item = x => `<label class="tp-int-pick${sel.has(x.id) ? ' on' : ''}"><input type="checkbox" data-int="${pEsc(x.id)}"${sel.has(x.id) ? ' checked' : ''}><span><b>${pEsc(G(x.name))}</b> ${pEsc(G(x.what))}<small>${pEsc(G(x.freq || ''))}</small></span><em class="tp-appr">${pEsc(x.approach)}</em></label>`;
+      const item = x => `<label class="tp-int-pick${sel.has(x.id) ? ' on' : ''}"><input type="checkbox" data-int="${pEsc(x.id)}"${sel.has(x.id) ? ' checked' : ''}><span><b>${pEsc(G(x.name))}</b> ${pEsc(G(x.what))}<small>${pEsc(G(x.freq || ''))}</small>${x.avoid ? `<small class="tp-avoid">🚫 ${pEsc(G(x.avoid))}</small>` : ''}</span><em class="tp-appr">${pEsc(x.approach)}</em></label>`;
       inner = `<h2>דרכי התערבות <small>(עד 3)</small></h2><div class="tp-tools"><label><input type="checkbox" id="tb-sort"${s.sortAppr ? ' checked' : ''}> מיון לפי גישה</label>${all.length > l.length || s.showAll ? `<label><input type="checkbox" id="tb-all"${s.showAll ? ' checked' : ''}> כל דרכי ההתערבות של המטרה</label>` : ''}</div>
         ${by ? by.map(a => `<h3 class="psec tp-appr-h">${pEsc(a)}</h3>${l.filter(x => x.approach === a).map(item).join('')}`).join('') : l.map(item).join('')}
         ${s.ints.filter(x => x.own).map(x => `<div class="tp-int-pick on"><span><b>${pEsc(x.name)}</b> ${pEsc(x.what)}</span><em class="tp-appr">${pEsc(x.approach || '')}</em><button type="button" class="btn ghost small" data-own-ix="${pEsc(x.id)}">הסרה</button></div>`).join('')}
@@ -274,8 +346,8 @@ async function tpBuilder(id, state){
     }
     else if(s.step === 'sents'){
       inner = `<h2>משפטים לומר לילד/ה</h2><div class="pnote">בוחרים אחד אחד. רק מה שבחרת יגיע לצוות.</div>
-        ${s.ints.map(x => `<div class="tp-sent-block"><b>${pEsc(x.name)}</b><div class="tp-chips">${(x.sentencesAll || []).map((t, k) => `<button type="button" class="th-chip${(x.sentences || []).includes(G(t)) ? ' on' : ''}" data-sent="${pEsc(x.id)}" data-k="${k}">💬 ${pEsc(G(t))}</button>`).join('')}</div>
-          ${(x.sentences || []).filter(t => !(x.sentencesAll || []).map(G).includes(t)).map(t => `<span class="th-chip on">💬 ${pEsc(t)}</span>`).join('')}
+        ${s.ints.map(x => `<div class="tp-sent-block"><b>${pEsc(x.name)}</b><div class="tp-chips">${(x.sentencesAll || []).map((t, k) => `<button type="button" class="th-chip${(x.sentences || []).includes(G(t)) ? ' on' : ''}" data-sent="${pEsc(x.id)}" data-k="${k}">${SAY}${pEsc(G(t))}</button>`).join('')}</div>
+          ${(x.sentences || []).filter(t => !(x.sentencesAll || []).map(G).includes(t)).map(t => `<span class="th-chip on">${SAY}${pEsc(t)}</span>`).join('')}
           <div class="th-add-row"><input type="text" data-own-sent="${pEsc(x.id)}" placeholder="משפט משלי"><button type="button" class="btn ghost small" data-own-sent-add="${pEsc(x.id)}">הוספה</button></div></div>`).join('')}${nav(true)}`;
     }
     else if(s.step === 'journey'){          // (its own step: Guy, after the simplicity checker)
@@ -293,7 +365,7 @@ async function tpBuilder(id, state){
       inner = `<h2>סיכום</h2><div class="tp-sum"><div><span class="tp-lbl">מטרה</span><b>${pEsc(G(s.title))}</b> <em class="tp-now">${s.status === 'focus' ? 'תיכנס למוקד' : 'תחכה בהמתנה'}</em></div>
         <div><span class="tp-lbl">יעדים</span>${s.targets.map(t => `<div>• ${pEsc(G(t.text))}${t.now ? ` <em class="tp-now">עכשיו ${t.now}${t.target ? ' · רוצים ' + t.target : ''}</em>` : ''}</div>`).join('')}</div>
         <div><span class="tp-lbl">דרכי התערבות</span>${s.ints.map(x2 => `<div>• ${pEsc(x2.name)} <em class="tp-appr">${pEsc(x2.approach || '')}</em></div>`).join('')}</div>
-        <div><span class="tp-lbl">משפטים</span>${s.ints.flatMap(x2 => x2.sentences || []).map(t => `<div>💬 ${pEsc(t)}</div>`).join('') || '<div class="pnote">לא נבחרו משפטים.</div>'}</div>
+        <div><span class="tp-lbl">משפטים</span>${s.ints.flatMap(x2 => x2.sentences || []).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('') || '<div class="pnote">לא נבחרו משפטים.</div>'}</div>
         <div><span class="tp-lbl">מסע ומקדש</span>${s.strengths.map(t => `<span class="th-chip">${pEsc(t)}</span>`).join(' ') || '<span class="pnote">בלי חוזקות</span>'}${s.planet ? ` · 🪐 ${pEsc(((thp.planets || []).find(p => p.id === s.planet) || {}).name || '')}` : ''}</div></div>
         ${nav(true, 'לתצוגה של הצוות ←')}`;
     }
@@ -325,6 +397,10 @@ async function tpBuilder(id, state){
       else s.targets = s.targets.filter(x => x.id !== t.id);
       draw(); }));
     body.querySelectorAll('[data-rate]').forEach(b => b.addEventListener('click', () => { const t = s.targets.find(x => x.id === b.dataset.rate); if(t){ t[b.dataset.k] = +b.dataset.v; draw(); } }));
+    body.querySelectorAll('[data-spmode]').forEach(b => b.addEventListener('click', () => { const [tid, k] = b.dataset.spmode.split('|'); TP_SP_MODE[tid] = k; draw(); }));
+    body.querySelectorAll('[data-spst]').forEach(b => b.addEventListener('click', () => {          // (a station of the spiral: "now" first, then "where to", then the chosen one)
+      const [tid, v] = b.dataset.spst.split('|'), t = s.targets.find(x => x.id === tid); if(!t) return;
+      const k = tpSpMode(t); t[k] = +v; if(k === 'now' && !t.target) TP_SP_MODE[tid] = 'target'; draw(); }));
     body.querySelectorAll('[data-scale]').forEach(i => i.addEventListener('change', () => { const t = s.targets.find(x => x.id === i.dataset.scale); if(t){ t.scale = t.scale || []; t.scale[+i.dataset.k] = i.value.trim(); } }));
     on('#tb-t-add', () => { const text = $('#tb-t-text').value.trim(), staff = $('#tb-t-staff').value.trim(); if(!text){ toast('כותבים את היעד'); return; } if(s.targets.length >= 3){ toast('אפשר עד 3 יעדים'); return; }
       s.targets.push({ id:tpUid('t'), own:true, text, staff:staff || text, scale:['', '', '', '', ''], now:null, target:null }); draw(); });
@@ -333,7 +409,7 @@ async function tpBuilder(id, state){
     const al = $('#tb-all'); if(al) al.addEventListener('change', () => { s.showAll = al.checked; draw(); });
     body.querySelectorAll('[data-int]').forEach(b => b.addEventListener('change', () => {
       const x = (ageW().interventions || []).find(y => y.id === b.dataset.int);
-      if(b.checked){ if(s.ints.length >= 3){ b.checked = false; toast('אפשר עד 3 דרכי התערבות'); return; } s.ints.push({ id:x.id, name:G(x.name), what:G(x.what), why:G(x.why), freq:G(x.freq), approach:x.approach, sentencesAll:x.sentences || [], sentences:[] }); }
+      if(b.checked){ if(s.ints.length >= 3){ b.checked = false; toast('אפשר עד 3 דרכי התערבות'); return; } s.ints.push({ id:x.id, name:G(x.name), what:G(x.what), why:G(x.why), freq:G(x.freq), avoid:G(x.avoid || ''), approach:x.approach, sentencesAll:x.sentences || [], sentences:[] }); }
       else s.ints = s.ints.filter(y => y.id !== x.id);
       draw(); }));
     on('#tb-i-add', () => { const name = $('#tb-i-name').value.trim(), what = $('#tb-i-what').value.trim(); if(!name || !what){ toast('כותבים שם ומה עושים'); return; } if(s.ints.length >= 3){ toast('אפשר עד 3 דרכי התערבות'); return; }
@@ -373,20 +449,44 @@ function tpGoalFromState(s, G){
   const x = s.libId ? (thp.library || []).find(y => y.id === s.libId) : null, review = isoDate(new Date(Date.now() + (((x && x.content.review) || 3) * 30) * 864e5));
   return tpSync({ id:s.goalId || (s.goalId = tpUid('g')), title:G(s.title), theme:s.theme || '', library_id:s.libId || null, status:s.status || 'focus',
     targets_list:s.targets.map(t => ({ id:t.id, text:t.text, staff:t.staff, scale:t.scale || [], now:t.now || null, target:t.target || null })),
-    interventions_list:s.ints.map(i => ({ id:i.id, name:i.name, what:i.what, why:i.why || '', freq:i.freq || '', approach:i.approach || '', sentences:(i.sentences || []).slice() })),
+    interventions_list:s.ints.map(i => ({ id:i.id, name:i.name, what:i.what, why:i.why || '', freq:i.freq || '', avoid:i.avoid || '', approach:i.approach || '', sentences:(i.sentences || []).slice() })),
     strengths:s.strengths.slice(), planet_id:s.planet || null, why_staff:G(s.why || ''), avoid_line:x ? G(x.content.avoid || '') : '', review_date:review,
-    methods:[...new Set(s.ints.map(i => i.approach).filter(Boolean))], bank:x ? { id:x.id, age:s.age } : null });
+    methods:[...new Set(s.ints.map(i => i.approach).filter(Boolean))], bank:x ? { id:x.id, age:s.age, evidence:(x.content || {}).evidence || null } : null });          // (the evidence stays with the therapist: plan_guidance leaves "bank" out)
 }
 
+// ---- the spiral of a target, to tap (Guy 2026-10-29): 5 stations from the centre outwards; ● "איפה עכשיו", ★ "לאן רוצים להגיע",
+// and the way between them in gold. Two small switches choose which mark a tap sets; the meaning of both stations is written under it
+const TP_SP_MODE = {};
+const tpSpMode = t => TP_SP_MODE[t.id] || (!t.now ? 'now' : !t.target ? 'target' : 'now');
+function tpSpiralPick(t){
+  const C = 110, A = 9, B = 6.4, TH = [0.9, 1.75, 2.6, 3.45, 4.3].map(x => x * Math.PI), at = th => { const r = A + B * th; return [C + r * Math.cos(th), C + r * Math.sin(th)]; };
+  const path = (a, b) => { const pts = []; for(let th = a; th <= b + 1e-6; th += 0.06) pts.push(at(th).map(n => n.toFixed(1)).join(',')); return 'M' + pts.join(' L'); };
+  const mode = tpSpMode(t), lo = t.now && t.target ? Math.min(t.now, t.target) : 0, hi = t.now && t.target ? Math.max(t.now, t.target) : 0;
+  const sc = t.scale || [], mean = v => v ? `${v} = ${pEsc(sc[v - 1] || '')}` : '—';
+  const st = TH.map((th, i) => { const [x, y] = at(th), v = i + 1, cls = `${t.now === v ? ' now' : ''}${t.target === v ? ' goal' : ''}`;
+    return `<button type="button" class="tp-sp-st${cls}" style="left:${(x / 2.2).toFixed(1)}%;top:${(y / 2.2).toFixed(1)}%" data-spst="${pEsc(t.id)}|${v}" aria-label="תחנה ${v}: ${pEsc(sc[i] || '')}">${t.target === v ? '★' : v}</button>`; }).join('');
+  return `<div class="tp-sp">
+    <div class="tp-sp-modes" role="group" aria-label="מה מסמנים"><button type="button" class="${mode === 'now' ? 'on' : ''}" data-spmode="${pEsc(t.id)}|now" aria-pressed="${mode === 'now'}">● איפה עכשיו</button><button type="button" class="${mode === 'target' ? 'on' : ''}" data-spmode="${pEsc(t.id)}|target" aria-pressed="${mode === 'target'}">★ לאן רוצים להגיע</button></div>
+    <div class="tp-sp-box"><svg viewBox="0 0 220 220" aria-hidden="true"><path class="tp-sp-line" d="${path(0.25 * Math.PI, 4.45 * Math.PI)}"/>${lo ? `<path class="tp-sp-way" d="${path(TH[lo - 1], TH[hi - 1])}"/>` : ''}</svg>${st}</div>
+    <div class="tp-sp-mean"><div><b>● עכשיו:</b> ${mean(t.now)}</div><div><b>★ רוצים:</b> ${mean(t.target)}</div></div>
+  </div>`;
+}
 // ---- the staff's view of one goal (Q21, Q25-27): the plain targets, the interventions with their approach, 2 sentences + "עוד", 👍/👎
+// the approach of an intervention, faint; what it is in one line from the method's card: a bubble under the mouse, "מה זה?" (very secondary) on a touch screen (Guy 2026-10-30)
+function tpApprHtml(a){
+  if(!a) return '';
+  const card = (thp.library || []).find(x => x.kind === 'method' && x.active && x.title === a);
+  const what = card ? ((card.description || '').split('\n')[0] || '').replace(/^מה היא:\s*/, '').replace(/\s*\([^()]*[A-Za-z][^()]*\)\s*$/, '').trim() : '';
+  return `<span class="tp-apx"><em class="tp-appr"${what ? ' tabindex="0"' : ''}>${pEsc(a)}</em>${what ? `<span class="tp-mpop tp-apop" role="tooltip">${pEsc(what)}</span><details class="tp-awhat"><summary>מה זה?</summary><div>${pEsc(what)}</div></details>` : ''}</span>`;
+}
 function tpStaffGoalHtml(childId, g, withFeedback){
   if(!tpIsV2(g)) return '';
   const sents = (g.interventions_list || []).flatMap(i => i.sentences || []);
   return `<div class="tp-sg"><b class="ar-keep">${pEsc(g.title)}</b>${g.why_staff ? `<div class="tp-sg-why ar-keep">${pEsc(g.why_staff)}</div>` : ''}
     ${(g.targets_list || []).length ? `<div class="tp-sg-t">${g.targets_list.map(t => `<div class="ar-keep">🎯 ${pEsc(t.staff || '')}</div>`).join('')}</div>` : ''}
-    ${(g.interventions_list || []).map(i => `<div class="tp-sg-i"><span class="ar-keep"><b>${pEsc(i.name)}</b> ${pEsc(i.what)}${i.freq ? ` <small>(${pEsc(i.freq)})</small>` : ''}</span><em class="tp-appr">${pEsc(i.approach || '')}</em>
+    ${(g.interventions_list || []).map(i => `<div class="tp-sg-i"><span class="ar-keep"><b>${pEsc(i.name)}</b> ${pEsc(i.what)}${i.freq ? ` <small>(${pEsc(i.freq)})</small>` : ''}${i.avoid ? `<small class="tp-avoid">🚫 ${pEsc(i.avoid)}</small>` : ''}</span>${tpApprHtml(i.approach)}
       ${withFeedback ? `<span class="tp-fb"><button type="button" data-fb="${pEsc(childId)}|${pEsc(g.id)}|${pEsc(i.id)}|up" aria-label="עבד">👍</button><button type="button" data-fb="${pEsc(childId)}|${pEsc(g.id)}|${pEsc(i.id)}|down" aria-label="לא עבד">👎</button></span>` : ''}</div>`).join('')}
-    ${sents.length ? `<div class="tp-sg-s ar-keep">${sents.slice(0, 2).map(t => `<div>💬 ${pEsc(t)}</div>`).join('')}${sents.length > 2 ? `<details><summary>עוד</summary>${sents.slice(2).map(t => `<div>💬 ${pEsc(t)}</div>`).join('')}</details>` : ''}</div>` : ''}</div>`;
+    ${sents.length ? `<div class="tp-sg-s ar-keep">${sents.slice(0, 2).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('')}${sents.length > 2 ? `<details><summary>עוד</summary>${sents.slice(2).map(t => `<div>${SAY}${pEsc(t)}</div>`).join('')}</details>` : ''}</div>` : ''}</div>`;
 }
 function tpWireFeedback(box){
   box.querySelectorAll('[data-fb]').forEach(b => b.addEventListener('click', () => {

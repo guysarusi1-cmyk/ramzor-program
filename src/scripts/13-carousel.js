@@ -55,8 +55,7 @@ function bonusBoardSection(title, list, revocationsByBonus){
     <h3 style="font-family:'Rubik'; font-size:14px; color:var(--gold); margin:0 0 8px;">${title}</h3>
     <div class="bonus-board-grid" style="margin-bottom:18px;">
       ${list.map(b => {
-        const revoked = revocationsByBonus[b.id];
-        const revokedHtml = revoked && revoked.length ? `<span class="bonus-revoked-names">לא היום: ${revoked.join(' ')}</span>` : '';
+        const revokedHtml = '';          // (who lost a bonus is shown on the staff's phones only, never on the kids' screen: BONUSES-SPEC)
         const activeClass = isBonusTimeActive(b) ? ' bonus-active' : '';
         return `<div class="bonus-board-item${activeClass}"><span class="bb-icon">${bonusIcon(b)}</span><span class="bb-body"><span class="bb-text">${b.text}</span>${revokedHtml}</span></div>`;
       }).join('')}
@@ -68,7 +67,7 @@ async function renderBonusesSlide(){
   const todayDaily = bonusesForToday(bonusesDaily, false);
   const todayWeekly = bonusesForToday(bonusesWeekly, true);
   if(!todayDaily.length && !todayWeekly.length){ el.innerHTML = '<div class="empty">אין בונוסים מוגדרים להיום</div>'; return; }
-  const revocationsByBonus = groupRevocationsByBonus(await getActiveBonusRevocations());
+  const revocationsByBonus = {};          // (the kids' screen does not even read who lost a bonus: BONUSES-SPEC)
   // few bonuses are shown big in one column; more than 4 switch to two columns so they all fit on the screen
   el.dataset.layout = (todayDaily.length + todayWeekly.length) > 4 ? 'two' : 'one';
   el.innerHTML = bonusBoardSection('יומיים', todayDaily, revocationsByBonus) + bonusBoardSection('שבועיים', todayWeekly, revocationsByBonus);
@@ -239,13 +238,8 @@ function startFeedbackListener(){
     else if(!feedbackSince) feedbackSince = new Date(0).toISOString();
   }, () => {});
   clearInterval(feedbackCatchUp); feedbackCatchUp = setInterval(catchUpFeedback, 8000);
-  bonusRevocationChannel = sb.channel('bonus_revocations_live')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bonus_revocations' }, () => {
-      // client decided (2026-10-02) revocation SHOULD interrupt the carousel too, same as the celebratory
-      // star/moon/mercury events — no banner/sound though, just jump to the bonuses board and refresh it
-      interruptToSlide(EVENT_TYPE_SLIDE.bonus, renderBonusesSlide);
-    })
-    .subscribe();
+  // (a revocation no longer reaches the kids' screen at all — no jump to the bonuses board, no data: BONUSES-SPEC, Guy 2026-11-04;
+  //  the jump of 2026-10-02 showed the names, which are now on the staff's phones only)
 }
 function stopFeedbackListener(){
   const c = feedbackClient || sb;          // (the connection it was opened on: this device may have signed in or out since)

@@ -98,10 +98,13 @@ function srvFeedbackFor(p, mk, input){
     if(c.weekend < 4) minGaps.push(L(`במשמרות סופ"ש יש ${c.weekend} מתוך 4`, `في مناوبات نهاية الأسبوع يوجد ${c.weekend} من 4`));
   } else if(profile && profile.only_long && !mine.some(r => r.shift === 'L')) minGaps.push(L('עוד לא שובצת לסופ"ש ארוך', 'لم تُجدول/ي بعد لنهاية أسبوع طويلة'));
   const asked = honored.length + unmet.length, name = p.first;
+  // the response to her wishes, short (Guy 2026-11-03): of the shifts she marked "כן" or "יכול", how many she got
+  const wished = Object.keys(prefs.slots || {}).filter(k => days.includes(k.split('|')[0]) && ['yes', 'avoid'].includes(prefs.slots[k]));
+  const placed = wished.filter(k => on(k.split('|')[0], k.split('|')[1]).length > 0).length;
   const lines = [];
   lines.push(T('fb_intro', monthLabel(mk)));
-  if(!asked) lines.push(T('fb_nothing', c.total));
-  else lines.push(T('fb_count', asked, honored.length));
+  if(wished.length) lines.push(L(`שובצת ב-${placed} מתוך ${wished.length} המשמרות שסימנת "כן" או "יכול".`, `جُدولت في ${placed} من ${wished.length} المناوبات التي اخترت فيها "نعم" أو "ممكن".`));
+  else if(!asked) lines.push(T('fb_nothing', c.total));
   const reqUnmet = unmet.filter(u => !u.startsWith('הבקשה '));
   if(reqUnmet.length) lines.push(T('fb_unmet', reqUnmet.map(u => '• ' + u).join('\n')));
   if(goalLine) lines.push(goalLine);
@@ -111,7 +114,7 @@ function srvFeedbackFor(p, mk, input){
   }
   const closing = T('fb_close', T('fb_thanks', fem));
   if(closing) lines.push(closing);
-  return { subject:L(`הסידור של ${monthLabel(mk)} פורסם: ככה הלכו הבקשות שלך`, `نُشر جدول ${arWords(monthLabel(mk))}: هكذا سارت طلباتك`), text:lines.join('\n\n'), asked, honored:honored.length, unmet:reqUnmet, goalOk, total:c.total, min, minGaps };
+  return { subject:L(`הסידור של ${monthLabel(mk)} פורסם: ככה הלכו הבקשות שלך`, `نُشر جدول ${arWords(monthLabel(mk))}: هكذا سارت طلباتك`), text:lines.join('\n\n'), asked, wished:wished.length, placed, honored:honored.length, unmet:reqUnmet, goalOk, total:c.total, min, minGaps };
 }
 
 // the coordinator's side: everybody gets their own message when the schedule is published

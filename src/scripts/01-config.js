@@ -8,6 +8,7 @@ const APP_ENV = '@env@';   // 'live' (what staff use) or 'test' (the safe sandbo
 const staffPasswordOn = () => APP_ENV === 'test' && !!window.__staffPasswordOn;
 // Mercury (the therapy portals, observations, the new space journey, the plan's strengths in the temple): only on the test site for now (Guy, 2026-10-22).
 // The kids' screen code (no staff password) is not part of this: it is on everywhere.
+const liveCut = () => APP_ENV !== 'test' || !!window.__asLive;          // (what the coming live version leaves out; &aslive shows it on the test site)
 const mercuryOn = () => APP_ENV === 'test';          // (set by the test-only checks and demo, which are not in the live build)
 const SUPABASE_URL = '@config(supabaseUrl)';
 const SUPABASE_ANON_KEY = '@config(anonKey)';

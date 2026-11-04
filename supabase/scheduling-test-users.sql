@@ -2,6 +2,13 @@
 -- Before running: Authentication -> Users -> Add user -> Create new user (tick "Auto Confirm User") for these four e-mails, same password for all:
 --     coordinator-test@merkaz-cherum.local   instructor-test@merkaz-cherum.local   instructor2-test@merkaz-cherum.local   service-test@merkaz-cherum.local
 -- Safe to run again.
+-- safety: TEST only. On any other database this stops here, before any change (the marker: supabase/test-marker.sql, run once on TEST)
+do $$ begin
+  if to_regclass('ops.environment') is null or not exists (select 1 from ops.environment where name = 'test') then
+    raise exception 'עצירה: זה לא מסד הבדיקות (TEST). לא שונה דבר.';
+  end if;
+end $$;
+
 update public.staff_private p set email = 'coordinator-test@merkaz-cherum.local', auth_user_id = (select id from auth.users where email = 'coordinator-test@merkaz-cherum.local')
   where p.staff_id = (select id from public.staff where kind = 'coordinator' and active order by sort_order limit 1);
 update public.staff_private p set email = 'instructor-test@merkaz-cherum.local', auth_user_id = (select id from auth.users where email = 'instructor-test@merkaz-cherum.local')

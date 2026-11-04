@@ -4,7 +4,7 @@
 // Nothing here changes the real schedule: the people changes are for the kids' TV of today only.
 const ctl = { fold:{ shifts:true }, shifts:null, tt:null, ttEdit:null, ttFixedDay:null, log:null };
 const canControl = () => typeof ramzorPersonal !== 'undefined' && ramzorPersonal && !!(srv.profile && srv.profile.control);
-const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.admin));
+const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.kind === 'manager' || srv.profile.admin));          // (the manager edits the fixed timetable too: scheduling-v52.sql)
 const CTL_SHIFTS = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה']];
 const WEEKDAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const ctlToday = () => isoDate(new Date());
@@ -17,7 +17,16 @@ const TT_ICON_LIST = [
   ['class', 'חוג', '🧩'], ['park', 'טיול', '🌳'], ['movie', 'סרט', '📺'], ['shower', 'מקלחות', '🛁'], ['dinner', 'ארוחת ערב', '🍲'], ['story', 'סיפור', '📖'],
   ['cleanup', 'סידור החדר', '🧹'], ['candles', 'קבלת שבת', '🕯️'], ['meeting', 'מפגש', '🤝'], ['bedtime', 'השכבה', '🌙']
 ];
-const ttIcon = id => TT_ICON_LIST.find(x => x[0] === id) || ['other', 'פעילות', '⭐'];
+// more pictures, behind "עוד תמונות": five subjects, ten in each (Guy 2026-11-04)
+const TT_ICON_MORE = [
+  ['אוכל', [['pizza', 'פיצה', '🍕'], ['pasta', 'פסטה', '🍝'], ['sandwich', 'כריך', '🥪'], ['salad', 'סלט', '🥗'], ['soup', 'מרק', '🍜'], ['cake', 'עוגה', '🍰'], ['icecream', 'גלידה', '🍦'], ['fruit', 'פירות', '🍉'], ['cook', 'בישול', '🍳'], ['drink', 'שתייה', '🧃']]],
+  ['לימוד ויצירה', [['homework', 'שיעורי בית', '✏️'], ['reading', 'קריאה', '📚'], ['computer', 'מחשב', '💻'], ['science', 'מדע', '🔬'], ['math', 'חשבון', '🔢'], ['paint', 'ציור', '🖌️'], ['crafts', 'מלאכה', '✂️'], ['clay', 'קדרות', '🏺'], ['theater', 'תיאטרון', '🎭'], ['guitar', 'נגינה', '🎸']]],
+  ['ספורט ומשחק', [['basket', 'כדורסל', '🏀'], ['swim', 'שחייה', '🏊'], ['bike', 'אופניים', '🚲'], ['dance', 'ריקוד', '💃'], ['yoga', 'יוגה', '🧘'], ['run', 'ריצה', '🏃'], ['tennis', 'טניס', '🎾'], ['boardgame', 'משחק קופסה', '🎲'], ['cards', 'קלפים', '🃏'], ['blocks', 'קוביות', '🧱']]],
+  ['טבע ויציאה', [['beach', 'ים', '🏖️'], ['garden', 'גינון', '🌻'], ['animals', 'בעלי חיים', '🐶'], ['horse', 'רכיבה', '🐴'], ['picnic', 'פיקניק', '🧺'], ['camp', 'מחנאות', '⛺'], ['bus', 'הסעה', '🚌'], ['shop', 'קניות', '🛒'], ['doctor', 'רופא', '🩺'], ['visit', 'ביקור', '🏠']]],
+  ['בית וחגים', [['laundry', 'כביסה', '🧦'], ['handwash', 'רחיצת ידיים', '🧼'], ['haircut', 'תספורת', '💇'], ['birthday', 'יום הולדת', '🎂'], ['party', 'מסיבה', '🎉'], ['prayer', 'תפילה', '🙏'], ['kiddush', 'קידוש', '🍷'], ['holiday', 'חג', '🕎'], ['talk', 'שיחה', '💬'], ['phone', 'שיחת טלפון', '📞']]]
+];
+const TT_ICON_ALL = TT_ICON_LIST.concat(...TT_ICON_MORE.map(g => g[1]));
+const ttIcon = id => TT_ICON_ALL.find(x => x[0] === id) || ['other', 'פעילות', '⭐'];
 
 // who is on which of today's shifts: the schedule's rows, then today's changes (removed / added); the order: teachers first, then the instructors
 // with the (best) ahmash in the first place, the service girls last. Used by the control and by the kids' TV.
@@ -63,6 +72,7 @@ function renderControl(){
     <div class="ctl-top"><button type="button" class="back-btn" id="ctl-back">→ חזרה</button><h1 class="ctl-title">בקרת אחמ"ש</h1><div class="ctl-date">${dayLabel(today)}</div></div>
     ${fold('shifts', 'מי מוצג היום במסך הילדים', 'רק במסך הילדים, ורק להיום')}
     ${fold('tt', 'הלו"ז של היום')}
+    ${fold('diary', 'יומן הילדים היום', 'יציאות, שיחות ופגישות')}
     ${fold('bonus', 'בונוסים היום')}
     ${fold('duties', 'לוח התורנויות')}
     ${fold('log', 'יומן שינויים')}
@@ -76,6 +86,7 @@ async function ctlFill(id){
   try {
     if(id === 'shifts') await ctlShifts(box);
     if(id === 'tt') await ctlTimetable(box);
+    if(id === 'diary'){ if(liveCut()){ box.closest('details') ? box.closest('details').remove() : box.remove(); return; } await ctlDiary(box); }
     if(id === 'bonus') await ctlBonuses(box);
     if(id === 'duties') await ctlDuties(box);
     if(id === 'log') await ctlLog(box);
@@ -133,18 +144,36 @@ const ctlFace = p => p.photo ? `<img class="ctl-face" src="${p.photo}" alt="">` 
 // ---- 2. today's timetable (and, for the coordinator, the fixed timetable of each weekday)
 async function ctlTimetable(box){
   const r = await sb.rpc('tv_timetable_today'); if(r.error) throw r.error;
+  r.data.items = (r.data.items || []).filter(x => ttOn(x, r.data.day));          // (what repeats every few weeks or once a month: only on its days)
   ctl.tt = r.data;
-  if(!ctl.ttEdit || ctl.ttEdit.day !== r.data.day) ctl.ttEdit = { day:r.data.day, items:(r.data.items || []).map(x => Object.assign({}, x)) };
+  if(!ctl.ttEdit || ctl.ttEdit.day !== r.data.day) ctl.ttEdit = { day:r.data.day, items:(r.data.items || []).map(x => Object.assign({}, x)) };          // (what was kept: its end is never suggested over)
   ctlTimetableDraw(box);
 }
+// how often an activity comes (Guy 2026-11-04): once (today only), every week, every N weeks from a day, or a month's first / second ... weekday. Kept on the activity itself
+const TT_REP = [['once', 'חד-פעמי'], ['week', 'שבועי'], ['nw', 'כל כמה שבועות'], ['month', 'חודשי']];
+function ttOn(x, day){
+  const r = x.rep; if(!r || !day) return true;
+  if(r.k === 'nw'){ const w = Math.round((parseIso(day) - parseIso(r.from)) / (7 * 864e5)); return w >= 0 && w % (r.n || 2) === 0; }
+  if(r.k === 'month') return Math.ceil(parseIso(day).getDate() / 7) === r.nth;
+  return true;
+}
+const ttRepOf = (x, fixed) => (x.rep && x.rep.k) || (x.fresh && !fixed ? 'once' : 'week');
+// the hour of an activity: two short lists, the hours 00–23 and the minutes (a time box would show AM/PM on a phone set that way: Guy 2026-11-03)
+function ttTimeHtml(t, i, end){          // (end: the hour it ends — Guy 2026-11-04, SCHEDULE-SPEC: every activity has a start and an end)
+  const [h, m] = String(t || '').split(':'), mins = Array.from({ length:12 }, (_, k) => String(k * 5).padStart(2, '0'));
+  if(m && !mins.includes(m)){ mins.push(m); mins.sort(); }          // (an hour kept before, not on the 5 minutes, stays as it was)
+  return `<span class="ctl-tt-time" ${end ? 'data-tt-end' : 'data-tt-time'}="${i}" dir="ltr"><select data-tt-h aria-label="${end ? 'שעת סיום' : 'שעת התחלה'}"><option value="">${end ? 'סיום' : '--'}</option>${Array.from({ length:24 }, (_, k) => String(k).padStart(2, '0')).map(x => `<option${x === h ? ' selected' : ''}>${x}</option>`).join('')}</select>:<select data-tt-m aria-label="דקות">${mins.map(x => `<option${x === (m || '00') ? ' selected' : ''}>${x}</option>`).join('')}</select></span>`;
+}
+const ttTimeOf = el => { const h = el.querySelector('[data-tt-h]').value; return h ? h + ':' + el.querySelector('[data-tt-m]').value : ''; };
 function ctlTimetableDraw(box){
   const tt = ctl.tt, coord = ctlIsCoord(), fixedDay = ctl.ttFixedDay;
   const editing = fixedDay != null ? ctl.ttFixed : ctl.ttEdit;
   const rows = editing.items.map((x, i) => `<div class="ctl-tt-row" data-row="${i}">
-      <input type="time" value="${pEsc(x.t || '')}" data-tt-time="${i}" aria-label="שעה">
+      <span class="ctl-tt-times">${ttTimeHtml(x.t, i)}<span class="ctl-tt-dash" aria-hidden="true">–</span>${ttTimeHtml(x.end, i, true)}</span>
       <button type="button" class="ctl-tt-icon" data-tt-icon="${i}" title="${pEsc(ttIcon(x.i)[1])}">${ttIcon(x.i)[2]}</button>
       <input type="text" value="${pEsc(x.n || '')}" data-tt-name="${i}" placeholder="שם הפעילות" maxlength="40">
-      <button type="button" class="ctl-x" data-tt-del="${i}" aria-label="מחיקה">✕</button></div>`).join('');
+      <button type="button" class="ctl-x" data-tt-del="${i}" aria-label="מחיקה">✕</button>
+      ${coord ? `<span class="ctl-tt-rep"><select data-tt-rep="${i}" aria-label="תדירות">${TT_REP.filter(r => fixedDay == null || r[0] !== 'once').map(([k, w]) => `<option value="${k}"${ttRepOf(x, fixedDay != null) === k ? ' selected' : ''}>${w}</option>`).join('')}</select>${ttRepOf(x, fixedDay != null) === 'nw' ? `<label>כל <input type="number" min="2" max="12" value="${(x.rep && x.rep.n) || 2}" data-tt-n="${i}" aria-label="כל כמה שבועות"> שבועות</label>` : ''}</span>` : ''}</div>`).join('');
   box.innerHTML = `
     ${fixedDay == null ? `<div class="pnote">${tt.title ? `<b>${pEsc(tt.title)}</b> · ` : ''}${tt.changed ? 'הלו"ז של היום שונה מהלו"ז הקבוע.' : `זה הלו"ז הקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}. שינוי כאן ישנה רק את היום.`}</div>`
                        : `<div class="pnote">עריכת <b>הלו"ז הקבוע של יום ${WEEKDAY_NAMES[fixedDay]}</b>. השינוי יחול מהשבוע הזה והלאה.</div>`}
@@ -154,13 +183,45 @@ function ctlTimetableDraw(box){
       ? `<button type="button" class="btn" id="tt-save">שמירה להיום</button>${tt.changed ? '<button type="button" class="btn ghost" id="tt-reset">חזרה ללו"ז הקבוע</button>' : ''}${coord ? `<button type="button" class="btn ghost" id="tt-save-fixed">שמירה גם כקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}</button>` : ''}`
       : `<button type="button" class="btn" id="tt-fixed-save">שמירת הלו"ז הקבוע</button><button type="button" class="btn ghost" id="tt-fixed-close">חזרה להיום</button>`}</div>
     ${coord && fixedDay == null ? `<div class="ctl-fixed-pick"><span>עריכת הלו"ז הקבוע של:</span>${WEEKDAY_NAMES.map((n, i) => `<button type="button" class="btn ghost small" data-fixed="${i}">${n}</button>`).join('')}</div>` : ''}`;
-  const sync = () => box.querySelectorAll('[data-row]').forEach(row => { const i = +row.dataset.row; editing.items[i].t = row.querySelector('[data-tt-time]').value; editing.items[i].n = row.querySelector('[data-tt-name]').value.trim(); });
-  const clean = () => { sync(); return editing.items.filter(x => x.t && x.n).sort((a, b) => a.t.localeCompare(b.t)).map(x => ({ t:x.t, n:x.n, i:x.i || 'other' })); };
+  // the end is offered, never asked for: the start of the next activity, until somebody sets it or empties it by hand (Guy 2026-11-04)
+  const suggest = () => editing.items.forEach((x, i) => { if(!x.endAuto) return; const nx = editing.items.slice(i + 1).find(b => b.t && b.t > x.t); x.end = nx ? nx.t : ''; });
+  const sync = () => box.querySelectorAll('[data-row]').forEach(row => { const i = +row.dataset.row; editing.items[i].t = ttTimeOf(row.querySelector('[data-tt-time]')); editing.items[i].end = ttTimeOf(row.querySelector('[data-tt-end]')); editing.items[i].n = row.querySelector('[data-tt-name]').value.trim(); });
+  // a changed hour: the activity glides to its place in the day, and the others make room (Guy 2026-11-03)
+  box.querySelectorAll('[data-tt-end] select').forEach(sel => sel.addEventListener('change', () => { sync(); const x = editing.items[+sel.closest('[data-row]').dataset.row]; x.endAuto = false; x.endSet = true; }));
+  box.querySelectorAll('[data-tt-time] select').forEach(sel => sel.addEventListener('change', () => {
+    sync();
+    { const x = editing.items[+sel.closest('[data-row]').dataset.row]; if(!x.end && !x.endSet) x.endAuto = true; }
+    const sorted = editing.items.slice().sort((a, b) => (a.t || '99').localeCompare(b.t || '99'));
+    { const at = sorted.indexOf(editing.items[+sel.closest('[data-row]').dataset.row]), before = sorted[at - 1]; if(before && !before.end && !before.endSet) before.endAuto = true; }
+    if(sorted.every((x, k) => x === editing.items[k])){ suggest(); ctlTimetableDraw(box); return; }
+    const tops = new Map([...box.querySelectorAll('[data-row]')].map(r => [editing.items[+r.dataset.row], r.getBoundingClientRect().top]));
+    const moved = editing.items[+sel.closest('[data-row]').dataset.row];
+    editing.items.splice(0, editing.items.length, ...sorted);
+    suggest(); ctlTimetableDraw(box);
+    // the screen follows the activity to its new place. Before the glide starts: during it the row is still drawn at its old place, and the screen would stay there (Guy 2026-11-04)
+    { const row = [...box.querySelectorAll('[data-row]')].find(r => editing.items[+r.dataset.row] === moved); if(row) row.scrollIntoView({ block:'center', behavior:'smooth' }); }
+    box.querySelectorAll('[data-row]').forEach(r => {
+      const it = editing.items[+r.dataset.row], d = (tops.get(it) || 0) - r.getBoundingClientRect().top;
+      if(it === moved) r.classList.add('ctl-tt-moved');
+      if(d && r.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) r.animate([{ transform:`translateY(${d}px)` }, { transform:'none' }], { duration:450, easing:'cubic-bezier(.2,.8,.2,1)' });
+    });
+  }));
+  box.querySelectorAll('[data-tt-rep]').forEach(sel => sel.addEventListener('change', () => {
+    sync(); const x = editing.items[+sel.dataset.ttRep], k = sel.value, day = fixedDay != null ? (() => { const t = ctl.tt.day; return addDays(t, (fixedDay - dowOf(t) + 7) % 7); })() : ctl.tt.day;
+    x.rep = k === 'nw' ? { k, n:2, from:day } : k === 'month' ? { k, nth:Math.ceil(parseIso(day).getDate() / 7) } : { k }; ctlTimetableDraw(box);
+  }));
+  box.querySelectorAll('[data-tt-n]').forEach(inp => inp.addEventListener('change', () => { const x = editing.items[+inp.dataset.ttN]; x.rep.n = Math.max(2, Math.min(12, +inp.value || 2)); }));
+  const clean = () => { sync(); return editing.items.filter(x => x.t && x.n).sort((a, b) => a.t.localeCompare(b.t)).map(x => Object.assign({ t:x.t, n:x.n, i:x.i || 'other' }, x.end && x.end > x.t ? { end:x.end } : {}, x.rep ? { rep:x.rep } : x.fresh && fixedDay == null ? { rep:{ k:'once' } } : {})); };
+  // what comes again goes into the fixed timetable of its weekday too; what is not due today stays there
+  const keepRepeats = async items => { if(!coord) return; const wd = ctl.tt.weekday, again = items.filter(x => x.rep && x.rep.k !== 'once'); if(!again.length) return;
+    const f = await sb.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle(), have = (f.data && f.data.items) || [], rest = have.filter(h => !again.some(x => x.n === h.n && x.t === h.t));
+    await sb.from('timetable_fixed').upsert({ weekday:wd, items:rest.concat(again).sort((a, b) => a.t.localeCompare(b.t)) }); };          // (an end before the start is left out)
   box.querySelectorAll('[data-tt-del]').forEach(b => b.addEventListener('click', () => { sync(); editing.items.splice(+b.dataset.ttDel, 1); ctlTimetableDraw(box); }));
-  box.querySelector('#tt-add').addEventListener('click', () => { sync(); editing.items.push({ t:'', n:'', i:'other' }); ctlTimetableDraw(box); const last = box.querySelector('.ctl-tt-row:last-child input[type=time]'); if(last) last.focus(); });
+  box.querySelector('#tt-add').addEventListener('click', () => { sync(); editing.items.push({ t:'', n:'', i:'other', endAuto:true, fresh:true }); ctlTimetableDraw(box); const last = box.querySelector('.ctl-tt-row:last-child [data-tt-h]'); if(last) last.focus(); });
   box.querySelectorAll('[data-tt-icon]').forEach(b => b.addEventListener('click', () => {
-    sync(); const i = +b.dataset.ttIcon;
-    const sh = portalSheet(`<h2>תמונה לפעילות</h2><div class="ctl-icons">${TT_ICON_LIST.map(([id, word, e]) => `<button type="button" class="ctl-icon-opt${editing.items[i].i === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`).join('')}</div>
+    sync(); const i = +b.dataset.ttIcon, opt = ([id, word, e]) => `<button type="button" class="ctl-icon-opt${editing.items[i].i === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`;
+    const sh = portalSheet(`<h2>תמונה לפעילות</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div>
+      <details class="ctl-icons-more"${TT_ICON_MORE.some(g => g[1].some(x => x[0] === editing.items[i].i)) ? ' open' : ''}><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}</details>
       <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
     sh.querySelectorAll('[data-icon]').forEach(o => o.addEventListener('click', () => {
       const it = editing.items[i]; it.i = o.dataset.icon; if(!it.n) it.n = ttIcon(it.i)[1]; sh.close(); ctlTimetableDraw(box);
@@ -168,10 +229,11 @@ function ctlTimetableDraw(box){
   }));
   const saved = (res, msg) => { if(res.error){ toast('השמירה נכשלה. נסו שוב.'); return false; } toast(msg); return true; };
   const on = (id, fn) => { const b = box.querySelector('#' + id); if(b) b.addEventListener('click', fn); };
-  on('tt-save', async () => { const items = clean(); if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ ctl.ttEdit = null; ctlTimetable(box); } });
+  on('tt-save', async () => { const items = clean(); if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ await keepRepeats(items); ctl.ttEdit = null; ctlTimetable(box); } });
   on('tt-reset', async () => { if(saved(await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'חזרנו ללו"ז הקבוע של היום.')){ ctl.ttEdit = null; ctlTimetable(box); } });
   on('tt-save-fixed', async () => {
-    const items = clean();
+    const f0 = await sb.from('timetable_fixed').select('items').eq('weekday', ctl.tt.weekday).maybeSingle(), notToday = ((f0.data && f0.data.items) || []).filter(x => !ttOn(x, ctl.tt.day));
+    const items = clean().filter(x => !x.rep || x.rep.k !== 'once').concat(notToday).sort((a, b) => a.t.localeCompare(b.t));
     if(!(await confirmSheet({ title:`לשמור כלו"ז הקבוע של יום ${WEEKDAY_NAMES[ctl.tt.weekday]}?`, text:'מעכשיו כל יום כזה יתחיל מהלו"ז הזה.', okLabel:'כן, לשמור', cancelLabel:'חזרה' }))) return;
     if(saved(await sb.from('timetable_fixed').upsert({ weekday:ctl.tt.weekday, items }), 'נשמר כלו"ז הקבוע.')){ await sb.from('timetable_day').delete().eq('day', ctl.tt.day); ctl.ttEdit = null; ctlTimetable(box); }
   });
@@ -183,6 +245,29 @@ function ctlTimetableDraw(box){
   on('tt-fixed-close', () => { ctl.ttFixedDay = null; ctlTimetableDraw(box); });
 }
 
+// ---- 2b. the children's diary of today, to read only (Guy 2026-11-04; SCHEDULE-SPEC update of 02.11): the outings, calls and meetings that
+// should happen — straight from the social workers' diary (scheduling-v57.sql: diary_for_control), never its technical note, nothing to change.
+// The whole day, and "רק המשמרת שלי": by the clock's shift (an event with no hour belongs to the morning)
+const CTL_SHIFT_SPAN = { M:['07:00', '15:00'], A:['14:00', '22:00'], N:['22:00', '32:00'] };
+async function ctlDiary(box){
+  const day = ctlToday(), r = await sb.rpc('diary_for_control', { p_day:day });
+  if(r.error){ box.innerHTML = '<div class="pnote">היומן עוד לא זמין כאן (חסר עדכון במסד: scheduling-v57.sql).</div>'; return; }
+  const rows = r.data || [], skips = rows.filter(x => x.skipped).map(x => ({ event_id:x.id, day }));
+  const occ = typeof dgOccurrences === 'function' ? dgOccurrences(rows, skips, day, day) : [];
+  const n = nowMin(), cur = n >= hm('22:00') || n < hm('07:00') ? 'N' : n >= hm('14:00') ? 'A' : 'M', [a, b] = CTL_SHIFT_SPAN[cur].map(hm);
+  const inShift = o => { const e = o.e, t = e.start_time ? hm(String(e.start_time).slice(0, 5)) : null, back = e.kind === 'outing' && e.return_day === day && e.return_time ? hm(String(e.return_time).slice(0, 5)) : null;
+    const fit = x => x !== null && ((x >= a && x < b) || (cur === 'N' && x + 24 * 60 >= a && x + 24 * 60 < b));
+    return t === null ? cur === 'M' : fit(t) || fit(back); };
+  const list = ctl.diaryMine ? occ.filter(inShift) : occ;
+  const nm = id => { const c = (typeof roster !== 'undefined' ? roster : []).find(x => x.id === id); return c ? displayName(c) : '?'; };
+  const T = x => x ? String(x).slice(0, 5) : '';
+  box.innerHTML = `<div class="mx-seg ctl-dg-seg" role="group" aria-label="מה להציג"><button type="button" data-cdg="all" aria-pressed="${!ctl.diaryMine}">כל היום</button><button type="button" data-cdg="mine" aria-pressed="${!!ctl.diaryMine}">רק המשמרת שלי</button></div>
+    ${list.length ? `<div class="ctl-dg">${list.map(o => { const e = o.e, k = (typeof DG_KIND !== 'undefined' && DG_KIND[e.kind]) || ['', ''];
+      return `<div class="ctl-dg-row"><span class="ctl-dg-time"><bdi dir="ltr">${e.start_time ? T(e.start_time) + (e.end_time ? '–' + T(e.end_time) : '') : 'בלי שעה'}</bdi></span><span class="ctl-dg-what"><b class="ar-keep">${escapeHtml(nm(e.child_id))}</b> · ${k[1]} ${escapeHtml(e.kind === 'other' && e.kind_text ? e.kind_text : k[0])}${e.with_whom ? ` עם ${escapeHtml(e.with_whom)}` : ''}${e.place ? ` · ${escapeHtml(e.place)}` : ''}${e.kind === 'outing' && e.return_day ? `<small>חזרה ${e.return_day === day ? 'היום' : dayLabel(e.return_day)}${e.return_time ? ' ב-' + T(e.return_time) : ''}</small>` : ''}</span></div>`; }).join('')}</div>`
+      : `<div class="pnote">${ctl.diaryMine ? 'אין אירועים במשמרת הזו.' : 'אין אירועים היום.'}</div>`}
+    <div class="pnote ctl-dg-note">לקריאה בלבד. העו"סית האחראית מעדכנת את היומן.</div>`;
+  box.querySelectorAll('[data-cdg]').forEach(x => x.addEventListener('click', () => { ctl.diaryMine = x.dataset.cdg === 'mine'; ctlDiary(box); }));
+}
 // ---- 3. today's bonuses: hide one for today, add a special one with hours; the coordinator can make a special one permanent or delete a permanent one
 async function ctlBonuses(box){
   await loadBonusDay();
