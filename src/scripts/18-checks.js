@@ -1342,7 +1342,7 @@
       showHub();
       check('ahmash control: the Ramzor home shows a small "בקרת אחמ״ש" button to the coordinator', !document.getElementById('hub-control-btn').hidden, 'hidden');
       document.getElementById('hub-control-btn').click(); await sleep(1500);
-      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 5 && !!document.querySelector('#view-control details[data-cfold="duties"]') && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
+      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the children diary, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 6 && !!document.querySelector('#view-control details[data-cfold="diary"]') && !!document.querySelector('#view-control details[data-cfold="duties"]') && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
       // the timetable of today: a change, read back as the kids TV reads it, then back to the fixed one
       const today = isoDate(new Date()), items = [{ t:'08:00', n:'ארוחת בוקר בדיקה', i:'breakfast' }, { t:'09:00', n:'גן', i:'school' }];
       let w = await sb.from('timetable_day').upsert({ day:today, items });

@@ -27,7 +27,7 @@ function dgOccurrences(events, skips, from, to){
   });
   return out.sort((a, b) => (a.day + (dgT(a.e.start_time) || '00:00')).localeCompare(b.day + (dgT(b.e.start_time) || '00:00')));
 }
-const dgKids = () => (typeof thpScope === 'function' ? thpScope() : []);
+const dgKids = () => (document.querySelector('#view-therapy.active') && typeof thpScope === 'function' ? thpScope() : typeof roster !== 'undefined' ? roster : []);          // (the social worker: her children; the coordinator: every child — scheduling-v57.sql)
 const dgName = id => { const c = (typeof roster !== 'undefined' ? roster : []).find(x => x.id === id); return c ? displayName(c) : '?'; };
 function dgLineHtml(o, readOnly){          // (read only: the manager's sheet — no button, no bin)
   const e = o.e, k = DG_KIND[e.kind] || ['', ''], tag = readOnly ? 'div' : 'button', time = e.start_time ? `${dgT(e.start_time)}${e.end_time ? '–' + dgT(e.end_time) : ''}` : 'בלי שעה';
@@ -37,6 +37,7 @@ function dgLineHtml(o, readOnly){          // (read only: the manager's sheet �
 async function renderDiary(box){
   if(!box || !box.isConnected) return;
   if(!box.querySelector('.dg')) box.innerHTML = '<div class="pnote">רק רגע...</div>';
+  if(!dgKids().length && typeof mgrKids === 'function') await mgrKids();          // (the coordinator's portal: the children's list read with her own sign-in)
   const [ev, sk] = await Promise.all([sbPersonal.from('child_diary').select('*'), sbPersonal.from('child_diary_skip').select('*')]);
   if(!box.isConnected) return;
   if(ev.error){ box.innerHTML = '<div class="pstatus bad">היומן עוד לא זמין כאן (חסר עדכון במסד: scheduling-v51.sql).</div>'; return; }

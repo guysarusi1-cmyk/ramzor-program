@@ -63,6 +63,7 @@ function renderControl(){
     <div class="ctl-top"><button type="button" class="back-btn" id="ctl-back">→ חזרה</button><h1 class="ctl-title">בקרת אחמ"ש</h1><div class="ctl-date">${dayLabel(today)}</div></div>
     ${fold('shifts', 'מי מוצג היום במסך הילדים', 'רק במסך הילדים, ורק להיום')}
     ${fold('tt', 'הלו"ז של היום')}
+    ${fold('diary', 'יומן הילדים היום', 'יציאות, שיחות ופגישות')}
     ${fold('bonus', 'בונוסים היום')}
     ${fold('duties', 'לוח התורנויות')}
     ${fold('log', 'יומן שינויים')}
@@ -76,6 +77,7 @@ async function ctlFill(id){
   try {
     if(id === 'shifts') await ctlShifts(box);
     if(id === 'tt') await ctlTimetable(box);
+    if(id === 'diary') await ctlDiary(box);
     if(id === 'bonus') await ctlBonuses(box);
     if(id === 'duties') await ctlDuties(box);
     if(id === 'log') await ctlLog(box);
@@ -205,6 +207,29 @@ function ctlTimetableDraw(box){
   on('tt-fixed-close', () => { ctl.ttFixedDay = null; ctlTimetableDraw(box); });
 }
 
+// ---- 2b. the children's diary of today, to read only (Guy 2026-11-04; SCHEDULE-SPEC update of 02.11): the outings, calls and meetings that
+// should happen — straight from the social workers' diary (scheduling-v57.sql: diary_for_control), never its technical note, nothing to change.
+// The whole day, and "רק המשמרת שלי": by the clock's shift (an event with no hour belongs to the morning)
+const CTL_SHIFT_SPAN = { M:['07:00', '15:00'], A:['14:00', '22:00'], N:['22:00', '32:00'] };
+async function ctlDiary(box){
+  const day = ctlToday(), r = await sb.rpc('diary_for_control', { p_day:day });
+  if(r.error){ box.innerHTML = '<div class="pnote">היומן עוד לא זמין כאן (חסר עדכון במסד: scheduling-v57.sql).</div>'; return; }
+  const rows = r.data || [], skips = rows.filter(x => x.skipped).map(x => ({ event_id:x.id, day }));
+  const occ = typeof dgOccurrences === 'function' ? dgOccurrences(rows, skips, day, day) : [];
+  const n = nowMin(), cur = n >= hm('22:00') || n < hm('07:00') ? 'N' : n >= hm('14:00') ? 'A' : 'M', [a, b] = CTL_SHIFT_SPAN[cur].map(hm);
+  const inShift = o => { const e = o.e, t = e.start_time ? hm(String(e.start_time).slice(0, 5)) : null, back = e.kind === 'outing' && e.return_day === day && e.return_time ? hm(String(e.return_time).slice(0, 5)) : null;
+    const fit = x => x !== null && ((x >= a && x < b) || (cur === 'N' && x + 24 * 60 >= a && x + 24 * 60 < b));
+    return t === null ? cur === 'M' : fit(t) || fit(back); };
+  const list = ctl.diaryMine ? occ.filter(inShift) : occ;
+  const nm = id => { const c = (typeof roster !== 'undefined' ? roster : []).find(x => x.id === id); return c ? displayName(c) : '?'; };
+  const T = x => x ? String(x).slice(0, 5) : '';
+  box.innerHTML = `<div class="mx-seg ctl-dg-seg" role="group" aria-label="מה להציג"><button type="button" data-cdg="all" aria-pressed="${!ctl.diaryMine}">כל היום</button><button type="button" data-cdg="mine" aria-pressed="${!!ctl.diaryMine}">רק המשמרת שלי</button></div>
+    ${list.length ? `<div class="ctl-dg">${list.map(o => { const e = o.e, k = (typeof DG_KIND !== 'undefined' && DG_KIND[e.kind]) || ['', ''];
+      return `<div class="ctl-dg-row"><span class="ctl-dg-time"><bdi dir="ltr">${e.start_time ? T(e.start_time) + (e.end_time ? '–' + T(e.end_time) : '') : 'בלי שעה'}</bdi></span><span class="ctl-dg-what"><b class="ar-keep">${escapeHtml(nm(e.child_id))}</b> · ${k[1]} ${escapeHtml(e.kind === 'other' && e.kind_text ? e.kind_text : k[0])}${e.with_whom ? ` עם ${escapeHtml(e.with_whom)}` : ''}${e.place ? ` · ${escapeHtml(e.place)}` : ''}${e.kind === 'outing' && e.return_day ? `<small>חזרה ${e.return_day === day ? 'היום' : dayLabel(e.return_day)}${e.return_time ? ' ב-' + T(e.return_time) : ''}</small>` : ''}</span></div>`; }).join('')}</div>`
+      : `<div class="pnote">${ctl.diaryMine ? 'אין אירועים במשמרת הזו.' : 'אין אירועים היום.'}</div>`}
+    <div class="pnote ctl-dg-note">לקריאה בלבד. העו"סית האחראית מעדכנת את היומן.</div>`;
+  box.querySelectorAll('[data-cdg]').forEach(x => x.addEventListener('click', () => { ctl.diaryMine = x.dataset.cdg === 'mine'; ctlDiary(box); }));
+}
 // ---- 3. today's bonuses: hide one for today, add a special one with hours; the coordinator can make a special one permanent or delete a permanent one
 async function ctlBonuses(box){
   await loadBonusDay();

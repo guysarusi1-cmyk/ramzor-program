@@ -257,7 +257,7 @@ async function srvSubmit(mk, note, goal){
 function srvTabs(me){
   if(srvEditingFor()) return me.role === 'service' ? [['avail', 'זמינות']] : [['prefs', 'העדפות']];          // (filling for somebody: only that tab — a service girl's availability, an instructor's preferences)
   if(portalAsCoord(me)){
-    const all = [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);
+    const all = [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['diary', 'יומן הילדים'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);
     const phone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
     return phone ? all.filter(t => ['schedule', 'submissions', 'swaps', 'oncall'].includes(t[0])) : all;          // (on a phone: סידור, הגשות, החלפות, כוננית only — the rest on the computer: Guy 2026-11-03)
   }          // (the admin: one more tab, 14s-portal-admin.js)
@@ -287,6 +287,7 @@ function srvRenderTab(me, body, t){
     if(t === 'vacations') return srvRenderCoordVacations(body);
     if(t === 'oncall') return renderOncall(body);          // (the weekend on-call panel, shared with the social workers: 14zl)
     if(t === 'chats') return mgrChats(body);          // (the conversations with the manager and the social workers: 14zn)
+    if(t === 'diary') return renderDiary(body);          // (the children's diary: every child, Guy 2026-11-04 — 14zm, scheduling-v57.sql)
     if(t === 'settings') return srvRenderCoordSettings(body);
     return srvRenderCoordSchedule(body);
   }
