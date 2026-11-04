@@ -48,7 +48,7 @@
   .th-lib-add input, .th-lib-add select{ min-height:44px; border-radius:10px; padding:6px 8px; font-family:inherit; font-size:15px; background:var(--p-panel2, var(--panel-2)); color:var(--p-text, var(--text)); border:1px solid var(--p-line, var(--line)); }
   .th-lib-item{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--p-line, var(--line)); }
   .th-lib-item > span:first-child{ flex:1; min-width:0; display:flex; flex-direction:column; } .th-lib-item small{ color:var(--p-muted, var(--muted)); }
-  .th-lib-item.off{ opacity:.8; }
+  .th-lib-item.off{ opacity:.9; }
   .th-lib-scope{ font-size:12px; font-weight:700; padding:2px 8px; border-radius:10px; border:1px solid var(--p-line, var(--line)); } .th-lib-scope.mercury{ border-color:var(--gold); }
   @media (max-width:600px){ .th-ed-grid{ grid-template-columns:1fr; } .th-lib-add{ grid-template-columns:1fr 1fr; } .th-lib-add #lib-desc{ grid-column:1 / -1; } .th-goal-top{ grid-template-columns:1fr auto; } .th-goal-top .pe-g-rm{ grid-column:2; grid-row:1; } .th-goal-top .th-focus{ grid-column:1 / -1; } }
   @media print{ .th-print{ font-family:'Assistant', sans-serif; font-size:11pt; } .th-print h1{ font-size:18pt; } .th-print h2{ font-size:13pt; margin-top:12px; } .th-print h3{ font-size:12pt; margin:8px 0 2px; } .th-print-meta{ color:#444; } .th-print-goal{ break-inside:avoid; border-top:1px solid #ccc; padding-top:4px; } }

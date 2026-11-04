@@ -706,6 +706,7 @@ html[data-contrast=high] body[data-rlook=light] .toast{
 }
 /* "פירוט" on the home cards: a button, so its faded word still has to be read on the light look */
 .mx-home[data-ptheme=light] .home-card-more{ opacity:.9; }
+.portal-shell[data-ptheme=light] .mcal-head.mini{ opacity:.85; }
 /* the coordinator's schedule on a phone (Guy 2026-11-04). Only the phone: the computer stays as it is. */
 @media (max-width:700px){
   /* no panel of the instructors' requests and no explanations on this tab */
