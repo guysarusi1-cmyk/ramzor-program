@@ -89,7 +89,7 @@ function showAppHome(){
     w.appendChild(more);
   });
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
-  { const oc1 = document.getElementById('apphome-oncall'); if(oc1) oc1.addEventListener('click', showOncallScreen); }
+  { const oc1 = document.getElementById('apphome-oncall'); if(oc1) oc1.addEventListener('click', () => showOncallScreen()); }
   { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
   { const ln = document.getElementById('apphome-learn'); if(ln) ln.addEventListener('click', showLearnHome); }          // (the admin's training videos, 14zh-learn.js)
@@ -171,7 +171,7 @@ function showPortal(tab){
   }
   document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? async () => { if(await askLogout()) srvSignOut(); } : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
-  { const oc1 = document.getElementById('portal-oncall'); if(oc1) oc1.addEventListener('click', showOncallScreen); }          // (they have no first screen: their way to the on-call screen)
+  { const oc1 = document.getElementById('portal-oncall'); if(oc1) oc1.addEventListener('click', () => showOncallScreen()); }          // (they have no first screen: their way to the on-call screen)
   { const th = document.getElementById('portal-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (service girls and teachers: their way to the therapy portal)
   const prob = document.getElementById('portal-problem'); if(prob) prob.addEventListener('click', openProblemReport);
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });

@@ -508,7 +508,7 @@
     await step('small fixes', async () => {
       showHub(); $('hub-logout-link').click(); await sleep(150);
       const sheet = document.querySelector('.confirm-sheet');
-      check('logging out asks first', !!sheet && /לצאת/.test(sheet.textContent) && visible($('protected-app')), 'no question');
+      check('logging out asks first', !!sheet && /תנתק/.test(sheet.textContent) && visible($('protected-app')), 'no question');
       if(sheet) sheet.querySelector('.confirm-cancel').click();
       await sleep(100);
       check('"stay" keeps the person signed in', visible($('protected-app')), 'signed out');
@@ -2873,8 +2873,10 @@
         srvOpenPortal(); await sleep(300);
         check('... and no on-call tab in her portal', !document.querySelector('[data-ptab="oncall"]'), '');
         showAppHome(); await sleep(100); document.getElementById('apphome-oncall').click(); await sleep(900);
+        check('the card opens it to work in, not only to look at', !document.querySelector('#view-oncall .adm-viewas'), '');
         check('the card opens its own screen, in the look of the person', document.querySelector('.view.active').id === 'view-oncall' && !!document.querySelector('#view-oncall .portal-shell[data-ptheme] .oc'), document.querySelector('.view.active').id);
         // the taxis, on a made-up list: the far weekend of the panel, two real people, written to the server and taken away
+        await renderOncall(document.getElementById('oc-screen')); await sleep(1500);          // (what the card asked for has come in, so it does not draw over the list below)
         const box = document.getElementById('oc-screen'), d = oc.data, p = d.periods[d.periods.length - 1].kind === 'weekend' ? d.periods[d.periods.length - 1] : d.periods[3], ids = Object.values(d.names).filter(s => s.active && s.kind === 'instructor').slice(0, 3).map(s => s.id), day = p.from_day;
         await sbPersonal.from('oncall_trip').delete().eq('period_key', p.key);
         const fake = Object.assign({}, d, { period:p, trips:[], events:[], rows:ids.map((id, i) => ({ id:'t' + i, staff_id:id, day, shift:'M', from_time:'07:00', to_time:'15:00' })) });
@@ -2883,7 +2885,7 @@
         check('the taxis: one folded line for each person, nothing marked, both choices there', rows().length === 3 && rows().every(x => !x.open && x.querySelectorAll('[data-oc-all]').length === 2 && !x.querySelector('[data-oc-all][aria-pressed="true"]')), String(rows().length));
         line(0).querySelector('[data-oc-all="need"]').click(); await sleep(250);
         line(1).querySelector('[data-oc-all="none"]').click(); await sleep(250);
-        check('... "צריך מונית": still folded, with "הוזמן" for arrival and for return in the line', !line(0).open && line(0).querySelectorAll('summary [data-oc-ord]').length === 2 && line(0).querySelector('[data-oc-all="need"]').getAttribute('aria-pressed') === 'true', '');
+        check('... "צריך מונית": still folded, with "הוזמן" for arrival and for return in the line', !line(0).open && line(0).querySelectorAll('summary [data-oc-ord]').length === 2 && line(0).querySelector('[data-oc-all="need"]').getAttribute('aria-pressed') === 'true', JSON.stringify([line(0).open, line(0).querySelectorAll('summary [data-oc-ord]').length, line(0).querySelector('[data-oc-all="need"]').getAttribute('aria-pressed'), (document.querySelector('.toast') || {}).textContent, fake.trips.length, p.key, p.kind, !!p.updated_at]));
         check('... "לא צריך מונית": no "הוזמן"', !line(1).querySelector('[data-oc-ord]') && line(1).querySelector('[data-oc-all="none"]').getAttribute('aria-pressed') === 'true', '');
         line(0).querySelector('[data-oc-ord$="|out"]').click(); await sleep(250);
         check('... one way marked by itself', line(0).querySelector('[data-oc-ord$="|out"]').getAttribute('aria-pressed') === 'true' && line(0).querySelector('[data-oc-ord$="|in"]').getAttribute('aria-pressed') === 'false', '');
