@@ -2803,6 +2803,7 @@
         if(!seen('#cs-share')){ check('(info) coordinator phone: skipped, no published schedule this month on the test server', true, ''); return; }
         if(!phone){
           check('the computer: the panel of the requests, the explanations and the long name of the share stay', (seen('.cs-tab') || seen('.cs-side')) && seen('.cs-help') && /שיתוף תמונת סידור/.test(document.querySelector('#cs-share').textContent), '');
+          { const t = [...document.querySelectorAll('.portal-tabs [data-ptab]')].map(b => b.getBoundingClientRect()), nav = document.querySelector('.portal-tabs').getBoundingClientRect(); check('the tabs on a computer are spread over the line', t.length >= 5 && Math.max(...t.map(r => r.right)) - Math.min(...t.map(r => r.left)) > nav.width * .9, `${t.length}`); }
           portalUi.csOpen = true; showPortal('schedule'); await sleep(500);
           { const sd = document.querySelector('.cs-side'), so = document.querySelector('.cs-sort-btn'); check('the panel: "לפי מספר משמרות", and in the usual text no scroll inside it', /לפי מספר משמרות/.test(so.textContent) && sd.scrollHeight <= sd.clientHeight + 2, `${sd.scrollHeight} / ${sd.clientHeight}`);
             try { localStorage.setItem('ramzor-portal-big', '2'); } catch(e){} applyPortalSize(); await sleep(200); sd.scrollIntoView({ block:'start' }); await sleep(120); csSideFit(); await sleep(60); sd.scrollTop = 1e6; await sleep(60); const r = sd.getBoundingClientRect(); check('... in very large text it scrolls to its very end, inside the screen', r.bottom <= innerHeight + 1 && Math.abs(sd.scrollTop + sd.clientHeight - sd.scrollHeight) < 3, `${r.bottom} / ${innerHeight}`); try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); portalUi.csOpen = false; }
@@ -3003,6 +3004,23 @@
         check('how often: every 2 weeks from a day, on that day and two weeks on, not the week between or before', ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-04') && ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-18') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-11') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-10-21'), '');
         check('how often: the first Wednesday of the month', ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-04') && !ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-11') && ttOn({ rep:{ k:'month', nth:1 } }, '2026-12-02'), '');
         check('how often: once and weekly always show on their day', ttOn({ rep:{ k:'once' } }, '2026-11-04') && ttOn({ rep:{ k:'week' } }, '2026-11-04') && ttOn({}, '2026-11-04'), '');
+        // how often, through the screen and into the database (what was there is put back exactly)
+        { const day = ctl.tt ? ctl.tt.day : isoDate(new Date()), wd = dowOf(day), name = 'בדיקת תדירות', d0 = (await sbPersonal.from('timetable_day').select('items').eq('day', day).maybeSingle()).data, f0 = (await sbPersonal.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle()).data;
+          try {
+            portalUi.tab = 'timetable'; mgr.ttMode = 'edit'; ctl.ttEdit = null; showPortal('timetable'); await sleep(900);
+            const box = document.getElementById('mgr-tt'); document.getElementById('tt-add').click(); await sleep(120);
+            const row = [...box.querySelectorAll('[data-row]')].pop(), h = row.querySelector('[data-tt-time] [data-tt-h]'); h.value = '23'; h.dispatchEvent(new Event('change', { bubbles:true })); await sleep(120);
+            const r2 = [...box.querySelectorAll('[data-row]')].pop(); r2.querySelector('[data-tt-name]').value = name;
+            const sel = r2.querySelector('[data-tt-rep]'); check('a new activity starts as once', sel.value === 'once', sel.value); sel.value = 'nw'; sel.dispatchEvent(new Event('change', { bubbles:true })); await sleep(120);
+            [...box.querySelectorAll('[data-row]')].pop().querySelector('[data-tt-name]').value = name; document.getElementById('tt-save').click(); await sleep(1400);
+            const dn = (await sbPersonal.from('timetable_day').select('items').eq('day', day).maybeSingle()).data, fn = (await sbPersonal.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle()).data, it = ((dn || {}).items || []).find(x => x.n === name), fx = ((fn || {}).items || []).find(x => x.n === name);
+            check('how often: kept for today, and in the fixed timetable of the day with its every 2 weeks', !!it && !!fx && fx.rep && fx.rep.k === 'nw' && fx.rep.n === 2 && fx.rep.from === day, JSON.stringify([it, fx]));
+            const tv = await sbPersonal.rpc('tv_timetable_today'); check('... the kids screen reads it, and shows it on its day only', ((tv.data || {}).items || []).some(x => x.n === name) && ttOn(fx || {}, day) && !ttOn(fx || {}, addDays(day, 7)), '');
+          } finally {
+            if(d0) await sbPersonal.from('timetable_day').upsert({ day, items:d0.items }); else await sbPersonal.from('timetable_day').delete().eq('day', day);
+            if(f0) await sbPersonal.from('timetable_fixed').upsert({ weekday:wd, items:f0.items }); else await sbPersonal.from('timetable_fixed').delete().eq('weekday', wd);
+            mgr.ttMode = 'view'; ctl.ttEdit = null;
+          } }
         // the users
         portalUi.tab = 'users'; showPortal('users'); await sleep(400);
         const groups = [...document.querySelectorAll('#portal-body .psec')].map(x => x.textContent);
@@ -3023,6 +3041,9 @@
         check('the on-call opens for her (scheduling-v59.sql)', !!document.querySelector('#view-oncall .oc') && !document.querySelector('#view-oncall .pstatus.bad'), '');
         // the Ramzor, to look at
         showAppHome(); await sleep(100); document.getElementById('apphome-ramzor').click(); await sleep(500);
+        check('the Ramzor: no link to an instructor portal', document.getElementById('hub-portal-link').hidden, '');
+        check('... on a computer "מסך ראשי" at the top right, on a phone the bar at the bottom', phone ? document.getElementById('hub-main-back').hidden : !document.getElementById('hub-main-back').hidden && document.getElementById('hub-main-back').getBoundingClientRect().right > innerWidth / 2, '');
+        if(!phone){ document.getElementById('hub-main-back').click(); await sleep(150); check('... and it goes back to the first screen', active() === 'view-apphome', active()); document.getElementById('apphome-ramzor').click(); await sleep(300); }
         check('the Ramzor opens for her, with no management and no control of the kids screen', active() === 'view-hub' && document.getElementById('hub-manage-gear').hidden && document.getElementById('hub-kids-btn').hidden, active());
         { const r = await sb.from('child_state').update({ stars:0 }).eq('child_id', 'none'); check('... whatever would write is stopped', !!r.error && /צפייה/.test(r.error.message), JSON.stringify(r.error)); const q = await sb.from('roster').select('id').limit(1); check('... reading works', !q.error && (q.data || []).length === 1, JSON.stringify(q.error)); }
       } finally { window.__asLive = false; document.querySelectorAll('.toast').forEach(x => x.remove()); const g = document.getElementById('hub-manage-gear'), k = document.getElementById('hub-kids-btn'); await personalLeave(); sb = sbShared || sb; if(g) g.hidden = false; if(k) k.hidden = false; showHub(); }

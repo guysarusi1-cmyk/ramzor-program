@@ -119,3 +119,7 @@ body[data-rlook] .bottom-nav-btn.active{ background:var(--color-primary-soft); c
 @media (max-width:700px){ #protected-app.guided-focus:has(#view-staff.active) > .bottom-nav{ display:grid; } }
 /* the light look: gold and yellow words on a pale card could not be read (the same hue, darker; the colour of the light itself stays) */
 body[data-rlook=light] .kq-word{ color:#7A5A00 !important; }
+/* the way back to the first screen on a computer, at the top right as in the portals */
+.home-main-row{ display:flex; justify-content:flex-start; min-height:0; margin-bottom:10px; }
+.home-main-back{ min-height:40px; padding:0 16px; border-radius:var(--radius-sm); border:1px solid var(--color-border-strong, var(--line)); background:transparent; color:var(--color-text, var(--text)); font:inherit; font-weight:600; font-size:15px; cursor:pointer; }
+.home-main-back:hover{ background:var(--color-surface-alt, var(--panel-2)); }

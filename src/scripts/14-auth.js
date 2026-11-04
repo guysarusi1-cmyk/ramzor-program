@@ -92,7 +92,8 @@ function showHub(){
   { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly(); if(kids) kids.hidden = rzLookOnly(); }
   stopCarousel();
   { const pl = document.getElementById('hub-portal-link'), rp = typeof ramzorPersonal !== 'undefined' && ramzorPersonal, plain = rp && hubPlainBack();
-    if(pl){ pl.hidden = !rp || (plain && matchMedia('(max-width:700px)').matches); pl.textContent = plain ? '→ חזרה' : '👥 לפורטל'; } }          // (a phone has its own way back)
+    if(pl) pl.hidden = !rp || plain;
+    const mb = document.getElementById('hub-main-back'); if(mb) mb.hidden = !rp || matchMedia('(max-width:700px)').matches; }          // (a computer: "מסך ראשי" at the top right, as in the portals; a phone has its own way back: Guy 2026-11-04)
   const cb = document.getElementById('hub-control-btn'); if(cb) cb.hidden = !(typeof canControl === 'function' && canControl());          // (the ahmash control: ahmash, coordinator, admin)
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-hub').classList.add('active');
@@ -104,7 +105,8 @@ document.getElementById('hub-daily-btn').addEventListener('click', ()=>{
   selectedStaffChild = null;
   showStaffScreen('pick');
 });
-document.getElementById('hub-portal-link').addEventListener('click', () => { if(hubPlainBack()) showAppHome(); else if(typeof srvOpenPortal === 'function') srvOpenPortal(); });
+document.getElementById('hub-portal-link').addEventListener('click', () => { if(typeof srvOpenPortal === 'function') srvOpenPortal(); });
+document.getElementById('hub-main-back').addEventListener('click', () => showAppHome());
 document.getElementById('hub-control-btn').addEventListener('click', () => { if(typeof showControl === 'function') showControl(); });
 document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
   toast('לומדת הרמזור בקרוב! 🎓');
