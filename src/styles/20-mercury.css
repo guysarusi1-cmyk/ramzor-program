@@ -831,3 +831,7 @@ html[data-contrast=high] body[data-rlook=light] .toast{
 .ctl-icons-more{ margin-top:10px; } .ctl-icons-more > summary{ min-height:44px; display:flex; align-items:center; justify-content:center; border:1px solid var(--color-border-strong, var(--line)); border-radius:10px; font-weight:700; cursor:pointer; list-style:none; } .ctl-icons-more > summary::-webkit-details-marker{ display:none; }
 /* the sign-in: the title under the logo, in its middle */
 .mx-login .apphome-title{ text-align:center; font-size:22px; margin-top:4px; }
+/* the sign-in in the light look: the page behind it is light too (it was dark, and the dark title could not be read: Guy 2026-11-04) */
+body:has(.view.active .mx-login[data-ptheme=light]){ background:#FAF7F2; }
+body:has(.view.active .mx-login[data-ptheme=light])::before{ display:none; }
+.mx-login[data-ptheme=light]{ background:transparent; }
