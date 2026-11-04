@@ -117,3 +117,5 @@ body[data-rlook] .bottom-nav-btn.active{ background:var(--color-primary-soft); c
 .kq-yellow-reminder-body{ padding:0 14px 12px; }
 /* during a protocol the bar stays on a phone: it carries "הבא" now (Guy 2026-11-03) */
 @media (max-width:700px){ #protected-app.guided-focus:has(#view-staff.active) > .bottom-nav{ display:grid; } }
+/* the light look: gold and yellow words on a pale card could not be read (the same hue, darker; the colour of the light itself stays) */
+body[data-rlook=light] .kq-word{ color:#7A5A00 !important; }

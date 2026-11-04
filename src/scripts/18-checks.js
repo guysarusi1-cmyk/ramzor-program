@@ -2733,12 +2733,19 @@
           if(r < low) bad.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} "${el.textContent.trim().slice(0, 14)}" ${r.toFixed(1)}`);
         });
         return bad; };
+      // pressed, hovered, in focus: a script cannot press, so every rule of those states that changes a colour is put on the elements it is for, measured and taken off
+      const stateRules = []; { const walk = rules => [...rules].forEach(r => { if(r.cssRules && r.media){ if(matchMedia(r.media.mediaText).matches) walk(r.cssRules); return; } if(!r.selectorText || !/:(hover|active|focus)/.test(r.selectorText)) return; const color = r.style.color, back = r.style.backgroundColor || r.style.background; if(color || back) r.selectorText.split(',').filter(x => /:(hover|active|focus)/.test(x)).forEach(x => stateRules.push({ sel:x.replace(/:(hover|active|focus-visible|focus-within|focus)/g, '').trim() || '*', color, back })); });
+        [...document.styleSheets].forEach(ss => { try { walk(ss.cssRules); } catch(e){} }); }
+      const stateScan = root => { const bad = []; stateRules.forEach(r => { let els = []; try { els = [...root.querySelectorAll(r.sel)].slice(0, 2); } catch(e){ return; }
+        els.forEach(el => { if(!el.getClientRects().length || el.disabled) return; if(/ghost|danger/.test(el.className) && !/ghost|danger/.test(r.sel)) return;          // (they have state rules of their own, which win)
+          const keep = el.getAttribute('style'); el.style.setProperty('transition', 'none', 'important'); if(r.color) el.style.setProperty('color', r.color, 'important'); if(r.back) el.style.setProperty('background', r.back, 'important');
+          const found = scan(el.parentElement || el).filter(x => x.includes(`"${el.textContent.trim().slice(0, 14)}"`)); if(found.length) bad.push(`${r.sel.slice(-34)} ${found[0]}`); if(keep === null) el.removeAttribute('style'); else el.setAttribute('style', keep); }); }); return bad; };
       const lookSet = t => { srv.portalTheme = t; portalLoad().settings.theme = t === 'leopard' ? 'light' : t; };
       const contrastSet = on => { a11y.contrast = on; applyA11y(); };
       const view = () => document.querySelector('.view.active');
       const tabsScan = async (sel, key, into) => { const ids = [...view().querySelectorAll(sel)].map(b => b.dataset[key]);
         into.push(...scan(view()));
-        for(const id of ids){ const b = [...view().querySelectorAll(sel)].find(x => x.dataset[key] === id); if(!b) continue; b.click(); await sleep(450); view().querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(30); into.push(...scan(view()).map(x => `${id}: ${x}`)); } };
+        for(const id of ids){ const b = [...view().querySelectorAll(sel)].find(x => x.dataset[key] === id); if(!b) continue; b.click(); await sleep(450); view().querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(30); into.push(...scan(view()).map(x => `${id}: ${x}`)); into.push(...stateScan(view()).map(x => `state ${id}: ${x}`)); } };
       const wasContrast = !!a11y.contrast;
       try {
         for(const kind of ['instructor', 'coordinator', 'service', 'manager', 'therapist']){
@@ -2756,6 +2763,23 @@
             }
             if(ocAllowed()){ showOncallScreen(); await sleep(800); bad.push(...scan(view()).map(x => `oncall: ${x}`)); const sv = view().querySelector('[data-oc-view="sched"]'); if(sv){ sv.click(); await sleep(800); bad.push(...scan(view()).map(x => `oncall sched: ${x}`)); oc.view = 'list'; } }
             if(look !== 'leopard' && typeof therapyAvailable === 'function' && therapyAvailable()){ await showTherapyPortal(); await sleep(500); await tabsScan('[data-th-tab]', 'thTab', bad); }
+            // windows opened from the screens, the question window and the small message, the Ramzor's staff screens, the training list
+            const sheet = async (name, open) => { try { await open(); await sleep(350); const sh = [...document.querySelectorAll('.psheet, .confirm-sheet')].pop(); if(sh){ sh.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(40); bad.push(...scan(sh).map(x => `${name}: ${x}`)); bad.push(...stateScan(sh).map(x => `state ${name}: ${x}`)); } } catch(e){ bad.push(`${name}: failed ${e.message}`); } document.querySelectorAll('.psheet, .confirm-sheet').forEach(x => x.remove()); };
+            if(kind === 'coordinator'){ srvOpenPortal(); await sleep(400); portalUi.tab = 'schedule'; portalUi.month = monthKeyOf(srvToday()); showPortal('schedule'); await sleep(600);
+              await sheet('shift window', () => { const c = document.querySelector('.mcal-cell.editable'); if(c) c.click(); });
+              await sheet('share window', () => { const b = document.getElementById('cs-share'); if(b) b.click(); });
+              await sheet('hide window', () => { const b = document.getElementById('cs-others'); if(b) b.click(); }); }
+            if(kind !== 'therapist' && kind !== 'manager'){ srvOpenPortal(); await sleep(350); await sheet('problem window', () => { const b = document.getElementById('portal-problem'); if(b) b.click(); }); }
+            await sheet('question window', () => { confirmSheet({ title:'כותרת לבדיקה', text:'טקסט לבדיקה', okLabel:'אישור', cancelLabel:'ביטול' }); });
+            { toast('הודעה לבדיקה'); await sleep(120); const t = document.querySelector('.toast'); if(t){ bad.push(...scan(t.parentElement || document.body).filter(x => x.includes('הודעה לבדיקה')).map(x => `toast: ${x}`)); } document.querySelectorAll('.toast').forEach(x => x.remove()); }
+            if(personalRamzorKind() && kind !== 'service' && look !== 'leopard'){
+              showHub(); ramzorLookApply(); await sleep(250); bad.push(...scan(view()).map(x => `hub: ${x}`)); bad.push(...stateScan(view()).map(x => `state hub: ${x}`));
+              const hb = document.getElementById('hub-daily-btn'); if(hb){ hb.click(); ramzorLookApply(); await sleep(350); bad.push(...scan(view()).map(x => `daily: ${x}`)); }
+              showHub(); await sleep(60); const kb = document.getElementById('hub-kids-btn'); if(kb && !kb.hidden){ kb.click(); ramzorLookApply(); await sleep(500); bad.push(...scan(view()).map(x => `kids control: ${x}`)); }
+              showHub(); await sleep(60); const cb = document.getElementById('hub-control-btn'); if(cb && !cb.hidden){ cb.click(); ramzorLookApply(); await sleep(700); bad.push(...scan(view()).map(x => `ahmash: ${x}`)); }
+              showHub(); await sleep(60); if(kind === 'coordinator'){ document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-manage').classList.add('active'); ramzorLookApply(); await sleep(200); bad.push(...scan(view()).map(x => `management: ${x}`)); showHub(); await sleep(60); ramzorLookApply(); }
+            }
+            if(kind === 'coordinator' && look !== 'leopard'){ showLearnHome(); await sleep(250); bad.push(...scan(view()).map(x => `learn: ${x}`)); }
             const u = [...new Set(bad)];
             check(`readable looks: ${kind}, ${look}${hc ? ', high contrast' : ''}`, !u.length, `${u.length}: ${u.slice(0, 14).join(' | ')}`);
           }
