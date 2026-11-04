@@ -10,7 +10,7 @@ const prefWeekOn = (me, locked, submitted) => portalServerOn && !!srv.prefWeekly
 const prefFem = () => !(srv.profile && srv.profile.female === false);
 const prefG = (f, m) => prefFem() ? f : m;
 const PW_KINDS = [['m', 'בוקר'], ['e', 'צהריים'], ['n', 'לילה']];
-// the marker of the steps: a tiny egg that hatches, step by step (drawn here: no files to load). Eight stages, spread over the steps of the month.
+// the marker of the steps: the numbers are always there, each under a dot; reaching a step, its dot gives way to the egg of that stage, up to the hatching chick (drawn here: no files to load). Eight stages, spread over the steps of the month.
 const PW_EGG = [
   '',
   '<path class="k" d="M9 8l1.5 2-1.2 1.6"/>',
@@ -121,7 +121,7 @@ function renderWeekPrefs(body, mk, m, prefs){
   if((pos === 'end' || (typeof pos === 'number' && pos > 0)) && !Object.keys(prefs.slots || {}).length && !(prefs.absent || []).length && !Object.keys(prefs.hours || {}).length){ pos = 'kinds'; pwSet(pwPosKey(mk), pos); }          // (nothing is marked for this month any more, e.g. cleared on TEST: start again from the first question)
   const go = p => { pwSet(pwPosKey(mk), p); renderInstructorPrefs(body); window.scrollTo(0, 0); if(window.navRefresh) window.navRefresh(); };
   const steps = ['kinds', 'days'].concat(weeks.map((_, i) => i)).concat(['end']), at = steps.indexOf(pos);
-  const head = `${prefViewBtnHtml()}<div class="pweek-head"><b>ההעדפות ל${pEsc(monthLabel(mk))}</b><span class="pweek-steps" role="img" aria-label="שלב ${at + 1} מתוך ${steps.length}">${steps.map((p, i) => `<i class="${i === at ? 'on' : i < at ? 'done' : ''}">${pwEggHtml(pwStage(i, steps.length))}<b>${i + 1}</b></i>`).join('')}</span></div>`;
+  const head = `${prefViewBtnHtml()}<div class="pweek-head"><b>ההעדפות ל${pEsc(monthLabel(mk))}</b><span class="pweek-steps" role="img" aria-label="שלב ${at + 1} מתוך ${steps.length}">${steps.map((p, i) => `<i class="${i === at ? 'on' : i < at ? 'done' : ''}">${i <= at ? pwEggHtml(pwStage(i, steps.length)) : '<span class="pw-dot"></span>'}<b>${i + 1}</b></i>`).join('')}</span></div>`;
   // the opening questions: the kinds of shifts and the weekdays she does not do this month (both may be skipped)
   if(pos === 'kinds' || pos === 'days'){
     const isK = pos === 'kinds', chosenKey = `ramzor-week${isK ? 'kinds' : 'days'}-${srv.me}-${mk}`;

@@ -678,3 +678,6 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-apphome).active [da
 @media (max-width:520px){ .pconsent .pchoice{ flex-wrap:wrap; } .pconsent .pchoice button{ flex:1 1 40%; } }
 .pview-seg button{ white-space:nowrap; }
 .pweek-nav .btn{ white-space:nowrap; padding-inline:8px; }
+/* the steps ahead: the number plain to see, a small dot above it until the egg comes */
+.pweek-steps i, .pweek-steps i.done{ opacity:1; }
+.pw-dot{ display:block; width:8px; height:8px; margin:6px; border-radius:50%; background:var(--color-border-strong, var(--p-line)); }

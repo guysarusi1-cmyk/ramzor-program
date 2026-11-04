@@ -2608,8 +2608,13 @@
         { const at = stepNow(); pb().querySelector('#pw-back-flow').click(); await sleep(200);
           check('"חזרה לתהליך": back to the very step it was opened from', !portalUi.prefsWholeMonth && stepNow() === at && !!pb().querySelector('.pwdays'), String(stepNow())); }
         // the marker: numbered, an egg that hatches
-        { const it = [...pb().querySelectorAll('.pweek-steps i')];
-          check('the marker of the steps: numbered 1.. with a drawing in each, the first an egg and the last a hatching chick', it.length === 2 + wks.length + 1 && it.every((x, i) => x.querySelector('b').textContent === String(i + 1) && !!x.querySelector('svg')) && !it[0].querySelector('.c') && !!it[it.length - 1].querySelector('.c'), String(it.length)); }
+        { const here = stepNow(), n = 2 + wks.length + 1, it = () => [...pb().querySelectorAll('.pweek-steps i')], at = it().findIndex(x => x.classList.contains('on'));
+          check('the marker of the steps: all the numbers show, the steps reached have the egg, the ones ahead a dot', it().length === n && it().every((x, i) => x.querySelector('b').textContent === String(i + 1) && (i <= at ? !!x.querySelector('svg') && !x.querySelector('.pw-dot') : !!x.querySelector('.pw-dot') && !x.querySelector('svg'))), String(at));
+          pwSet(pwPosKey(mk), 'kinds'); renderInstructorPrefs(pb()); await sleep(100);
+          const a1 = it().filter(x => x.querySelector('svg')).length, plain1 = !it()[0].querySelector('.c');
+          pwSet(pwPosKey(mk), 'end'); renderInstructorPrefs(pb()); await sleep(100);
+          check('... at the first step one egg only, at the last all of them, ending in the hatching chick', a1 === 1 && plain1 && it().every(x => !!x.querySelector('svg')) && !!it()[n - 1].querySelector('.c'), String(a1));
+          pwSet(pwPosKey(mk), here); renderInstructorPrefs(pb()); await sleep(100); }
         // a whole day
         { const dayB = pb().querySelector('[data-pwday]');
           if(dayB){ const d = dayB.dataset.pwday, ks = prefShiftsFor(d).map(x => `${d}|${x.id}`).filter(k => !prefFixedNo(k) && !prefInsideLong(pr, k));
