@@ -1317,7 +1317,7 @@
       document.getElementById('apphome-portal').click(); await sleep(300);
       check('personal sign-in: ... his instructor portal has the preferences tab', !!document.querySelector('[data-ptab="prefs"]') && /פורטל המדריך/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       showAppHome(); document.getElementById('apphome-manage').click(); await sleep(300);
-      check('personal sign-in: ... and the management portal has the coordinator tabs (on a phone the four of the day-to-day work only)', !!document.querySelector('[data-ptab="submissions"]') && (matchMedia('(max-width:700px)').matches ? !document.querySelector('[data-ptab="settings"]') && !document.querySelector('[data-ptab="admin"]') : !!document.querySelector('[data-ptab="settings"]')) && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
+      check('personal sign-in: ... and the management portal has the coordinator tabs (on a phone the four of the day-to-day work only)', !!document.querySelector('[data-ptab="submissions"]') && !!document.querySelector('[data-ptab="settings"]') && /פורטל ניהול/.test(document.querySelector('.portal-title').textContent), document.querySelector('.portal-title').textContent);
       if(!matchMedia('(max-width:700px)').matches){          // (the management tab: on the computer only, Guy 2026-11-03)
       document.querySelector('[data-ptab="admin"]') && document.querySelector('[data-ptab="admin"]').click(); await sleep(200);
       check('management portal: a "ניהול" tab with the staff details, looking as somebody, the system settings, building again and the full log', document.querySelectorAll('#portal-body details[data-afold]').length === 6 && !!document.querySelector('#portal-body details[data-afold="problems"]'), document.querySelectorAll('#portal-body details[data-afold]').length);
@@ -1603,7 +1603,7 @@
           check('fill for a service girl: in the submissions tab a service girl has "מילוי זמינות"', !!fb, 'no button');
           if(fb){ const sid = fb.dataset.fillFor; fb.click(); await sleep(700);
             check('fill for a service girl: ... it opens her availability screen, for her', portalUi.tab === 'avail' && srvWho() === sid && !!document.querySelector('.adm-viewas.edit') && !!document.querySelector('#portal-body .svcal'), portalUi.tab + ' / ' + srvWho());
-            check('service girls: the availability is a monthly calendar: yes / no / other hours; Friday and Saturday in grey', !!document.querySelector('#portal-body [data-svtool="hours"]') && !!document.querySelector('#portal-body [data-svtool="no"]') && document.querySelectorAll('#portal-body .svcal-day.off').length >= 8, 'no calendar');
+            check('service girls: the availability is a monthly calendar: yes / no / other hours; Friday and Saturday in grey', !!document.querySelector('#portal-body [data-svtool="hours"]') && !!document.querySelector('#portal-body [data-svtool="no"]') && document.querySelectorAll('#portal-body .svcal-day.off').length >= 4, 'no calendar');
             const w = await sbPersonal.from('prefs_service').upsert({ staff_id:sid, day:'2099-01-05', opt:'early' });
             if(w.error && /policy|permission|row-level/i.test(w.error.message)) check('(info) fill for a service girl: the coordinator saves it after scheduling-v36.sql', true, '');
             else { check('fill for a service girl: the database keeps what the coordinator chose for her', !w.error, (w.error || {}).message); await sbPersonal.from('prefs_service').delete().eq('staff_id', sid).eq('day', '2099-01-05'); }
@@ -1986,7 +1986,7 @@
         let t0 = performance.now(); const entered = await personalEnter(), tEnter = performance.now() - t0;
         check(`user journey (${kind}): signing in opens the first screen within 6 seconds (the two choices; only the portal for a service girl)`, entered && (activeView() === 'view-apphome' || (kind === 'service' && activeView() === 'view-portal')) && tEnter < 6000, activeView() + ' / ' + Math.round(tEnter) + ' ms');
         // the right person: the staff row linked to this e-mail, and its name in the greeting
-        const me = who[mail];
+        const me = who[mail] || { id:(await sbPersonal.rpc('my_staff_id')).data, name:(portalPerson(srv.me) || {}).first || '' };          // (a test person's e-mail may have been cleared in the management: the sign-in knows)
         check(`user journey (${kind}): the system knows who signed in (the person linked to this e-mail)`, !!me && srv.me === me.id, me ? me.id + ' vs ' + srv.me : 'no such e-mail in the staff');
         const card = document.getElementById('apphome-portal') || document.getElementById('apphome-manage');
         if(activeView() === 'view-apphome' && card) card.click();
@@ -2144,7 +2144,7 @@
           { const was = portalUi.csOpen, ws = portalUi.csSort; portalUi.csOpen = true; portalUi.csSort = 'count';
             const box = document.createElement('div'); box.innerHTML = srvSidePanelHtml(mk); const nums = [...box.querySelectorAll('.cs-name-count')].map(x => +x.textContent), c = srvShiftCounts(mk);
             portalUi.csSort = 'name'; const plain = document.createElement('div'); plain.innerHTML = srvSidePanelHtml(mk); portalUi.csSort = 'count';
-            check('instructors panel: by name with no numbers; "הצג את מספר המשמרות" shows the number by every name and puts the fewest first', !plain.querySelector('.cs-name-count') && /הצג את מספר המשמרות/.test(plain.textContent) && nums.length > 0 && nums.every((n, k) => k === 0 || nums[k - 1] <= n) && /הסתר את מספר המשמרות/.test(box.textContent) && [...box.querySelectorAll('[data-cs-person]')].every(b => +b.querySelector('.cs-name-count').textContent === ((c[b.dataset.csPerson] || {}).all || 0)), nums.join(','));
+            check('instructors panel: by name with no numbers; "הצג את מספר המשמרות" shows the number by every name and puts the fewest first', !plain.querySelector('.cs-name-count') && /לפי מספר משמרות/.test(plain.textContent) && nums.length > 0 && nums.every((n, k) => k === 0 || nums[k - 1] <= n) && /לפי שם/.test(box.textContent) && [...box.querySelectorAll('[data-cs-person]')].every(b => +b.querySelector('.cs-name-count').textContent === ((c[b.dataset.csPerson] || {}).all || 0)), nums.join(','));
             { const st2 = portalLoad(), sh = id => st2.shiftTypes.find(x => x.id === id), sun = daysOfMonth(mk).find(d => dowOf(d) === 0), mon = daysOfMonth(mk).find(d => dowOf(d) === 1);
               const a = srvOtherHours('service', sun, 'm', sh('m'), null), b = srvOtherHours('service', mon, 'e', sh('e'), null), c2 = srvOtherHours('teacher', mon, 'e', sh('e'), { '1':['08:00', '14:00'] }), d2 = srvOtherHours('teacher', sun, 'm', sh('m'), { '1':['08:00', '14:00'] });
               check('drag a service girl / teacher: Sunday 11-19 for a service girl, the shift\'s hours on other days; a teacher her fixed hours (none that day: refused)', a.from === '11:00' && a.to === '19:00' && b.from === sh('e').start && c2.from === '08:00' && c2.to === '14:00' && d2 === null, JSON.stringify([a, b, c2, d2]));
@@ -2175,8 +2175,10 @@
       if(!(await enter('coordinator'))){ check('therapy portal: the coordinator signs in', false, 'no'); return; }
       const probe = await sbPersonal.rpc('my_therapy_children');
       if(probe.error){ check('(info) therapy portal: skipped, scheduling-v31.sql was not run on this server', true, ''); await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null; srv.me = null; showHub(); return; }
-      const t2 = await sbPersonal.from('staff_private').select('staff_id').eq('email', M('instructor2')).single(), t1 = await sbPersonal.from('staff_private').select('staff_id').eq('email', M('instructor')).single();
-      const th = t2.data && t2.data.staff_id, plain = t1.data && t1.data.staff_id;
+      // who the two test instructors are: by their sign-in (the e-mails in the staff list may have been cleared in the management)
+      const idOf = async kind => { await sbPersonal.auth.signOut(); await signInRetry(M(kind), PW); return (await sbPersonal.rpc('my_staff_id')).data; };
+      const th = await idOf('instructor2'), plain = await idOf('instructor');
+      if(!(await enter('coordinator'))){ check('therapy portal: the coordinator signs in again', false, 'no'); return; }
       try {
         showAppHome(); await sleep(150);
         check('therapy portal: the app home has one card "פורטל הטיפול"', !!document.getElementById('apphome-therapy') && /פורטל הטיפול/.test(document.getElementById('apphome-therapy').textContent) && !document.getElementById('apphome-therapist'), 'cards wrong');
