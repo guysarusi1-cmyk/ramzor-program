@@ -58,6 +58,11 @@ function showAppHome(){
           <span class="home-card-title">פורטל הטיפול</span>
           <span class="home-card-sub">${canTherapistPortal() ? 'מה מחכה לך, התוכניות, התצפיות והמעקב' : 'מה עושים עם כל ילד, וממה להימנע'}</span>
         </button>` : ''}
+        ${typeof ocAllowed === 'function' && ocAllowed() ? `<button type="button" class="home-card" id="apphome-oncall">
+          <span class="apphome-emoji apphome-ico">${psIco('schedule')}</span>
+          <span class="home-card-title">כוננית סוף שבוע</span>
+          <span class="home-card-sub">עובדי סוף השבוע, מוניות וסידור</span>
+        </button>` : ''}
         ${portalServerOn && (portalMe() || {}).admin ? `<button type="button" class="home-card" id="apphome-learn">
           <span class="apphome-emoji apphome-ico">${psIco('play')}</span>
           <span class="home-card-title">לומדה</span>
@@ -79,6 +84,7 @@ function showAppHome(){
     w.appendChild(more);
   });
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
+  { const oc1 = document.getElementById('apphome-oncall'); if(oc1) oc1.addEventListener('click', showOncallScreen); }
   { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
   { const ln = document.getElementById('apphome-learn'); if(ln) ln.addEventListener('click', showLearnHome); }          // (the admin's training videos, 14zh-learn.js)
@@ -138,7 +144,7 @@ function showPortal(tab){
       <div class="portal-top">
         <button type="button" class="back-btn portal-back${portalServerOn && !ramzorPersonal ? '' : ' is-home'}" id="portal-home">${portalServerOn && !ramzorPersonal ? 'יציאה' : '→ מסך ראשי'}</button>
         <h1 class="portal-title">${pTitle}</h1>
-        <span class="portal-top-actions">${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof therapyAvailable === 'function' && therapyAvailable() ? '<button type="button" class="portal-theme" id="portal-therapy" aria-label="פורטל הטיפול" title="פורטל הטיפול">🌱</button>' : ''}${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
+        <span class="portal-top-actions">${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof ocAllowed === 'function' && ocAllowed() ? '<button type="button" class="portal-theme" id="portal-oncall" aria-label="כוננית סוף שבוע" title="כוננית סוף שבוע">📋</button>' : ''}${portalServerOn && ['service', 'teacher'].includes(me.role) && typeof therapyAvailable === 'function' && therapyAvailable() ? '<button type="button" class="portal-theme" id="portal-therapy" aria-label="פורטל הטיפול" title="פורטל הטיפול">🌱</button>' : ''}${portalServerOn ? '<button type="button" class="portal-theme" id="portal-gear" aria-label="העדפות מערכת" title="העדפות מערכת">⚙️</button>' : ''}<button type="button" class="portal-theme" id="portal-theme" aria-label="החלפה בין מצב כהה לבהיר">${leopard ? '🐆' : st.settings.theme === 'dark' ? '☀️' : '🌙'}</button></span>
       </div>
       ${portalServerOn ? `<div class="portal-hello">שלום ${pEsc(me.first)}</div>` : `<label class="portal-as">צפייה כ:
         <select id="portal-persona">${st.instructors.filter(p => p.active).map(p => `<option value="${p.id}"${p.id === me.id ? ' selected' : ''}>${pEsc(instrName(p, st.instructors))}${p.role === 'coordinator' ? ' (רכזת)' : ''}</option>`).join('')}</select>
@@ -160,6 +166,7 @@ function showPortal(tab){
   }
   document.getElementById('portal-home').addEventListener('click', portalServerOn && !ramzorPersonal ? srvSignOut : showAppHome);          // (after the one personal sign-in: back to the two cards; leaving is there)
   const gear = document.getElementById('portal-gear'); if(gear) gear.addEventListener('click', openPortalSettings);
+  { const oc1 = document.getElementById('portal-oncall'); if(oc1) oc1.addEventListener('click', showOncallScreen); }          // (they have no first screen: their way to the on-call screen)
   { const th = document.getElementById('portal-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (service girls and teachers: their way to the therapy portal)
   const prob = document.getElementById('portal-problem'); if(prob) prob.addEventListener('click', openProblemReport);
   document.getElementById('portal-theme').addEventListener('click', () => { if(leopard){ srv.portalTheme = null; srvSaveSetting({ portalTheme:st.settings.theme }); showPortal(); return; } st.settings.theme = st.settings.theme === 'dark' ? 'light' : 'dark'; if(portalServerOn){ try { localStorage.setItem('ramzor-portal-theme', st.settings.theme); } catch(e){} } else portalSave(); showPortal(); });
@@ -207,7 +214,7 @@ function portalCtx(mk){
 function portalSheet(html){
   const wrap = document.createElement('div');
   wrap.className = 'sheet psheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
+  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
   wrap.innerHTML = `<div class="sheet-card">${html}</div>`;
   const close = () => wrap.remove();
   wrap.addEventListener('click', e => { if(e.target === wrap || e.target.closest('[data-close]')) close(); });

@@ -71,12 +71,17 @@ async function thpLoad(){
   thp.loaded = true;
 }
 
+// the size of the text: the same three choices as in everybody's settings, kept the same way; "רגיל" until she chooses (Guy 2026-11-04)
+function thpTextSizeHtml(){
+  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}
+  return `<div class="pfield th-text-size"><span>גודל הכתב</span><div class="pchoice wrap">${[['0', 'טקסט רגיל'], ['1', 'טקסט גדול'], ['2', 'טקסט גדול מאוד']].map(([k, w]) => `<button type="button" class="${big === k ? 'on' : ''}" data-th-big="${k}">${w}</button>`).join('')}</div></div>`;
+}
 // the tabs of each portal
 function thpTabs(){
   const t = [];
   if(thp.mode === 'therapist'){
     t.push(['todo', 'משימות']);
-    if(isTherapistMe() || (srv.profile && srv.profile.admin)) t.push(['oncall', 'כוננית סוף שבוע'], ['diary', 'יומן הילדים'], ['chats', 'שיחות']);          // (the social workers' urgent areas: Guy 2026-11-03; 14zl, 14zm)
+    if(isTherapistMe() || (srv.profile && srv.profile.admin)) t.push(['diary', 'יומן הילדים'], ['chats', 'שיחות']);          // (the social workers' urgent areas: Guy 2026-11-03; 14zl, 14zm)
     t.push(['mine', 'הילדים שלי']);
     if(thp.v32) t.push(['plans', 'תוכניות טיפוליות']);          // (the plans, one goal at a time: 14zf)
     t.push(['kids', 'כל הילדים']);          // (every child as the staff sees it, read only: Mercury decision 87)
@@ -211,7 +216,7 @@ function thpRender(){
   else if(thp.tab === 'mine'){
     const list = thpScope();
     inner = list.length ? `<div class="th-kids">${list.map(thpStatusCard).join('')}</div>` : '<div class="pnote">עוד לא שויכו אלייך ילדים. השיוך נעשה אצל הרכזת או מנהל המערכת.</div>';
-  } else if(thp.tab === 'settings') inner = obsNotifyHtml();
+  } else if(thp.tab === 'settings') inner = thpTextSizeHtml() + obsNotifyHtml();
   else if(thp.tab === 'kids') inner = thpStaffKidsHtml();
   else if(thp.tab === 'myobs') inner = thpMyObsHtml();
   else if(thp.tab === 'library') inner = planLibraryHtml();
@@ -271,7 +276,7 @@ function thpRender(){
   if(thp.tab === 'diary') renderDiary(body.querySelector('#th-diary'));
   if(thp.tab === 'chats') mgrChats(body.querySelector('#th-chats'));
   if(thp.tab === 'overview'){ const rv = body.querySelector('#bk-review'); if(rv) rv.addEventListener('click', () => { const s = bankReview(0); const close = s.close; s.close = () => { close(); thpRender(); }; }); }
-  if(thp.tab === 'settings') obsWireNotify(body);
+  if(thp.tab === 'settings'){ obsWireNotify(body); body.querySelectorAll('[data-th-big]').forEach(b => b.addEventListener('click', () => { try { localStorage.setItem('ramzor-portal-big', b.dataset.thBig); } catch(e){} applyPortalSize(); thpRender(); })); }
   if(thp.editing && ther && thp.v32 && planCanEdit(thp.editing)) planOpenEditor(thp.editing);
   { const add = view.querySelector('#sub-add'); if(add) add.addEventListener('click', async () => {
       const therapist = view.querySelector('#sub-away').value, substitute = view.querySelector('#sub-by').value, until = view.querySelector('#sub-until').value;

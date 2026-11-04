@@ -1308,7 +1308,7 @@
         if(coord){
           adminActAs(coord.id); await sleep(200);
           const tabsC = [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab);
-          check('admin in the coordinator\'s screen: her own tabs, with a banner of full control', tabsC.includes('schedule') && tabsC.includes('submissions') && (matchMedia('(max-width:700px)').matches ? tabsC.join(',') === 'schedule,submissions,swaps,oncall' : tabsC.includes('settings')) && !tabsC.includes('admin') && !!document.querySelector('.adm-viewas.act'), tabsC.join(','));
+          check('admin in the coordinator\'s screen: her own tabs, with a banner of full control', tabsC.includes('schedule') && tabsC.includes('submissions') && (matchMedia('(max-width:700px)').matches ? tabsC.join(',') === 'schedule,submissions,swaps' : tabsC.includes('settings')) && !tabsC.includes('admin') && !!document.querySelector('.adm-viewas.act'), tabsC.join(','));
           document.querySelector('[data-ptab="submissions"]').click(); await sleep(200);
           check('admin in the coordinator\'s screen: ... and it works (not "only to look")', portalUi.tab === 'submissions' && !!document.querySelector('.adm-viewas.act'), portalUi.tab);
           await adminViewAsEnd(); await sleep(150);
@@ -2346,7 +2346,7 @@
         await showTherapyPortal();
         const t3 = [...document.querySelectorAll('#view-therapy [data-th-tab]')].map(b => b.dataset.thTab);
         { const mt = document.querySelector('#view-therapy [data-th-tab="mine"]'); if(mt){ mt.click(); await sleep(80); } }
-        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary', 'chats'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3.slice(1, 3).join(',') === 'oncall,diary' && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
+        check('therapist portal: "מה דורש אותי", "הילדים שלי" (her 3), and as she is also an instructor the staff tabs, the library and the settings', t3.filter(x => !['oncall', 'diary', 'chats'].includes(x)).join(',') === (v32 ? 'todo,mine,plans,kids,myobs,library,settings' : 'todo,mine,kids') && t3.slice(1, 3).join(',') === 'diary,chats' && !t3.includes('oncall') && document.querySelectorAll('#view-therapy [data-th-kid]').length === 3, t3.join(',') + ' / ' + document.querySelectorAll('#view-therapy [data-th-kid]').length);
         showAppHome(); await sleep(80);
         check('therapy portal: somebody with both roles still gets one card', !document.getElementById('apphome-therapist') && document.querySelectorAll('#apphome-therapy').length === 1, 'cards wrong');
         // a therapist only (no shifts): no instructor portal card, only the therapy portal (and the Ramzor)
@@ -2754,6 +2754,7 @@
               const g = document.getElementById('portal-gear');
               if(g){ g.click(); await sleep(350); const sh = [...document.querySelectorAll('.psheet')].pop(); if(sh){ sh.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(60); bad.push(...scan(sh).map(x => `gear: ${x}`)); sh.remove(); } }
             }
+            if(ocAllowed()){ showOncallScreen(); await sleep(800); bad.push(...scan(view()).map(x => `oncall: ${x}`)); const sv = view().querySelector('[data-oc-view="sched"]'); if(sv){ sv.click(); await sleep(800); bad.push(...scan(view()).map(x => `oncall sched: ${x}`)); oc.view = 'list'; } }
             if(look !== 'leopard' && typeof therapyAvailable === 'function' && therapyAvailable()){ await showTherapyPortal(); await sleep(500); await tabsScan('[data-th-tab]', 'thTab', bad); }
             const u = [...new Set(bad)];
             check(`readable looks: ${kind}, ${look}${hc ? ', high contrast' : ''}`, !u.length, `${u.length}: ${u.slice(0, 14).join(' | ')}`);
@@ -2841,6 +2842,78 @@
         try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
         await personalLeave(); showHub();
       }
+    });
+    // ---- the on-call screen: a card of the first screen, one folded line per person, "הוזמן לכולם", two views on a phone; the text size of the therapist (Guy 2026-11-04)
+    await step('oncall round', async () => {
+      if(!PORTAL_ENABLED) return;
+      const PW = '@config(testPersonalPassword)', phone = matchMedia('(max-width:700px)').matches;
+      const enter = async kind => { await sbPersonal.auth.signOut(); const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW); return !error && await personalEnter(); };
+      try {
+        for(const kind of ['instructor', 'manager', 'service']){
+          if(!(await enter(kind))){ check(`oncall round: ${kind} signs in`, false, ''); continue; }
+          if(personalRamzorKind()){ showAppHome(); await sleep(150); }
+          check(`no right, no card: ${kind}`, !document.getElementById('apphome-oncall') && !document.getElementById('portal-oncall') && !ocAllowed(), '');
+        }
+        if(await enter('therapist')){
+          await sleep(200);
+          check('the therapist comes in to the first screen, with the cards of the therapy portal and of the on-call', document.querySelector('.view.active').id === 'view-apphome' && !!document.getElementById('apphome-oncall') && !!document.getElementById('apphome-therapy'), document.querySelector('.view.active').id);
+          await showTherapyPortal(); await sleep(100);
+          check('the therapy portal has no on-call tab', !document.querySelector('[data-th-tab="oncall"]'), '');
+          try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
+          const set = document.querySelector('[data-th-tab="settings"]'); if(set){ set.click(); await sleep(400); } else { thp.tab = 'settings'; thpRender(); await sleep(300); }
+          const bs = [...document.querySelectorAll('[data-th-big]')];
+          check('the therapist settings: the three sizes, "רגיל" until she chooses', bs.map(b => b.textContent).join('|') === 'טקסט רגיל|טקסט גדול|טקסט גדול מאוד' && bs[0].classList.contains('on'), bs.length);
+          if(bs[1]){ bs[1].click(); await sleep(300); check('... a choice takes hold and stays', document.body.classList.contains('portal-big') && localStorage.getItem('ramzor-portal-big') === '1' && document.querySelector('[data-th-big="1"]').classList.contains('on'), '');
+            const wide = document.documentElement.scrollWidth > innerWidth + 1; check('... nothing wider than the screen', !wide, String(document.documentElement.scrollWidth)); }
+          try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
+        } else check('oncall round: the therapist signs in', false, '');
+        if(!(await enter('coordinator'))){ check('oncall round: the coordinator signs in', false, ''); return; }
+        showAppHome(); await sleep(150);
+        check('the coordinator: a card on the first screen', !!document.getElementById('apphome-oncall'), '');
+        srvOpenPortal(); await sleep(300);
+        check('... and no on-call tab in her portal', !document.querySelector('[data-ptab="oncall"]'), '');
+        showAppHome(); await sleep(100); document.getElementById('apphome-oncall').click(); await sleep(900);
+        check('the card opens its own screen, in the look of the person', document.querySelector('.view.active').id === 'view-oncall' && !!document.querySelector('#view-oncall .portal-shell[data-ptheme] .oc'), document.querySelector('.view.active').id);
+        // the taxis, on a made-up list: the far weekend of the panel, two real people, written to the server and taken away
+        const box = document.getElementById('oc-screen'), d = oc.data, p = d.periods[d.periods.length - 1].kind === 'weekend' ? d.periods[d.periods.length - 1] : d.periods[3], ids = Object.values(d.names).filter(s => s.active && s.kind === 'instructor').slice(0, 3).map(s => s.id), day = p.from_day;
+        await sbPersonal.from('oncall_trip').delete().eq('period_key', p.key);
+        const fake = Object.assign({}, d, { period:p, trips:[], events:[], rows:ids.map((id, i) => ({ id:'t' + i, staff_id:id, day, shift:'M', from_time:'07:00', to_time:'15:00' })) });
+        oc.key = p.key; oc.view = 'list'; ocPaint(box, fake); await sleep(60);
+        const rows = () => [...box.querySelectorAll('.oc-p')], line = i => rows()[i], who = i => line(i).dataset.ocPerson.split('|')[0], w0 = who(0), w2 = who(2);
+        check('the taxis: one folded line for each person, nothing marked, both choices there', rows().length === 3 && rows().every(x => !x.open && x.querySelectorAll('[data-oc-all]').length === 2 && !x.querySelector('[data-oc-all][aria-pressed="true"]')), String(rows().length));
+        line(0).querySelector('[data-oc-all="need"]').click(); await sleep(250);
+        line(1).querySelector('[data-oc-all="none"]').click(); await sleep(250);
+        check('... "צריך מונית": still folded, with "הוזמן" for arrival and for return in the line', !line(0).open && line(0).querySelectorAll('summary [data-oc-ord]').length === 2 && line(0).querySelector('[data-oc-all="need"]').getAttribute('aria-pressed') === 'true', '');
+        check('... "לא צריך מונית": no "הוזמן"', !line(1).querySelector('[data-oc-ord]') && line(1).querySelector('[data-oc-all="none"]').getAttribute('aria-pressed') === 'true', '');
+        line(0).querySelector('[data-oc-ord$="|out"]').click(); await sleep(250);
+        check('... one way marked by itself', line(0).querySelector('[data-oc-ord$="|out"]').getAttribute('aria-pressed') === 'true' && line(0).querySelector('[data-oc-ord$="|in"]').getAttribute('aria-pressed') === 'false', '');
+        line(0).querySelector('summary').click(); await sleep(120);
+        check('... opened: each way with its time and address', line(0).open && line(0).querySelectorAll('[data-oc-time]').length === 2 && line(0).querySelectorAll('[data-oc-place]').length === 2 && line(0).querySelector('[data-oc-time]').value === '07:00', '');
+        box.querySelector('[data-oc-all-ordered]').click(); await sleep(500);
+        const saved = (await sbPersonal.from('oncall_trip').select('staff_id,need,ordered,dir').eq('period_key', p.key)).data || [];
+        check('"הוזמן לכולם": saved for who needs a taxi, both ways', saved.filter(t => t.staff_id === w0 && t.ordered).length === 2, JSON.stringify(saved));
+        check('... and for nobody else', !saved.some(t => t.staff_id !== w0 && t.ordered) && !saved.some(t => t.staff_id === w2), JSON.stringify(saved));
+        check('... the button says it is done', box.querySelector('[data-oc-all-ordered]').disabled, '');
+        await sbPersonal.from('oncall_trip').delete().eq('period_key', p.key);
+        await sbPersonal.from('oncall_event').delete().eq('period_key', p.key);
+        // the schedule
+        oc.key = d.period.key; oc.view = 'sched'; oc.wkStart = null; oc.schedView = 'week'; await renderOncall(box); await sleep(200);
+        if(phone){
+          const sv = () => [...box.querySelectorAll('[data-oc-sv]')].map(b => b.textContent).join('|'), days = () => [...box.querySelectorAll('.oc-wk-day')];
+          check('a phone: two views only', sv() === 'שבוע|סוף השבוע הקרוב' && !box.querySelector('#oc-viewbar, .oc-viewbar'), sv());
+          { const ds = days(), r = ds.map(x => x.getBoundingClientRect()); check('"שבוע": seven days side by side, Sunday on the right, inside the screen', ds.length === 7 && ds[0].textContent.startsWith(DOW_SHORT[0]) && r.every((x, i) => !i || (x.right <= r[i - 1].left + 3 && Math.abs(x.top - r[0].top) < 2)) && document.documentElement.scrollWidth <= innerWidth + 1, String(document.documentElement.scrollWidth)); }
+          oc.wkStart = '2026-12-27'; await renderOncall(box); await sleep(200);
+          check('... over the end of the year', days().map(x => x.querySelector('span').textContent).join(' ') === '27/12 28/12 29/12 30/12 31/12 1/1 2/1', days().map(x => x.textContent).join(' '));
+          box.querySelector('[data-oc-wk="7"]').click(); await sleep(700);
+          check('... the arrow goes a week on', days()[0].querySelector('span').textContent === '3/1', days()[0].textContent);
+          box.querySelector('[data-oc-wk="-7"]').click(); await sleep(700); oc.wkStart = null; await renderOncall(box); await sleep(200);
+          { const c = [...box.querySelectorAll('[data-oc-cell]')].find(x => x.querySelector('.mcal-name')); if(c){ c.click(); await sleep(250); const sh = [...document.querySelectorAll('.psheet')].pop(); check('a tap on a shift of the weekend: its names with remove and add', !!sh && !!sh.querySelector('[data-oc-un]') && !!sh.querySelector('[data-oc-add]'), ''); sh.remove(); } else check('(info) oncall round: no shift to open in the week', true, ''); }
+          await renderOncall(box); await sleep(200);
+          box.querySelector('[data-oc-sv="weekend"]').click(); await sleep(150);
+          { const f = ocFridayOf(isoDate(new Date())), rs = [...box.querySelectorAll('.mcal-wrow')], lbl = i => [...rs[i].querySelectorAll('.mcal-wrow-lbl')].map(x => x.textContent);
+            check('"סוף השבוע הקרוב": Thursday night to Sunday morning, as the system counts it', rs.length === 4 && rs[0].textContent.includes(ocShort(addDays(f, -1))) && lbl(0).length === 1 && !!document.querySelector('.oc-wk-title') && rs[3].textContent.includes(ocShort(addDays(f, 2))) && !lbl(3).includes(ocShiftWord('N')), JSON.stringify(rs.map((_, i) => lbl(i)))); }
+        } else check('a computer: the schedule stays as it was', !box.querySelector('[data-oc-sv]') && !!box.querySelector('.mcal-viewbar, .oc-viewbar, #oc-viewbar'), '');
+      } finally { oc.view = 'list'; oc.wkStart = null; oc.schedView = 'week'; oc.key = null; try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); await personalLeave(); showHub(); }
     });
     await step('very large text', async () => {
       if(!PORTAL_ENABLED) return;

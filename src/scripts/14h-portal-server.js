@@ -259,9 +259,9 @@ async function srvSubmit(mk, note, goal){
 function srvTabs(me){
   if(srvEditingFor()) return me.role === 'service' ? [['avail', 'זמינות']] : [['prefs', 'העדפות']];          // (filling for somebody: only that tab — a service girl's availability, an instructor's preferences)
   if(portalAsCoord(me)){
-    const all = [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['oncall', 'כוננית'], ['diary', 'יומן הילדים'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);
+    const all = [['schedule', 'סידור'], ['submissions', 'הגשות'], ['swaps', 'החלפות'], ['vacations', 'חופשות'], ['diary', 'יומן הילדים'], ['chats', 'שיחות'], ['settings', 'הגדרות']].concat(me.admin ? [['admin', 'ניהול']] : []);
     const phone = (() => { try { return matchMedia('(max-width:700px)').matches; } catch(e){ return false; } })();
-    return phone ? all.filter(t => ['schedule', 'submissions', 'swaps', 'oncall'].includes(t[0])) : all;          // (on a phone: סידור, הגשות, החלפות, כוננית only — the rest on the computer: Guy 2026-11-03)
+    return phone ? all.filter(t => ['schedule', 'submissions', 'swaps'].includes(t[0])) : all;          // (on a phone: סידור, הגשות, החלפות only; the on-call screen is a card of the first screen — the rest on the computer: Guy 2026-11-03)
   }          // (the admin: one more tab, 14s-portal-admin.js)
   if(me.role === 'manager') return MGR_TABS;          // (the manager of the framework: 14zn)
   if(me.role === 'instructor' && srv.profile && srv.profile.manual_only) return [['schedule', 'הסידור'], ['open', 'משמרות חסרות'], ['swaps', 'החלפות וחופשות'], ['inbox', 'הודעות']];          // (not scheduled automatically: she places herself where somebody is missing)
@@ -455,7 +455,6 @@ async function personalEnter(){
   if(!personalRamzorKind()){ srvOpenPortal(); return true; }          // (service girls and teachers: only the portal)
   sb = sbPersonal; ramzorPersonal = true;
   try { await initRoster(); await initMiniLists(); renderManageRoster(); } catch(e){ /* the Ramzor data loads again on the next screen */ }
-  if(personalIsTherapistOnly() && typeof therapyAvailable === 'function' && therapyAvailable()){ await showTherapyPortal(); return true; }          // (straight to the therapy portal)
   showAppHome();
   return true;
 }

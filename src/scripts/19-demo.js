@@ -15,7 +15,7 @@
     if(/^psrv-/.test(what)){      // the portal on the database: psrv-login | psrv-prefs | psrv-sched | psrv-subs | psrv-service  (signs in with the TEST personal accounts)
       document.getElementById('login-screen').style.display = 'none'; document.getElementById('protected-app').style.display = '';
       if(what === 'psrv-login'){ srvShowLogin('email'); return; }
-      const kind = /^psrv-(subs|csched|cswaps|cvac|cset)$/.test(what) ? 'coordinator' : what === 'psrv-service' ? 'service' : 'instructor';
+      const kind = /^psrv-(subs|csched|cswaps|cvac|cset|oncall)$/.test(what) ? 'coordinator' : what === 'psrv-service' ? 'service' : 'instructor';
       await sbPersonal.auth.signInWithPassword({ email:kind + '-test@merkaz-cherum.local', password:'@config(testPersonalPassword)' });
       try { const sz = location.search.match(/[?&]size=(\d)/); localStorage.setItem('ramzor-portal-big', sz ? sz[1] : '0'); } catch(e){}          // (&size=2 shows the very large text)
       if(/[?&]light(&|$)/.test(location.search)) localStorage.setItem('ramzor-portal-theme', 'light');          // (&light: the light look)
@@ -34,6 +34,7 @@
       { const pw = (location.search.match(/[?&]pw=(\w+)/) || [])[1];          // (&pw=kinds|days|0|1..|end: a step of the process; &pw=month: the month opened from it; &pw=wk: "שבוע-שבוע")
         if(pw){ const wk = pw === 'wk'; srv.prefWeekly = !wk; srv.prefPlain = !wk; localStorage.setItem('ramzor-plain-help', '1'); portalUi.prefsWholeMonth = pw === 'month'; localStorage.setItem(pwPosKey(prefsMonthNow()), JSON.stringify(/^\d+$/.test(pw) ? Number(pw) : pw === 'month' || wk ? 0 : pw)); } }
       if(/[?&]gear(&|$)/.test(location.search)) setTimeout(() => { document.getElementById('portal-gear').click(); setTimeout(() => document.querySelectorAll('.psheet details').forEach(d => { d.open = true; }), 400); }, 1500);          // (&gear: the settings, every fold open)
+      if(what === 'psrv-oncall'){ const v = location.search.match(/[?&]ocv=(\w+)/); if(v){ oc.view = 'sched'; oc.schedView = v[1]; } showOncallScreen(); return; }          // (&ocv=week | weekend: the schedule on a phone)
       if(/[?&]monthpic(&|$)/.test(location.search)) setTimeout(() => { const c = csMonthCanvas(portalUi.month || monthKeyOf(srvToday())); c.style.cssText = 'position:fixed;top:0;left:0;z-index:99999;width:' + c.width + 'px;height:' + c.height + 'px'; document.body.appendChild(c); }, 5000);          // (&monthpic: the picture of the month to share, at its own size)
       showPortal(({ 'psrv-prefs':'prefs', 'psrv-subs':'submissions', 'psrv-swaps':'swaps', 'psrv-cswaps':'swaps', 'psrv-cvac':'vacations', 'psrv-cset':'settings', 'psrv-inbox':'inbox' })[what] || (location.search.match(/[?&]ptab=(\w+)/) || [])[1] || 'schedule');          // (&ptab=avail opens that tab)
       return;
