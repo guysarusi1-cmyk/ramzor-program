@@ -1296,7 +1296,7 @@
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
       { const ids = [...document.querySelectorAll('#view-apphome .home-card')].map(b => b.id);
-        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 5 : 4) && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
+        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 6 : 5) && ids.includes('apphome-oncall') && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
       { const other = portalLoad().instructors.find(p => p.active && p.role === 'instructor' && p.id !== srv.me);
         portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.editPrefs = true;
         check('admin fills preferences: the screen writes the other person\'s preferences, only the preferences tab, also after the closing time', srvWho() === other.id && srvTabs(portalMe()).map(x => x[0]).join(',') === 'prefs' && srvPrefsOpen('2020-01'), [srvWho(), srvTabs(portalMe()).map(x => x[0]).join(',')].join(' / '));
