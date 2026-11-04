@@ -17,7 +17,16 @@ const TT_ICON_LIST = [
   ['class', 'חוג', '🧩'], ['park', 'טיול', '🌳'], ['movie', 'סרט', '📺'], ['shower', 'מקלחות', '🛁'], ['dinner', 'ארוחת ערב', '🍲'], ['story', 'סיפור', '📖'],
   ['cleanup', 'סידור החדר', '🧹'], ['candles', 'קבלת שבת', '🕯️'], ['meeting', 'מפגש', '🤝'], ['bedtime', 'השכבה', '🌙']
 ];
-const ttIcon = id => TT_ICON_LIST.find(x => x[0] === id) || ['other', 'פעילות', '⭐'];
+// more pictures, behind "עוד תמונות": five subjects, ten in each (Guy 2026-11-04)
+const TT_ICON_MORE = [
+  ['אוכל', [['pizza', 'פיצה', '🍕'], ['pasta', 'פסטה', '🍝'], ['sandwich', 'כריך', '🥪'], ['salad', 'סלט', '🥗'], ['soup', 'מרק', '🍜'], ['cake', 'עוגה', '🍰'], ['icecream', 'גלידה', '🍦'], ['fruit', 'פירות', '🍉'], ['cook', 'בישול', '🍳'], ['drink', 'שתייה', '🧃']]],
+  ['לימוד ויצירה', [['homework', 'שיעורי בית', '✏️'], ['reading', 'קריאה', '📚'], ['computer', 'מחשב', '💻'], ['science', 'מדע', '🔬'], ['math', 'חשבון', '🔢'], ['paint', 'ציור', '🖌️'], ['crafts', 'מלאכה', '✂️'], ['clay', 'קדרות', '🏺'], ['theater', 'תיאטרון', '🎭'], ['guitar', 'נגינה', '🎸']]],
+  ['ספורט ומשחק', [['basket', 'כדורסל', '🏀'], ['swim', 'שחייה', '🏊'], ['bike', 'אופניים', '🚲'], ['dance', 'ריקוד', '💃'], ['yoga', 'יוגה', '🧘'], ['run', 'ריצה', '🏃'], ['tennis', 'טניס', '🎾'], ['boardgame', 'משחק קופסה', '🎲'], ['cards', 'קלפים', '🃏'], ['blocks', 'קוביות', '🧱']]],
+  ['טבע ויציאה', [['beach', 'ים', '🏖️'], ['garden', 'גינון', '🌻'], ['animals', 'בעלי חיים', '🐶'], ['horse', 'רכיבה', '🐴'], ['picnic', 'פיקניק', '🧺'], ['camp', 'מחנאות', '⛺'], ['bus', 'הסעה', '🚌'], ['shop', 'קניות', '🛒'], ['doctor', 'רופא', '🩺'], ['visit', 'ביקור', '🏠']]],
+  ['בית וחגים', [['laundry', 'כביסה', '🧦'], ['handwash', 'רחיצת ידיים', '🧼'], ['haircut', 'תספורת', '💇'], ['birthday', 'יום הולדת', '🎂'], ['party', 'מסיבה', '🎉'], ['prayer', 'תפילה', '🙏'], ['kiddush', 'קידוש', '🍷'], ['holiday', 'חג', '🕎'], ['talk', 'שיחה', '💬'], ['phone', 'שיחת טלפון', '📞']]]
+];
+const TT_ICON_ALL = TT_ICON_LIST.concat(...TT_ICON_MORE.map(g => g[1]));
+const ttIcon = id => TT_ICON_ALL.find(x => x[0] === id) || ['other', 'פעילות', '⭐'];
 
 // who is on which of today's shifts: the schedule's rows, then today's changes (removed / added); the order: teachers first, then the instructors
 // with the (best) ahmash in the first place, the service girls last. Used by the control and by the kids' TV.
@@ -210,8 +219,9 @@ function ctlTimetableDraw(box){
   box.querySelectorAll('[data-tt-del]').forEach(b => b.addEventListener('click', () => { sync(); editing.items.splice(+b.dataset.ttDel, 1); ctlTimetableDraw(box); }));
   box.querySelector('#tt-add').addEventListener('click', () => { sync(); editing.items.push({ t:'', n:'', i:'other', endAuto:true, fresh:true }); ctlTimetableDraw(box); const last = box.querySelector('.ctl-tt-row:last-child [data-tt-h]'); if(last) last.focus(); });
   box.querySelectorAll('[data-tt-icon]').forEach(b => b.addEventListener('click', () => {
-    sync(); const i = +b.dataset.ttIcon;
-    const sh = portalSheet(`<h2>תמונה לפעילות</h2><div class="ctl-icons">${TT_ICON_LIST.map(([id, word, e]) => `<button type="button" class="ctl-icon-opt${editing.items[i].i === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`).join('')}</div>
+    sync(); const i = +b.dataset.ttIcon, opt = ([id, word, e]) => `<button type="button" class="ctl-icon-opt${editing.items[i].i === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`;
+    const sh = portalSheet(`<h2>תמונה לפעילות</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div>
+      <details class="ctl-icons-more"${TT_ICON_MORE.some(g => g[1].some(x => x[0] === editing.items[i].i)) ? ' open' : ''}><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}</details>
       <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
     sh.querySelectorAll('[data-icon]').forEach(o => o.addEventListener('click', () => {
       const it = editing.items[i]; it.i = o.dataset.icon; if(!it.n) it.n = ttIcon(it.i)[1]; sh.close(); ctlTimetableDraw(box);
