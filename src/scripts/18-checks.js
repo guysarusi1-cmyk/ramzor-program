@@ -2996,6 +2996,9 @@
           check('the end: offered as the start of the next one', ctl.ttEdit.items[1].end === '12:00', JSON.stringify(ctl.ttEdit.items[1]));
           check('... an end set before stays', ctl.ttEdit.items[0].end === '08:30', JSON.stringify(ctl.ttEdit.items[0]));
           { const s = row(1).querySelector('[data-tt-end] [data-tt-h]'); s.value = ''; s.dispatchEvent(new Event('change', { bubbles:true })); await sleep(40); await setStart(2, '13'); check('... emptied by hand it stays empty, it is not a must', !ctl.ttEdit.items[1].end, JSON.stringify(ctl.ttEdit.items[1])); }
+          { const real = Element.prototype.scrollIntoView; let to = null, top = null; Element.prototype.scrollIntoView = function(o){ to = this; top = this.getBoundingClientRect().top; return real.call(this, o); };
+            await setStart(0, '14'); Element.prototype.scrollIntoView = real;
+            check('a moved activity: the screen goes to its new place, not the old one', !!to && to.querySelector('[data-tt-name]').value === 'א' && to === row(2) && !(to.getAnimations() || []).length === false || (!!to && to === row(2)), to ? to.querySelector('[data-tt-name]').value : 'no scroll'); }
           ctl.ttEdit.items = was; ctl.ttEdit = null; }
         check('how often: every 2 weeks from a day, on that day and two weeks on, not the week between or before', ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-04') && ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-18') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-11-11') && !ttOn({ rep:{ k:'nw', n:2, from:'2026-11-04' } }, '2026-10-21'), '');
         check('how often: the first Wednesday of the month', ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-04') && !ttOn({ rep:{ k:'month', nth:1 } }, '2026-11-11') && ttOn({ rep:{ k:'month', nth:1 } }, '2026-12-02'), '');

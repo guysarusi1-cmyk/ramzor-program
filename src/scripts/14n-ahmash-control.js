@@ -185,17 +185,17 @@ function ctlTimetableDraw(box){
     const sorted = editing.items.slice().sort((a, b) => (a.t || '99').localeCompare(b.t || '99'));
     { const at = sorted.indexOf(editing.items[+sel.closest('[data-row]').dataset.row]), before = sorted[at - 1]; if(before && !before.end && !before.endSet) before.endAuto = true; }
     if(sorted.every((x, k) => x === editing.items[k])){ suggest(); ctlTimetableDraw(box); return; }
-    const refocus = () => { const m = box.querySelector('.ctl-tt-moved'); if(m) m.scrollIntoView({ block:'center', behavior:'smooth' }); };          // (the screen follows the activity to its new place)
     const tops = new Map([...box.querySelectorAll('[data-row]')].map(r => [editing.items[+r.dataset.row], r.getBoundingClientRect().top]));
     const moved = editing.items[+sel.closest('[data-row]').dataset.row];
     editing.items.splice(0, editing.items.length, ...sorted);
     suggest(); ctlTimetableDraw(box);
+    // the screen follows the activity to its new place. Before the glide starts: during it the row is still drawn at its old place, and the screen would stay there (Guy 2026-11-04)
+    { const row = [...box.querySelectorAll('[data-row]')].find(r => editing.items[+r.dataset.row] === moved); if(row) row.scrollIntoView({ block:'center', behavior:'smooth' }); }
     box.querySelectorAll('[data-row]').forEach(r => {
       const it = editing.items[+r.dataset.row], d = (tops.get(it) || 0) - r.getBoundingClientRect().top;
       if(it === moved) r.classList.add('ctl-tt-moved');
       if(d && r.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) r.animate([{ transform:`translateY(${d}px)` }, { transform:'none' }], { duration:450, easing:'cubic-bezier(.2,.8,.2,1)' });
     });
-    refocus();
   }));
   box.querySelectorAll('[data-tt-rep]').forEach(sel => sel.addEventListener('change', () => {
     sync(); const x = editing.items[+sel.dataset.ttRep], k = sel.value, day = fixedDay != null ? (() => { const t = ctl.tt.day; return addDays(t, (fixedDay - dowOf(t) + 7) % 7); })() : ctl.tt.day;
