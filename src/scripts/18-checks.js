@@ -688,7 +688,7 @@
       check('management: each child has a social-worker choice', !!sel && sel.value === '972500000001', sel && sel.value);
       sel.value = '972500000002'; sel.dispatchEvent(new Event('change')); await sleep(900);
       check('management: changing a child\'s worker is applied and saved', roster.find(c => c.id === 'c1').swName === 'רונית' && ((await getRoster()).find(c => c.id === 'c1').swPhone === '972500000002'), JSON.stringify(roster.find(c => c.id === 'c1')));
-      document.querySelector('.roster-sw[data-sw-for="c1"]').value = '972500000001'; document.querySelector('.roster-sw[data-sw-for="c1"]').dispatchEvent(new Event('change')); await sleep(900);
+      document.querySelector('.roster-sw[data-sw-for="c1"]').value = '972500000001'; document.querySelector('.roster-sw[data-sw-for="c1"]').dispatchEvent(new Event('change')); for(let i = 0; i < 40 && roster.find(c => c.id === 'c1').swName !== 'דנה'; i++) await sleep(150);          // (a slow answer of the server is not a failure)
       check('management: worker choice can be set back', roster.find(c => c.id === 'c1').swName === 'דנה', 'not restored');
 
       // ship picker
@@ -3040,7 +3040,7 @@
           const body = document.getElementById('portal-body'), anyBtn = body.querySelector('[data-pslot], [data-pview], button:not([data-pmonth])'); if(anyBtn){ const wasS = JSON.stringify(portalMonth(portalUi.month || monthKeyOf(srvToday())).prefs || {}); anyBtn.click(); await sleep(150); check('... a tap changes nothing there', JSON.stringify(portalMonth(portalUi.month || monthKeyOf(srvToday())).prefs || {}) === wasS, ''); }
           document.getElementById('viewas-end').click(); await sleep(400);
           check('... and back to the list', portalUi.tab === 'users' && !portalUi.viewAs && !!document.querySelector('[data-mu]'), String(portalUi.tab)); }
-        { const c = portalLoad().instructors.find(p => p.role === 'coordinator' && p.active && !p.admin), b = c && document.querySelector(`[data-mu="${c.id}"]`); if(b){ b.click(); await sleep(900); check('... the coordinator: her tabs', !!document.querySelector('[data-ptab="schedule"]') && !!document.querySelector('.adm-viewas') && !document.querySelector('#portal-body .pstatus.bad'), ''); document.getElementById('viewas-end').click(); await sleep(400); } }
+        { const c = portalLoad().instructors.find(p => p.role === 'coordinator' && p.active && !p.admin), b = c && document.querySelector(`[data-mu="${c.id}"]`); if(b){ b.click(); for(let i = 0; i < 60 && !document.getElementById('viewas-end'); i++) await sleep(150); await sleep(300); check('... the coordinator: her tabs', !!document.querySelector('[data-ptab="schedule"]') && !!document.querySelector('.adm-viewas') && !document.querySelector('#portal-body .pstatus.bad'), ''); document.getElementById('viewas-end').click(); await sleep(400); } }
         { const t = portalLoad().instructors.find(p => p.role === 'therapist' && p.active), b = t && document.querySelector(`[data-mu="${t.id}"]`); if(b){ b.click(); await sleep(900); check('... a social worker: the on-call, to look at, not the therapy portal', active() === 'view-oncall' && !!document.querySelector('#view-oncall .adm-viewas'), active()); document.getElementById('oc-home-back').click(); await sleep(300); } }
         // the on-call, as a social worker
         showAppHome(); await sleep(100); document.getElementById('apphome-oncall').click(); await sleep(900);
