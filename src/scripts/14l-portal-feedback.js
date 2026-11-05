@@ -9,7 +9,7 @@ const fbGx = (profile, m, f) => (profile && profile.female === false) ? m : f;  
 function fbWeeks(mk){ const ds = daysOfMonth(mk); return ds.filter(d => dowOf(d) === 0 && ds.includes(addDays(d, 6))); }
 // what the person is asked to do at least, in this month: 2 mid-week shifts and a night every full week (when she does nights), and 4 weekend shifts (a night on Friday / Saturday counts for both)
 const fbOwnMin = profile => !!profile && [profile.min_mid, profile.min_nights, profile.min_weekend].some(x => x != null);
-const fbMins = profile => ({ mid:profile.min_mid ?? 2, night:(profile.no_nights || profile.only_long || profile.latest_end) ? 0 : (profile.min_nights ?? 1), weekend:profile.min_weekend ?? 4 });
+const fbMins = profile => ({ mid:profile.min_mid ?? 2, night:(profile.no_nights || profile.only_long || profile.latest_end) ? 0 : Math.min(profile.min_nights ?? 1, profile.max_nights || (profile === srv.profile && srv.maxNights) || 7), weekend:profile.min_weekend ?? 4 });
 function fbMinimum(profile, mk, ar){
   profile = profile || {};
   if(ar){          // (the same, in Arabic)
@@ -125,7 +125,7 @@ async function srvSendFeedback(mk){
     const rows = st.rows.filter(r => r.staff === p.id), pr = (m.prefs[p.id] || { slots:{}, absent:[], hours:{} });
     if(!rows.length && !Object.keys(pr.slots || {}).length) continue;
     const pv = (st.priv || {})[p.id] || {};
-    const input = { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour, min_mid:pv.min_mid, min_nights:pv.min_nights, min_weekend:pv.min_weekend }, goal:(m.goals || {})[p.id] || null, voice:(st.voices || {})[p.id] || 'warm' };
+    const input = { prefs:pr, rows, profile:{ female:pv.female, no_nights:pv.no_nights, only_long:pv.only_long_weekend, manual_only:pv.manual_only, latest_end:pv.latest_end_hour, min_mid:pv.min_mid, min_nights:pv.min_nights, min_weekend:pv.min_weekend, max_nights:(st.maxNights || {})[p.id] }, goal:(m.goals || {})[p.id] || null, voice:(st.voices || {})[p.id] || 'warm' };
     const fb = srvFeedbackFor(p, mk, input), ar = ((st.langs || {})[p.id] || pv.lang) === 'ar' ? srvFeedbackFor(p, mk, Object.assign({}, input, { voice:'ar' })) : null;          // (an Arabic speaker: Arabic first, the Hebrew under it)
     const r = await sbPersonal.rpc('coordinator_tell', { p_staff:p.id, p_subject:ar ? `${ar.subject} | ${fb.subject}` : fb.subject, p_text:ar ? `${ar.text}\n\n— בעברית —\n\n${fb.text}` : fb.text, p_kind:'info' });
     if(r.error) sent.failed++; else sent.ok++;

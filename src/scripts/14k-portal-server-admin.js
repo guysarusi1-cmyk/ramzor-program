@@ -127,6 +127,44 @@ function srvRenderCoordVacations(body){
   }));
 }
 
+// the priority list: dragged by the small handle only, so that scrolling the page never moves anybody (Guy 2026-11-05). The other rows step aside: the dragged row itself
+// stays in its place in the page, because moving it would end the drag. On a keyboard: the arrow keys on the handle.
+function staffDragWire(list, done){
+  if(!list) return;
+  const order = () => [...list.querySelectorAll(':scope > .pstaff-fold')].map(d => d.dataset.sid);
+  list.querySelectorAll('[data-drag]').forEach(h => {
+    const row = h.closest('.pstaff-fold');
+    h.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });          // (the handle does not open the row)
+    h.addEventListener('mousedown', e => e.preventDefault());          // (a drag with the mouse does not paint the text)
+    h.addEventListener('keydown', e => {
+      if(e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return; e.preventDefault();
+      const was = order().join(), o = e.key === 'ArrowUp' ? row.previousElementSibling : row.nextElementSibling; if(!o) return;
+      list.insertBefore(o, e.key === 'ArrowUp' ? row.nextElementSibling : row);
+      if(order().join() !== was) done(order());
+    });
+    h.addEventListener('pointerdown', e => {
+      if(e.button) return; e.preventDefault();
+      const was = order().join(); let y = e.clientY, timer = null;
+      try { h.setPointerCapture(e.pointerId); } catch(err){}
+      row.classList.add('dragging'); if(navigator.vibrate) try { navigator.vibrate(15); } catch(err){}
+      const mid = el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+      const aim = () => {
+        let n; while((n = row.nextElementSibling) && y > mid(n)) list.insertBefore(n, row);
+        let v; while((v = row.previousElementSibling) && y < mid(v)) list.insertBefore(v, row.nextElementSibling);
+      };
+      const tick = () => { const edge = 100, vy = y < edge ? -9 : y > innerHeight - edge ? 9 : 0; if(vy){ (document.scrollingElement || document.documentElement).scrollTop += vy; aim(); } };
+      const move = ev => { y = ev.clientY; aim(); };
+      const stop = () => {
+        h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', stop); h.removeEventListener('pointercancel', stop);
+        clearInterval(timer); row.classList.remove('dragging');
+        if(order().join() !== was) done(order());
+      };
+      h.addEventListener('pointermove', move); h.addEventListener('pointerup', stop); h.addEventListener('pointercancel', stop);
+      timer = setInterval(tick, 20);
+    });
+  });
+}
+
 // ---------------------------------------------------------------- settings: staff, special days, announcements, the log
 function srvRenderCoordSettings(body){
   // the screen opens at once with the four folded parts; a part is loaded and drawn only when it is opened, and opening one folds the others
@@ -138,29 +176,56 @@ function srvRenderCoordSettings(body){
   const sections = {
     staff: [() => 'הצוות, מיילים וסדר עדיפות', async () => {
       const priv = st.priv || {};
-      const instr = st.instructors.filter(p => p.role === 'instructor').sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
+      const gone = st.removed || {}, stOpen = portalUi.staffOpen = portalUi.staffOpen || {};          // (הסרה מהרשימה: scheduling-v60.sql; a row that is open stays open when the list is drawn again)
+      const instr = st.instructors.filter(p => p.role === 'instructor' && !gone[p.id]).sort((a, b) => ((priv[a.id] || {}).leader_priority ?? 999) - ((priv[b.id] || {}).leader_priority ?? 999));
+      const roleWord = id => { const v = priv[id] || {}; return [v.is_leader ? 'מוביל/ה' : '', v.ahmash_rank === 2 ? 'אחמ"ש דרגה 2' : v.ahmash_rank ? 'אחמ"ש' : ''].filter(Boolean).join(' · ') || 'מדריך/ה'; };
+      const contact = p => `<input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">`;
+      const login = p => (priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`;
+      const leave = p => `${p.active ? '' : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}${p.id === srv.me || p.admin || (priv[p.id] || {}).is_admin ? '' : `<button type="button" class="btn ghost small danger" data-remove="${p.id}">הסרה מהרשימה</button>`}`;
+      const photoBtn = p => `<label class="btn ghost small pstaff-photo-btn">החלפת תמונה<input type="file" accept="image/*" data-photo="${p.id}" hidden></label>`;
+      const fold = (p, word, drag, inner) => `<details class="pstaff-fold${p.active ? '' : ' off'}" data-sid="${p.id}"${stOpen[p.id] ? ' open' : ''}><summary class="pstaff-sum"><img src="${p.photo}" alt=""><span class="pstaff-name">${pEsc(p.first)} <small data-role-word="${p.id}">${word}</small></span>${drag ? `<button type="button" class="pstaff-handle" data-drag="${p.id}" aria-label="גרירה לשינוי הסדר של ${pEsc(p.first)}" title="גרירה לשינוי הסדר">☰</button>` : ''}</summary><div class="pstaff-row">${inner}</div></details>`;
       const html = `
-      ${instr.map((p, i) => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)}${(priv[p.id] || {}).is_leader ? ' <small>מוביל/ה</small>' : ''}</span>
-        <span class="pstaff-order"><button type="button" class="btn ghost small" data-up="${p.id}"${i === 0 ? ' disabled' : ''} aria-label="למעלה">↑</button><button type="button" class="btn ghost small" data-down="${p.id}"${i === instr.length - 1 ? ' disabled' : ''} aria-label="למטה">↓</button></span>
-        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
-        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${srv.meRow && srv.meRow.admin ? `<button type="button" class="btn ghost small" data-simple="${p.id}">${(st.simple || {})[p.id] ? 'הגשה פשוטה ✓' : 'הגשה פשוטה'}</button>` : ''}${srv.meRow && srv.meRow.admin && p.role === 'therapist' ? `<button type="button" class="btn ghost small" data-oc-grant="${p.id}">שיבוץ בכוננית</button>` : ''}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
+      <div class="pnote">גוררים מהסימן ☰ כדי לשנות את הסדר. לחיצה על שורה פותחת את הפרטים.</div>
+      <div class="pstaff-list" id="staff-order">${instr.map(p => fold(p, roleWord(p.id), true, `${contact(p)}
+        <div class="pstaff-roles" role="group" aria-label="תפקיד"><label class="adm-check"><input type="checkbox" data-role-leader="${p.id}"${(priv[p.id] || {}).is_leader ? ' checked' : ''}> מוביל/ה</label><label class="adm-check"><input type="checkbox" data-role-ahmash="${p.id}"${(priv[p.id] || {}).ahmash_rank ? ' checked' : ''}> אחמ"ש</label></div>
+        ${photoBtn(p)}${login(p)}${srv.meRow && srv.meRow.admin ? `<button type="button" class="btn ghost small" data-simple="${p.id}">${(st.simple || {})[p.id] ? 'הגשה פשוטה ✓' : 'הגשה פשוטה'}</button>` : ''}${srv.meRow && srv.meRow.admin && p.role === 'therapist' ? `<button type="button" class="btn ghost small" data-oc-grant="${p.id}">שיבוץ בכוננית</button>` : ''}${leave(p)}`)).join('')}</div>
       <h3 class="psec">בנות שירות, מורות ואחרים</h3>
-      ${st.instructors.filter(p => p.role !== 'instructor').map(p => `<div class="pstaff-row" data-sid="${p.id}"><label class="pstaff-photo" title="החלפת תמונה"><img src="${p.photo}" alt=""><input type="file" accept="image/*" data-photo="${p.id}" hidden></label><span class="pstaff-name">${pEsc(p.first)} <small>${p.admin ? 'מנהל' : p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : KIND_WORD[p.role]}</small></span>
-        ${p.role === 'teacher' && p.active ? `<button type="button" class="btn ghost small" data-fixed-hours="${p.id}">שעות קבועות</button>` : ''}
-        <input type="email" dir="ltr" placeholder="מייל" value="${pEsc((priv[p.id] || {}).email || '')}" data-mail="${p.id}"><input type="tel" dir="ltr" placeholder="טלפון" value="${pEsc((priv[p.id] || {}).phone || '')}" data-phone="${p.id}">
-        ${(priv[p.id] || {}).auth_user_id ? '<em class="pst pst-approved">מחובר/ת</em>' : `<button type="button" class="btn ghost small" data-login="${p.id}">יצירת התחברות</button>`}${p.active ? `<button type="button" class="btn ghost small" data-left="${p.id}">עזב/ה</button>` : `<em class="pst">לא פעיל/ה</em><button type="button" class="btn ghost small" data-back="${p.id}">החזרה</button>`}</div>`).join('')}
+      ${st.instructors.filter(p => p.role !== 'instructor' && !gone[p.id]).map(p => fold(p, p.admin ? 'מנהל' : p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : KIND_WORD[p.role], false, `${p.role === 'teacher' && p.active ? `<button type="button" class="btn ghost small" data-fixed-hours="${p.id}">שעות קבועות</button>` : ''}
+        ${contact(p)}${photoBtn(p)}${login(p)}${leave(p)}`)).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
       <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}${srv.meRow && srv.meRow.admin ? '<option value="manager">מנהלת מסגרת</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
         box.querySelectorAll('[data-simple]').forEach(b => b.addEventListener('click', () => simplePrefsSheet(b.dataset.simple, again)));
         box.querySelectorAll('[data-oc-grant]').forEach(b => b.addEventListener('click', () => oncallGrantSheet(b.dataset.ocGrant)));          // (the admin: may this social worker add / remove instructors in the weekend shifts? scheduling-v50.sql)          // (the admin only: "שבוע אחרי שבוע" / "בלי צבעים" for somebody, Guy 2026-10-30)
         box.querySelectorAll('[data-fixed-hours]').forEach(b => b.addEventListener('click', () => teacherHoursSheet(b.dataset.fixedHours)));
-        box.querySelectorAll('[data-left], [data-back]').forEach(b => b.addEventListener('click', async () => {
-          const id = b.dataset.left || b.dataset.back, on = !!b.dataset.back, p = st.instructors.find(x => x.id === id), nm = p ? instrName(p, st.instructors) : '';
-          if(!on && !(await confirmSheet({ title:`${nm} עזב/ה?`, text:'לא יופיע/תופיע יותר ברשימות ובסידורים הבאים. משמרות שכבר שובצו נשארות בסידור, ואפשר להעביר אותן ידנית. אפשר להחזיר בכל עת.', okLabel:'כן, עזב/ה', cancelLabel:'חזרה', danger:true }))) return;
-          const u = await sbPersonal.from('staff').update({ active:on }).eq('id', id);
+        box.querySelectorAll('.pstaff-fold').forEach(d => d.addEventListener('toggle', () => { stOpen[d.dataset.sid] = d.open; }));
+        box.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', async () => {
+          const id = b.dataset.back, p = st.instructors.find(x => x.id === id), nm = p ? instrName(p, st.instructors) : '';
+          const u = await sbPersonal.from('staff').update({ active:true }).eq('id', id);
           if(u.error){ toast('השינוי נכשל'); return; }
-          if(p) p.active = on; toast(on ? `${nm} חזר/ה לצוות` : `${nm} הוסר/ה מהרשימות`); again();
+          if(p) p.active = true; toast(`${nm} חזר/ה לצוות`); again();
+        }));
+        box.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', async () => {          // (Guy 2026-11-05: gone from the lists, cannot sign in; the old schedules stay whole, so nothing is deleted)
+          const id = b.dataset.remove, p = st.instructors.find(x => x.id === id), nm = p ? instrName(p, st.instructors) : '';
+          const left = await sbPersonal.from('assignment').select('month,day').eq('staff_id', id).gte('day', today);
+          if(left.error){ toast('הבדיקה נכשלה. נסו שוב.'); return; }
+          const rows = left.data || [], n = rows.length;
+          if(!(await confirmSheet({ title:`להסיר את ${nm} מהרשימה?`, text:`${nm} לא יופיע/תופיע יותר ברשימות, והכניסה למערכת תיחסם. סידורים שכבר היו נשארים עם השם. ${n ? `נשארו ${n} משמרות מהיום והלאה: הן נשארות בסידור עד שמחליפים אותן ידנית, ויופיעו ברשימה של "דורש תשומת לב".` : 'אין משמרות מהיום והלאה.'} אפשר להחזיר מפורטל הניהול.`, okLabel:'כן, הסרה', cancelLabel:'חזרה', danger:true }))) return;
+          const u = await sbPersonal.from('staff').update({ active:false, removed_at:new Date().toISOString() }).eq('id', id);
+          if(u.error){ toast('ההסרה נכשלה. שום דבר לא השתנה.'); return; }
+          const off = await sbPersonal.from('staff_private').update({ auth_user_id:null }).eq('staff_id', id);          // (no link, no entry: my_staff_id finds nobody. The way back links the same account again: create-staff-user)
+          const months = {}; rows.forEach(r => { const k = r.month; (months[k] = months[k] || []).push(r.day); });
+          if(n) await sbPersonal.from('coordinator_flags').insert(Object.keys(months).map(k => ({ month:k, day:months[k].sort()[0], kind:'removed', staff_id:id, text:`${nm} הוסר/ה מהרשימה ונשארו ${months[k].length} משמרות מ-${shortDate(months[k][0])}. צריך להחליף ידנית.` })));
+          if(p) p.active = false; (st.removed = st.removed || {})[id] = true;
+          toast(off.error ? `${nm} הוסר/ה, אבל חסימת הכניסה נכשלה` : `${nm} הוסר/ה מהרשימה`, off.error ? 6000 : undefined); again();
+        }));
+        box.querySelectorAll('[data-role-leader], [data-role-ahmash]').forEach(inp => inp.addEventListener('change', async () => {          // (two separate switches: a person may be both, Guy 2026-11-05)
+          const leader = 'roleLeader' in inp.dataset, id = leader ? inp.dataset.roleLeader : inp.dataset.roleAhmash, patch = leader ? { is_leader:inp.checked } : { ahmash_rank:inp.checked ? 1 : 0 };
+          inp.disabled = true; const u = await sbPersonal.from('staff_private').update(patch).eq('staff_id', id); inp.disabled = false;
+          if(u.error){ inp.checked = !inp.checked; toast('השינוי לא נשמר'); return; }
+          Object.assign(st.priv[id] = st.priv[id] || {}, patch);
+          const w = box.querySelector(`[data-role-word="${id}"]`); if(w) w.textContent = roleWord(id);
+          toast('התפקיד נשמר'); srvReloadSafe();
         }));
         box.querySelectorAll('[data-phone]').forEach(inp => inp.addEventListener('change', async () => {          // (for a WhatsApp chat from the schedule; scheduling-v21.sql)
           const phone = inp.value.trim() || null;
@@ -190,17 +255,12 @@ function srvRenderCoordSettings(body){
           let welcomed = false; if(ok){ try { const w = await sbPersonal.rpc('welcome_staff', { p_staff:b.dataset.login, p_url:location.origin + location.pathname }); welcomed = !w.error && w.data === true; } catch(e){} }          // (a welcome e-mail: what the system is and how to enter; scheduling-v17.sql)
           toast(!ok ? 'יצירת ההתחברות נכשלה' : welcomed ? 'ההתחברות נוצרה. בשעה הקרובה יישלח מייל "ברוכים הבאים" עם הסבר איך נכנסים.' : 'ההתחברות נוצרה. אפשר להיכנס עם קוד שנשלח למייל.', 6000); again();
         }));
-        const move = async (id, dir) => {
-          const ids = instr.map(p => p.id), i = ids.indexOf(id), j = i + dir; if(j < 0 || j >= ids.length) return;
-          [ids[i], ids[j]] = [ids[j], ids[i]];
-          const changed = ids.filter((x, k) => (st.priv[x] || {}).leader_priority !== k + 1);          // (usually only the two who traded places)
+        staffDragWire(box.querySelector('#staff-order'), async ids => {
+          const changed = ids.filter((x, k) => (st.priv[x] || {}).leader_priority !== k + 1);          // (only those whose place changed)
           ids.forEach((x, k) => { (st.priv[x] = st.priv[x] || {}).leader_priority = k + 1; });
-          srvRenderCoordSettings(body);          // (the list moves at once; the server is told right after)
           const res = await Promise.all(changed.map(x => sbPersonal.from('staff_private').update({ leader_priority:st.priv[x].leader_priority }).eq('staff_id', x)));
           if(res.some(r => r.error)){ toast('הסדר לא נשמר. נסו שוב.'); again(); }
-        };
-        box.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => move(b.dataset.up, -1)));
-        box.querySelectorAll('[data-down]').forEach(b => b.addEventListener('click', () => move(b.dataset.down, 1)));
+        });
         const kindSel = box.querySelector('#new-kind'), roleSel = box.querySelector('#new-role');
         kindSel.addEventListener('change', () => { roleSel.hidden = kindSel.value !== 'instructor'; });          // (the type - instructor, leader, ahmash - only for an instructor)
         box.querySelector('#new-go').addEventListener('click', async () => {

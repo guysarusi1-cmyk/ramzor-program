@@ -226,7 +226,17 @@
   .an-actions #an-send{ margin:0; min-height:0; height:auto; min-width:120px; font-size:18px; font-weight:800; padding:0 28px; }
   @media (max-width:760px){ .an-actions{ grid-template-columns:1fr; row-gap:8px; } .an-actions .pchoice{ width:auto; } .an-actions #an-send{ min-height:48px; } }
   .pchoice.wrap button{ flex:1 1 40%; }
-  .pstaff-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--p-line); }
+  .pstaff-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:4px 0 12px; }
+  .pstaff-fold{ border-bottom:1px solid var(--p-line); }
+  .pstaff-fold.off .pstaff-sum{ opacity:.6; }
+  .pstaff-fold.dragging{ background:var(--panel-2); outline:2px solid var(--p-line); border-radius:10px; position:relative; z-index:2; }
+  .pstaff-sum{ display:flex; align-items:center; gap:10px; padding:8px 2px; cursor:pointer; list-style:none; min-height:44px; user-select:none; -webkit-user-select:none; }
+  .pstaff-sum::-webkit-details-marker{ display:none; }
+  .pstaff-sum img{ flex:0 0 40px; width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid var(--p-line); }
+  .pstaff-handle{ flex:0 0 44px; width:44px; height:44px; border:0; background:none; color:inherit; font-size:20px; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; opacity:.75; }
+  .pstaff-fold.dragging .pstaff-handle{ cursor:grabbing; opacity:1; }
+  .pstaff-roles{ flex:1 1 100%; display:flex; flex-wrap:wrap; gap:16px; }
+  .pstaff-photo-btn{ cursor:pointer; }
   .pstaff-name{ flex:1 1 90px; font-weight:700; }
   .pstaff-row input{ flex:2 1 160px; }
   .pstaff-add{ display:flex; flex-wrap:wrap; gap:8px; }

@@ -41,13 +41,22 @@ async function adminStaff(box, body){
   const extra = !priv.error;          // (personal minimums, the day colleague and the language come with scheduling-v25.sql)
   if(!extra) priv = await sbPersonal.from('staff_private').select(BASE);
   const thr = await sbPersonal.from('staff_private').select('staff_id,is_therapist'), mercury = !thr.error && mercuryOn();          // (Mercury: "also a therapist", scheduling-v31.sql)
+  const rmv = await sbPersonal.from('staff').select('id').not('removed_at', 'is', null), gone = {}; if(!rmv.error) (rmv.data || []).forEach(r => { gone[r.id] = true; });          // (הסרה מהרשימה: scheduling-v60.sql)
   const isTh = {}; if(mercury) (thr.data || []).forEach(r => { isTh[r.staff_id] = !!r.is_therapist; });
   if(staff.error || priv.error) throw staff.error || priv.error;
   const pv = {}; (priv.data || []).forEach(p => { pv[p.staff_id] = p; });
   const KIND = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', therapist:'איש/אשת טיפול', admin:'מנהל' };
   const flags = (s, p) => [p.is_admin ? 'מנהל' : '', isTh[s.id] && s.kind !== 'therapist' ? 'גם איש/אשת טיפול' : '', p.is_leader ? 'מוביל/ה' : '', p.ahmash_rank ? `אחמ"ש ${p.ahmash_rank}` : '', p.no_nights ? 'בלי לילות' : '', p.latest_end_hour ? `עד ${p.latest_end_hour}:00` : '', p.manual_only ? 'שיבוץ ידני בלבד' : '', p.only_long_weekend ? 'רק סופ"ש ארוך' : '', p.female === false ? 'גבר' : '',
     [p.min_mid, p.min_nights, p.min_weekend].some(x => x != null) ? `מינימום אישי ${p.min_mid ?? 2}/${p.min_nights ?? 1}/${p.min_weekend ?? 4}` : '', p.day_buddy ? `יום עדיף עם ${nameOf(p.day_buddy)}` : '', p.lang === 'ar' ? 'ערבית' : ''].filter(Boolean).join(' · ');
-  box.innerHTML = (staff.data || []).map(s => { const p = pv[s.id] || {}; return `<div class="pmine-row adm-row${s.active ? '' : ' inactive'}"><span><b>${pEsc(s.display_name)}</b> <small>${KIND[s.kind] || s.kind}${s.active ? '' : ' · לא פעיל/ה'}</small><br><small>${pEsc(flags(s, p)) || '—'}</small></span><button type="button" class="btn ghost small" data-adm-edit="${s.id}">✏️ עריכה</button></div>`; }).join('');
+  box.innerHTML = (staff.data || []).map(s => { const p = pv[s.id] || {}; return `<div class="pmine-row adm-row${s.active ? '' : ' inactive'}"><span><b>${pEsc(s.display_name)}</b> <small>${KIND[s.kind] || s.kind}${gone[s.id] ? ' · הוסר/ה מהרשימה' : s.active ? '' : ' · לא פעיל/ה'}</small><br><small>${pEsc(flags(s, p)) || '—'}</small></span>${gone[s.id] ? `<button type="button" class="btn ghost small" data-adm-return="${s.id}">החזרה לרשימה</button>` : `<button type="button" class="btn ghost small" data-adm-edit="${s.id}">✏️ עריכה</button>`}</div>`; }).join('');
+  box.querySelectorAll('[data-adm-return]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.admReturn; b.disabled = true;
+    const u = await sbPersonal.from('staff').update({ active:true, removed_at:null }).eq('id', id);
+    if(u.error){ b.disabled = false; toast('ההחזרה נכשלה'); return; }
+    await sbPersonal.from('coordinator_flags').update({ resolved:true }).eq('staff_id', id).eq('kind', 'removed').eq('resolved', false);
+    let linked = false; if((pv[id] || {}).email){ const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:id } }); linked = !(r.error || (r.data && r.data.error)); }          // (the same account is linked again)
+    toast(linked ? 'חזר/ה לרשימה, והכניסה נפתחה' : 'חזר/ה לרשימה. את הכניסה פותחים ב"יצירת התחברות"', 6000); await srvReloadSafe(); adminStaff(box, body);
+  }));
   box.querySelectorAll('[data-adm-edit]').forEach(b => b.addEventListener('click', () => {
     const s = staff.data.find(x => x.id === b.dataset.admEdit), p = pv[s.id] || {};
     const yes = (id, label, on) => `<label class="adm-check"><input type="checkbox" id="${id}"${on ? ' checked' : ''}> ${label}</label>`;

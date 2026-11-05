@@ -2,7 +2,7 @@
 // ---------- THE PORTAL ON THE SERVER: the coordinator's schedule (the board, editing a shift, publishing, what needs her attention) ----------
 // The schedule is built by the system once a month (the 25th, at night). From then on the coordinator edits it by hand; there is no "build" button.
 const SRV_STATUS_WORD = { collecting:'בהגשת העדפות', draft:'טיוטה', sent:'נשלח אלייך', published:'פורסם' };
-const SRV_FLAG_KIND = { ahmash:'אחמ"שית', night:'לילה', staffing:'איוש', composition:'הרכב', min:'מינימום אישי', pair:'שילוב', rest:'מנוחה', extension:'הארכה', from16:'מ-16:00', pull:'משיכה', double:'כפולה', partial:'שעות מותאמות', can:'"יכול"', ahmash2:'אחמ"שית שנייה', service:'בנות שירות', service_absent:'היעדרות בת שירות', vacation_conflict:'חופשה', nosubmit:'לא הגיש' };
+const SRV_FLAG_KIND = { removed:'הוסר/ה מהרשימה', ahmash:'אחמ"שית', night:'לילה', staffing:'איוש', composition:'הרכב', min:'מינימום אישי', pair:'שילוב', rest:'מנוחה', extension:'הארכה', from16:'מ-16:00', pull:'משיכה', double:'כפולה', partial:'שעות מותאמות', can:'"יכול"', ahmash2:'אחמ"שית שנייה', service:'בנות שירות', service_absent:'היעדרות בת שירות', vacation_conflict:'חופשה', nosubmit:'לא הגיש' };
 
 // ---- the rest rules in the browser (the same two numbers as in the server: 7 hours, and 8 after more than 11 hours in a row)
 const dayNum = date => Math.round(parseIso(date).getTime() / 86400000);
@@ -35,6 +35,10 @@ function srvWarnings(pid, day, shift, from, to, ignoreId){
   if(fx) out.push(`יום היעדרות (${FIXED_REASON[fx.reason] || 'היעדרות'})`);
   else if((pr.absent || []).includes(day)) out.push('סימן/ה היעדרות ביום הזה');
   if(shift === 'N' && p.no_nights) out.push('לא עושה לילות');
+  if(shift === 'N' && (st.maxNights || {})[pid]){          // (her own limit: the engine never goes over it, by hand it is the coordinator's call)
+    const sun = addDays(day, -dowOf(day)), sat = addDays(sun, 6), had = st.rows.filter(r => r.staff === pid && r.id !== ignoreId && r.shift === 'N' && r.day >= sun && r.day <= sat).length;
+    if(had >= st.maxNights[pid]) out.push(`ביקש/ה עד ${st.maxNights[pid]} לילות בשבוע, וזה יהיה לילה מספר ${had + 1}`);
+  }
   if(p.manual_only) out.push('משובץ/ת ידנית בלבד');
   { const picks = csPicksOf(pid, monthKeyOf(day)), f = shift === 'L' ? day : csWeekendOf(day);
     if(picks.length >= 2 && f && picks.includes(f)){
@@ -70,7 +74,7 @@ async function srvLoadCoord(){
   const st = portalLoad();
   // everything is read at the same time (one after the other made the coordinator's sign-in slow); a part that fails or is missing (an older database) is just empty
   const q = build => Promise.resolve().then(build).catch(e => ({ error:e }));
-  const [priv, flags, vac, ph, pm, wm, sv, sr, br, orq, tt, sd, fd] = await Promise.all([
+  const [priv, flags, vac, ph, pm, wm, sv, sr, br, orq, tt, sd, fd, rmv] = await Promise.all([
     srvAll(() => sbPersonal.from('staff_private').select('staff_id,email,female,is_leader,ahmash_rank,leader_priority,no_nights,manual_only,only_long_weekend,latest_end_hour,auth_user_id')),
     srvAll(() => sbPersonal.from('coordinator_flags').select('id,month,day,kind,text,staff_id,resolved').eq('resolved', false).order('day', { nullsFirst:true })),
     srvAll(() => sbPersonal.from('vacation_requests').select('id,staff_id,from_day,to_day,note,status,created_at').order('created_at', { ascending:false }).limit(60)),
@@ -84,6 +88,7 @@ async function srvLoadCoord(){
     q(() => sbPersonal.from('staff_constraints').select('staff_id,params').eq('kind', 'title')),
     q(() => sbPersonal.from('special_days').select('day,kind,label,min_staff,max_staff,scope,from_time,to_time').gte('day', firstOf(addMonths(monthKeyOf(srvToday()), -1)))),          // (the live checks of "דורש תשומת לב": 14jb)
     q(() => sbPersonal.from('coordinator_flags').select('month,text').eq('kind', 'handled').gte('month', firstOf(addMonths(monthKeyOf(srvToday()), -1)))),                                // (a teacher written by another word, "גננת": Guy 2026-10-25)
+    q(() => sbPersonal.from('staff').select('id').not('removed_at', 'is', null)),                                               // (who was taken off the list: scheduling-v60.sql)
     srvOdLoad()                                                                                                                 // (the open days for sign-up and who took them: scheduling-v25.sql)
   ]);
   const rows = r => (r && !r.error && r.data) || [];
@@ -91,7 +96,9 @@ async function srvLoadCoord(){
   rows(ph).forEach(r => { if(st.priv[r.staff_id]) st.priv[r.staff_id].phone = r.phone; });
   rows(pm).forEach(r => { if(st.priv[r.staff_id]) Object.assign(st.priv[r.staff_id], r); });
   st.waMsg = (wm && !wm.error && wm.data && wm.data.value) || {};
-  st.voices = {}; st.fixedNo = {}; st.langs = {}; st.simple = {};
+  st.voices = {}; st.fixedNo = {}; st.langs = {}; st.simple = {}; st.maxNights = {}; st.removed = {};
+  rows(rmv).forEach(r => { st.removed[r.id] = true; });
+  rows(sv).forEach(r => { if(r.max_nights) st.maxNights[r.staff_id] = r.max_nights; });          // (the most nights a week she chose: scheduling-v60.sql)
   rows(sv).forEach(r => { if(r.pref_weekly || r.pref_plain) st.simple[r.staff_id] = { w:!!r.pref_weekly, p:!!r.pref_plain }; if(r.voice) st.voices[r.staff_id] = r.voice; if((r.fixed_no || []).length) st.fixedNo[r.staff_id] = r.fixed_no; if(r.lang) st.langs[r.staff_id] = r.lang; });
   st.flags = flags; st.vacations = vac;
   st.reasons = {}; rows(sr).forEach(x => { if(x.note) st.reasons[x.assignment_id] = x.note; });

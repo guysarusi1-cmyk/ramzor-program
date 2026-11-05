@@ -124,6 +124,7 @@ async function srvLoadSettings(){
   srv.prefStart = null;          // (how the preferences start every month: scheduling-v30.sql)
   try { const pr = await sbPersonal.from('staff_settings').select('pref_start').eq('staff_id', srv.me).maybeSingle(); if(!pr.error && pr.data) srv.prefStart = pr.data.pref_start || null; } catch(e){}
   srv.fixedNo = [];          // (fixed preferences: scheduling-v27.sql)
+  srv.maxNights = null; try { const mx = await sbPersonal.from('staff_settings').select('max_nights').eq('staff_id', srv.me).maybeSingle(); if(!mx.error && mx.data) srv.maxNights = mx.data.max_nights; } catch(e){}          // (scheduling-v60.sql)
   try { const fx = await sbPersonal.from('staff_settings').select('fixed_no').eq('staff_id', srv.me).maybeSingle(); if(!fx.error && fx.data && Array.isArray(fx.data.fixed_no)) srv.fixedNo = fx.data.fixed_no; } catch(e){}
   srvLoadSimplePrefs((await (async () => { try { const r = await sbPersonal.from('staff_settings').select('pref_weekly,pref_plain,fixed_no_days').eq('staff_id', srv.me).maybeSingle(); return r.error ? null : (r.data || {}); } catch(e){ return null; } })()));          // (scheduling-v48.sql)
   srv.lang = (srv.profile && srv.profile.lang) || null;          // (the language: her own choice, else the admin's default; scheduling-v25.sql)
@@ -189,6 +190,9 @@ function openPortalSettings(){
     <h3 class="psec">העדפות קבועות</h3>
     <div class="pnote">מה שמסמנים כאן מופיע אצלך "לא" בכל חודש. אפשר לבחור יותר מאחד, ואפשר תמיד לשנות משמרת מסוימת בלחיצה עליה.</div>
     <div class="pchoice wrap fixed-no">${[['m', 'לא עושה בקרים'], ['e', 'לא עושה צהריים'], ['n', 'לא עושה לילות']].map(([k, w]) => { const admin = k === 'n' && srv.profile && srv.profile.no_nights; return `<button type="button" class="${admin || (srv.fixedNo || []).includes(k) ? 'on' : ''}" data-fixed-no="${k}"${admin ? ' disabled title="הוגדר בפורטל הניהול"' : ''}>${w}</button>`; }).join('')}</div>
+    <div class="pmax-nights"${(srv.profile && srv.profile.no_nights) || (srv.fixedNo || []).includes('n') ? ' hidden' : ''}><h3 class="psec">כמה לילות בשבוע לכל היותר?</h3>
+    <div class="pchoice wrap">${[[1, 'לילה אחד'], [2, '2 לילות'], [3, '3 לילות'], [0, 'בלי הגבלה']].map(([k, w]) => `<button type="button" class="${(srv.maxNights || 0) === k ? 'on' : ''}" data-max-nights="${k}">${w}</button>`).join('')}</div>
+    <div class="pnote">הסידור האוטומטי לא ישבץ אותך ליותר לילות מזה בשבוע (ראשון עד שבת). בשיבוץ ידני הרכזת תראה שזו הבחירה שלך.</div></div>
     <h3 class="psec">ימים שאני לא באה בהם</h3>
     <div class="pnote">הימים שמסמנים כאן מסומנים אצלך "לא" בתחילת כל חודש.</div>
     <div class="pchoice wrap fixed-days">${DOW_SHORT.map((d, i) => `<button type="button" class="${(srv.fixedDays || []).includes(i) ? 'on' : ''}" data-fixed-day="${i}">${pEsc(d)}</button>`).join('')}</div>
@@ -255,7 +259,15 @@ function openPortalSettings(){
     let ok = false; try { const r = await sbPersonal.from('staff_settings').upsert({ staff_id:srv.me, fixed_no:next }); ok = !r.error; } catch(e){}
     if(!ok){ srv.fixedNo = was; b.classList.toggle('on', (was || []).includes(k)); toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
     toast('נשמר. ההעדפה תופיע בכל חודש');
+    { const mn = sh.querySelector('.pmax-nights'); if(mn) mn.hidden = !!(srv.profile && srv.profile.no_nights) || next.includes('n'); }          // (no nights: no limit to choose)
     if(portalUi.tab === 'prefs'){ const body = document.getElementById('portal-body'); if(body) renderInstructorPrefs(body); }
+  }));
+  sh.querySelectorAll('[data-max-nights]').forEach(b => b.addEventListener('click', async () => {
+    const k = +b.dataset.maxNights, was = srv.maxNights, all = sh.querySelectorAll('[data-max-nights]'), mark = v => all.forEach(x => x.classList.toggle('on', +x.dataset.maxNights === (v || 0)));
+    srv.maxNights = k || null; mark(k);
+    let ok = false; try { const r = await sbPersonal.from('staff_settings').upsert({ staff_id:srv.me, max_nights:k || null }); ok = !r.error; } catch(e){}
+    if(!ok){ srv.maxNights = was; mark(was); toast('לא הצלחנו לשמור כרגע. אפשר לנסות שוב בעוד רגע'); return; }
+    toast('נשמר');
   }));
   sh.querySelectorAll('[data-set-weekly], [data-set-plain]').forEach(b => b.addEventListener('click', async () => {          // (the two ways of filling the preferences, Guy 2026-10-30)
     const patch = 'setWeekly' in b.dataset ? { prefWeekly:b.dataset.setWeekly === '1' } : { prefPlain:b.dataset.setPlain === '1' };
