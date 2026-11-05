@@ -37,7 +37,7 @@ function srvWarnings(pid, day, shift, from, to, ignoreId){
   if(shift === 'N' && p.no_nights) out.push('לא עושה לילות');
   if(shift === 'N' && (st.maxNights || {})[pid]){          // (her own limit: the engine never goes over it, by hand it is the coordinator's call)
     const sun = addDays(day, -dowOf(day)), sat = addDays(sun, 6), had = st.rows.filter(r => r.staff === pid && r.id !== ignoreId && r.shift === 'N' && r.day >= sun && r.day <= sat).length;
-    if(had >= st.maxNights[pid]) out.push(`ביקש/ה עד ${st.maxNights[pid]} לילות בשבוע, וזה יהיה לילה מספר ${had + 1}`);
+    if(had >= st.maxNights[pid]) out.push(`ביקש/ה עד ${st.maxNights[pid] === 1 ? 'לילה אחד' : st.maxNights[pid] + ' לילות'} בשבוע, וזה יהיה לילה מספר ${had + 1}`);
   }
   if(p.manual_only) out.push('משובץ/ת ידנית בלבד');
   { const picks = csPicksOf(pid, monthKeyOf(day)), f = shift === 'L' ? day : csWeekendOf(day);
