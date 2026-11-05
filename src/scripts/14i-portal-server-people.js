@@ -194,15 +194,19 @@ async function srvRenderAvailability(body){          // (also the admin or the c
   const mk = (portalUi.pmonth = prefsMonthNow()), m = portalMonth(mk), locked = !srvPrefsOpen(mk);          // (next month only)
   if(!body.querySelector('.svcal')) body.innerHTML = '<div class="pnote">רק רגע...</div>';          // (a choice: the calendar stays until the new one is ready, nothing jumps)
   const all = daysOfMonth(mk), days = all.filter(d => dowOf(d) <= 4);
-  const [r, rh] = await Promise.all([sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1]),
-    sbPersonal.from('prefs_hours').select('day,from_time,to_time').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1])]);
+  const [r, rh, sd] = await Promise.all([sbPersonal.from('prefs_service').select('day,opt').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1]),
+    sbPersonal.from('prefs_hours').select('day,from_time,to_time').eq('staff_id', srvWho()).gte('day', days[0]).lte('day', days[days.length - 1]),
+    sbPersonal.from('special_days').select('day,kind').gte('day', days[0]).lte('day', days[days.length - 1])]);
   if(!body.isConnected) return;
   const have = {}, hrs = {}; (r.data || []).forEach(x => { have[x.day] = x.opt; }); (rh.data || []).forEach(x => { hrs[x.day] = `${String(x.from_time).slice(0, 5)}–${String(x.to_time).slice(0, 5)}`; });
   const fixed = srvPrefsOf(m, srvWho()).fixed.map(f => f.day), submitted = !!m.submitted[srvWho()];
   const tool = portalUi.svcTool || 'no';
+  // a holiday or its eve in the week works like Saturday or Friday: no service girls (Guy 2026-11-05), so grey like them. What the coordinator wrote comes first, as in the engine
+  const spKind = {}; (sd.data || []).forEach(x => { spKind[x.day] = x.kind; });
+  const noService = d => ['holiday', 'eve'].includes(d in spKind ? spKind[d] : csHebKind(d));
   const cell = d => {
     const dow = dowOf(d), num = parseIso(d).getDate();
-    if(dow >= 5) return `<div class="svcal-day off"><span class="svcal-num">${num}</span></div>`;
+    if(dow >= 5 || noService(d)) return `<div class="svcal-day off"><span class="svcal-num">${num}</span></div>`;
     if(fixed.includes(d)) return `<div class="svcal-day away"><span class="svcal-num">${num}</span><em>היעדרות</em></div>`;
     if(have[d] === 'hours') return `<div class="svcal-day"><span class="svcal-num">${num}</span><button type="button" class="svcal-slot lv-hours" data-svday="${d}"${locked ? ' disabled' : ''}>שעות אחרות<small>${pEsc(hrs[d] || '')}</small></button></div>`;
     const yes = svcYesOf(d, have[d]);
