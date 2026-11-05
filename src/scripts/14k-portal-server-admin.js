@@ -193,7 +193,7 @@ function srvRenderCoordSettings(body){
       ${st.instructors.filter(p => p.role !== 'instructor' && !gone[p.id]).map(p => fold(p, p.admin ? 'מנהל' : p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : KIND_WORD[p.role], false, `${p.role === 'teacher' && p.active ? `<button type="button" class="btn ghost small" data-fixed-hours="${p.id}">שעות קבועות</button>` : ''}
         ${contact(p)}${photoBtn(p)}${login(p)}${leave(p)}`)).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
-      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם (כפי שיוצג)"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}${srv.meRow && srv.meRow.admin ? '<option value="manager">מנהלת מסגרת</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
+      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם פרטי"><input type="text" id="new-last" placeholder="שם משפחה"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}${srv.meRow && srv.meRow.admin ? '<option value="manager">מנהלת מסגרת</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
         box.querySelectorAll('[data-simple]').forEach(b => b.addEventListener('click', () => simplePrefsSheet(b.dataset.simple, again)));
         box.querySelectorAll('[data-oc-grant]').forEach(b => b.addEventListener('click', () => oncallGrantSheet(b.dataset.ocGrant)));          // (the admin: may this social worker add / remove instructors in the weekend shifts? scheduling-v50.sql)          // (the admin only: "שבוע אחרי שבוע" / "בלי צבעים" for somebody, Guy 2026-10-30)
@@ -264,13 +264,14 @@ function srvRenderCoordSettings(body){
         const kindSel = box.querySelector('#new-kind'), roleSel = box.querySelector('#new-role');
         kindSel.addEventListener('change', () => { roleSel.hidden = kindSel.value !== 'instructor'; });          // (the type - instructor, leader, ahmash - only for an instructor)
         box.querySelector('#new-go').addEventListener('click', async () => {
-          const name = box.querySelector('#new-name').value.trim(), kind = box.querySelector('#new-kind').value, mail = box.querySelector('#new-mail').value.trim().toLowerCase() || null;
-          if(!name){ toast('צריך שם'); return; }
+          const name = box.querySelector('#new-name').value.trim(), last = box.querySelector('#new-last').value.trim() || null, kind = box.querySelector('#new-kind').value, mail = box.querySelector('#new-mail').value.trim().toLowerCase() || null;
+          if(!name){ toast('צריך שם פרטי'); return; }
+          if(!last && st.instructors.some(p => p.active && (p.first === name || String(p.first).startsWith(name + ' ')))){ toast(`כבר יש ${name} ברשימה. צריך גם שם משפחה, כדי להבדיל ביניהם.`, 6000); return; }          // (the first letter of it shows only when two have the same first name: scheduling-v61.sql)
           const maxOrder = Math.max(0, ...st.instructors.map((p, i) => i + 1));
-          const s = await sbPersonal.from('staff').insert({ display_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
+          const s = await sbPersonal.from('staff').insert({ display_name:name, first_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
           if(s.error){ toast('ההוספה נכשלה'); return; }
           const role = kind === 'instructor' ? roleSel.value : 'plain';
-          const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, female:true, is_leader:role === 'leader', ahmash_rank:role === 'ahmash' ? 1 : 0, leader_priority:kind === 'instructor' ? instr.length + 1 : null, ...(kind === 'therapist' ? { is_therapist:true } : {}) });          // (a therapist: scheduling-v31.sql)
+          const pr = await sbPersonal.from('staff_private').insert({ staff_id:s.data.id, email:mail, last_name:last, female:true, is_leader:role === 'leader', ahmash_rank:role === 'ahmash' ? 1 : 0, leader_priority:kind === 'instructor' ? instr.length + 1 : null, ...(kind === 'therapist' ? { is_therapist:true } : {}) });          // (a therapist: scheduling-v31.sql)
           toast(pr.error ? 'האדם נוסף, אבל המייל לא נשמר' : 'נוסף. אפשר ליצור לו התחברות.'); again();
         });
       };

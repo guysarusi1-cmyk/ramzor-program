@@ -928,7 +928,7 @@ function waText(staffId, key){
   const other = lv === 'no' && (((portalMonth(monthKeyOf(date)).prefs || {})[staffId] || {}).absent || []).includes(date) ? null          // (a day away: never "another shift")
     : st.shiftTypes.find(s => s.id !== shiftId && ['yes', 'can'].includes(srvWishFor(staffId, `${date}|${s.id}`)));
   const kind = other ? 'other' : lv === 'no' ? 'no' : 'none';
-  return waTemplate(kind, female).replace(/\{שם\}/g, String(p.first || '').split(' ')[0]).replace(/\{משמרת אחרת\}/g, other ? `משמרת ה${other.label}` : '').replace(/\{משמרת\}/g, `משמרת ה${sh.label || ''}`)
+  return waTemplate(kind, female).replace(/\{שם\}/g, String(p.first || '').replace(/ \S'?$/, '')).replace(/\{משמרת אחרת\}/g, other ? `משמרת ה${other.label}` : '').replace(/\{משמרת\}/g, `משמרת ה${sh.label || ''}`)
     .replace(/\{יום\}/g, `יום ${dayLabel(date)}`).replace(/\{שעות\}/g, `${sh.start || ''}–${sh.end || ''}`);
 }
 // WhatsApp opens in the computer's app (whatsapp://, no browser tab: Guy 2026-10-26) or in the browser, by the choice in the gear ("מתקדם")

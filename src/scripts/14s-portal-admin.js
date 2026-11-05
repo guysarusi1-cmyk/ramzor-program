@@ -40,6 +40,8 @@ async function adminStaff(box, body){
   ]);
   const extra = !priv.error;          // (personal minimums, the day colleague and the language come with scheduling-v25.sql)
   if(!extra) priv = await sbPersonal.from('staff_private').select(BASE);
+  const nmF = await sbPersonal.from('staff').select('id,first_name'), nmL = await sbPersonal.from('staff_private').select('staff_id,last_name'), twoNames = !nmF.error && !nmL.error, firstOf = {}, lastOf = {};          // (first and family name: scheduling-v61.sql)
+  if(twoNames){ (nmF.data || []).forEach(r => { firstOf[r.id] = r.first_name; }); (nmL.data || []).forEach(r => { lastOf[r.staff_id] = r.last_name; }); }
   const thr = await sbPersonal.from('staff_private').select('staff_id,is_therapist'), mercury = !thr.error && mercuryOn();          // (Mercury: "also a therapist", scheduling-v31.sql)
   const rmv = await sbPersonal.from('staff').select('id').not('removed_at', 'is', null), gone = {}; if(!rmv.error) (rmv.data || []).forEach(r => { gone[r.id] = true; });          // (הסרה מהרשימה: scheduling-v60.sql)
   const isTh = {}; if(mercury) (thr.data || []).forEach(r => { isTh[r.staff_id] = !!r.is_therapist; });
@@ -61,7 +63,9 @@ async function adminStaff(box, body){
     const s = staff.data.find(x => x.id === b.dataset.admEdit), p = pv[s.id] || {};
     const yes = (id, label, on) => `<label class="adm-check"><input type="checkbox" id="${id}"${on ? ' checked' : ''}> ${label}</label>`;
     const sh = portalSheet(`<h2>עריכת ${pEsc(s.display_name)}</h2>
-      <label class="pfield">השם (כפי שמוצג)<input type="text" id="ae-name" maxlength="40" value="${pEsc(s.display_name)}"></label>
+      ${twoNames ? `<label class="pfield">שם פרטי<input type="text" id="ae-name" maxlength="40" value="${pEsc(firstOf[s.id] || s.display_name)}"></label>
+      <label class="pfield">שם משפחה<input type="text" id="ae-last" maxlength="40" value="${pEsc(lastOf[s.id] || '')}"></label>
+      <div class="pnote">בכל מקום מופיע רק השם הפרטי. האות הראשונה של שם המשפחה מופיעה רק כשיש עוד מישהו עם אותו שם.</div>` : `<label class="pfield">השם (כפי שמוצג)<input type="text" id="ae-name" maxlength="40" value="${pEsc(s.display_name)}"></label>`}
       <label class="pfield">תפקיד<select id="ae-kind">${Object.keys(KIND).filter(k => k !== 'admin' && (k !== 'therapist' || mercury)).map(k => `<option value="${k}"${s.kind === k ? ' selected' : ''}>${KIND[k]}</option>`).join('')}</select></label>
       <div class="adm-checks">${yes('ae-active', 'פעיל/ה', s.active)}${yes('ae-female', 'אישה', p.female !== false)}${yes('ae-leader', 'מוביל/ה', p.is_leader)}${yes('ae-nonights', 'לא עושה לילות', p.no_nights)}${yes('ae-manual', 'שיבוץ ידני בלבד', p.manual_only)}${yes('ae-long', 'רק סופ"ש ארוך', p.only_long_weekend)}${yes('ae-admin', 'מנהל (פורטל ניהול)', p.is_admin)}</div>
       ${mercury ? `<div class="adm-checks">${yes('ae-therapist', 'גם איש/אשת טיפול (רואה את הילדים שבאחריותו בפורטל הטיפול)', s.kind === 'therapist' || isTh[s.id])}</div>` : ''}
@@ -77,9 +81,10 @@ async function adminStaff(box, body){
       <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="ae-save">שמירה</button></div>`);
     sh.querySelector('#ae-save').addEventListener('click', async () => {
       const v = id => sh.querySelector('#' + id), name = v('ae-name').value.trim(); if(!name){ toast('צריך שם'); return; }
-      const a = await sbPersonal.from('staff').update({ display_name:name, kind:v('ae-kind').value, active:v('ae-active').checked }).eq('id', s.id);
+      const a = await sbPersonal.from('staff').update({ [twoNames ? 'first_name' : 'display_name']:name, kind:v('ae-kind').value, active:v('ae-active').checked }).eq('id', s.id);
       const row = { female:v('ae-female').checked, is_leader:v('ae-leader').checked, no_nights:v('ae-nonights').checked, manual_only:v('ae-manual').checked, only_long_weekend:v('ae-long').checked,
                     is_admin:v('ae-admin').checked, ahmash_rank:+v('ae-ahm').value, latest_end_hour:v('ae-end').value ? +v('ae-end').value : null };
+      if(twoNames) row.last_name = v('ae-last').value.trim() || null;
       const num = id => { const x = v(id); if(!x || x.value === '') return null; const n = Math.round(+x.value); return isNaN(n) ? null : Math.max(0, n); };
       if(v('ae-mmid')) Object.assign(row, { min_mid:num('ae-mmid'), min_nights:num('ae-mnight'), min_weekend:num('ae-mwk'), day_buddy:v('ae-buddy').value || null });
       if(v('ae-lang')) row.lang = v('ae-lang').value === 'ar' ? 'ar' : null;
