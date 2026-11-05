@@ -359,6 +359,8 @@ function mcalViewBarWire(root, id, mk, get, set, redraw){
     set(m, w); redraw();
   }));
 }
+// large text on a phone: seven columns have no room for the names (Guy 2026-11-05), so a week is shown as rows
+const mcalBigPhone = () => { try { return matchMedia('(max-width:700px)').matches && (/\bportal-(big|huge)\b/.test(document.body.className) || !!document.documentElement.getAttribute('data-text')); } catch(e){ return false; } };
 function monthCalHtml(ctx, assignments, opts){
   opts = opts || {};
   const table = scheduleTable(ctx, assignments), today = isoDate(new Date()), picks = ahmashPicks(table, ctx, opts.ahmash || {});
@@ -393,7 +395,7 @@ function monthCalHtml(ctx, assignments, opts){
     };
     return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${(liveMiss ? liveMiss[c.slot.key] || 0 : c.missing) ? `<span class="mcal-missing">חסר ${liveMiss ? liveMiss[c.slot.key] : c.missing}</span>` : ''}</div>`;
   };
-  if(Number.isInteger(opts.week) && opts.rows){          // the weekly view as rows: a day per row, its shifts side by side — room for the names on a phone (Guy 2026-11-03)
+  if(Number.isInteger(opts.week) && (opts.rows || mcalBigPhone())){          // the weekly view as rows: a day per row, its shifts side by side — room for the names on a phone (Guy 2026-11-03)
     const w0 = Math.max(0, Math.min(opts.week, flat.length / 7 - 1)) * 7;
     return `<div class="mcal mcal-wrows">${flat.slice(w0, w0 + 7).filter(Boolean).filter(r => !opts.day || r.date === opts.day).map(r => `<div class="mcal-wrow${[5, 6].includes(dowOf(r.date)) ? ' weekend' : ''}${r.date === today ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(r.date)]}</b><span>${parseIso(r.date).getDate()}/${parseIso(r.date).getMonth() + 1}</span></div><div class="mcal-wrow-cells">${ctx.shiftTypes.map((s, i) => `<div class="mcal-wrow-shift"><span class="mcal-wrow-lbl">${pEsc(s.label)} <small>${hours(s)}</small></span>${shiftCell(r, i)}</div>`).join('')}</div></div>`).join('')}</div>`;
   }
