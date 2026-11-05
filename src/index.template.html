@@ -77,6 +77,7 @@
   <section class="view" id="view-portal"></section>
   <section class="view" id="view-learn"></section>
   <section class="view" id="view-oncall"></section>
+  <section class="view" id="view-sec"></section>
   <section class="view" id="view-chats"></section>
   <section class="view" id="view-control"></section>
   <section class="view" id="view-therapy"></section>
@@ -116,6 +117,14 @@
         <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="20" height="13" rx="2"/><path d="M8 21h8M12 16.5V21"/></svg>
         <span class="home-card-title">שליטה במסך הילדים</span>
         <span class="home-card-sub">ניהול התצוגה והפידבקים לילדים</span>
+      </button>
+      <button type="button" class="home-card" id="hub-stars-btn" hidden>
+        <span class="home-card-title">⭐ ניהול כוכבים</span>
+        <span class="home-card-sub">גריעה, איפוס וקביעת מספר</span>
+      </button>
+      <button type="button" class="home-card" id="hub-kidslist-btn" hidden>
+        <span class="home-card-title">🧒 ילדים במסגרת</span>
+        <span class="home-card-sub">הוספה, עריכה והסרה</span>
       </button>
       <button type="button" class="home-card home-control-card" id="hub-control-btn" hidden>
         <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>
@@ -241,7 +250,7 @@
       <div class="note">לבדיקת התאמה של טלוויזיה: אותה כתובת עם <b dir="ltr">#diag</b> בסוף.</div>
     </div>
 
-    <div class="card">
+    <div class="card" id="mgmt-roster-card">
       <h2>ילדים במסגרת</h2>
       <div class="chip-row" id="roster-list"></div>
       <div class="add-row">

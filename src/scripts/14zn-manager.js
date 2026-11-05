@@ -44,7 +44,7 @@ async function mgrTimetable(body){
   const box = body.querySelector('#mgr-tt');
   try {
     if(!edit) return await mgrTimetableView(box);
-    box.insertAdjacentHTML('beforebegin', '<div class="pnote">שינוי נשמר בלחיצה על "שמירה", מופיע במסך הילדים תוך רגע, והרכזת מקבלת על כך הודעה בפורטל.</div>');
+    box.insertAdjacentHTML('beforebegin', `<div class="pnote">שינוי נשמר בלחיצה על "שמירה", ומופיע במסך הילדים תוך רגע${mgrIsMe() ? ', והרכזת מקבלת על כך הודעה בפורטל' : ''}.</div>`);
     await ctlTimetable(box);
   } catch(e){ box.innerHTML = '<div class="pstatus bad">הלו"ז לא נטען. אפשר לנסות שוב.</div>'; }
 }
@@ -54,15 +54,18 @@ async function mgrTimetableView(box){
   const today = isoDate(new Date()), sun = addDays(today, -dowOf(today)), week = mgr.ttView === 'week', days = Array.from({ length:7 }, (_, i) => addDays(sun, i));
   const [r, fixed, daily] = await Promise.all([sb.rpc('tv_timetable_today'), sbPersonal.from('timetable_fixed').select('weekday,items'), sbPersonal.from('timetable_day').select('day,items').gte('day', days[0]).lte('day', days[6])]);
   if(r.error) throw r.error;
+  const evs = secOn() ? await secApi.between(days[0], days[6]).catch(() => []) : [], evOf = d => evs.filter(e => e.occ === d);          // (mentoring and volunteering: next to the timetable, 14zo-secretary.js)
   if(!box.isConnected) return;
   const itemsOf = d => (d === today ? (r.data.items || []) : ((daily.data || []).find(x => x.day === d) || (fixed.data || []).find(x => x.weekday === dowOf(d)) || {}).items || []).filter(x => ttOn(x, d));
-  const card = a => `<div class="mgr-ttv-item"><div class="mgr-ttv-time"><bdi dir="ltr">${pEsc(a.t || '')}${a.end ? '–' + pEsc(a.end) : ''}</bdi></div><div class="mgr-ttv-icon">${typeof ttArt === 'function' ? ttArt(a.i) : ''}</div><div class="mgr-ttv-name">${pEsc(a.n || '')}</div></div>`;
+  const card = a => `<div class="mgr-ttv-item${a.ev ? ' mgr-ttv-ev' : ''}"><div class="mgr-ttv-time"><bdi dir="ltr">${pEsc(a.t || '')}${a.end ? '–' + pEsc(a.end) : ''}</bdi></div><div class="mgr-ttv-icon">${typeof ttArt === 'function' ? ttArt(a.i) : ''}</div><div class="mgr-ttv-name">${pEsc(a.n || '')}</div></div>`;
   const grid = list => list.length ? `<div class="mgr-ttv" style="--c:${list.length > 12 ? 4 : 3}">${list.map(card).join('')}</div>` : '<div class="pnote">אין לו"ז ליום הזה.</div>';
+  const dayHtml = d => evOf(d).length ? ttAlignedHtml(itemsOf(d), evOf(d)) : grid(itemsOf(d));
+  const colOf = d => itemsOf(d).concat(evOf(d).map(e => ({ t:e.t, end:e.end, i:e.i, n:evText(e), ev:true }))).sort((a, b) => String(a.t).localeCompare(String(b.t)));
   const phone = matchMedia('(max-width:700px)').matches, pick = mgr.ttDay && days.includes(mgr.ttDay) ? mgr.ttDay : today;
   const seg = `<div class="mx-seg mgr-tt-mode" role="group" aria-label="תצוגה"><button type="button" data-mtv="day" aria-pressed="${!week}">היום</button><button type="button" data-mtv="week" aria-pressed="${week}">השבוע</button></div>`;
-  box.innerHTML = seg + (!week ? `<div class="mgr-ttv-fit">${grid(itemsOf(today))}</div>`
-    : phone ? `<div class="mgr-ttv-days">${days.map(d => `<button type="button" data-mtd="${d}" aria-pressed="${d === pick}"><b>${DOW_SHORT[dowOf(d)]}</b><small>${mgrShort(d)}</small></button>`).join('')}</div><div class="mgr-ttv-fit">${grid(itemsOf(pick))}</div>`
-    : `<div class="mgr-ttv-week">${days.map(d => `<div class="mgr-ttv-col${d === today ? ' today' : ''}"><b>${DOW_NAMES[dowOf(d)]} ${mgrShort(d)}</b>${itemsOf(d).map(card).join('') || '<div class="pnote">—</div>'}</div>`).join('')}</div>`);
+  box.innerHTML = seg + (!week ? `<div class="mgr-ttv-fit">${dayHtml(today)}</div>`
+    : phone ? `<div class="mgr-ttv-days">${days.map(d => `<button type="button" data-mtd="${d}" aria-pressed="${d === pick}"><b>${DOW_SHORT[dowOf(d)]}</b><small>${mgrShort(d)}</small></button>`).join('')}</div><div class="mgr-ttv-fit">${dayHtml(pick)}</div>`
+    : `<div class="mgr-ttv-week">${days.map(d => `<div class="mgr-ttv-col${d === today ? ' today' : ''}"><b>${DOW_NAMES[dowOf(d)]} ${mgrShort(d)}</b>${colOf(d).map(card).join('') || '<div class="pnote">—</div>'}</div>`).join('')}</div>`);
   box.querySelectorAll('[data-mtv]').forEach(b => b.addEventListener('click', () => { mgr.ttView = b.dataset.mtv; mgrTimetableView(box); }));
   box.querySelectorAll('[data-mtd]').forEach(b => b.addEventListener('click', () => { mgr.ttDay = b.dataset.mtd; mgrTimetableView(box); }));
   const fit = box.querySelector('.mgr-ttv-fit');

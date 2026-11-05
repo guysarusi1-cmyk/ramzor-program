@@ -52,6 +52,7 @@ function askCode({ title, text, okLabel, password }){
 
 // the only way into the management screen (home gear, #manage address)
 async function openManagement(){
+  document.getElementById('view-manage').classList.remove('manage-kids-only');
   if(MANAGER_LOGIN){
     if(!(await adminClient())) return false;                 // asks for the manager's password when needed
   } else {
@@ -90,6 +91,7 @@ async function signInAsManager(){
 // the connection that management actions write through: the manager's (after his password, valid for a few
 // minutes of use) — or, before the manager login exists in a project, the ordinary one
 async function adminClient(){
+  if(typeof manageKidsOnly === 'function' && manageKidsOnly()) return sb;          // ("ילדים במסגרת" of the secretary and the admin: their own sign-in, scheduling-v62.sql)
   if(!MANAGER_LOGIN) return sb;
   if(await managerSessionValid()){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return sbAdmin; }
   return (await signInAsManager()) ? sbAdmin : null;

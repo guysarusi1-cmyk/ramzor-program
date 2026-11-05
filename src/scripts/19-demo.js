@@ -1,4 +1,44 @@
 /*@TEST-ONLY*/
+// the secretary's screens with example data, kept in memory only: nothing here reaches the database
+function secDemoStore(){
+  const today = secToday(), sun = addDays(today, -dowOf(today));
+  const contacts = [{ id:'k1', name:'חונך לדוגמה', phone:'0501234567' }, { id:'k2', name:'מתנדבת לדוגמה', phone:null }];
+  const kid = (roster[0] || {}), kid2 = (roster[1] || kid);
+  const evs = [
+    { id:'e1', kind:'mentor', child_id:kid.id, child:kid.id ? displayName(kid) : 'ילד לדוגמה', contact_id:'k1', person:'חונך לדוגמה', i:'reading', t:'16:00', end:'17:00', every_weeks:1 },
+    { id:'e2', kind:'volunteer', activity:'ציור בחצר', group:'small', contact_id:'k2', person:'מתנדבת לדוגמה', i:'art', t:'16:00', end:null, every_weeks:null },
+    { id:'e3', kind:'mentor', child_id:kid2.id, child:kid2.id ? displayName(kid2) : 'ילד לדוגמה', contact_id:'k1', person:'חונך לדוגמה', i:'sport', t:'16:30', end:null, every_weeks:null },
+    { id:'e4', kind:'volunteer', activity:'כדורגל', group:'other', group_text:'כיתה ג', contact_id:'k2', person:'מתנדבת לדוגמה', i:'sport', t:'17:15', end:'18:00', every_weeks:2 }
+  ];
+  const stars = {}; roster.forEach((c, i) => { stars[c.id] = (i * 3) % 11; });
+  Object.assign(secApi, {
+    between:async (from, to) => { const out = []; for(let d = from; d <= to; d = addDays(d, 1)) evs.forEach(e => { const once = !e.every_weeks; if(once ? d === (e.day || today) : dowOf(d) === dowOf(e.day || today)) out.push(Object.assign({}, e, { occ:d, day:e.day || today })); }); return out; },
+    save:async (id, scope, day, r) => { const row = { id:id || 'n' + Date.now(), kind:r.kind, child_id:r.child_id, child:r.child_id ? displayName(roster.find(c => c.id === r.child_id)) : null, activity:r.activity, group:r.group_kind, group_text:r.group_text, contact_id:r.contact_id, person:(contacts.find(c => c.id === r.contact_id) || {}).name, i:r.icon, t:r.start_time, end:r.end_time, every_weeks:r.every_weeks, monthly_nth:r.monthly_nth, day:r.day };
+      const at = evs.findIndex(e => e.id === id); if(at >= 0) evs[at] = row; else evs.push(row); return row.id; },
+    remove:async id => { const at = evs.findIndex(e => e.id === id); if(at >= 0) evs.splice(at, 1); },
+    contacts:async () => contacts.slice(),
+    contactAdd:async c => { const n = Object.assign({ id:'k' + Date.now() }, c); contacts.push(n); return n; },
+    contactChange:async (id, c) => { Object.assign(contacts.find(x => x.id === id), c); evs.filter(e => e.contact_id === id).forEach(e => { e.person = c.name; }); },
+    contactRemove:async id => { const ahead = evs.filter(e => e.contact_id === id); if(ahead.length) return { ok:false, ahead:ahead.map(e => Object.assign({ day:today }, e)) }; contacts.splice(contacts.findIndex(c => c.id === id), 1); return { ok:true }; },
+    canEdit:async () => !/[?&]offshift/.test(location.search),
+    stars:async () => Object.assign({}, stars),
+    setStars:async (id, compute) => { const before = { stars:stars[id] || 0 }, ch = compute(before); if(!ch) return { ok:false, reason:'declined', before }; stars[id] = ch.set.stars; return { ok:true, before, after:{ stars:stars[id] } }; }
+  });
+  return evs;
+}
+async function secDemo(){
+  const sm = (location.search.match(/[?&]sm=(\w+)/) || [])[1] || 'home', role = /[?&]asadmin/.test(location.search) ? null : 'secretary';
+  if(role){ srv.profile = Object.assign({}, srv.profile, { kind:role, admin:false, control:true }); const me = portalMe(); if(me){ me.role = role; me.admin = false; } if(srv.meRow){ srv.meRow.role = role; srv.meRow.admin = false; } }
+  sb = sbPersonal; ramzorPersonal = true;
+  try { await initRoster(); } catch(e){}
+  secDemoStore();
+  if(sm === 'home') showAppHome();
+  else if(sm === 'hub') showHub();
+  else if(sm === 'kids') showKidsList();
+  else if(sm === 'control'){ ctl.fold = { ev:true, tt:true }; showControl(); }
+  else if(sm === 'contacts'){ sec.tab = 'contacts'; showSecScreen('ev'); }
+  else showSecScreen(sm);
+}
 // ---------- DEMO MODE (test environment only) ----------
 // ?demo=star | moon | mercury | milestone  — signs in, opens the kids' TV and plays that celebration.
 // ?demo=slide3 | slide5 | slide7 ...        — opens the kids' TV on that slide.
@@ -15,7 +55,7 @@
     if(/^psrv-/.test(what)){      // the portal on the database: psrv-login | psrv-prefs | psrv-sched | psrv-subs | psrv-service  (signs in with the TEST personal accounts)
       document.getElementById('login-screen').style.display = 'none'; document.getElementById('protected-app').style.display = '';
       if(what === 'psrv-login'){ srvShowLogin('email'); return; }
-      const kind = /^psrv-(subs|csched|cswaps|cvac|cset|oncall)$/.test(what) ? 'coordinator' : what === 'psrv-service' ? 'service' : what === 'psrv-mgr' ? 'manager' : what === 'psrv-ther' ? 'therapist' : 'instructor';
+      const kind = /^psrv-(subs|csched|cswaps|cvac|cset|oncall|sec)$/.test(what) ? 'coordinator' : what === 'psrv-service' ? 'service' : what === 'psrv-mgr' ? 'manager' : what === 'psrv-ther' ? 'therapist' : 'instructor';
       await sbPersonal.auth.signInWithPassword({ email:kind + '-test@merkaz-cherum.local', password:'@config(testPersonalPassword)' });
       try { const sz = location.search.match(/[?&]size=(\d)/); localStorage.setItem('ramzor-portal-big', sz ? sz[1] : '0'); } catch(e){}          // (&size=2 shows the very large text)
       if(/[?&]light(&|$)/.test(location.search)) localStorage.setItem('ramzor-portal-theme', 'light');          // (&light: the light look)
@@ -37,6 +77,7 @@
       if(/[?&]aslive(&|$)/.test(location.search)) window.__asLive = true;          // (&aslive: what the coming live version shows)
       if(/[?&]hub(&|$)/.test(location.search)){ await personalEnter(); showHub(); ramzorLookApply(); return; }          // (&hub: the Ramzor's first screen)
       if(what === 'psrv-ther'){ await showTherapyPortal(); return; }
+      if(what === 'psrv-sec'){ secDemo(); return; }          // (the secretary with example data, nothing is saved: &sm=home | stars | tt | ev | contacts | kids | hub | control)
       if(what === 'psrv-mgr'){ const t = location.search.match(/[?&]mt=(\w+)/), v = location.search.match(/[?&]mtv=(\w+)/); if(v) mgr.ttView = v[1]; if(/[?&]mte(&|$)/.test(location.search)) mgr.ttMode = 'edit'; showPortal(t ? t[1] : 'schedule'); return; }          // (&mt=timetable&mtv=week, &mte: the editor)
       if(/[?&]csopen(&|$)/.test(location.search)) portalUi.csOpen = true;
       if(what === 'psrv-oncall'){ const v = location.search.match(/[?&]ocv=(\w+)/); if(v){ oc.view = 'sched'; oc.schedView = v[1]; } showOncallScreen(); return; }          // (&ocv=week | weekend: the schedule on a phone)

@@ -278,7 +278,7 @@ function srvTabCount(me, t){
   if(t === 'swaps') return (st.swaps || []).filter(s => s.status === 'offered' || (s.status === 'open' && s.urgent)).length + (st.openReqs || []).length;
   if(t === 'vacations') return (st.vacations || []).filter(v => v.status === 'pending').length;
   if(t === 'submissions'){ const mk = addMonths(monthKeyOf(srvToday()), 1), m = portalMonth(mk); if(!srvPrefsOpen(mk)) return 0;
-    return st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role) && !m.submitted[p.id]).length; }
+    return st.instructors.filter(p => p.active && !['coordinator', 'therapist', 'secretary'].includes(p.role) && !m.submitted[p.id]).length; }
   return 0;
 }
 function srvRenderTab(me, body, t){
@@ -446,7 +446,7 @@ const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' ||
 // ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
 let ramzorPersonal = false;
-const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist', 'manager'].includes(srv.profile.kind)) || ['instructor', 'coordinator', 'manager'].includes((portalMe() || {}).role);
+const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist', 'manager', 'secretary'].includes(srv.profile.kind)) || ['instructor', 'coordinator', 'manager', 'secretary'].includes((portalMe() || {}).role);
 async function personalEnter(){
   portalServerOn = true; portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoadFirst())) return false;

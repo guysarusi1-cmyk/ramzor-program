@@ -44,6 +44,7 @@ function handleTvCommand(c){
   else if(c.cmd === 'pause'){ tvHold(); announceTvStatus(); }
   else if(c.cmd === 'resume') tvRelease();
   else if(c.cmd === 'show' && visibleSlideIds().includes(c.slide)){ tvHold(); showSlide(c.slide); }
+  else if(c.cmd === 'tt' && typeof loadTvToday === 'function') loadTvToday(true).then(() => { if(document.getElementById('tv-timetable') && tvTimetable) renderTimetableLive(); });          // (a change of the timetable or the events: at once)
   else if(c.cmd === 'next'){ tvHold(); tvStep(1); }
   else if(c.cmd === 'prev'){ tvHold(); tvStep(-1); }
   else if(c.cmd === 'summary' && c.child && typeof showChildSummary === 'function') showChildSummary(c.child);

@@ -11,7 +11,7 @@ function toast(msg, ms){
 // onUndo() resolves true when it worked. Stays for UNDO_MS; one undo message at a time.
 const UNDO_MS = 9000;
 let undoToastEl = null;
-function toastUndo(msg, onUndo){
+function toastUndo(msg, onUndo, ms){
   if(undoToastEl) undoToastEl.remove();
   const t = document.createElement('div');
   t.className = 'toast toast-undo';
@@ -26,7 +26,7 @@ function toastUndo(msg, onUndo){
   t.append(text, btn);
   document.body.appendChild(t);
   undoToastEl = t;
-  setTimeout(() => { if(undoToastEl === t){ t.remove(); undoToastEl = null; } else t.remove(); }, UNDO_MS);
+  setTimeout(() => { if(undoToastEl === t){ t.remove(); undoToastEl = null; } else t.remove(); }, ms || UNDO_MS);
 }
 
 // A question in the middle of the screen. Resolves true on the confirm button, false on cancel / outside tap.
@@ -37,7 +37,7 @@ function confirmSheet(opts){
     const wrap = document.createElement('div');
     wrap.className = 'sheet confirm-sheet';
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-    { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme; } }          // (in a staff area the question wears its look: 20-mercury.css, Guy 2026-10-30)
+    { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme; } }          // (in a staff area the question wears its look: 20-mercury.css, Guy 2026-10-30)
     wrap.innerHTML = `<div class="sheet-card">
         <h2></h2><p class="confirm-text"></p>
         ${opts.typeWord ? '<input type="text" class="confirm-input" autocomplete="off" aria-label="אישור בהקלדה">' : ''}

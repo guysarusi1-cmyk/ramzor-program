@@ -1296,7 +1296,7 @@
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
       { const ids = [...document.querySelectorAll('#view-apphome .home-card')].map(b => b.id);
-        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 6 : 5) && ids.includes('apphome-oncall') && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
+        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 7 : 6) && ids.includes('apphome-secev') && ids.includes('apphome-oncall') && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
       { const other = portalLoad().instructors.find(p => p.active && p.role === 'instructor' && p.id !== srv.me);
         portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.editPrefs = true;
         check('admin fills preferences: the screen writes the other person\'s preferences, only the preferences tab, also after the closing time', srvWho() === other.id && srvTabs(portalMe()).map(x => x[0]).join(',') === 'prefs' && srvPrefsOpen('2020-01'), [srvWho(), srvTabs(portalMe()).map(x => x[0]).join(',')].join(' / '));
@@ -1342,7 +1342,7 @@
       showHub();
       check('ahmash control: the Ramzor home shows a small "בקרת אחמ״ש" button to the coordinator', !document.getElementById('hub-control-btn').hidden, 'hidden');
       document.getElementById('hub-control-btn').click(); await sleep(1500);
-      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the children diary, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 6 && !!document.querySelector('#view-control details[data-cfold="diary"]') && !!document.querySelector('#view-control details[data-cfold="duties"]') && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
+      check('ahmash control: it opens with the people of today on the kids screen, the timetable, the children diary, the bonuses and a log', activeView() === 'view-control' && document.querySelectorAll('#view-control details[data-cfold]').length === 7 && !!document.querySelector('#view-control details[data-cfold="diary"]') && !!document.querySelector('#view-control details[data-cfold="duties"]') && document.querySelectorAll('#view-control .ctl-shift').length === 3, activeView());
       // the timetable of today: a change, read back as the kids TV reads it, then back to the fixed one
       const today = isoDate(new Date()), items = [{ t:'08:00', n:'ארוחת בוקר בדיקה', i:'breakfast' }, { t:'09:00', n:'גן', i:'school' }];
       let w = await sb.from('timetable_day').upsert({ day:today, items });
@@ -3295,6 +3295,31 @@
       } finally { window.srvSwapCandidates2 = was; box.remove(); }
     });
 
+    await step('secretary', async () => {          // (14zo-secretary.js; the database side was checked on a local Postgres, scheduling-v62.sql)
+      const items = [{ t:'08:00', n:'א', i:'wake' }, { t:'16:00', n:'ב', i:'snack' }, { t:'18:00', n:'ג', i:'dinner' }];
+      const evs = [{ kind:'mentor', t:'16:00', i:'reading', person:'חונך', child:'ילד' }, { kind:'volunteer', t:'16:00', i:'art', person:'מתנדבת', activity:'ציור', group:'other', group_text:'כיתה ג' }, { kind:'mentor', t:'17:00', end:'17:30', i:'sport', person:'חונך', child:'ילדה' }];
+      const rows = ttRows(items, evs);
+      check('secretary: an activity and events of the same hour are in one row, together', rows.length === 4 && rows[1].t === '16:00' && rows[1].main.length === 1 && rows[1].ev.length === 2, JSON.stringify(rows.map(r => r.t)));
+      check('secretary: an event between two activities gets its row in its place', rows[2].t === '17:00' && !rows[2].main.length && rows[3].t === '18:00');
+      { const h = ttAlignedHtml(items, evs); check('secretary: no end hour is made up, the given one is shown', (h.match(/עד /g) || []).length === 1 && h.includes('17:30'));
+        check('secretary: the words of the events', h.includes('חונכות לילד עם חונך') && h.includes('ציור עם מתנדבת') && h.includes('קבוצה: כיתה ג')); }
+      check('secretary: a phone: empty, wrong, good', secPhone('') === null && secPhone('123') === false && secPhone('052-111-2222') === '0521112222' && secWa('0521112222') === 'https://wa.me/972521112222');
+      { const was = tvEvents, tt = tvTimetable, el = document.getElementById('tv-timetable');
+        tvTimetable = { items, day:'2026-11-05' }; tvEvents = evs; renderTimetableLive();
+        check('secretary: the kids\' TV shows two columns on a day with events', el.classList.contains('tvt3') && el.querySelectorAll('.tta-row').length === 4);
+        check('secretary: nothing about a phone on the TV', !/05\d/.test(el.textContent));
+        tvEvents = []; renderTimetableLive();
+        check('secretary: a day without events keeps the grid of cards', el.classList.contains('tvt2') && !el.querySelector('.tta'));
+        tvEvents = was; tvTimetable = tt; }
+      { const on = portalServerOn, asl = window.__asLive; window.__asLive = true; portalServerOn = true;
+        check('secretary: nothing of it on live until Guy says so', !secOn() && !secEventsOk() && !secStarsOk() && secHomeCards() === '');
+        window.__asLive = asl; portalServerOn = on; }
+      { const real = secApi.setStars, db = { c1:5 }, box = document.createElement('div');
+        secApi.setStars = async (id, f) => { const before = { stars:db[id] }, ch = f(before); if(!ch) return { ok:false, reason:'declined' }; db[id] = ch.set.stars; return { ok:true }; };
+        await secApi.setStars('c1', () => ({ set:{ stars:0 } })); db.c1 += 1;          // (reset, and meanwhile somebody gave a star)
+        const ok = await secGiveBack([{ id:'c1', delta:5 }], box); secApi.setStars = real;
+        check('secretary: the way back gives back what was taken and keeps what others did since', ok && db.c1 === 6, String(db.c1)); }
+    });
     await step('learn', async () => {
       if(!PORTAL_ENABLED) return;
       const frame = document.createElement('iframe'); frame.style.cssText = 'position:fixed;left:0;top:0;width:356px;height:746px;opacity:0;pointer-events:none;';

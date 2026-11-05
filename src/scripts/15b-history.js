@@ -26,7 +26,8 @@
     }
     if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}${portalUi.prefsPast ? 'p' : ''}`;
     if(v.id === 'view-therapy' && typeof thp !== 'undefined') return `therapy:${thp.mode}|${thp.tab || ''}|${thp.editing || ''}|${thp.editing ? thp.wtab || '' : ''}`;
-    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control', 'view-learn':'learn', 'view-oncall':'oncall', 'view-chats':'chats' })[v.id] || 'hub';
+    if(v.id === 'view-manage' && v.classList.contains('manage-kids-only')) return 'kidslist';
+    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control', 'view-learn':'learn', 'view-oncall':'oncall', 'view-chats':'chats', 'view-sec':'sec' })[v.id] || 'hub';
   }
   function snapshot(key){
     if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona, prefsPast:!!portalUi.prefsPast };
@@ -52,10 +53,12 @@
   // any other page: brought back as it was
   async function restorePage(key, snap){
     if(key === 'apphome' && typeof showAppHome === 'function') return showAppHome();
+    if(key === 'kidslist' && typeof showKidsList === 'function') return showKidsList();
     if(key === 'manage' && typeof openManagement === 'function') return openManagement();
     if(key === 'control' && typeof showControl === 'function') return showControl();
     if(key === 'learn' && typeof showLearnHome === 'function') return showLearnHome();
     if(key === 'oncall' && typeof showOncallScreen === 'function') return showOncallScreen();
+    if(key === 'sec' && typeof showSecScreen === 'function') return showSecScreen();
     if(key === 'chats' && typeof showChatsScreen === 'function') return showChatsScreen();
     if(key.startsWith('portal:') && snap){
       if(portalUi.editPrefs && !snap.editPrefs && typeof srvFlush === 'function'){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled for somebody is saved before leaving)

@@ -4,7 +4,7 @@
 // Nothing here changes the real schedule: the people changes are for the kids' TV of today only.
 const ctl = { fold:{ shifts:true }, shifts:null, tt:null, ttEdit:null, ttFixedDay:null, log:null };
 const canControl = () => typeof ramzorPersonal !== 'undefined' && ramzorPersonal && !!(srv.profile && srv.profile.control);
-const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.kind === 'manager' || srv.profile.admin));          // (the manager edits the fixed timetable too: scheduling-v52.sql)
+const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.kind === 'manager' || srv.profile.kind === 'secretary' || srv.profile.admin));          // (the manager edits the fixed timetable too: scheduling-v52.sql)
 const CTL_SHIFTS = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה']];
 const WEEKDAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const ctlToday = () => isoDate(new Date());
@@ -72,6 +72,7 @@ function renderControl(){
     <div class="ctl-top"><button type="button" class="back-btn" id="ctl-back">→ חזרה</button><h1 class="ctl-title">בקרת אחמ"ש</h1><div class="ctl-date">${dayLabel(today)}</div></div>
     ${fold('shifts', 'מי מוצג היום במסך הילדים', 'רק במסך הילדים, ורק להיום')}
     ${fold('tt', 'הלו"ז של היום')}
+    ${typeof secOn === 'function' && secOn() ? fold('ev', 'חונכויות והתנדבויות היום') : ''}
     ${fold('diary', 'יומן הילדים היום', 'יציאות, שיחות ופגישות')}
     ${fold('bonus', 'בונוסים היום')}
     ${fold('duties', 'לוח התורנויות')}
@@ -86,6 +87,7 @@ async function ctlFill(id){
   try {
     if(id === 'shifts') await ctlShifts(box);
     if(id === 'tt') await ctlTimetable(box);
+    if(id === 'ev') await ctlEvents(box);
     if(id === 'diary'){ if(liveCut()){ box.closest('details') ? box.closest('details').remove() : box.remove(); return; } await ctlDiary(box); }
     if(id === 'bonus') await ctlBonuses(box);
     if(id === 'duties') await ctlDuties(box);
@@ -118,7 +120,7 @@ async function ctlShifts(box){
   }));
   box.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => {
     const code = b.dataset.add, here = new Set(groups[code].filter(p => !p.removed).map(p => p.id));
-    const people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role) && !here.has(p.id)).sort((a, c) => String(a.first).localeCompare(String(c.first), 'he'));
+    const people = st.instructors.filter(p => p.active && !['coordinator', 'therapist', 'secretary'].includes(p.role) && !here.has(p.id)).sort((a, c) => String(a.first).localeCompare(String(c.first), 'he'));
     const sh = portalSheet(`<h2>הוספה למשמרת ה${CTL_SHIFTS.find(x => x[0] === code)[1]}</h2>
       <input type="search" class="ctl-search" id="ctl-search" placeholder="חיפוש שם" autocomplete="off">
       <div class="ctl-pick">${people.map(p => `<button type="button" class="ctl-pick-item" data-pick="${p.id}" data-name="${pEsc(p.first)}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><small>${KIND_WORD[p.role] || ''}</small></button>`).join('')}</div>
@@ -142,9 +144,20 @@ function personFace(p){
 const ctlFace = p => p.photo ? `<img class="ctl-face" src="${p.photo}" alt="">` : `<span class="ctl-face ctl-face-art">${personArt(p)}</span>`;
 
 // ---- 2. today's timetable (and, for the coordinator, the fixed timetable of each weekday)
+// an ahmash changes the timetable and the events only during the shift (Guy 5 Nov; the database keeps it: scheduling-v62.sql). Before v62 nothing changes
+const ctlMayEdit = async () => typeof secOn !== 'function' || !secOn() || ctlIsCoord() || (await secApi.canEdit()) !== false;
+async function ctlEvents(box){
+  const today = secToday(), [r, evs, may] = await Promise.all([sb.rpc('tv_timetable_today'), secApi.between(today, today).catch(() => null), ctlMayEdit()]);
+  if(evs === null){ box.innerHTML = '<div class="pnote">האירועים עוד לא זמינים כאן.</div>'; return; }
+  const items = ((r.data && r.data.items) || []).filter(x => ttOn(x, today));
+  box.innerHTML = `${evs.length ? ttAlignedHtml(items, evs) : '<div class="pnote">אין היום חונכויות או התנדבויות.</div>'}
+    ${may ? '<div class="ctl-actions"><button type="button" class="btn ghost" id="ctl-ev-manage">ניהול חונכויות והתנדבויות</button></div>' : '<div class="pnote">אפשר לשנות רק בזמן המשמרת שלך.</div>'}`;
+  { const b = box.querySelector('#ctl-ev-manage'); if(b) b.addEventListener('click', () => showSecScreen('ev', 'control')); }
+}
 async function ctlTimetable(box){
   const r = await sb.rpc('tv_timetable_today'); if(r.error) throw r.error;
   r.data.items = (r.data.items || []).filter(x => ttOn(x, r.data.day));          // (what repeats every few weeks or once a month: only on its days)
+  if(!(await ctlMayEdit())){ box.innerHTML = `<div class="pnote">אפשר לשנות את הלו"ז רק בזמן המשמרת שלך.</div>${r.data.items.length ? ttAlignedHtml(r.data.items, []) : '<div class="pnote">אין לו"ז להיום.</div>'}`; return; }
   ctl.tt = r.data;
   if(!ctl.ttEdit || ctl.ttEdit.day !== r.data.day) ctl.ttEdit = { day:r.data.day, items:(r.data.items || []).map(x => Object.assign({}, x)) };          // (what was kept: its end is never suggested over)
   ctlTimetableDraw(box);
@@ -227,7 +240,7 @@ function ctlTimetableDraw(box){
       const it = editing.items[i]; it.i = o.dataset.icon; if(!it.n) it.n = ttIcon(it.i)[1]; sh.close(); ctlTimetableDraw(box);
     }));
   }));
-  const saved = (res, msg) => { if(res.error){ toast('השמירה נכשלה. נסו שוב.'); return false; } toast(msg); return true; };
+  const saved = (res, msg) => { if(res.error){ toast('השמירה נכשלה. נסו שוב.'); return false; } toast(msg); if(typeof ttNudgeTv === 'function') ttNudgeTv(); return true; };
   const on = (id, fn) => { const b = box.querySelector('#' + id); if(b) b.addEventListener('click', fn); };
   on('tt-save', async () => { const items = clean(); if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ await keepRepeats(items); ctl.ttEdit = null; ctlTimetable(box); } });
   on('tt-reset', async () => { if(saved(await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'חזרנו ללו"ז הקבוע של היום.')){ ctl.ttEdit = null; ctlTimetable(box); } });

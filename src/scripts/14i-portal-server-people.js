@@ -18,7 +18,7 @@ function srvFeedbackShort(fb){
 function srvRowLine(r){
   const flags = (r.flags || []).filter(f => f !== 'ok').map(f => SRV_FLAG_WORD[f]).filter(Boolean);          // ("אישר/ה ✓" is the coordinator's own mark, not shown to the instructor: Guy 2026-11-03)
   const hrs = r.from && r.to ? rangeHtml(r.from, r.to) : '';
-  return `<b>${dayLabel(r.day)}</b><span>${SRV_SHIFT_WORD[r.shift] || r.shift} ${hrs}${flags.length ? ` · <em>${flags.join(', ')}</em>` : ''}</span>`;
+  return `<b>${dayLabel(r.day)}</b> <span>${SRV_SHIFT_WORD[r.shift] || r.shift} ${hrs}${flags.length ? ` · <em>${flags.join(', ')}</em>` : ''}</span>`;
 }
 // colleagues who could take a shift (the database answers; before scheduling-v5.sql it simply has nothing to add)
 async function srvSwapCandidates(assignmentId){
