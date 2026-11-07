@@ -23,10 +23,7 @@ create or replace function public.is_staff() returns boolean language sql stable
       or exists (select 1 from public.staff s join public.staff_private p on p.staff_id = s.id
                  where p.auth_user_id = auth.uid() and s.active and s.kind in ('instructor', 'coordinator', 'admin', 'secretary'))
 $$;
--- "הרמזור כולל את כל יכולות הרמזור": the ahmash control too
-create or replace function public.can_control() returns boolean language sql stable security definer set search_path = public as $$
-  select public.is_ahmash() or public.is_coordinator() or public.is_secretary()
-$$;
+-- (the ahmash control is not hers: Guy, in answer to the question. can_control() stays as it was)
 
 -- an ahmash on shift right now (Guy 5 Nov: anybody with an ahmash rank who is on shift now, not only the marked one).
 -- By the published schedule and the person's own hours; today's changes of the control count: taken off the shift = not on it, added = on it

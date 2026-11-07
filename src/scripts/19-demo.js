@@ -28,7 +28,7 @@ function secDemoStore(){
 }
 async function secDemo(){
   const sm = (location.search.match(/[?&]sm=(\w+)/) || [])[1] || 'home', role = /[?&]asadmin/.test(location.search) ? null : 'secretary';
-  if(role){ srv.profile = Object.assign({}, srv.profile, { kind:role, admin:false, control:true }); const me = portalMe(); if(me){ me.role = role; me.admin = false; } if(srv.meRow){ srv.meRow.role = role; srv.meRow.admin = false; } }
+  if(role){ srv.profile = Object.assign({}, srv.profile, { kind:role, admin:false, control:false }); const me = portalMe(); if(me){ me.role = role; me.admin = false; } if(srv.meRow){ srv.meRow.role = role; srv.meRow.admin = false; } }
   sb = sbPersonal; ramzorPersonal = true;
   try { await initRoster(); } catch(e){}
   secDemoStore();
