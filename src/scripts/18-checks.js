@@ -1909,6 +1909,43 @@
 
     // ---- a published month: the coordinator's change waits for "שליחת עדכונים", then the person gets ONE message (scheduling-v45.sql).
     //      On a month of its own that has no schedule on the test server (made here and removed at the end)
+    await step('staff e-mail back', async () => {          // (the add form of the staff list, as the coordinator)
+      if(!PORTAL_ENABLED) return;
+      if(matchMedia('(max-width:700px)').matches){ check('(info) staff e-mail: the staff list is on the computer only (no settings tab on a phone)', true, ''); return; }
+      const PW = '@config(testPersonalPassword)';
+      const waitFor = async (fn, n = 60) => { for(let i = 0; i < n; i++){ const v = await fn(); if(v) return v; await sleep(150); } return false; };
+      await sbPersonal.auth.signOut(); portalServerOn = false; portalState = null;
+      const sg = await signInRetry('coordinator-test@merkaz-cherum.local', PW);
+      if(sg.error){ check('staff e-mail: the coordinator test account signs in', false, sg.error.message); return; }
+      portalServerOn = true; if(!(await srvLoad())){ check('staff e-mail: the coordinator is found', false, 'no person'); portalServerOn = false; return; }
+      portalUi.persona = srv.me; showPortal('settings');
+      await waitFor(() => { const d = document.querySelector('details[data-sfold="staff"]'); if(d && !d.open) d.open = true; return !!document.querySelector('#new-go'); }, 100);
+        // ---- an e-mail kept by a removed person: offered back, not "the e-mail was not saved" (Guy 2026-11-08)
+        { const MB = 'mailback-test@merkaz-cherum.local';
+          let row = await sbPersonal.from('staff_private').select('staff_id').eq('email', MB).maybeSingle(), mid = row.data && row.data.staff_id;
+          if(!mid){ const ns = await sbPersonal.from('staff').insert({ display_name:'בדיקת מייל', first_name:'בדיקת מייל', kind:'instructor', sort_order:990 }).select('id').single(); mid = ns.data && ns.data.id;
+            if(mid) await sbPersonal.from('staff_private').insert({ staff_id:mid, email:MB, female:true }); }
+          if(mid){
+            await sbPersonal.from('staff').update({ active:false, removed_at:new Date().toISOString(), kind:'instructor' }).eq('id', mid);
+            const before = await sbPersonal.from('staff').select('id', { count:'exact', head:true });
+            box0: { const nm = document.querySelector('#new-name'), ml = document.querySelector('#new-mail'), go = document.querySelector('#new-go'), kd = document.querySelector('#new-kind');
+              if(!nm || !ml || !go){ check('staff e-mail: the add form is there', false, 'folds ' + [...document.querySelectorAll('details[data-sfold]')].map(d => d.dataset.sfold + (d.open ? '+' : '')).join(',') + ' / view ' + activeView() + ' / tab ' + portalUi.tab); break box0; }
+              nm.value = 'בדיקת מייל'; document.querySelector('#new-last').value = 'חוזרת'; ml.value = MB.toUpperCase(); kd.value = 'therapist'; kd.dispatchEvent(new Event('change')); go.click();
+              const ok = await waitFor(() => { const b = [...document.querySelectorAll('.confirm-sheet .confirm-ok')].find(x => x.textContent === 'החזרה לרשימה'); return b || null; }, 100);
+              check('staff e-mail: an e-mail of a removed person offers to bring that person back', !!ok && /הוסר\/ה מהרשימה/.test(document.querySelector('.confirm-sheet').textContent), 'no offer');
+              if(ok){ ok.click();
+                check('staff e-mail: ... the same person is back, as the type chosen, and nobody new is added', await waitFor(async () => { const r = await sbPersonal.from('staff').select('active,kind').eq('id', mid).single(); return r.data && r.data.active && r.data.kind === 'therapist'; })
+                  && (await sbPersonal.from('staff').select('id', { count:'exact', head:true })).count === before.count, 'not back'); }
+              await waitFor(() => !!document.querySelector('#new-go'), 100);
+              const nm2 = document.querySelector('#new-name'), ml2 = document.querySelector('#new-mail'); nm2.value = 'בדיקת מייל'; document.querySelector('#new-last').value = 'שנייה'; ml2.value = MB;
+              document.querySelectorAll('.toast').forEach(x => x.remove()); document.querySelector('#new-go').click();
+              check('staff e-mail: ... and an e-mail of somebody on the list says who has it', await waitFor(() => [...document.querySelectorAll('.toast')].some(t => /כבר שייך ל/.test(t.textContent)), 100), 'no notice');
+            }
+            await sbPersonal.from('staff').update({ active:false, removed_at:new Date().toISOString(), kind:'instructor' }).eq('id', mid);          // (left removed for the next run)
+            await sbPersonal.from('coordinator_flags').update({ resolved:true }).eq('staff_id', mid).eq('resolved', false);
+          } else check('staff e-mail: the test person for the e-mail is made', false, 'not made'); }
+      portalServerOn = false;
+    });
     await step('send updates', async () => {
       portalUi.csWeekOn = false;          // (the whole month: the changed name may be in another week than the phone's default one)
       if(!PORTAL_ENABLED) return;

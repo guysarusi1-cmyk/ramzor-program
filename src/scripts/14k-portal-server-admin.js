@@ -267,6 +267,22 @@ function srvRenderCoordSettings(body){
           const name = box.querySelector('#new-name').value.trim(), last = box.querySelector('#new-last').value.trim() || null, kind = box.querySelector('#new-kind').value, mail = box.querySelector('#new-mail').value.trim().toLowerCase() || null;
           if(!name){ toast('צריך שם פרטי'); return; }
           if(!last && st.instructors.some(p => p.active && (p.first === name || String(p.first).startsWith(name + ' ')))){ toast(`כבר יש ${name} ברשימה. צריך גם שם משפחה, כדי להבדיל ביניהם.`, 6000); return; }          // (the first letter of it shows only when two have the same first name: scheduling-v61.sql)
+          if(mail){          // (an e-mail is kept once: a removed person with it is offered back, instead of "the e-mail was not saved": Guy 2026-11-08)
+            const had = await sbPersonal.from('staff_private').select('staff_id').ilike('email', mail.replace(/[\\%_]/g, '\\$&')).limit(1);
+            const hid = had.data && had.data[0] && had.data[0].staff_id;
+            if(hid){
+              const hs = await sbPersonal.from('staff').select('id,display_name,active').eq('id', hid).maybeSingle(), who = hs.data;
+              if(!who){ toast('המייל הזה כבר שמור אצל מישהו אחר במערכת'); return; }
+              if(who.active){ toast(`המייל הזה כבר שייך ל${who.display_name}, שנמצא/ת ברשימה.`, 6000); return; }
+              const kw = (kindSel.selectedOptions[0] || {}).textContent || '';
+              if(!await confirmSheet({ title:`${who.display_name} כבר היה/תה ברשימה`, text:`המייל הזה שמור אצל ${who.display_name}, שהוסר/ה מהרשימה. להחזיר לרשימה${kw ? ' בתור ' + kw : ''}? שום דבר לא נמחק, וההיסטוריה נשמרת.`, okLabel:'החזרה לרשימה' })) return;
+              const u = await sbPersonal.from('staff').update({ active:true, removed_at:null, kind }).eq('id', hid);
+              if(u.error){ toast('ההחזרה נכשלה'); return; }
+              if(kind !== 'instructor') await sbPersonal.from('staff_private').update({ is_leader:false, ahmash_rank:0, leader_priority:null, ...(kind === 'therapist' ? { is_therapist:true } : {}) }).eq('staff_id', hid);
+              await sbPersonal.from('coordinator_flags').update({ resolved:true }).eq('staff_id', hid).eq('kind', 'removed').eq('resolved', false);
+              toast(`${who.display_name} חזר/ה לרשימה. את הכניסה פותחים ב"יצירת התחברות".`, 6000); await srvReloadSafe(); again(); return;
+            }
+          }
           const maxOrder = Math.max(0, ...st.instructors.map((p, i) => i + 1));
           const s = await sbPersonal.from('staff').insert({ display_name:name, first_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
           if(s.error){ toast('ההוספה נכשלה'); return; }
