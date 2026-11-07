@@ -90,6 +90,7 @@ body[data-rlook] .bottom-nav-btn.active{ background:var(--color-primary-soft); c
 .home-bar-icons, .home-bar-words{ display:flex; align-items:center; gap:8px; }
 .home-bar .home-icon-btn, .home-bar .home-text-btn{ position:static; margin:0; }
 .home-bar .home-icon-btn{ width:44px; height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; border:1px solid var(--line); background:var(--panel); }
+.home-bar .home-icon-btn[hidden]{ display:none; }          /* (the line above must not show a hidden gear: the secretary, the manager) */
 .home-bar .home-text-btn{ min-height:44px; padding:0 10px; font-size:15px; }
 .home-control-card[hidden]{ display:none; }
 @media (min-width:701px){ .home-primary:has(> .home-control-card:not([hidden])){ grid-template-columns:repeat(3, minmax(0, 1fr)); } }

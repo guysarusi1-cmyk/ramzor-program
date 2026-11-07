@@ -3051,7 +3051,7 @@
         check('the Ramzor: no link to an instructor portal', document.getElementById('hub-portal-link').hidden, '');
         check('... on a computer "מסך ראשי" at the top right, on a phone the bar at the bottom', phone ? document.getElementById('hub-main-back').hidden : !document.getElementById('hub-main-back').hidden && document.getElementById('hub-main-back').getBoundingClientRect().right > innerWidth / 2, '');
         if(!phone){ document.getElementById('hub-main-back').click(); await sleep(150); check('... and it goes back to the first screen', active() === 'view-apphome', active()); document.getElementById('apphome-ramzor').click(); await sleep(300); }
-        check('the Ramzor opens for her, with no management and no control of the kids screen', active() === 'view-hub' && document.getElementById('hub-manage-gear').hidden && document.getElementById('hub-kids-btn').hidden, active());
+        check('the Ramzor opens for her, with no management and no control of the kids screen', active() === 'view-hub' && document.getElementById('hub-manage-gear').hidden && getComputedStyle(document.getElementById('hub-manage-gear')).display === 'none' && document.getElementById('hub-kids-btn').hidden, active());
         { const r = await sb.from('child_state').update({ stars:0 }).eq('child_id', 'none'); check('... whatever would write is stopped', !!r.error && /צפייה/.test(r.error.message), JSON.stringify(r.error)); const q = await sb.from('roster').select('id').limit(1); check('... reading works', !q.error && (q.data || []).length === 1, JSON.stringify(q.error)); }
       } finally { window.__asLive = false; document.querySelectorAll('.toast').forEach(x => x.remove()); const g = document.getElementById('hub-manage-gear'), k = document.getElementById('hub-kids-btn'); await personalLeave(); sb = sbShared || sb; if(g) g.hidden = false; if(k) k.hidden = false; showHub(); }
     });
@@ -3311,6 +3311,8 @@
         tvEvents = []; renderTimetableLive();
         check('secretary: a day without events keeps the grid of cards', el.classList.contains('tvt2') && !el.querySelector('.tta'));
         tvEvents = was; tvTimetable = tt; }
+      { const g = document.getElementById('hub-manage-gear'), was = g.hidden; g.hidden = true;
+        check('secretary: a hidden gear is really not shown (the button style must not bring it back)', getComputedStyle(g).display === 'none', getComputedStyle(g).display); g.hidden = was; }
       { const on = portalServerOn, asl = window.__asLive; window.__asLive = true; portalServerOn = true;
         check('secretary: nothing of it on live until Guy says so', !secOn() && !secEventsOk() && !secStarsOk() && secHomeCards() === '');
         window.__asLive = asl; portalServerOn = on; }
