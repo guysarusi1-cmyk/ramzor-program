@@ -783,8 +783,8 @@ html[data-contrast=high] body[data-rlook=light] .toast{
 .mgr-ttv-name, .mgr-ttv-time{ flex:none; position:relative; }
 @media (max-width:700px){ .mgr-ttv-fit .mgr-ttv-item{ min-height:0; } .mgr-ttv-fit .mgr-ttv-icon{ flex:1 1 0; height:auto; min-height:0; } .mgr-ttv-fit .mgr-ttv-icon .tvt2-emoji{ font-size:24px; line-height:1; } }
 @media (min-width:701px){ .mgr-ttv-fit .mgr-ttv{ height:auto; grid-auto-rows:auto; } .mgr-ttv{ --c:6 !important; } }
-/* the editor: hours from left to right, how often under the row */
-.ctl-tt-times{ direction:ltr; }
+/* the editor: the start on the right and the end on the left, as in every form of the timetable, mentoring and volunteering (Guy 2026-11-08); each hour reads 16:30 inside. How often: under the row */
+.ctl-tt-times{ direction:rtl; }
 .ctl-tt-rep{ grid-column:1 / -1; display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:14px; }
 .ctl-tt-rep select{ min-height:36px; padding:2px 6px; border-radius:8px; font:inherit; background:var(--color-surface, var(--panel-2)); color:var(--color-text, var(--text)); border:1px solid var(--color-border-strong, var(--line)); }
 .ctl-tt-rep input{ width:52px; min-height:36px; text-align:center; }

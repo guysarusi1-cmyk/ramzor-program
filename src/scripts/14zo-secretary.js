@@ -13,13 +13,17 @@ const secStarsOk = () => secOn() && typeof ramzorPersonal !== 'undefined' && ram
 const secEventsOk = () => secOn() && (secIsMe() || ['coordinator', 'manager'].includes(secMe().role) || !!secMe().admin);          // (the home card; an ahmash reaches them from the control, during the shift)
 
 // everything that talks to the database (the demo puts its own in: 19-demo.js)
+let secRolesDb = true;          // (false: the database has no SQL 64 yet)
+const SEC_ROLE = { mentor:'חונך', volunteer:'מתנדב' }, SEC_ROLES = { mentor:'חונכים', volunteer:'מתנדבים' };
+const secRolesOf = c => (c && Array.isArray(c.roles) && c.roles.length ? c.roles : ['mentor']);
 const secApi = {
   between:async (from, to) => { const r = await sbPersonal.rpc('tt_events_between', { p_from:from, p_to:to }); if(r.error) throw r.error; return r.data || []; },
   save:async (id, scope, day, row) => { const r = await sbPersonal.rpc('tt_event_save', { p_id:id || null, p_scope:scope, p_day:day || null, p:row }); if(r.error) throw r.error; return r.data; },
   remove:async (id, scope, day) => { const r = await sbPersonal.rpc('tt_event_remove', { p_id:id, p_scope:scope, p_day:day }); if(r.error) throw r.error; },
-  contacts:async () => { const r = await sbPersonal.from('tt_contact').select('id,name,phone').order('name'); if(r.error) throw r.error; return r.data || []; },
-  contactAdd:async c => { const r = await sbPersonal.from('tt_contact').insert(c).select('id,name,phone').single(); if(r.error) throw r.error; return r.data; },
-  contactChange:async (id, c) => { const r = await sbPersonal.from('tt_contact').update(c).eq('id', id); if(r.error) throw r.error; },
+  // (a contact's roles: mentor / volunteer / both, from SQL 64. Before it everybody counts as a mentor and nothing about roles is sent)
+  contacts:async () => { let r = await sbPersonal.from('tt_contact').select('id,name,phone,roles').order('name'); if(r.error && /roles/.test(String(r.error.message))){ secRolesDb = false; r = await sbPersonal.from('tt_contact').select('id,name,phone').order('name'); } else if(!r.error) secRolesDb = true; if(r.error) throw r.error; return (r.data || []).map(c => Object.assign({ roles:['mentor'] }, c, { roles:c.roles && c.roles.length ? c.roles : ['mentor'] })); },
+  contactAdd:async c => { const row = secRolesDb ? c : { name:c.name, phone:c.phone }; const r = await sbPersonal.from('tt_contact').insert(row).select(secRolesDb ? 'id,name,phone,roles' : 'id,name,phone').single(); if(r.error) throw r.error; return r.data; },
+  contactChange:async (id, c) => { const row = secRolesDb ? c : { name:c.name, phone:c.phone }; const r = await sbPersonal.from('tt_contact').update(row).eq('id', id); if(r.error) throw r.error; },
   contactRemove:async id => { const r = await sbPersonal.rpc('tt_contact_remove', { p_id:id }); if(r.error) throw r.error; return r.data; },
   canEdit:async () => { const r = await sbPersonal.rpc('can_edit_timetable'); return r.error ? null : !!r.data; },          // (null: the database has no v62 yet)
   stars:async () => { const r = await sb.from('child_state').select('child_id,stars'); if(r.error) throw r.error; const m = {}; (r.data || []).forEach(x => { m[x.child_id] = x.stars || 0; }); return m; },
@@ -30,7 +34,7 @@ const secApi = {
 function secHomeCards(){
   const card = (id, ico, title, sub) => `<button type="button" class="home-card" id="${id}"><span class="apphome-emoji apphome-ico">${psIco(ico)}</span><span class="home-card-title">${title}</span><span class="home-card-sub">${sub}</span></button>`;
   return (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '')
-    + (typeof kidsOk === 'function' && kidsOk() ? card('apphome-kidstv', 'tv', 'מסך הילדים', 'מה מוצג, ימי הולדת וחיבור מסכים') : '');          // (the admin only for now: Guy 2026-11-08, 14zp-tv-display.js)
+    + (typeof kidsOk === 'function' && kidsOk() ? card('apphome-kidstv', 'tv', 'מסך הילדים', 'מה מוצג, ימי הולדת וחיבור מסכים') : '');          // (the admin and the secretary: Guy 2026-11-08, 14zp-tv-display.js)
 }
 function secHomeWire(){
   { const b = document.getElementById('apphome-sectt'); if(b) b.addEventListener('click', () => showSecScreen('tt')); }
@@ -130,9 +134,9 @@ const EV_GROUP = { small:'קטנים', big:'גדולים', all:'כולם', other
 const evGroupWord = e => e.group === 'other' ? (e.group_text || 'אחר') : EV_GROUP[e.group] || '';
 const evText = e => e.kind === 'mentor' ? `חונכות ל${e.child || '?'} עם ${e.person}` : `${e.activity} עם ${e.person}`;
 const evSub = e => e.kind === 'volunteer' ? `קבוצה: ${evGroupWord(e)}` : '';
-const evRep = e => e.every_weeks ? (e.every_weeks === 1 ? 'כל שבוע' : `כל ${e.every_weeks} שבועות`) : e.monthly_nth ? 'כל חודש' : '';
+const evRep = e => e.sun_thu ? 'ראשון עד חמישי' : e.every_weeks ? (e.every_weeks === 1 ? 'כל שבוע' : `כל ${e.every_weeks} שבועות`) : e.monthly_nth ? 'כל חודש' : '';
 const evTime = e => `${e.t}${e.end ? '–' + e.end : ''}`;
-const evSeries = e => !!(e && (e.every_weeks || e.monthly_nth));
+const evSeries = e => !!(e && (e.every_weeks || e.monthly_nth || e.sun_thu));
 // one row per hour: an hour of the timetable and of an event is the same row; an event between two activities gets a row of its own, in its place;
 // what starts together stays together (the row grows, the two sides stay level)
 function ttRows(items, events){
@@ -180,8 +184,9 @@ async function evEdit(o, kind, done){
   try { contacts = await secApi.contacts(); } catch(e){ toast('דף הקשר לא נטען. אפשר לנסות שוב.'); return; }
   const k = o ? o.kind : kind, mentor = k === 'mentor', series = evSeries(o), day0 = o ? o.occ : secToday();
   let icon = (o && o.i) || (mentor ? 'reading' : 'other');
-  const rep0 = !o ? 'once' : o.monthly_nth ? 'month' : o.every_weeks === 1 ? 'week' : o.every_weeks ? 'nw' : 'once';
-  const people = sel => `<option value="">בחירה מהרשימה</option>${contacts.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${pEsc(c.name)}</option>`).join('')}<option value="new">+ איש קשר חדש</option>`;
+  const rep0 = !o ? 'once' : o.sun_thu ? 'sunthu' : o.monthly_nth ? 'month' : o.every_weeks === 1 ? 'week' : o.every_weeks ? 'nw' : 'once';
+  const fits = contacts.filter(c => secRolesOf(c).includes(k) || (o && c.id === o.contact_id));          // (mentoring: the mentors only, volunteering: the volunteers; an event keeps the contact it has: Guy 2026-11-08)
+  const people = sel => `<option value="">בחירה מהרשימה</option>${fits.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${pEsc(c.name)}</option>`).join('')}<option value="new">+ ${mentor ? 'חונך חדש' : 'מתנדב חדש'}</option>`;
   const sh = portalSheet(`<h2>${o ? 'עריכת' : 'הוספת'} ${mentor ? 'חונכות' : 'התנדבות'}</h2>
     ${mentor ? `<label class="pfield">ילד/ה<select id="ev-child"><option value="">בחירה</option>${secKids().map(c => `<option value="${c.id}"${o && o.child_id === c.id ? ' selected' : ''}>${pEsc(displayName(c))}</option>`).join('')}</select></label>`
              : `<label class="pfield">שם פעילות<input type="text" id="ev-activity" maxlength="60" value="${pEsc((o && o.activity) || '')}"></label>`}
@@ -202,8 +207,9 @@ async function evEdit(o, kind, done){
   $('ev-rep').addEventListener('change', () => { $('ev-n-wrap').hidden = $('ev-rep').value !== 'nw'; });
   $('ev-icon').addEventListener('click', () => {
     const opt = ([id, word, e]) => `<button type="button" class="ctl-icon-opt${icon === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`;
-    const p = portalSheet(`<h2>תמונה</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div><details class="ctl-icons-more"><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}</details><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
-    p.querySelectorAll('[data-icon]').forEach(b => b.addEventListener('click', () => { icon = b.dataset.icon; $('ev-icon').textContent = ttIcon(icon)[2]; p.close(); }));
+    const p = portalSheet(`<h2>תמונה</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div><details class="ctl-icons-more"${ttEmojiOk(icon) ? ' open' : ''}><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}${ttEmojiHtml(icon)}</details><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+    ttEmojiWire(p);
+    p.querySelectorAll('[data-icon]').forEach(b => b.addEventListener('click', () => { if(!b.dataset.icon) return; icon = b.dataset.icon; $('ev-icon').textContent = ttIcon(icon)[2]; p.close(); }));
   });
   $('ev-save').addEventListener('click', async () => {
     const start = ttTimeOf(sh.querySelector('[data-tt-time]')), end = ttTimeOf(sh.querySelector('[data-tt-end]')), day = $('ev-day').value, rep = $('ev-rep').value, n = Math.max(2, Math.min(12, +$('ev-n').value || 2));
@@ -220,9 +226,9 @@ async function evEdit(o, kind, done){
         const name = $('ev-new-name').value.trim(), phone = secPhone($('ev-new-phone').value);
         if(!name){ toast('כתבו את שם איש הקשר'); $('ev-new-name').focus(); return; }
         if(phone === false){ toast('מספר הטלפון לא תקין'); return; }
-        const c = await secApi.contactAdd({ name, phone }); contact = c.id;
+        const c = await secApi.contactAdd({ name, phone, roles:[k] }); contact = c.id;          // (made from this form: its role)
       }
-      const row = { kind:k, contact_id:contact, icon, day, start_time:start, end_time:end || null, every_weeks:rep === 'week' ? 1 : rep === 'nw' ? n : null, monthly_nth:rep === 'month' ? Math.ceil(parseIso(day).getDate() / 7) : null };
+      const row = { kind:k, contact_id:contact, icon, day, start_time:start, end_time:end || null, every_weeks:rep === 'week' ? 1 : rep === 'nw' ? n : null, monthly_nth:rep === 'month' ? Math.ceil(parseIso(day).getDate() / 7) : null, sun_thu:rep === 'sunthu' };          // (ראשון עד חמישי: SQL 64)
       if(mentor) row.child_id = $('ev-child').value; else Object.assign(row, { activity:$('ev-activity').value.trim(), group_kind:$('ev-group').value, group_text:$('ev-group').value === 'other' ? $('ev-group-text').value.trim() || null : null });
       await secApi.save(o ? o.id : null, scope, o ? o.occ : null, row);
     } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
@@ -243,8 +249,11 @@ async function renderSecContacts(body){
   let list;
   try { list = await secApi.contacts(); } catch(e){ body.innerHTML = '<div class="pstatus bad">דף הקשר לא נטען. אפשר לנסות שוב.</div>'; return; }
   if(!body.isConnected) return;
+  // two groups, folded when the page opens: the mentors and the volunteers; somebody who is both is in both (Guy 2026-11-08)
+  const one = c => `<div class="sec-contact"><button type="button" class="sec-contact-main" data-contact="${c.id}"><b>${pEsc(c.name)}</b>${c.phone ? `<small><bdi dir="ltr">${pEsc(formatPhone(c.phone))}</bdi></small>` : '<small>אין טלפון</small>'}</button>${secPhone(c.phone) ? `<a class="btn ghost small" href="${secWa(c.phone)}" target="_blank" rel="noopener">וואטסאפ</a>` : ''}</div>`;
+  const group = r => { const l = list.filter(c => secRolesOf(c).includes(r)); return `<details class="pfold sec-cgroup" data-cgroup="${r}"><summary><span>${SEC_ROLES[r]} <small class="pcount">${l.length}</small></span></summary><div class="pfold-body"><div class="sec-contacts">${l.map(one).join('') || `<div class="pnote">עוד אין ${SEC_ROLES[r]}.</div>`}</div></div></details>`; };
   body.innerHTML = `<div class="sec-add"><button type="button" class="btn small" id="sec-contact-new">+ איש קשר</button></div>
-    <div class="sec-contacts">${list.map(c => `<div class="sec-contact"><button type="button" class="sec-contact-main" data-contact="${c.id}"><b>${pEsc(c.name)}</b>${c.phone ? `<small><bdi dir="ltr">${pEsc(formatPhone(c.phone))}</bdi></small>` : '<small>אין טלפון</small>'}</button>${secPhone(c.phone) ? `<a class="btn ghost small" href="${secWa(c.phone)}" target="_blank" rel="noopener">וואטסאפ</a>` : ''}</div>`).join('') || '<div class="pnote">עוד אין אנשי קשר.</div>'}</div>`;
+    ${list.length ? `<div class="sec-cgroups">${group('mentor')}${group('volunteer')}</div>` : '<div class="pnote">עוד אין אנשי קשר.</div>'}`;
   const again = () => renderSecContacts(body);
   body.querySelector('#sec-contact-new').addEventListener('click', () => secContactSheet(null, again));
   body.querySelectorAll('[data-contact]').forEach(b => b.addEventListener('click', () => secContactSheet(list.find(c => c.id === b.dataset.contact), again)));
@@ -253,14 +262,18 @@ function secContactSheet(c, done){
   const sh = portalSheet(`<h2>${c ? 'עריכת איש קשר' : 'איש קשר חדש'}</h2>
     <label class="pfield">שם<input type="text" id="sc-name" maxlength="80" value="${pEsc((c && c.name) || '')}"></label>
     <label class="pfield">טלפון<input type="tel" id="sc-phone" maxlength="20" dir="ltr" value="${pEsc((c && c.phone && formatPhone(c.phone)) || '')}"></label>
+    ${secRolesDb ? `<div class="pfield"><span>תפקיד (אפשר את שניהם)</span><div class="pchoice sec-roles">${Object.keys(SEC_ROLE).map(r => `<button type="button" data-role="${r}" aria-pressed="${!!(c ? secRolesOf(c).includes(r) : r === 'mentor')}">${SEC_ROLE[r]}</button>`).join('')}</div></div>` : ''}
     ${c ? '<div class="pnote">שינוי כאן יחול בכל החונכויות וההתנדבויות של איש הקשר.</div>' : ''}
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="sc-save">שמירה</button></div>
     ${c ? '<button type="button" class="btn ghost danger sec-ev-del" id="sc-del">הסרה</button>' : ''}`);
+  sh.querySelectorAll('[data-role]').forEach(b => b.addEventListener('click', () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'))));
   sh.querySelector('#sc-save').addEventListener('click', async () => {
     const name = sh.querySelector('#sc-name').value.trim(), phone = secPhone(sh.querySelector('#sc-phone').value);
+    const roles = [...sh.querySelectorAll('[data-role][aria-pressed="true"]')].map(b => b.dataset.role);
     if(!name){ toast('כתבו שם'); return; }
     if(phone === false){ toast('מספר הטלפון לא תקין'); return; }
-    try { if(c) await secApi.contactChange(c.id, { name, phone }); else await secApi.contactAdd({ name, phone }); } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
+    if(secRolesDb && !roles.length){ toast('בחרו חונך, מתנדב או את שניהם'); return; }
+    try { if(c) await secApi.contactChange(c.id, { name, phone, roles }); else await secApi.contactAdd({ name, phone, roles }); } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
     sh.close(); toast('נשמר'); ttNudgeTv(); done();
   });
   if(c) sh.querySelector('#sc-del').addEventListener('click', async () => {

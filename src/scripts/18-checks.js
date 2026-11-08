@@ -3403,9 +3403,48 @@
           const list = birthdaysToday(); PORTAL_TV_LIVE = live; tvBirthdays = b;
           check('kids screen: the real screen shows only the birthdays of the list, with the age', !roster[0] || (list.length === 1 && list[0].b.age === 9 && list[0].child.id === roster[0].id), JSON.stringify(list.map(x => x.b))); }
         { const on = portalServerOn, asl = window.__asLive; window.__asLive = true; portalServerOn = true;
-          check('kids screen: on live the card follows the admin flag only (Guy 2026-11-08)', kidsOk() === (!!secMe().admin || !!(srv.profile && srv.profile.admin)));
+          check('kids screen: on live the card is the admin\'s and the secretary\'s (Guy 2026-11-08)', kidsOk() === (!!secMe().admin || !!(srv.profile && srv.profile.admin) || secIsMe()));
           window.__asLive = asl; portalServerOn = on; }
       } finally { tvdOffSet = was; }
+    });
+    await step('secretary round', async () => {          // (Alex card 59b4f012, Guy 2026-11-08; the database side was checked on a local Postgres, scheduling-v64.sql)
+      check('emoji: only an emoji is kept or drawn', ttEmojiOk('👨‍👩‍👧‍👦') && ttEmojiOk('👍🏽') && ttEmojiOk('🇮🇱') && ttEmojiOk('1️⃣') && !ttEmojiOk('<b>') && !ttEmojiOk('1') && !ttEmojiOk('שלום') && !ttEmojiOk('🎂<img src=x>'));
+      check('emoji: the first one of what was pasted', ttEmojiOf(' 🇮🇱 שלום') === '🇮🇱' && ttEmojiOf('👍🏽x') === '👍🏽' && ttEmojiOf('abc') === '');
+      check('emoji: drawn as it is, and anything else stays the star', ttIcon('🎂')[2] === '🎂' && ttIcon('🎂')[1] === 'עוגת יום הולדת' && ttIcon('<img src=x>')[2] === '⭐' && ttIcon('wake')[2] === '⏰');
+      check('emoji: the list is about 400, in subjects, every one an emoji', TT_EMOJI_ALL.length >= 380 && TT_EMOJI.length >= 10 && TT_EMOJI_ALL.every(([e]) => ttEmojiOk(e)), TT_EMOJI_ALL.filter(([e]) => !ttEmojiOk(e)).map(x => x[0]).join(' '));
+      { const box = document.createElement('div'); box.innerHTML = ttEmojiHtml('🍕'); document.body.appendChild(box); ttEmojiWire(box);
+        const q = box.querySelector('.emj-search'); q.value = 'פיצה'; q.dispatchEvent(new Event('input'));
+        const shown = [...box.querySelectorAll('.emj-opt')].filter(b => !b.hidden && !b.closest('[hidden]')).map(b => b.dataset.icon);
+        const t = box.querySelector('.emj-type'), use = box.querySelector('.emj-use'); t.value = '🦖'; t.dispatchEvent(new Event('input')); const a = use.dataset.icon, ad = use.disabled;
+        t.value = '<b>'; t.dispatchEvent(new Event('input')); const bd = use.disabled; box.remove();
+        check('emoji: the search in Hebrew finds it', shown.includes('🍕'), shown.join(''));
+        check('emoji: typed from the keyboard is chosen, other letters are not', a === '🦖' && !ad && bd); }
+      check('how often: every Sunday to Thursday is offered', TT_REP.some(r => r[0] === 'sunthu'));
+      check('how often: Sunday to Thursday, never Friday or Saturday', ttOn({ rep:{ k:'sunthu' } }, '2026-11-08') && ttOn({ rep:{ k:'sunthu' } }, '2026-11-12') && !ttOn({ rep:{ k:'sunthu' } }, '2026-11-13') && !ttOn({ rep:{ k:'sunthu' } }, '2026-11-14'));
+      check('how often: an event of Sunday to Thursday is a series, with its words', evSeries({ sun_thu:true }) && evRep({ sun_thu:true }) === 'ראשון עד חמישי');
+      check('contacts: no role yet counts as a mentor', secRolesOf({}).join() === 'mentor' && secRolesOf({ roles:['volunteer'] }).join() === 'volunteer');
+      const realC = secApi.contacts;
+      secApi.contacts = async () => [{ id:'a', name:'חונך', phone:null, roles:['mentor'] }, { id:'b', name:'מתנדבת', phone:null, roles:['volunteer'] }, { id:'c', name:'שניהם', phone:null, roles:['mentor', 'volunteer'] }];
+      try {
+        { const body = document.createElement('div'); document.body.appendChild(body); await renderSecContacts(body);
+          const g = r => [...body.querySelectorAll(`[data-cgroup="${r}"] .sec-contact-main b`)].map(b => b.textContent).join();
+          check('contacts: two groups, folded, somebody who is both is in both', body.querySelectorAll('details[data-cgroup]').length === 2 && ![...body.querySelectorAll('details[data-cgroup]')].some(d => d.open) && g('mentor') === 'חונך,שניהם' && g('volunteer') === 'מתנדבת,שניהם', g('mentor') + ' / ' + g('volunteer'));
+          body.remove(); }
+        const names = () => [...document.querySelectorAll('#ev-person option')].map(o => o.textContent);
+        const close = () => { const s = document.querySelector('#ev-person'); const d = s && s.closest('dialog'); if(d){ d.close ? d.close() : d.remove(); } document.querySelectorAll('#ev-person').forEach(x => { const d2 = x.closest('.psheet, dialog'); if(d2) d2.remove(); }); };
+        await evEdit(null, 'mentor', () => {}); const m = names();
+        const sheet = document.querySelector('.sec-times'), st = sheet && sheet.querySelector('[data-tt-time]').getBoundingClientRect(), en = sheet && sheet.querySelector('[data-tt-end]').getBoundingClientRect();
+        close();
+        await evEdit(null, 'volunteer', () => {}); const v = names(); close();
+        await evEdit({ id:'x', occ:'2026-11-08', kind:'volunteer', contact_id:'a', activity:'ציור', group:'all', t:'10:00', i:'art' }, null, () => {}); const old = names(); close();
+        check('contacts: mentoring picks from the mentors only', m.join() === 'בחירה מהרשימה,חונך,שניהם,+ חונך חדש', m.join());
+        check('contacts: volunteering picks from the volunteers only', v.join() === 'בחירה מהרשימה,מתנדבת,שניהם,+ מתנדב חדש', v.join());
+        check('contacts: an event keeps the contact it has', old.includes('חונך'), old.join());
+        check('hours: the start on the right, the end on the left', !!st && (st.top < en.top - 4 || st.left > en.left), st && [st.left, en.left, st.top, en.top].map(Math.round).join());
+      } finally { secApi.contacts = realC; }
+      { const box = document.createElement('div'); box.className = 'ctl-tt-times'; box.innerHTML = ttTimeHtml('16:00', 0) + '<span>–</span>' + ttTimeHtml('17:00', 0, true); document.body.appendChild(box);
+        const a = box.querySelector('[data-tt-time]').getBoundingClientRect(), b = box.querySelector('[data-tt-end]').getBoundingClientRect(); box.remove();
+        check('hours: in the timetable editor too, the start on the right', a.left > b.left || a.top < b.top - 4, [a.left, b.left].map(Math.round).join()); }
     });
     await step('learn', async () => {
       if(!PORTAL_ENABLED) return;

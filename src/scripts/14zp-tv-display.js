@@ -178,9 +178,9 @@ async function renderBirthdays(box){
 // ---- the admin's "מסך הילדים" card on the home screen (Guy 2026-11-08): everything about controlling the kids' screen, in folded parts, one open at a time.
 //   1. what the screen shows now + a child's summary (the same card the instructors have in the Ramzor, moved here while this part is open)
 //   2. what is shown on the screen (the switches)   3. the birthdays   4. the screens in the room (also in the coordinator's settings)
-// The admin only for now; the secretary's place for the birthdays, the timetable and the duties comes in a later version.
+// The admin and the secretary (Guy 2026-11-08, scheduling-v64.sql).
 if(typeof PS_ICON !== 'undefined' && !PS_ICON.tv) PS_ICON.tv = 'M3 5.5h18v11.5H3zM8.5 21h7M12 17v4';
-const kidsOk = () => typeof secOn === 'function' && secOn() && (!!secMe().admin || !!(srv.profile && srv.profile.admin));
+const kidsOk = () => typeof secOn === 'function' && secOn() && (!!secMe().admin || !!(srv.profile && srv.profile.admin) || secIsMe());          // (the secretary too, all of it: Guy 2026-11-08, Alex card 59b4f012; the database agrees from SQL 64)
 const KIDS_PARTS = [
   ['remote', 'מה המסך מציג עכשיו', 'בחירת לוח, השהיה, תצוגה מקדימה וסיכום לילד'],
   ['show', 'מה מוצג במסך', 'להסתיר מסכים וחלקים, או להחזיר אותם'],

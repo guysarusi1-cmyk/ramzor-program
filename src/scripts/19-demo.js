@@ -2,7 +2,7 @@
 // the secretary's screens with example data, kept in memory only: nothing here reaches the database
 function secDemoStore(){
   const today = secToday(), sun = addDays(today, -dowOf(today));
-  const contacts = [{ id:'k1', name:'חונך לדוגמה', phone:'0501234567' }, { id:'k2', name:'מתנדבת לדוגמה', phone:null }];
+  const contacts = [{ id:'k1', name:'חונך לדוגמה', phone:'0501234567', roles:['mentor'] }, { id:'k2', name:'מתנדבת לדוגמה', phone:null, roles:['volunteer'] }, { id:'k3', name:'גם וגם לדוגמה', phone:'0521112233', roles:['mentor', 'volunteer'] }];
   const kid = (roster[0] || {}), kid2 = (roster[1] || kid);
   const evs = [
     { id:'e1', kind:'mentor', child_id:kid.id, child:kid.id ? displayName(kid) : 'ילד לדוגמה', contact_id:'k1', person:'חונך לדוגמה', i:'reading', t:'16:00', end:'17:00', every_weeks:1 },
@@ -12,11 +12,11 @@ function secDemoStore(){
   ];
   const stars = {}; roster.forEach((c, i) => { stars[c.id] = (i * 3) % 11; });
   Object.assign(secApi, {
-    between:async (from, to) => { const out = []; for(let d = from; d <= to; d = addDays(d, 1)) evs.forEach(e => { const once = !e.every_weeks; if(once ? d === (e.day || today) : dowOf(d) === dowOf(e.day || today)) out.push(Object.assign({}, e, { occ:d, day:e.day || today })); }); return out; },
-    save:async (id, scope, day, r) => { const row = { id:id || 'n' + Date.now(), kind:r.kind, child_id:r.child_id, child:r.child_id ? displayName(roster.find(c => c.id === r.child_id)) : null, activity:r.activity, group:r.group_kind, group_text:r.group_text, contact_id:r.contact_id, person:(contacts.find(c => c.id === r.contact_id) || {}).name, i:r.icon, t:r.start_time, end:r.end_time, every_weeks:r.every_weeks, monthly_nth:r.monthly_nth, day:r.day };
+    between:async (from, to) => { const out = []; for(let d = from; d <= to; d = addDays(d, 1)) evs.forEach(e => { const once = !e.every_weeks && !e.sun_thu; if(e.sun_thu ? d >= (e.day || today) && dowOf(d) <= 4 : once ? d === (e.day || today) : dowOf(d) === dowOf(e.day || today)) out.push(Object.assign({}, e, { occ:d, day:e.day || today })); }); return out; },
+    save:async (id, scope, day, r) => { const row = { id:id || 'n' + Date.now(), kind:r.kind, child_id:r.child_id, child:r.child_id ? displayName(roster.find(c => c.id === r.child_id)) : null, activity:r.activity, group:r.group_kind, group_text:r.group_text, contact_id:r.contact_id, person:(contacts.find(c => c.id === r.contact_id) || {}).name, i:r.icon, t:r.start_time, end:r.end_time, every_weeks:r.every_weeks, monthly_nth:r.monthly_nth, sun_thu:!!r.sun_thu, day:r.day };
       const at = evs.findIndex(e => e.id === id); if(at >= 0) evs[at] = row; else evs.push(row); return row.id; },
     remove:async id => { const at = evs.findIndex(e => e.id === id); if(at >= 0) evs.splice(at, 1); },
-    contacts:async () => contacts.slice(),
+    contacts:async () => { secRolesDb = true; return contacts.slice(); },          // (the example data has the roles of SQL 64)
     contactAdd:async c => { const n = Object.assign({ id:'k' + Date.now() }, c); contacts.push(n); return n; },
     contactChange:async (id, c) => { Object.assign(contacts.find(x => x.id === id), c); evs.filter(e => e.contact_id === id).forEach(e => { e.person = c.name; }); },
     contactRemove:async id => { const ahead = evs.filter(e => e.contact_id === id); if(ahead.length) return { ok:false, ahead:ahead.map(e => Object.assign({ day:today }, e)) }; contacts.splice(contacts.findIndex(c => c.id === id), 1); return { ok:true }; },
