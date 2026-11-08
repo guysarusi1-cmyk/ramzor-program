@@ -261,6 +261,11 @@
   .pnote-soft{ border-right:3px solid var(--gold); padding-right:10px; }
   .pfb{ margin:10px 0; padding:12px; border:1px solid var(--p-line); border-radius:14px; background:var(--p-panel); line-height:1.6; white-space:pre-line; }
   /* a shift nobody marked is neutral: grey and dashed, until the person says yes / can / no */
+  /* the preferences in colours: a chosen shift or day is FILLED with its colour, not only framed (Guy 2026-11-08). The letters take the soft colour of the
+     same theme, so they are dark on the dark theme's light colours and light on the light theme's dark ones */
+  :is(.pcal, .pweek):not(.plain) :is(.pshift, .plong).lv-yes{ background:var(--p-yes, #7be0a0); color:var(--p-yes-bg, #123322); border-color:var(--p-yes, #7be0a0) !important; font-weight:800; }
+  :is(.pcal, .pweek):not(.plain) :is(.pshift, .plong).lv-avoid{ background:var(--p-can, #8ec0ff); color:var(--p-can-bg, #14263f); border-color:var(--p-can, #8ec0ff) !important; font-weight:800; }
+  :is(.pcal, .pweek):not(.plain) :is(.pshift, .plong).lv-no{ background:var(--p-no, #ff8a80); color:var(--p-no-bg, #3a1a18); border-color:var(--p-no, #ff8a80) !important; font-weight:800; }
   .pshift.lv-neutral, .plong.lv-neutral{ background:transparent; color:var(--p-muted); border:1px dashed var(--p-line); font-weight:600; }
   /* the long weekend: one button under the Friday and the Saturday, with a sub-title; "only one of these" sits below it */
   .plong-row{ grid-column:6 / 8; display:flex; flex-wrap:wrap; gap:4px; align-items:stretch; margin:-2px 0 6px; padding:3px; border:1px dashed var(--gold); border-top:none; border-radius:0 0 10px 10px; }          /* (a slim bridge under the two days) */
