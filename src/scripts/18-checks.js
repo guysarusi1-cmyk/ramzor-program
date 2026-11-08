@@ -353,6 +353,7 @@
 
     // ---- the ship's own stunt on the board: out to the front of the screen, then back to its new spot
     await step('stunt flight', async () => {
+      if(typeof TVD_GONE !== 'undefined' && TVD_GONE.includes(7)){ check('the stunt flight waits: the word-planet board is off for now (Guy 2026-11-08)', SLIDES[7].hidden); return; }
       activateDisplayView(); stopCarousel();
       await showSlide(7); await sleep(300);
       const kid = 'c7', now = (await getChildState(kid)).mercurySteps;   // c7 is on step 6 in the test data
@@ -1296,7 +1297,7 @@
       // an instructor who is also the admin: a third card, the management portal (the coordinator's view, titled "פורטל ניהול")
       srv.meRow.admin = true; showAppHome();
       { const ids = [...document.querySelectorAll('#view-apphome .home-card')].map(b => b.id);
-        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 7 : 6) && ids.includes('apphome-secev') && ids.includes('apphome-oncall') && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
+        check('personal sign-in: an instructor who is the admin gets four cards (Ramzor, his instructor portal, "לומדה" right before the management portal) + the therapy portal', !!document.getElementById('apphome-manage') && ids.length === (therapyAvailable() ? 8 : 7) && ids.includes('apphome-secev') && ids.includes('apphome-kidstv') && ids.includes('apphome-oncall') && ids.indexOf('apphome-learn') === ids.indexOf('apphome-manage') - 1, ids.join(',')); }
       { const other = portalLoad().instructors.find(p => p.active && p.role === 'instructor' && p.id !== srv.me);
         portalUi.viewAs = other.id; portalUi.persona = other.id; portalUi.editPrefs = true;
         check('admin fills preferences: the screen writes the other person\'s preferences, only the preferences tab, also after the closing time', srvWho() === other.id && srvTabs(portalMe()).map(x => x[0]).join(',') === 'prefs' && srvPrefsOpen('2020-01'), [srvWho(), srvTabs(portalMe()).map(x => x[0]).join(',')].join(' / '));
@@ -3026,7 +3027,8 @@
         // the timetable
         portalUi.tab = 'timetable'; showPortal('timetable'); await sleep(900);
         const ttr = await sbPersonal.rpc('tv_timetable_today'), n = ((ttr.data || {}).items || []).length;
-        check('the timetable: "לו"ז" and "עריכה", and the day as on the kids screen', document.querySelectorAll('[data-mtt]').length === 2 && document.querySelectorAll('.mgr-ttv-item').length === n, `${document.querySelectorAll('.mgr-ttv-item').length} / ${n}`);
+        const shownN = document.querySelectorAll('.mgr-ttv-item').length || document.querySelectorAll('.tta-main .tta-item').length;          // (a day with mentoring or volunteering: the aligned rows)
+        check('the timetable: "לו"ז" and "עריכה", and the day as on the kids screen', document.querySelectorAll('[data-mtt]').length === 2 && shownN === n, `${shownN} / ${n}`);
         if(phone){ await sleep(200); const clip = [...document.querySelectorAll('.mgr-ttv-name, .mgr-ttv-time')].filter(x => x.getBoundingClientRect().bottom > x.closest('.mgr-ttv-item').getBoundingClientRect().bottom + 1 || x.scrollWidth > x.clientWidth + 1), nav = document.querySelector('.bottom-nav'), last = [...document.querySelectorAll('.mgr-ttv-item')].pop();
           check('... on a phone: all of it on the screen, no scrolling, nothing cut', document.documentElement.scrollWidth <= innerWidth + 1 && !clip.length && (!last || last.getBoundingClientRect().bottom <= (nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : innerHeight) + 1), `${clip.length} cut`); }
         { const it = [...document.querySelectorAll('.mgr-ttv-item')].slice(0, 4), bad = it.filter(x => x.querySelector('.mgr-ttv-name').getBoundingClientRect().top < x.querySelector('.mgr-ttv-icon').getBoundingClientRect().bottom - 1 || [...x.querySelectorAll('.mgr-ttv-icon *')].some(e => e.getBoundingClientRect().bottom > x.querySelector('.mgr-ttv-name').getBoundingClientRect().top + 1)); check('... the words under the picture, the picture inside its frame', !bad.length, String(bad.length)); }
@@ -3225,7 +3227,7 @@
       const s = await signInRetry('coordinator-test@merkaz-cherum.local', '@config(testPersonalPassword)');
       if(!s.error){
         await sbPersonal.from('timetable_day').upsert({ day:today, items:[{ t:earlier, n:'פעילות בדיקה', i:'art' }, { t:later, n:'עוד פעילות', i:'park' }] });
-        await loadTvToday(true); await showSlide(10);
+        await loadTvToday(true); const evWas = tvEvents; tvEvents = []; await showSlide(10); tvEvents = evWas;          // (the day without mentoring: whatever the test data has today)
         check('tv today: the timetable shows the activities with a big picture in the middle, the current one lit', document.querySelectorAll('#tv-timetable .tvt2-item').length === 2 && document.querySelectorAll('#tv-timetable .tvt2-icon').length === 2 && (!!document.querySelector('#tv-timetable .tvt2-item.now') || n.getHours() === 0), document.querySelectorAll('#tv-timetable .tvt2-item').length);
         await sbPersonal.from('timetable_day').delete().eq('day', today); await sbPersonal.auth.signOut();
       } else check('tv today: the coordinator test account signs in', false, s.error.message);
