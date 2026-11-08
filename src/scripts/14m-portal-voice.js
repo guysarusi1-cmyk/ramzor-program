@@ -166,7 +166,7 @@ async function srvSaveSimplePrefs(patch){
 }
 function openPortalSettings(){
   const coord = leopardAllowed(), leo = coord && portalThemeNow() === 'leopard';          // (the leopard look: exclusive — the coordinator, the admin, and whom the admin chose; never the default)          // (the leopard look: only the coordinator's portal)
-  const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){ return '0'; } })();          // ('0' usual, '1' large, '2' very large)
+  const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { const v = localStorage.getItem('ramzor-portal-big') || '0'; return v === '2' ? '1' : v; } catch(e){ return '0'; } })();          // ('0' usual, '1' large; the very large one is gone from the settings: Guy 2026-11-08)
   const role = srv.meRow ? srv.meRow.role : '', isInstr = role === 'instructor', remOn = ['instructor', 'service'].includes(role);
   const ps = srv.prefStart || '', PS = { '':'הכל לא סומן', yes:'הכל "כן"', no:'הכל "לא"' };
   const gf = portalUi.gearFold = portalUi.gearFold || {};
@@ -183,7 +183,7 @@ function openPortalSettings(){
     ${remOn ? `<h3 class="psec">תזכורות במייל להגשת ההעדפות</h3>
     <div class="pchoice wrap"><button type="button" class="${srv.reminders === false ? '' : 'on'}" data-set-rem="1">לקבל תזכורות</button><button type="button" class="${srv.reminders === false ? 'on' : ''}" data-set-rem="0">בלי תזכורות</button></div>` : ''}`)}
     ${fold('look', 'מראה', lookNow, `<div class="pchoice wrap"><button type="button" class="${dark && !leo ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark || leo ? '' : 'on'}" data-set-theme="light">מצב בהיר</button>${coord ? `<button type="button" class="${leo ? 'on' : ''}" data-set-theme="leopard">מצב מנומר 🐆</button>` : ''}</div>
-    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button><button type="button" class="${big === '2' ? 'on' : ''}" data-set-big="2">טקסט גדול מאוד</button></div>`)}
+    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button></div>`)}
     ${isInstr ? fold('prefs', 'ההעדפות שלי', PS[ps], `<h3 class="psec">איך מתחילות ההעדפות בכל חודש?</h3>
     <div class="pchoice wrap pref-start">${Object.keys(PS).map(k => `<button type="button" class="${ps === k ? 'on' : ''}" data-pref-start="${k}">${PS[k]}</button>`).join('')}</div>
     <div class="pnote">כשנפתח חודש חדש, כל המשמרות מסומנות אצלך כך מההתחלה, ומשנים רק את מה שצריך. ההעדפות הקבועות שלך נשארות "לא".</div>
@@ -330,7 +330,7 @@ function openChangePassword(){
   sh.querySelector('#chpw-new2').addEventListener('keydown', e => { if(e.key === 'Enter') save.click(); });
 }
 function applyPortalSize(){
-  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}
+  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; if(big === '2'){ big = '1'; localStorage.setItem('ramzor-portal-big', '1'); } } catch(e){}          // (who had "טקסט גדול מאוד" gets "טקסט גדול": Guy 2026-11-08)
   document.body.classList.toggle('portal-big', big === '1');
   document.body.classList.toggle('portal-huge', big === '2');
 }

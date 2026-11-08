@@ -2844,7 +2844,7 @@
           { const t = [...document.querySelectorAll('.portal-tabs [data-ptab]')].map(b => b.getBoundingClientRect()), nav = document.querySelector('.portal-tabs').getBoundingClientRect(); check('the tabs on a computer are spread over the line', t.length >= 5 && Math.max(...t.map(r => r.right)) - Math.min(...t.map(r => r.left)) > nav.width * .9, `${t.length}`); }
           portalUi.csOpen = true; showPortal('schedule'); await sleep(500);
           { const sd = document.querySelector('.cs-side'), so = document.querySelector('.cs-sort-btn'); check('the panel: "לפי מספר משמרות", and in the usual text no scroll inside it', /לפי מספר משמרות/.test(so.textContent) && sd.scrollHeight <= sd.clientHeight + 2, `${sd.scrollHeight} / ${sd.clientHeight}`);
-            try { localStorage.setItem('ramzor-portal-big', '2'); } catch(e){} applyPortalSize(); await sleep(200); sd.scrollIntoView({ block:'start' }); await sleep(120); csSideFit(); await sleep(60); sd.scrollTop = 1e6; await sleep(60); const r = sd.getBoundingClientRect(); check('... in very large text it scrolls to its very end, inside the screen', r.bottom <= innerHeight + 1 && Math.abs(sd.scrollTop + sd.clientHeight - sd.scrollHeight) < 3, `${r.bottom} / ${innerHeight}`); try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); portalUi.csOpen = false; }
+            try { localStorage.setItem('ramzor-portal-big', '1'); } catch(e){} applyPortalSize(); await sleep(200); sd.scrollIntoView({ block:'start' }); await sleep(120); csSideFit(); await sleep(60); sd.scrollTop = 1e6; await sleep(60); const r = sd.getBoundingClientRect(); check('... in very large text it scrolls to its very end, inside the screen', r.bottom <= innerHeight + 1 && Math.abs(sd.scrollTop + sd.clientHeight - sd.scrollHeight) < 3, `${r.bottom} / ${innerHeight}`); try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize(); portalUi.csOpen = false; }
           return;
         }
         check('the admin on a phone has all the tabs, the coordinator three', srvTabs(Object.assign({}, portalMe(), { admin:true })).length > 4 && srvTabs(Object.assign({}, portalMe(), { admin:false })).length === 3, '');
@@ -2899,7 +2899,10 @@
         // a tap on a shift still opens it, with its actions
         { const c = document.querySelector('.mcal-wrows .mcal-cell.editable'); await sleep(600); c.click(); await sleep(350); check('a tap on a shift opens it as before', !!document.querySelector('.psheet'), ''); document.querySelectorAll('.psheet').forEach(x => x.remove()); }
         // the tabs in large text
-        for(const big of ['1', '2']){
+        { try { localStorage.setItem('ramzor-portal-big', '2'); } catch(e){} applyPortalSize();
+          let v = null; try { v = localStorage.getItem('ramzor-portal-big'); } catch(e){}
+          check('who had "טקסט גדול מאוד" gets "טקסט גדול" (Guy 2026-11-08)', v === '1' && document.body.classList.contains('portal-big') && !document.body.classList.contains('portal-huge'), v); }
+        for(const big of ['1']){
           try { localStorage.setItem('ramzor-portal-big', big); } catch(e){} applyPortalSize(); await sleep(250);
           const c = document.querySelector('.portal-tabs .ptab-count'), was = c ? c.textContent : ''; if(c) c.textContent = '125'; await sleep(60);
           const tabs = [...document.querySelectorAll('.portal-tabs [data-ptab]')].filter(b => b.getClientRects().length), rs = tabs.map(b => b.getBoundingClientRect()), nav = document.querySelector('.portal-tabs');
@@ -2934,7 +2937,7 @@
           try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
           const set = document.querySelector('[data-th-tab="settings"]'); if(set){ set.click(); await sleep(400); } else { thp.tab = 'settings'; thpRender(); await sleep(300); }
           const bs = [...document.querySelectorAll('[data-th-big]')];
-          check('the therapist settings: the three sizes, "רגיל" until she chooses', bs.map(b => b.textContent).join('|') === 'טקסט רגיל|טקסט גדול|טקסט גדול מאוד' && bs[0].classList.contains('on'), bs.length);
+          check('the therapist settings: two sizes (no very large one: Guy 2026-11-08), "רגיל" until she chooses', bs.map(b => b.textContent).join('|') === 'טקסט רגיל|טקסט גדול' && bs[0].classList.contains('on'), bs.length);
           if(bs[1]){ bs[1].click(); await sleep(300); check('... a choice takes hold and stays', document.body.classList.contains('portal-big') && localStorage.getItem('ramzor-portal-big') === '1' && document.querySelector('[data-th-big="1"]').classList.contains('on'), '');
             const wide = document.documentElement.scrollWidth > innerWidth + 1; check('... nothing wider than the screen', !wide, String(document.documentElement.scrollWidth)); }
           try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
@@ -3145,11 +3148,11 @@
         await sbPersonal.auth.signOut();
         const { error } = await signInRetry(kind + '-test@merkaz-cherum.local', PW);
         if(error || !(await personalEnter())){ check(`very large text (${kind}): signs in`, false, error ? error.message : 'no'); continue; }
-        try { localStorage.setItem('ramzor-portal-big', '2'); } catch(e){} applyPortalSize();
+        try { localStorage.setItem('ramzor-portal-big', '1'); } catch(e){} applyPortalSize();
         if(activeView() === 'view-apphome') (document.getElementById('apphome-portal') || document.getElementById('apphome-manage')).click();
         await waitFor(() => activeView() === 'view-portal' && !/טוען/.test(document.getElementById('portal-body').textContent), 60);
         const bad = [];
-        if(getComputedStyle(document.querySelector('.portal-shell')).zoom < 1.45) bad.push('not enlarged');
+        if(getComputedStyle(document.querySelector('.portal-shell')).zoom < 1.2) bad.push('not enlarged');          // ("טקסט גדול": the very large one left the settings, Guy 2026-11-08)
         for(const tab of [...document.querySelectorAll('[data-ptab]')].map(b => b.dataset.ptab)){
           document.querySelector(`[data-ptab="${tab}"]`).click(); await sleep(60); await waitFor(() => !/טוען/.test(document.getElementById('portal-body').textContent) && !!document.getElementById('portal-body').textContent, 60);
           { const w = wider(); if(w) bad.push(tab + ': ' + w); }

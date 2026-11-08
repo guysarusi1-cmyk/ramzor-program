@@ -38,7 +38,7 @@ function showAppHome(){
   document.body.classList.toggle('leopard-bg', look === 'leopard');
   document.getElementById('view-apphome').innerHTML = `
     <div class="apphome mx-home" data-ptheme="${look}">
-      <div class="apphome-top"><div class="mx-brand-wrap mx-brand-small"><div class="mx-brand-logo" role="img" aria-label="Mercury"></div><div class="eyebrow-gold mx-brand">Mercury 1.2</div></div><button type="button" class="home-text-btn" id="apphome-logout">יציאה</button></div>
+      <div class="apphome-top"><div class="mx-brand-wrap mx-brand-small"><div class="mx-brand-logo" role="img" aria-label="Mercury"></div><div class="eyebrow-gold mx-brand">Mercury 1.2</div></div><span class="apphome-top-end"><button type="button" class="home-text-btn" id="apphome-logout">יציאה</button><button type="button" class="apphome-theme" id="apphome-theme" aria-label="${look === 'light' ? 'מעבר למצב כהה' : 'מעבר למצב בהיר'}" title="${look === 'light' ? 'מצב כהה' : 'מצב בהיר'}">${look === 'light' ? '🌙' : '☀️'}</button></span></div>
       <h1 class="apphome-title">מה תרצו לפתוח?</h1>
       <div class="apphome-cards">
         ${portalServerOn ? `<div class="apphome-hello">שלום ${pEsc((portalMe() || {}).first || '')}</div>` : ''}
@@ -97,6 +97,16 @@ function showAppHome(){
   { const ln = document.getElementById('apphome-learn'); if(ln) ln.addEventListener('click', showLearnHome); }          // (the admin's training videos, 14zh-learn.js)
   const mg = document.getElementById('apphome-manage'); if(mg) mg.addEventListener('click', () => { portalUi.manager = true; srvOpenPortal(); });
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
+  // light / dark in the corner of the home screen, for everybody (Guy 2026-11-08). From the leopard: to light. Kept like the gear's choice
+  document.getElementById('apphome-theme').addEventListener('click', async () => {
+    const next = look === 'light' ? 'dark' : 'light', st = portalLoad();
+    st.settings.theme = next; try { localStorage.setItem('ramzor-portal-theme', next); } catch(e){}
+    if(!portalServerOn) portalSave();
+    const was = portalServerOn ? srv.portalTheme : null;
+    if(portalServerOn && was) srv.portalTheme = next;
+    showAppHome();
+    if(portalServerOn && was && typeof srvSaveSetting === 'function') await srvSaveSetting({ portalTheme:next });
+  });
 }
 
 // ---- the portal itself

@@ -73,8 +73,8 @@ async function thpLoad(){
 
 // the size of the text: the same three choices as in everybody's settings, kept the same way; "רגיל" until she chooses (Guy 2026-11-04)
 function thpTextSizeHtml(){
-  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}
-  return `<div class="pfield th-text-size"><span>גודל הכתב</span><div class="pchoice wrap">${[['0', 'טקסט רגיל'], ['1', 'טקסט גדול'], ['2', 'טקסט גדול מאוד']].map(([k, w]) => `<button type="button" class="${big === k ? 'on' : ''}" data-th-big="${k}">${w}</button>`).join('')}</div></div>`;
+  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; if(big === '2') big = '1'; } catch(e){}
+  return `<div class="pfield th-text-size"><span>גודל הכתב</span><div class="pchoice wrap">${[['0', 'טקסט רגיל'], ['1', 'טקסט גדול']].map(([k, w]) => `<button type="button" class="${big === k ? 'on' : ''}" data-th-big="${k}">${w}</button>`).join('')}</div></div>`;
 }
 // the tabs of each portal
 function thpTabs(){
