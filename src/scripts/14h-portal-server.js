@@ -438,10 +438,12 @@ async function srvStart(){
   portalServerOn = true;
   if(!(await srvLoadFirst())) return false;
   if(personalIsTherapistOnly()) return personalEnter();          // (a therapist with no shifts: never the shifts portal, also after a refresh)
+  if(personalIsSecretary()){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} return personalEnter(); }          // (the secretary has no shifts: her home, also when the page reloads itself on an address with #portal — Guy 2026-11-09)
   portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null;
   showPortal();
   return true;
 }
+const personalIsSecretary = () => (portalMe() || {}).role === 'secretary' || !!(srv.profile && srv.profile.kind === 'secretary');
 const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' || !!(srv.profile && srv.profile.kind === 'therapist');
 // ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
