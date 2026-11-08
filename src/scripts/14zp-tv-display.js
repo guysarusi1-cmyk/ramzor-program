@@ -139,19 +139,26 @@ async function renderBirthdays(box){
     return `גיל ${i.age}${i.days === 0 ? ' · <b class="bd-today">🎂 יום הולדת היום!</b>' : i.days <= 30 ? ` · בעוד ${i.days} ימים` : ''}`; };
   const soon = kids.filter(c => dates[c.id]).map(c => ({ c, i:bdInfo(dates[c.id], today) })).filter(x => x.i.days <= 30).sort((a, b) => a.i.days - b.i.days);
   box.innerHTML = `<div class="pnote">ילד עם תאריך מופיע במסך הילדים ביום ההולדת שלו, עם הגיל. ילד שיוצא מהרשימה של המסגרת יוצא גם מכאן.</div>
-    ${soon.length ? `<h3 class="psec">בחודש הקרוב</h3>${soon.map(({ c, i }) => `<div class="pmine-row"><span><b>${pEsc(displayName(c))}</b> · ${i.days === 0 ? 'היום! 🎂' : i.days === 1 ? 'מחר' : `בעוד ${i.days} ימים`} · יהיה/תהיה בן/בת ${i.days === 0 ? i.age : i.age + 1}</span></div>`).join('')}` : ''}
+    ${soon.length ? `<h3 class="psec">בחודש הקרוב</h3>${soon.map(({ c, i }) => `<div class="pmine-row"><span><b>${pEsc(displayName(c))}</b> · ${i.days === 0 ? `היום! 🎂 · חוגג/ת ${i.age}` : `${i.days === 1 ? 'מחר' : `בעוד ${i.days} ימים`} · יהיה/תהיה בן/בת ${i.age + 1}`}</span></div>`).join('')}` : ''}
     <h3 class="psec">כל הילדים</h3>
     ${kids.map(c => `<div class="pmine-row bd-row" data-bd="${pEsc(c.id)}"><span><b>${pEsc(displayName(c))}</b><br><small data-bd-word>${word(dates[c.id])}</small></span>
       <span class="bd-edit"><input type="date" max="${today}" min="1990-01-02" value="${dates[c.id] || ''}" aria-label="תאריך הלידה של ${pEsc(displayName(c))}">${dates[c.id] ? '<button type="button" class="btn ghost small" data-bd-clear>מחיקה</button>' : ''}</span></div>`).join('') || '<div class="pnote">אין ילדים ברשימה.</div>'}`;
   box.querySelectorAll('[data-bd]').forEach(row => {
     const id = row.dataset.bd, inp = row.querySelector('input[type=date]');
-    inp.addEventListener('change', async () => {
+    // saved when the typing is over (leaving the field, Enter, or a date chosen in the phone's picker): while a year is typed digit by digit
+    // the field already holds a "date" like 0002-05-03, which is not a mistake yet (Guy 2026-11-08)
+    let busy = false;
+    const done = async () => {
       const v = inp.value;
-      if(!v) return;
-      if(v > today || v < '1990-01-02'){ toast('התאריך לא נראה נכון'); inp.value = dates[id] || ''; return; }
-      try { await bdApi.set(id, v); } catch(e){ toast('השמירה נכשלה'); inp.value = dates[id] || ''; return; }
-      toast('נשמר'); tvdTellScreens('tt'); renderBirthdays(box);
-    });
+      if(busy || !v || v === (dates[id] || '')) return;
+      if(v > today || v < '1990-01-02'){ toast('התאריך לא נראה נכון. בודקים את היום, החודש והשנה'); return; }
+      busy = true;
+      try { await bdApi.set(id, v); } catch(e){ busy = false; toast('השמירה נכשלה'); return; }
+      busy = false; dates[id] = v; toast('נשמר'); tvdTellScreens('tt'); renderBirthdays(box);
+    };
+    inp.addEventListener('change', () => { if(document.activeElement !== inp) done(); });
+    inp.addEventListener('blur', done);
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); done(); } });
     const del = row.querySelector('[data-bd-clear]');
     if(del) del.addEventListener('click', async () => {
       if(!(await confirmSheet({ title:'למחוק את התאריך?', text:`התאריך של ${displayName(roster.find(c => c.id === id) || { firstName:'' })} יימחק, ויום ההולדת לא יופיע במסך הילדים.`, okLabel:'כן, למחוק', cancelLabel:'חזרה', danger:true }))) return;
