@@ -199,7 +199,7 @@ function ctlTimetableDraw(box){
   const tt = ctl.tt, coord = ctlIsCoord(), fixedDay = ctl.ttFixedDay;
   const editing = fixedDay != null ? ctl.ttFixed : ctl.ttEdit;
   const rows = editing.items.map((x, i) => `<div class="ctl-tt-row" data-row="${i}">
-      <span class="ctl-tt-times">${ttTimeHtml(x.t, i)}<span class="ctl-tt-dash" aria-hidden="true">–</span>${ttTimeHtml(x.end, i, true)}</span>
+      <span class="ctl-tt-times"><span class="ctl-tt-cap"><small>התחלה</small>${ttTimeHtml(x.t, i)}</span><span class="ctl-tt-dash" aria-hidden="true">–</span><span class="ctl-tt-cap"><small>סיום</small>${ttTimeHtml(x.end, i, true)}</span></span>          <!-- (a small title over each hour: Guy 2026-11-09) -->
       <button type="button" class="ctl-tt-icon" data-tt-icon="${i}" title="${pEsc(ttIcon(x.i)[1])}">${ttIcon(x.i)[2]}</button>
       <input type="text" value="${pEsc(x.n || '')}" data-tt-name="${i}" placeholder="שם הפעילות" maxlength="40">
       <button type="button" class="ctl-x" data-tt-del="${i}" aria-label="מחיקה">✕</button>
