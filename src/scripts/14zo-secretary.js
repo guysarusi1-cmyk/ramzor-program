@@ -4,10 +4,10 @@
 //   * the stars: lower, reset or set one child's stars, reset everybody's; a way back for 5 seconds that never overwrites what others did since
 //   * mentoring and volunteering next to the timetable: right the timetable, left the events, one row per hour — on the kids' TV (a day with events only) and on the staff's screens
 //   * the contact page: a person kept once, linked to many events; phones never reach the kids' TV
-// Not on live until Guy says so (liveCut).
+// On live since Guy's "תעלה" of 2026-11-08 (until then behind liveCut).
 const sec = { mode:'ev', from:null, tab:'events', start:null };
 const secMe = () => { try { return portalMe() || {}; } catch(e){ return {}; } };
-const secOn = () => typeof liveCut === 'function' && !liveCut() && typeof portalServerOn !== 'undefined' && portalServerOn;
+const secOn = () => typeof portalServerOn !== 'undefined' && portalServerOn;          // (on live too: Guy 2026-11-08)
 const secIsMe = () => secOn() && (secMe().role === 'secretary' || !!(srv.profile && srv.profile.kind === 'secretary'));
 const secStarsOk = () => secOn() && typeof ramzorPersonal !== 'undefined' && ramzorPersonal && (secIsMe() || !!(srv.profile && srv.profile.admin));          // (stars and "ילדים במסגרת": the secretary and the admin)
 const secEventsOk = () => secOn() && (secIsMe() || ['coordinator', 'manager'].includes(secMe().role) || !!secMe().admin);          // (the home card; an ahmash reaches them from the control, during the shift)

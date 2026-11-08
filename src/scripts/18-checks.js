@@ -3354,7 +3354,7 @@
       { const g = document.getElementById('hub-manage-gear'), was = g.hidden; g.hidden = true;
         check('secretary: a hidden gear is really not shown (the button style must not bring it back)', getComputedStyle(g).display === 'none', getComputedStyle(g).display); g.hidden = was; }
       { const on = portalServerOn, asl = window.__asLive; window.__asLive = true; portalServerOn = true;
-        check('secretary: nothing of it on live until Guy says so', !secOn() && !secEventsOk() && !secStarsOk() && secHomeCards() === '');
+        check('secretary: on live too since Guy said "תעלה" (2026-11-08)', secOn());
         window.__asLive = asl; portalServerOn = on; }
       { const real = secApi.setStars, db = { c1:5 }, box = document.createElement('div');
         secApi.setStars = async (id, f) => { const before = { stars:db[id] }, ch = f(before); if(!ch) return { ok:false, reason:'declined' }; db[id] = ch.set.stars; return { ok:true }; };
@@ -3401,7 +3401,7 @@
           const list = birthdaysToday(); PORTAL_TV_LIVE = live; tvBirthdays = b;
           check('kids screen: the real screen shows only the birthdays of the list, with the age', !roster[0] || (list.length === 1 && list[0].b.age === 9 && list[0].child.id === roster[0].id), JSON.stringify(list.map(x => x.b))); }
         { const on = portalServerOn, asl = window.__asLive; window.__asLive = true; portalServerOn = true;
-          check('kids screen: the "מסך הילדים" card is not on live until Guy says so', !kidsOk());
+          check('kids screen: on live the card follows the admin flag only (Guy 2026-11-08)', kidsOk() === (!!secMe().admin || !!(srv.profile && srv.profile.admin)));
           window.__asLive = asl; portalServerOn = on; }
       } finally { tvdOffSet = was; }
     });
