@@ -1405,6 +1405,11 @@
   .pnote-soft{ border-right:3px solid var(--gold); padding-right:10px; }
   .pfb{ margin:10px 0; padding:12px; border:1px solid var(--p-line); border-radius:14px; background:var(--p-panel); line-height:1.6; white-space:pre-line; }
   /* a shift nobody marked is neutral: grey and dashed, until the person says yes / can / no */
+  /* the preferences in colours: a chosen shift or day is FILLED with its colour, not only framed (Guy 2026-11-08). The letters take the soft colour of the
+     same theme, so they are dark on the dark theme's light colours and light on the light theme's dark ones */
+  :is(.pcal, .pweek):not(.plain) :is(.pshift, .plong).lv-yes{ background:var(--p-yes, #7be0a0); color:var(--p-yes-bg, #123322); border-color:var(--p-yes, #7be0a0) !important; font-weight:800; }
+  :is(.pcal, .pweek):not(.plain) :is(.pshift, .plong).lv-avoid{ background:var(--p-can, #8ec0ff); color:var(--p-can-bg, #14263f); border-color:var(--p-can, #8ec0ff) !important; font-weight:800; }
+  :is(.pcal, .pweek):not(.plain) :is(.pshift, .plong).lv-no{ background:var(--p-no, #ff8a80); color:var(--p-no-bg, #3a1a18); border-color:var(--p-no, #ff8a80) !important; font-weight:800; }
   .pshift.lv-neutral, .plong.lv-neutral{ background:transparent; color:var(--p-muted); border:1px dashed var(--p-line); font-weight:600; }
   /* the long weekend: one button under the Friday and the Saturday, with a sub-title; "only one of these" sits below it */
   .plong-row{ grid-column:6 / 8; display:flex; flex-wrap:wrap; gap:4px; align-items:stretch; margin:-2px 0 6px; padding:3px; border:1px dashed var(--gold); border-top:none; border-radius:0 0 10px 10px; }          /* (a slim bridge under the two days) */
@@ -2251,8 +2256,8 @@
   --p-avoid:var(--color-warning); --p-avoid-bg:var(--color-warning-soft); --p-can:var(--color-info); --p-can-bg:var(--color-info-soft);
   color:var(--color-text); font-family:var(--font-body); font-size:16px; line-height:1.65;
 }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme=dark]){ background:#1C1A17; transition:background-color var(--motion-fast, 200ms) cubic-bezier(.4, 0, .2, 1); }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme=light]){ background:#FAF7F2; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec).active .portal-shell[data-ptheme=dark]){ background:#1C1A17; transition:background-color var(--motion-fast, 200ms) cubic-bezier(.4, 0, .2, 1); }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec).active .portal-shell[data-ptheme=light]){ background:#FAF7F2; }
 .portal-shell[data-ptheme]{ background:transparent; border-radius:0; padding:0 0 90px; margin:0; }
 #view-therapy .portal-shell{ max-width:1200px; }
 
@@ -2386,10 +2391,10 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats
 .therapy-shell[data-ptheme] .tm-state.bad{ color:var(--color-warning); }
 
 /* the "עבודה | סקירה" switch, and the review */
-:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg{ display:inline-flex; padding:3px; gap:2px; border-radius:var(--radius-pill); background:var(--color-surface-alt); border:1px solid var(--color-border); align-self:flex-start; }
-:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button{ min-height:36px; padding:0 var(--space-4); border:0; border-radius:var(--radius-pill); background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-size:15px; font-weight:600; cursor:pointer;
+:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-sec .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg{ display:inline-flex; padding:3px; gap:2px; border-radius:var(--radius-pill); background:var(--color-surface-alt); border:1px solid var(--color-border); align-self:flex-start; }
+:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-sec .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button{ min-height:36px; padding:0 var(--space-4); border:0; border-radius:var(--radius-pill); background:transparent; color:var(--color-text-secondary); font-family:var(--font-body); font-size:15px; font-weight:600; cursor:pointer;
   transition:background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard); }
-:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
+:is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-sec .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button[aria-pressed=true]{ background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-card); }
 .therapy-shell[data-ptheme] .tp-review{ display:flex; flex-direction:column; gap:var(--space-12); max-width:820px; }
 .therapy-shell[data-ptheme] .tp-review section{ display:flex; flex-direction:column; gap:var(--space-4); }
 .therapy-shell[data-ptheme] .tp-review h2{ font-size:22px; margin:0; } .therapy-shell[data-ptheme] .tp-review h3{ font-size:18px; margin:0; }
@@ -2448,7 +2453,7 @@ body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats
 .therapy-shell[data-ptheme] .tp-rv-print{ align-self:flex-start; }
 @media (min-width:1024px){ .therapy-shell[data-ptheme] .th-todo-list, .therapy-shell[data-ptheme] .tp-list{ max-width:840px; } }
 @media (max-width:767px){
-  :is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button, .therapy-shell[data-ptheme] .tp-filter .th-chip, .therapy-shell[data-ptheme] .pfield > .th-tpl-btn, .therapy-shell[data-ptheme] .pfield > #tm-suggest{ min-height:44px; }
+  :is(.therapy-shell, #view-oncall .portal-shell, #view-chats .portal-shell, #view-sec .portal-shell, #view-portal .portal-shell)[data-ptheme] .mx-seg button, .therapy-shell[data-ptheme] .tp-filter .th-chip, .therapy-shell[data-ptheme] .pfield > .th-tpl-btn, .therapy-shell[data-ptheme] .pfield > #tm-suggest{ min-height:44px; }
   .therapy-shell[data-ptheme] .tp-steps li{ min-width:0; flex:1 1 0; font-size:0; padding:8px 0 0; }          /* (a phone: a progress bar, the name only on the step that is open) */
   .therapy-shell[data-ptheme] .tp-steps li.now{ flex:3 1 0; font-size:12px; }
 }
@@ -2598,14 +2603,14 @@ body:has(#view-apphome.active .mx-home[data-ptheme=light]){ background:#FAF7F2; 
 .mx-home .home-card-sub{ font-size:14px; color:var(--color-text-secondary); line-height:1.45; }
 .mx-home .apphome-demo{ color:var(--color-text-secondary); }
 /* the bottom bar ("בית", "חזור") and the floating "חזור" on a computer: the colours of the look that is open (Guy 2026-10-30) */
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=dark]) :is(.bottom-nav, .nav-back-float){ background:#24211D; border-color:#3A362F; color:#A8A196; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=light]) :is(.bottom-nav, .nav-back-float){ background:#FFFFFF; border-color:#E7E0D3; color:#6E675C; box-shadow:none; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme=dark]) :is(.bottom-nav, .nav-back-float){ background:#24211D; border-color:#3A362F; color:#A8A196; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme=light]) :is(.bottom-nav, .nav-back-float){ background:#FFFFFF; border-color:#E7E0D3; color:#6E675C; box-shadow:none; }
 body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) :is(.bottom-nav, .nav-back-float){ background:#22170E; border-color:#4A3420; color:#D3BD97; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) .bottom-nav{ -webkit-backdrop-filter:none; backdrop-filter:none; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) :is(.bottom-nav-btn, .nav-back-float){ font-family:'Assistant', Arial, sans-serif; font-weight:600; font-size:13px; color:inherit; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) .nav-back-float{ font-size:15px; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=dark]) .bottom-nav-btn.active{ background:#2D3328; color:#E9E4DA; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=light]) .bottom-nav-btn.active{ background:#E7ECE2; color:#2D2A24; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme]) .bottom-nav{ -webkit-backdrop-filter:none; backdrop-filter:none; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme]) :is(.bottom-nav-btn, .nav-back-float){ font-family:'Assistant', Arial, sans-serif; font-weight:600; font-size:13px; color:inherit; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme]) .nav-back-float{ font-size:15px; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme=dark]) .bottom-nav-btn.active{ background:#2D3328; color:#E9E4DA; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme=light]) .bottom-nav-btn.active{ background:#E7ECE2; color:#2D2A24; }
 body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) .bottom-nav-btn.active{ background:#352612; color:#F7ECD8; }
 /* the personal sign-in (14h srvLoginHtml): the same calm card, fields and one main button */
 body:has(#view-portal.active .mx-home[data-ptheme=dark]){ background:#1C1A17; }
@@ -2620,7 +2625,7 @@ body:has(#view-portal.active .mx-home[data-ptheme=light]){ background:#FAF7F2; }
 .mx-login .plogin-staff-link{ color:var(--color-link); }
 .mx-login .plogin-error{ color:var(--color-danger); }
 /* the לומדה's list (14zh): its own title row replaces the site's header, like the portals; the chosen buttons on the primary colour */
-#protected-app:has(:is(#view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme]) > #shared-header, #protected-app:has(:is(#view-learn, #view-oncall, #view-chats).active .portal-shell[data-ptheme]) > #shared-logout-row{ display:none; }
+#protected-app:has(:is(#view-learn, #view-oncall, #view-chats, #view-sec).active .portal-shell[data-ptheme]) > #shared-header, #protected-app:has(:is(#view-learn, #view-oncall, #view-chats, #view-sec).active .portal-shell[data-ptheme]) > #shared-logout-row{ display:none; }
 .portal-shell[data-ptheme] .ln-ibtn[aria-pressed="true"]{ background:var(--color-primary); color:var(--color-on-primary); border-color:var(--color-primary); }
 .portal-shell[data-ptheme] .ln-card-btn:hover{ border-color:var(--color-border-strong); background:var(--color-surface); }
 /* the question in the middle of the screen (05 confirmSheet) and the short messages at the bottom (toast), in a staff area's look (Guy 2026-10-30: "ההודעות שקופצות עדיין בעיצוב הישן") */
@@ -2628,10 +2633,10 @@ body:has(#view-portal.active .mx-home[data-ptheme=light]){ background:#FAF7F2; }
 .mx-sheet .confirm-actions .btn{ min-height:48px; }
 .mx-sheet .confirm-ok.danger{ background:var(--color-danger); color:var(--color-surface); border-color:var(--color-danger); }
 .mx-sheet .confirm-ok.danger:hover{ background:var(--color-danger); opacity:.92; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=dark]) .toast{ background:#2C2925; border-color:#4A453C; color:#E9E4DA; font-family:'Assistant', Arial, sans-serif; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme=light]) .toast{ background:#2D2A24; border-color:#2D2A24; color:#FAF7F2; font-family:'Assistant', Arial, sans-serif; box-shadow:0 8px 24px rgba(45, 42, 36, .18); }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme=dark]) .toast{ background:#2C2925; border-color:#4A453C; color:#E9E4DA; font-family:'Assistant', Arial, sans-serif; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme=light]) .toast{ background:#2D2A24; border-color:#2D2A24; color:#FAF7F2; font-family:'Assistant', Arial, sans-serif; box-shadow:0 8px 24px rgba(45, 42, 36, .18); }
 body.leopard-bg:has(:is(#view-portal, #view-apphome).active [data-ptheme=leopard]) .toast{ background:#2A1C10; border-color:#6A4B2C; color:#F7ECD8; font-family:'Assistant', Arial, sans-serif; }
-body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active [data-ptheme]) .toast-undo-btn{ font-family:'Assistant', Arial, sans-serif; font-weight:700; }
+body:has(:is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active [data-ptheme]) .toast-undo-btn{ font-family:'Assistant', Arial, sans-serif; font-weight:700; }
 /* "חודש | שבוע" above a month's calendar, and the week with ‹ › (14e mcalViewBarHtml, Guy 2026-11-03) */
 .mcal-viewbar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin:8px 0 12px; }
 .portal-shell[data-ptheme] .mcal-seg{ display:inline-flex; padding:3px; gap:2px; border-radius:var(--radius-pill); background:var(--color-surface-alt); border:1px solid var(--color-border); }
@@ -3137,6 +3142,70 @@ body:has(.view.active .mx-login[data-ptheme=light])::before{ display:none; }
   .learn-acts{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
   .learn-acts a{ text-decoration:none; }
   @media (max-width:560px){ .learn-row{ flex-wrap:wrap; } .learn-acts{ width:100%; justify-content:stretch; } .learn-acts a{ flex:1; text-align:center; } }
+/* The secretary: stars, mentoring and volunteering, the contact page (14zo-secretary.js) */
+#view-manage.manage-kids-only > :not(#manage-back-to-hub):not(#mgmt-roster-card){ display:none !important; }
+
+/* the timetable and the events side by side: right the timetable, left the events, one row per hour */
+.tta{ display:flex; flex-direction:column; gap:6px; }
+.tta-head, .tta-row{ display:grid; grid-template-columns:3.6em minmax(0, 1fr) minmax(0, 1fr); gap:8px; }
+.tta-head{ font-size:.85em; opacity:.8; padding:0 8px; }
+.tta-row{ padding:6px 8px; border:1px solid var(--p-line, rgba(127,127,127,.3)); border-radius:12px; }
+.tta-time{ font-weight:700; }
+.tta-main, .tta-ev{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.tta-ev{ border-inline-start:1px solid var(--p-line, rgba(127,127,127,.3)); padding-inline-start:8px; }
+.tta-item{ display:flex; align-items:center; gap:6px; min-width:0; }
+.tta-name{ min-width:0; overflow-wrap:anywhere; }
+.tta-name small{ display:block; opacity:.8; font-size:.82em; }
+.tta-emoji{ flex:none; }
+@media (max-width:420px){ .tta-head, .tta-row{ grid-template-columns:3em minmax(0, 1fr) minmax(0, 1fr); gap:4px; } .tta-row{ padding:6px 4px; } .tta-ev{ padding-inline-start:4px; } }
+.mgr-ttv-fit:has(.tta){ overflow:auto; }
+.mgr-ttv-item.mgr-ttv-ev{ outline:1px dashed currentColor; outline-offset:-3px; }
+
+/* the kids' TV: everything on one screen, the letters follow the number of lines */
+.tv-timetable.tvt3{ display:flex; flex-direction:column; gap:1vmin; justify-content:center; }
+.tta-tv{ --tta-size:min(3.4vmin, calc(82vh / var(--units, 20))); font-size:var(--tta-size); gap:.25em; width:100%; }
+.tta-tv .tta-head, .tta-tv .tta-row{ grid-template-columns:4.2em minmax(0, 1fr) minmax(0, 1fr); gap:.5em; }
+.tta-tv .tta-head{ font-weight:800; opacity:1; padding:0 .5em; }
+.tta-tv .tta-row{ padding:.2em .5em; border:0; background:rgba(255,255,255,.08); border-radius:.5em; }
+.tta-tv .tta-ev{ border-inline-start:2px solid rgba(255,255,255,.25); padding-inline-start:.5em; gap:.15em; }
+.tta-tv .tta-main{ gap:.15em; }
+.tta-tv .tta-row.now{ background:rgba(255,214,90,.28); box-shadow:0 0 0 2px rgba(255,214,90,.8) inset; }
+.tta-tv .tta-row.past{ opacity:.5; }
+/* the drawings three times bigger on the kids' TV only (Guy 2026-11-08); the words stay beside them, smaller when the day is long */
+.tta-tv .tta-item{ gap:.5em; }
+.tta-tv .tta-item svg, .tta-tv .tta-item img{ width:5em; height:5em; flex:none; }
+.tta-tv .tvt2-emoji{ font-size:4em; line-height:1.2; flex:none; }
+.tta-tv .tta-name{ font-size:1.15em; font-weight:700; }
+
+/* the stars */
+.sec-stars{ display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:8px; margin:10px 0; }
+.sec-star-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; min-height:48px; padding:8px 12px; font:inherit; color:inherit; background:var(--p-panel, transparent); border:1px solid var(--p-line, rgba(127,127,127,.3)); border-radius:12px; cursor:pointer; text-align:start; }
+.sec-danger{ margin-top:18px; }
+.sec-star-actions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+
+/* the events and the contact page */
+.sec-add{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.sec-evs, .sec-contacts{ display:flex; flex-direction:column; gap:6px; }
+.sec-ev{ display:flex; align-items:center; gap:8px; width:100%; min-height:48px; padding:8px 12px; font:inherit; color:inherit; text-align:start; background:var(--p-panel, transparent); border:1px solid var(--p-line, rgba(127,127,127,.3)); border-radius:12px; cursor:pointer; }
+.sec-ev-time{ flex:none; font-weight:700; }
+.sec-ev-text{ min-width:0; overflow-wrap:anywhere; }
+.sec-ev-text small{ display:block; opacity:.8; }
+.sec-contact{ display:flex; align-items:center; gap:8px; padding:6px 8px; background:var(--p-panel, transparent); border:1px solid var(--p-line, rgba(127,127,127,.3)); border-radius:12px; }
+.sec-contact-main{ flex:1; min-width:0; min-height:44px; font:inherit; color:inherit; text-align:start; background:none; border:0; cursor:pointer; }
+.sec-contact-main small{ display:block; opacity:.8; }
+.sec-times{ display:flex; flex-wrap:wrap; gap:12px; }
+.sec-times .pfield > span, .psheet .pfield > span{ display:block; }
+.sec-ev-icon{ display:block; }
+.sec-ev-del{ width:100%; margin-top:10px; }
+.sec-ahead{ margin:8px 0; padding-inline-start:20px; }
+#view-sec .mx-seg button{ white-space:nowrap; }
+.sec-times .pfield{ flex:1 1 140px; margin:0; }
+.sec-times .ctl-tt-time{ display:inline-flex; flex-wrap:nowrap; align-items:center; gap:2px; }
+.sec-times .ctl-tt-time select{ width:auto; min-width:64px; }
+.psheet .sec-times .ctl-tt-time select{ width:auto; flex:1 1 auto; }
+#view-manage.manage-kids-only .roster-th{ display:none; }
+#view-manage.manage-kids-only .roster-row{ flex-wrap:wrap; }
+#view-manage.manage-kids-only .roster-name{ flex:1 1 100%; white-space:normal; order:-1; }
 
 /* ---------- the Ramzor's staff screens on the new look (Guy 2026-10-30; the look is chosen in 14zk-ramzor-look.js) ----------
    body[data-rlook] is set only while a staff screen of the Ramzor is open (never the kids' TV). The base variables every Ramzor rule reads are
@@ -3229,6 +3298,7 @@ body[data-rlook] .bottom-nav-btn.active{ background:var(--color-primary-soft); c
 .home-bar-icons, .home-bar-words{ display:flex; align-items:center; gap:8px; }
 .home-bar .home-icon-btn, .home-bar .home-text-btn{ position:static; margin:0; }
 .home-bar .home-icon-btn{ width:44px; height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; border:1px solid var(--line); background:var(--panel); }
+.home-bar .home-icon-btn[hidden]{ display:none; }          /* (the line above must not show a hidden gear: the secretary, the manager) */
 .home-bar .home-text-btn{ min-height:44px; padding:0 10px; font-size:15px; }
 .home-control-card[hidden]{ display:none; }
 @media (min-width:701px){ .home-primary:has(> .home-control-card:not([hidden])){ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
@@ -3300,6 +3370,42 @@ body[data-rlook=light] .kq-word{ color:#7A5A00 !important; }
 .mx-brand-small{ flex-direction:row; gap:8px; margin:0; }
 .mx-brand-small .mx-brand-logo{ width:40px; height:40px; }
 .mx-brand-small .eyebrow-gold{ font-size:13px; }
+
+/* light / dark in the corner of the home screen (Guy 2026-11-08) */
+.mx-home .apphome-top-end{ display:flex; align-items:center; gap:8px; }
+.apphome-theme{ width:44px; height:44px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--color-border, rgba(127,127,127,.35)); background:var(--color-surface, transparent); font-size:20px; line-height:1; cursor:pointer; padding:0; }
+.apphome-theme:focus-visible{ outline:3px solid var(--color-accent, #f2c14e); outline-offset:2px; }
+@media (forced-colors:active){ .apphome-theme{ border-color:CanvasText; } }
+/* ---------- the kids' screen: what it shows (the admin's switches) and the birthdays (Guy 2026-11-08, 14zp-tv-display.js) ---------- */
+
+/* the top bar of the TV: the name of the board and the dots, each may be hidden */
+body.tvd-no-label #slide-label, body.tvd-no-dots #slide-dots{ visibility:hidden; }
+
+/* the switches in the portal settings */
+.tvd-list{ display:flex; flex-direction:column; gap:12px; margin:8px 0 4px; }
+.tvd-group{ display:flex; flex-direction:column; gap:2px; }
+.tvd-gtitle{ font-weight:800; margin:2px 0 4px; }
+.tvd-row{ display:flex; align-items:center; gap:10px; min-height:44px; padding:4px 10px; border:1px solid var(--p-line, rgba(127,127,127,.3)); border-radius:12px; cursor:pointer; }
+.tvd-row input{ width:22px; height:22px; flex:none; accent-color:var(--p-accent, #2f7d4f); cursor:pointer; }
+.tvd-row.tvd-part{ margin-inline-start:28px; min-height:40px; font-size:.95em; }
+.tvd-row.off{ opacity:.5; cursor:default; }
+.tvd-row input:disabled{ cursor:default; }
+
+/* the birthdays */
+.bd-row{ align-items:center; }
+.bd-edit{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.bd-edit input[type=date]{ min-height:40px; font:inherit; padding:4px 8px; border-radius:10px; border:1px solid var(--p-line, rgba(127,127,127,.4)); background:var(--p-panel, transparent); color:inherit; }
+.bd-none{ opacity:.7; }
+.bd-today{ color:var(--p-accent, #c77700); }
+@media (max-width:420px){ .bd-row{ flex-wrap:wrap; } .bd-edit{ width:100%; justify-content:flex-start; } }
+@media (forced-colors:active){ .tvd-row, .bd-edit input[type=date]{ border-color:CanvasText; } }
+
+/* the admin's "מסך הילדים" card: the folded parts, each with a short line under its name */
+#kids-parts{ display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+#kids-parts summary > span{ display:flex; flex-direction:column; gap:2px; }
+.kids-sub{ font-weight:400; font-size:.82em; opacity:.75; }
+#kids-parts #tv-remote-card{ margin:0; box-shadow:none; }
+#kids-parts .tv-remote-title{ display:none; }          /* (the part's own name already says it) */
 </style>
 </head>
 <body>
@@ -3354,6 +3460,7 @@ body[data-rlook=light] .kq-word{ color:#7A5A00 !important; }
   <section class="view" id="view-portal"></section>
   <section class="view" id="view-learn"></section>
   <section class="view" id="view-oncall"></section>
+  <section class="view" id="view-sec"></section>
   <section class="view" id="view-chats"></section>
   <section class="view" id="view-control"></section>
   <section class="view" id="view-therapy"></section>
@@ -3393,6 +3500,14 @@ body[data-rlook=light] .kq-word{ color:#7A5A00 !important; }
         <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="20" height="13" rx="2"/><path d="M8 21h8M12 16.5V21"/></svg>
         <span class="home-card-title">שליטה במסך הילדים</span>
         <span class="home-card-sub">ניהול התצוגה והפידבקים לילדים</span>
+      </button>
+      <button type="button" class="home-card" id="hub-stars-btn" hidden>
+        <span class="home-card-title">⭐ ניהול כוכבים</span>
+        <span class="home-card-sub">גריעה, איפוס וקביעת מספר</span>
+      </button>
+      <button type="button" class="home-card" id="hub-kidslist-btn" hidden>
+        <span class="home-card-title">🧒 ילדים במסגרת</span>
+        <span class="home-card-sub">הוספה, עריכה והסרה</span>
       </button>
       <button type="button" class="home-card home-control-card" id="hub-control-btn" hidden>
         <svg class="home-card-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>
@@ -3518,7 +3633,7 @@ body[data-rlook=light] .kq-word{ color:#7A5A00 !important; }
       <div class="note">לבדיקת התאמה של טלוויזיה: אותה כתובת עם <b dir="ltr">#diag</b> בסוף.</div>
     </div>
 
-    <div class="card">
+    <div class="card" id="mgmt-roster-card">
       <h2>ילדים במסגרת</h2>
       <div class="chip-row" id="roster-list"></div>
       <div class="add-row">
@@ -4080,7 +4195,7 @@ function toast(msg, ms){
 // onUndo() resolves true when it worked. Stays for UNDO_MS; one undo message at a time.
 const UNDO_MS = 9000;
 let undoToastEl = null;
-function toastUndo(msg, onUndo){
+function toastUndo(msg, onUndo, ms){
   if(undoToastEl) undoToastEl.remove();
   const t = document.createElement('div');
   t.className = 'toast toast-undo';
@@ -4095,7 +4210,7 @@ function toastUndo(msg, onUndo){
   t.append(text, btn);
   document.body.appendChild(t);
   undoToastEl = t;
-  setTimeout(() => { if(undoToastEl === t){ t.remove(); undoToastEl = null; } else t.remove(); }, UNDO_MS);
+  setTimeout(() => { if(undoToastEl === t){ t.remove(); undoToastEl = null; } else t.remove(); }, ms || UNDO_MS);
 }
 
 // A question in the middle of the screen. Resolves true on the confirm button, false on cancel / outside tap.
@@ -4106,7 +4221,7 @@ function confirmSheet(opts){
     const wrap = document.createElement('div');
     wrap.className = 'sheet confirm-sheet';
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-    { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme; } }          // (in a staff area the question wears its look: 20-mercury.css, Guy 2026-10-30)
+    { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme; } }          // (in a staff area the question wears its look: 20-mercury.css, Guy 2026-10-30)
     wrap.innerHTML = `<div class="sheet-card">
         <h2></h2><p class="confirm-text"></p>
         ${opts.typeWord ? '<input type="text" class="confirm-input" autocomplete="off" aria-label="אישור בהקלדה">' : ''}
@@ -4599,6 +4714,7 @@ function askCode({ title, text, okLabel, password }){
 
 // the only way into the management screen (home gear, #manage address)
 async function openManagement(){
+  document.getElementById('view-manage').classList.remove('manage-kids-only');
   if(MANAGER_LOGIN){
     if(!(await adminClient())) return false;                 // asks for the manager's password when needed
   } else {
@@ -4637,6 +4753,7 @@ async function signInAsManager(){
 // the connection that management actions write through: the manager's (after his password, valid for a few
 // minutes of use) — or, before the manager login exists in a project, the ordinary one
 async function adminClient(){
+  if(typeof manageKidsOnly === 'function' && manageKidsOnly()) return sb;          // ("ילדים במסגרת" of the secretary and the admin: their own sign-in, scheduling-v62.sql)
   if(!MANAGER_LOGIN) return sb;
   if(await managerSessionValid()){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return sbAdmin; }
   return (await signInAsManager()) ? sbAdmin : null;
@@ -6005,6 +6122,7 @@ function tvRelease(){
 }
 function tvStep(delta){
   const ids = visibleSlideIds();
+  if(!ids.length) return;
   const at = ids.indexOf(carouselIndex);
   const next = ids[(Math.max(at, 0) + delta + ids.length) % ids.length];
   return showSlide(next);
@@ -6016,10 +6134,12 @@ function handleTvCommand(c){
   else if(c.cmd === 'pause'){ tvHold(); announceTvStatus(); }
   else if(c.cmd === 'resume') tvRelease();
   else if(c.cmd === 'show' && visibleSlideIds().includes(c.slide)){ tvHold(); showSlide(c.slide); }
+  else if(c.cmd === 'tt' && typeof loadTvToday === 'function') loadTvToday(true).then(() => { if(document.getElementById('tv-timetable') && tvTimetable) renderTimetableLive(); });          // (a change of the timetable or the events: at once)
   else if(c.cmd === 'next'){ tvHold(); tvStep(1); }
   else if(c.cmd === 'prev'){ tvHold(); tvStep(-1); }
-  else if(c.cmd === 'summary' && c.child && typeof showChildSummary === 'function') showChildSummary(c.child);
-  else if(c.cmd === 'journey' && c.child && typeof journeyShowMilestone === 'function') journeyShowMilestone(c.child, c.milestone);          // (Mercury: a milestone, when the instructor says the child may watch)          // (a child's summary: 14q-child-summary.js)
+  else if(c.cmd === 'display' && typeof tvdLoad === 'function') tvdLoad();          // (the admin changed what the screen shows: 14zp-tv-display.js)
+  else if(c.cmd === 'summary' && c.child && typeof showChildSummary === 'function' && !(typeof tvdOff === 'function' && tvdOff('summary'))) showChildSummary(c.child);
+  else if(c.cmd === 'journey' && !(typeof TVD_GONE !== 'undefined' && TVD_GONE.includes(13)) && c.child && typeof journeyShowMilestone === 'function') journeyShowMilestone(c.child, c.milestone);          // (Mercury: a milestone, when the instructor says the child may watch)          // (a child's summary: 14q-child-summary.js)
 }
 function announceTvStatus(){
   if(tvControlChannel && !IS_TV_PREVIEW) tvControlChannel.send({ type:'broadcast', event:'status', payload: tvStatusPayload() });
@@ -6187,8 +6307,8 @@ function bonusBoardSection(title, list, revocationsByBonus){
 async function renderBonusesSlide(){
   const el = document.getElementById('bonuses-slide-content');
   await loadBonusDay();          // (the ahmash control may have hidden or added a bonus a moment ago)
-  const todayDaily = bonusesForToday(bonusesDaily, false);
-  const todayWeekly = bonusesForToday(bonusesWeekly, true);
+  const todayDaily = typeof tvdOff === 'function' && tvdOff('bonuses_daily') ? [] : bonusesForToday(bonusesDaily, false);          // (the admin's list: 14zp-tv-display.js)
+  const todayWeekly = typeof tvdOff === 'function' && tvdOff('bonuses_weekly') ? [] : bonusesForToday(bonusesWeekly, true);
   if(!todayDaily.length && !todayWeekly.length){ el.innerHTML = '<div class="empty">אין בונוסים מוגדרים להיום</div>'; return; }
   const revocationsByBonus = {};          // (the kids' screen does not even read who lost a bonus: BONUSES-SPEC)
   // few bonuses are shown big in one column; more than 4 switch to two columns so they all fit on the screen
@@ -6226,7 +6346,9 @@ function resumeRotation(){
   carouselTimer = setInterval(async ()=>{
     await refreshJourneyBoards();
     let next = (carouselIndex + 1) % SLIDES.length;
-    while(SLIDES[next].hidden) next = (next + 1) % SLIDES.length;
+    let k = 0;
+    while(SLIDES[next].hidden && k++ < SLIDES.length) next = (next + 1) % SLIDES.length;
+    if(SLIDES[next].hidden) return;          // (nothing to show: the admin hid it all and the rest wait for their day — stay)
     showSlide(next);
   }, CAROUSEL_MS);
 }
@@ -6314,6 +6436,8 @@ function celebrateFeedbackEvent(ev){
   if(!document.getElementById('view-display').classList.contains('active')) return;
   const type = ev.type, childId = ev.child_id;
   const child = roster.find(c => c.id === childId);
+  if(type === 'moon' || type === 'mercury' || type === 'journey') return;          // (the old Mercury boards are off for now: Guy 2026-11-08)
+  if(typeof tvdOff === 'function' && tvdOff('celebration')) return;          // (the admin hid the celebrations; the boards show the news in their turn)
   if(type === 'journey'){ if(child && typeof journeyCelebrate === 'function') journeyCelebrate(ev, child); return; }          // (Mercury: a step of the new journey)
   if(!(type in EVENT_TYPE_SLIDE) || type === 'bonus' || !child) return;
   queueCelebration(async () => {
@@ -6321,8 +6445,8 @@ function celebrateFeedbackEvent(ev){
     const now = type === 'star' ? (state.stars || 0) : type === 'bricks' ? (state.bricks || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
     const why = type === 'bricks' ? ((ev.message || '').match(/ · כוח: (.+)$/) || [])[1] || '' : '';        // the strength the instructor named
     await playCelebration(type, child, now, why, type === 'bricks' ? state.brickWhy : undefined);
-    if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
-    else if(type === 'bricks') interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard);
+    if(type === 'star'){ if(!SLIDES[EVENT_TYPE_SLIDE.star].hidden) interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard); }
+    else if(type === 'bricks'){ if(!SLIDES[EVENT_TYPE_SLIDE.bricks].hidden) interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard); }
     else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,
       () => flyMarkerStunt(childId, document.getElementById('moon-board'), o => renderMoonBoard(Object.assign({ justArrivedChildId: childId }, o)), now - 1), STUNT_BOARD_MS);
     else interruptToSlide(EVENT_TYPE_SLIDE.mercury,
@@ -6380,6 +6504,7 @@ function startCarousel(){
   startFeedbackListener();
   startTvControlListener();
   if(typeof startTvQuiet === 'function') startTvQuiet();          // (the "good night" and "good morning" screens)
+  if(typeof tvdStart === 'function') tvdStart();          // (what the admin chose to show: 14zp-tv-display.js)
 }
 function stopCarousel(){
   pauseRotation();
@@ -6545,6 +6670,8 @@ function kidBirthday(child, index){
   return st.birthdays[child.id];
 }
 function birthdaysToday(){
+  if(typeof PORTAL_TV_LIVE !== 'undefined' && PORTAL_TV_LIVE)          // (the real screen: the list of the admin and the secretary, today's only, scheduling-v63.sql)
+    return (typeof tvBirthdays !== 'undefined' ? tvBirthdays : []).map(x => ({ child:roster.find(c => c.id === x.child_id), b:{ age:x.age } })).filter(x => x.child);
   const md = isoDate(new Date()).slice(5);
   return roster.map((c, i) => ({ child:c, b:kidBirthday(c, i) })).filter(x => x.b.md === md);
 }
@@ -6634,16 +6761,18 @@ function rzReadOnlyClient(real){
     if(k === 'from') return n => { const q = t.from(n); return new Proxy(q, { get(o, m){ if(['insert', 'update', 'upsert', 'delete'].includes(m)) return no; const v = o[m]; return typeof v === 'function' ? v.bind(o) : v; } }); };
     const v = t[k]; return typeof v === 'function' ? v.bind(t) : v; } });
 }
-const hubPlainBack = () => { try { return ['therapist', 'manager'].includes((portalMe() || {}).role) || !!(srv.profile && srv.profile.kind === 'therapist'); } catch(e){ return false; } };          // (no instructor portal to go to: just back, Guy 2026-11-04)
+const hubPlainBack = () => { try { return ['therapist', 'manager', 'secretary'].includes((portalMe() || {}).role) || !!(srv.profile && srv.profile.kind === 'therapist'); } catch(e){ return false; } };          // (no instructor portal to go to: just back, Guy 2026-11-04)
 const rzLookOnly = () => typeof srv !== 'undefined' && !!srv.me && portalServerOn && !!srv.meRow && srv.meRow.role === 'manager';
 function showHub(){
   document.body.classList.remove('portal-mode', 'leopard-bg');
   if(rzLookOnly()) sb = rzReadOnlyClient(sbPersonal);
-  { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly(); if(kids) kids.hidden = rzLookOnly(); }
+  { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly() || (typeof secIsMe === 'function' && secIsMe()); if(kids) kids.hidden = rzLookOnly(); }
   stopCarousel();
   { const pl = document.getElementById('hub-portal-link'), rp = typeof ramzorPersonal !== 'undefined' && ramzorPersonal, plain = rp && hubPlainBack();
     if(pl) pl.hidden = !rp || plain;
     const mb = document.getElementById('hub-main-back'); if(mb) mb.hidden = !rp || matchMedia('(max-width:700px)').matches; }          // (a computer: "מסך ראשי" at the top right, as in the portals; a phone has its own way back: Guy 2026-11-04)
+  document.getElementById('view-manage').classList.remove('manage-kids-only');
+  if(typeof secHubButtons === 'function') secHubButtons();          // (the secretary and the admin: stars, the children's list)
   const cb = document.getElementById('hub-control-btn'); if(cb) cb.hidden = !(typeof canControl === 'function' && canControl());          // (the ahmash control: ahmash, coordinator, admin)
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-hub').classList.add('active');
@@ -6658,6 +6787,8 @@ document.getElementById('hub-daily-btn').addEventListener('click', ()=>{
 document.getElementById('hub-portal-link').addEventListener('click', () => { if(typeof srvOpenPortal === 'function') srvOpenPortal(); });
 document.getElementById('hub-main-back').addEventListener('click', () => showAppHome());
 document.getElementById('hub-control-btn').addEventListener('click', () => { if(typeof showControl === 'function') showControl(); });
+document.getElementById('hub-stars-btn').addEventListener('click', () => showSecScreen('stars'));
+document.getElementById('hub-kidslist-btn').addEventListener('click', () => showKidsList());
 document.getElementById('hub-learn-btn').addEventListener('click', ()=>{
   toast('לומדת הרמזור בקרוב! 🎓');
 });
@@ -7211,7 +7342,7 @@ function showAppHome(){
   document.body.classList.toggle('leopard-bg', look === 'leopard');
   document.getElementById('view-apphome').innerHTML = `
     <div class="apphome mx-home" data-ptheme="${look}">
-      <div class="apphome-top"><div class="mx-brand-wrap mx-brand-small"><div class="mx-brand-logo" role="img" aria-label="Mercury"></div><div class="eyebrow-gold mx-brand">Mercury 1.2</div></div><button type="button" class="home-text-btn" id="apphome-logout">יציאה</button></div>
+      <div class="apphome-top"><div class="mx-brand-wrap mx-brand-small"><div class="mx-brand-logo" role="img" aria-label="Mercury"></div><div class="eyebrow-gold mx-brand">Mercury 1.2</div></div><span class="apphome-top-end"><button type="button" class="home-text-btn" id="apphome-logout">יציאה</button><button type="button" class="apphome-theme" id="apphome-theme" aria-label="${look === 'light' ? 'מעבר למצב כהה' : 'מעבר למצב בהיר'}" title="${look === 'light' ? 'מצב כהה' : 'מצב בהיר'}">${look === 'light' ? '🌙' : '☀️'}</button></span></div>
       <h1 class="apphome-title">מה תרצו לפתוח?</h1>
       <div class="apphome-cards">
         ${portalServerOn ? `<div class="apphome-hello">שלום ${pEsc((portalMe() || {}).first || '')}</div>` : ''}
@@ -7220,12 +7351,13 @@ function showAppHome(){
           <span class="home-card-title">הרמזור</span>
           <span class="home-card-sub">תפעול יומיומי ומסך הילדים</span>
         </button>
-        ${(portalMe() || {}).role === 'therapist' ? '' : `<button type="button" class="home-card" id="apphome-portal">
+        ${['therapist', 'secretary'].includes((portalMe() || {}).role) ? '' : `<button type="button" class="home-card" id="apphome-portal">
           <span class="apphome-emoji apphome-ico">${psIco('people')}</span>
           <span class="home-card-title">${portalServerOn && (portalMe() || {}).role === 'manager' ? 'ניהול' : portalServerOn && (portalMe() || {}).role === 'coordinator' ? ((portalMe() || {}).admin ? 'פורטל ניהול' : 'פורטל הרכזת') : 'פורטל המדריך'}</span>
           <span class="home-card-sub">${portalServerOn && (portalMe() || {}).role === 'manager' ? 'סידור, לו"ז, שיחות ומשתמשים' : 'משמרות, העדפות והודעות'}</span>
         </button>`}
-        ${!liveCut() && typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
+        ${typeof secHomeCards === 'function' ? secHomeCards() : ''}
+        ${!liveCut() && !(typeof secIsMe === 'function' && secIsMe()) && typeof therapyAvailable === 'function' && therapyAvailable() ? `<button type="button" class="home-card" id="apphome-therapy">
           <span class="apphome-emoji apphome-ico">${psIco('leaf')}</span>
           <span class="home-card-title">פורטל הטיפול</span>
           <span class="home-card-sub">${canTherapistPortal() ? 'מה מחכה לך, התוכניות, התצפיות והמעקב' : 'מה עושים עם כל ילד, וממה להימנע'}</span>
@@ -7265,9 +7397,20 @@ function showAppHome(){
   { const ch = document.getElementById('apphome-chats'); if(ch) ch.addEventListener('click', () => showChatsScreen()); }
   { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)
   if(document.getElementById('apphome-portal')) document.getElementById('apphome-portal').addEventListener('click', () => { portalUi.manager = false; if(portalServerOn) srvOpenPortal(); else if(typeof srvShowLogin === 'function' && sbPersonal && !window.__portalDemo) srvShowLogin('email'); else showPortal(); });          // (with the staff password: the personal sign-in, not a demo)
+  if(typeof secHomeWire === 'function') secHomeWire();
   { const ln = document.getElementById('apphome-learn'); if(ln) ln.addEventListener('click', showLearnHome); }          // (the admin's training videos, 14zh-learn.js)
   const mg = document.getElementById('apphome-manage'); if(mg) mg.addEventListener('click', () => { portalUi.manager = true; srvOpenPortal(); });
   document.getElementById('apphome-logout').addEventListener('click', () => document.getElementById('hub-logout-link').click());
+  // light / dark in the corner of the home screen, for everybody (Guy 2026-11-08). From the leopard: to light. Kept like the gear's choice
+  document.getElementById('apphome-theme').addEventListener('click', async () => {
+    const next = look === 'light' ? 'dark' : 'light', st = portalLoad();
+    st.settings.theme = next; try { localStorage.setItem('ramzor-portal-theme', next); } catch(e){}
+    if(!portalServerOn) portalSave();
+    const was = portalServerOn ? srv.portalTheme : null;
+    if(portalServerOn && was) srv.portalTheme = next;
+    showAppHome();
+    if(portalServerOn && was && typeof srvSaveSetting === 'function') await srvSaveSetting({ portalTheme:next });
+  });
 }
 
 // ---- the portal itself
@@ -7392,7 +7535,7 @@ function portalCtx(mk){
 function portalSheet(html){
   const wrap = document.createElement('div');
   wrap.className = 'sheet psheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
+  { const mx = document.querySelector(':is(#view-portal, #view-therapy, #view-learn, #view-oncall, #view-chats, #view-sec, #view-apphome).active :is(.portal-shell, .mx-home)[data-ptheme]'); if(mx){ wrap.classList.add('mx-sheet'); wrap.dataset.ptheme = mx.dataset.ptheme || 'dark'; } }          // (a sheet of a staff portal takes its look: 20-mercury.css)
   wrap.innerHTML = `<div class="sheet-card">${html}</div>`;
   const close = () => wrap.remove();
   wrap.addEventListener('click', e => { if(e.target === wrap || e.target.closest('[data-close]')) close(); });
@@ -8554,7 +8697,7 @@ function srvTabCount(me, t){
   if(t === 'swaps') return (st.swaps || []).filter(s => s.status === 'offered' || (s.status === 'open' && s.urgent)).length + (st.openReqs || []).length;
   if(t === 'vacations') return (st.vacations || []).filter(v => v.status === 'pending').length;
   if(t === 'submissions'){ const mk = addMonths(monthKeyOf(srvToday()), 1), m = portalMonth(mk); if(!srvPrefsOpen(mk)) return 0;
-    return st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role) && !m.submitted[p.id]).length; }
+    return st.instructors.filter(p => p.active && !['coordinator', 'therapist', 'secretary'].includes(p.role) && !m.submitted[p.id]).length; }
   return 0;
 }
 function srvRenderTab(me, body, t){
@@ -8722,7 +8865,7 @@ const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' ||
 // ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
 let ramzorPersonal = false;
-const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist', 'manager'].includes(srv.profile.kind)) || ['instructor', 'coordinator', 'manager'].includes((portalMe() || {}).role);
+const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist', 'manager', 'secretary'].includes(srv.profile.kind)) || ['instructor', 'coordinator', 'manager', 'secretary'].includes((portalMe() || {}).role);
 async function personalEnter(){
   portalServerOn = true; portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoadFirst())) return false;
@@ -8776,7 +8919,7 @@ function srvFeedbackShort(fb){
 function srvRowLine(r){
   const flags = (r.flags || []).filter(f => f !== 'ok').map(f => SRV_FLAG_WORD[f]).filter(Boolean);          // ("אישר/ה ✓" is the coordinator's own mark, not shown to the instructor: Guy 2026-11-03)
   const hrs = r.from && r.to ? rangeHtml(r.from, r.to) : '';
-  return `<b>${dayLabel(r.day)}</b><span>${SRV_SHIFT_WORD[r.shift] || r.shift} ${hrs}${flags.length ? ` · <em>${flags.join(', ')}</em>` : ''}</span>`;
+  return `<b>${dayLabel(r.day)}</b> <span>${SRV_SHIFT_WORD[r.shift] || r.shift} ${hrs}${flags.length ? ` · <em>${flags.join(', ')}</em>` : ''}</span>`;
 }
 // colleagues who could take a shift (the database answers; before scheduling-v5.sql it simply has nothing to add)
 async function srvSwapCandidates(assignmentId){
@@ -10280,7 +10423,7 @@ function srvAskBeforePlacing(staffId, key){
 
 // ---------- THE PORTAL ON THE SERVER: the coordinator's other screens (who submitted, absences, vacation requests, settings) ----------
 const ABSENCE_REASONS = [['sick', 'מחלה'], ['reserve', 'מילואים'], ['leave', 'חופשה מיוחדת / לידה'], ['other', 'אחר']];
-const KIND_WORD = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', therapist:'איש/אשת טיפול', manager:'מנהלת מסגרת' };
+const KIND_WORD = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', secretary:'מזכירה', therapist:'איש/אשת טיפול', manager:'מנהלת מסגרת' };
 const nameOf = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
 const shortDate = d => `${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}`;
 // the days of one person as ranges: ['2026-12-03','2026-12-04','2026-12-05'] -> '3/12–5/12'
@@ -10296,7 +10439,7 @@ function srvRenderSubmissions(body){
   if(!body.isConnected) return;                                   // (a screen that finished loading after the person left it must not draw)
   const st = portalLoad();
   if(!portalUi.smonth) portalUi.smonth = addMonths(monthKeyOf(srvToday()), 1);
-  const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role));          // (a therapist hands in no preferences)
+  const mk = portalUi.smonth, m = portalMonth(mk), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist', 'secretary'].includes(p.role));          // (a therapist hands in no preferences)
   const missing = people.filter(p => !m.submitted[p.id]), done = people.filter(p => m.submitted[p.id]);
   const subRow = p => { const pr = m.prefs[p.id] || { slots:{}, absent:[], hours:{} }, c = { yes:0, avoid:0, no:0 }; Object.values(pr.slots).forEach(v => { v = v === 'can' ? 'avoid' : v; if(c[v] !== undefined) c[v]++; });
     const note = m.notes && m.notes[p.id];
@@ -10318,7 +10461,7 @@ function srvRenderSubmissions(body){
   }));
 }
 function srvAbsenceSheet(body){
-  const st = portalLoad(), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role)), today = srvToday();
+  const st = portalLoad(), people = st.instructors.filter(p => p.active && !['coordinator', 'therapist', 'secretary'].includes(p.role)), today = srvToday();
   const sh = portalSheet(`<h2>הוספת היעדרות</h2>
     <label class="pfield">מי<select id="ab-who">${people.map(p => `<option value="${p.id}">${pEsc(instrName(p, st.instructors))}</option>`).join('')}</select></label>
     <label class="pfield">סיבה<select id="ab-why">${ABSENCE_REASONS.map(r => `<option value="${r[0]}">${r[1]}</option>`).join('')}</select></label>
@@ -10472,7 +10615,7 @@ function srvRenderCoordSettings(body){
       ${st.instructors.filter(p => p.role !== 'instructor' && !gone[p.id]).map(p => fold(p, p.admin ? 'מנהל' : p.role === 'teacher' ? calRoleWord(p.id, 'teacher') : KIND_WORD[p.role], false, `${p.role === 'teacher' && p.active ? `<button type="button" class="btn ghost small" data-fixed-hours="${p.id}">שעות קבועות</button>` : ''}
         ${contact(p)}${photoBtn(p)}${login(p)}${leave(p)}`)).join('')}
       <h3 class="psec">הוספת איש צוות</h3>
-      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם פרטי"><input type="text" id="new-last" placeholder="שם משפחה"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}${srv.meRow && srv.meRow.admin ? '<option value="manager">מנהלת מסגרת</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
+      <div class="pstaff-add"><input type="text" id="new-name" placeholder="שם פרטי"><input type="text" id="new-last" placeholder="שם משפחה"><select id="new-kind"><option value="instructor">מדריך/ה</option><option value="service">בת שירות</option><option value="teacher">מורה / גננת</option>${srv.profile && 'therapist' in srv.profile ? '<option value="therapist">איש/אשת טיפול</option>' : ''}${srv.meRow && srv.meRow.admin ? '<option value="manager">מנהלת מסגרת</option>' : ''}${srv.meRow && srv.meRow.admin && secOn() ? '<option value="secretary">מזכירה</option>' : ''}</select><select id="new-role" aria-label="סוג המדריך"><option value="plain">מדריך/ה</option><option value="leader">מוביל/ה</option><option value="ahmash">אחמ"ש</option></select><input type="email" dir="ltr" id="new-mail" placeholder="מייל"><button type="button" class="btn small" id="new-go">הוספה</button></div>`;
       const wire = box => {
         box.querySelectorAll('[data-simple]').forEach(b => b.addEventListener('click', () => simplePrefsSheet(b.dataset.simple, again)));
         box.querySelectorAll('[data-oc-grant]').forEach(b => b.addEventListener('click', () => oncallGrantSheet(b.dataset.ocGrant)));          // (the admin: may this social worker add / remove instructors in the weekend shifts? scheduling-v50.sql)          // (the admin only: "שבוע אחרי שבוע" / "בלי צבעים" for somebody, Guy 2026-10-30)
@@ -10546,6 +10689,22 @@ function srvRenderCoordSettings(body){
           const name = box.querySelector('#new-name').value.trim(), last = box.querySelector('#new-last').value.trim() || null, kind = box.querySelector('#new-kind').value, mail = box.querySelector('#new-mail').value.trim().toLowerCase() || null;
           if(!name){ toast('צריך שם פרטי'); return; }
           if(!last && st.instructors.some(p => p.active && (p.first === name || String(p.first).startsWith(name + ' ')))){ toast(`כבר יש ${name} ברשימה. צריך גם שם משפחה, כדי להבדיל ביניהם.`, 6000); return; }          // (the first letter of it shows only when two have the same first name: scheduling-v61.sql)
+          if(mail){          // (an e-mail is kept once: a removed person with it is offered back, instead of "the e-mail was not saved": Guy 2026-11-08)
+            const had = await sbPersonal.from('staff_private').select('staff_id').ilike('email', mail.replace(/[\\%_]/g, '\\$&')).limit(1);
+            const hid = had.data && had.data[0] && had.data[0].staff_id;
+            if(hid){
+              const hs = await sbPersonal.from('staff').select('id,display_name,active').eq('id', hid).maybeSingle(), who = hs.data;
+              if(!who){ toast('המייל הזה כבר שמור אצל מישהו אחר במערכת'); return; }
+              if(who.active){ toast(`המייל הזה כבר שייך ל${who.display_name}, שנמצא/ת ברשימה.`, 6000); return; }
+              const kw = (kindSel.selectedOptions[0] || {}).textContent || '';
+              if(!await confirmSheet({ title:`${who.display_name} כבר היה/תה ברשימה`, text:`המייל הזה שמור אצל ${who.display_name}, שהוסר/ה מהרשימה. להחזיר לרשימה${kw ? ' בתור ' + kw : ''}? שום דבר לא נמחק, וההיסטוריה נשמרת.`, okLabel:'החזרה לרשימה' })) return;
+              const u = await sbPersonal.from('staff').update({ active:true, removed_at:null, kind }).eq('id', hid);
+              if(u.error){ toast('ההחזרה נכשלה'); return; }
+              if(kind !== 'instructor') await sbPersonal.from('staff_private').update({ is_leader:false, ahmash_rank:0, leader_priority:null, ...(kind === 'therapist' ? { is_therapist:true } : {}) }).eq('staff_id', hid);
+              await sbPersonal.from('coordinator_flags').update({ resolved:true }).eq('staff_id', hid).eq('kind', 'removed').eq('resolved', false);
+              toast(`${who.display_name} חזר/ה לרשימה. את הכניסה פותחים ב"יצירת התחברות".`, 6000); await srvReloadSafe(); again(); return;
+            }
+          }
           const maxOrder = Math.max(0, ...st.instructors.map((p, i) => i + 1));
           const s = await sbPersonal.from('staff').insert({ display_name:name, first_name:name, kind, sort_order:maxOrder + 1 }).select('id').single();
           if(s.error){ toast('ההוספה נכשלה'); return; }
@@ -10640,22 +10799,7 @@ function srvRenderCoordSettings(body){
       ${GROUPS.map(([key, title, test]) => { const list = rows.filter(test); return `<details class="pfold pfold-in" data-lgroup="${key}"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">${list.slice(0, 60).map(line).join('') || '<div class="pnote">אין.</div>'}${list.length > 60 ? `<div class="pnote">ועוד ${list.length - 60} שינויים ישנים יותר.</div>` : ''}</div></details>`; }).join('')}`;
       return { html, wire:() => {} };
     }],
-    screens: [() => 'מסכי הילדים בחדר', async () => {          // (Mercury stage 6: no staff password; a screen joins by a code sent by e-mail, scheduling-v32.sql)
-      const r = await sbPersonal.from('tv_devices').select('id,name,created_at,last_seen,active').order('created_at', { ascending:false });
-      if(r.error) return { html:'<div class="pnote">צריך את SQL 32.</div>', wire:() => {} };
-      const when = x => x ? new Date(x).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' }) : 'עוד לא';
-      const html = `<div class="pnote">מסך ילדים מתחבר פעם אחת בקוד קצר. הקוד מופיע כאן מיד (ונשלח גם במייל), תקף ל-15 דקות, ומקלידים אותו במסך (בכתובת של מסך הילדים).</div>
-        <button type="button" class="btn" id="tv-code-new">קוד למסך חדש</button>
-        ${(r.data || []).map(d => `<div class="pmine-row"><span><b>${pEsc(d.name)}</b><br><small>חובר ${when(d.created_at)} · נראה לאחרונה ${when(d.last_seen)}${d.active ? '' : ' · מנותק'}</small></span>${d.active ? `<button type="button" class="btn ghost small" data-tv-off="${d.id}">ניתוק</button>` : ''}</div>`).join('') || '<div class="pnote">עוד אין מסכים מחוברים.</div>'}`;
-      return { html, wire:box => {
-        box.querySelector('#tv-code-new').addEventListener('click', async e => { e.target.disabled = true; const x = await sbPersonal.rpc('tv_code_new'); e.target.disabled = false; if(x.error){ toast('יצירת הקוד נכשלה'); return; }
-          // the code at once on the screen (the e-mail goes out with the hourly sending, later than the 15 minutes): read from her own notice
-          const n = await sbPersonal.from('notices').select('text').eq('to_staff', srv.me).eq('kind', 'tv').order('created_at', { ascending:false }).limit(1), code = ((((n.data || [])[0] || {}).text || '').match(/\b(\d{6})\b/) || [])[1];
-          if(!code){ toast('הקוד נשלח למייל שלך. הוא תקף ל-15 דקות'); return; }
-          portalSheet(`<h2>הקוד למסך הילדים</h2><div class="tv-code-big" dir="ltr">${code}</div><div class="pnote">מקלידים אותו במסך הילדים (בכתובת של מסך הילדים). תקף ל-15 דקות, לשימוש אחד. נשלח גם למייל שלך.</div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סגירה</button></div>`); });
-        box.querySelectorAll('[data-tv-off]').forEach(b => b.addEventListener('click', async () => { if(!(await confirmSheet({ title:'לנתק את המסך?', text:'המסך יפסיק להציג עד שיחובר מחדש בקוד.', okLabel:'כן, לנתק', cancelLabel:'חזרה', danger:true }))) return; const x = await sbPersonal.rpc('tv_revoke', { p_id:b.dataset.tvOff }); toast(x.error ? 'הניתוק נכשל' : 'המסך נותק'); again(); }));
-      } };
-    }]
+    screens: [() => 'מסכי הילדים בחדר', () => tvScreensSection(again)]
   };
   const fill = async id => {
     const box = body.querySelector(`[data-sbody="${id}"]`); if(!box || box.dataset.filled) return;
@@ -10671,6 +10815,24 @@ function srvRenderCoordSettings(body){
     fill(d.dataset.sfold);
   }));
   Object.keys(sections).forEach(id => { if(portalUi.setFold[id]) fill(id); });
+}
+
+// the screens in the room: a code for a new screen, the list, disconnecting. In the coordinator's settings, and in the admin's "מסך הילדים" card (14zp-tv-display.js)
+async function tvScreensSection(again){
+      const r = await sbPersonal.from('tv_devices').select('id,name,created_at,last_seen,active').order('created_at', { ascending:false });
+      if(r.error) return { html:'<div class="pnote">צריך את SQL 32.</div>', wire:() => {} };
+      const when = x => x ? new Date(x).toLocaleString('he-IL', { dateStyle:'short', timeStyle:'short' }) : 'עוד לא';
+      const html = `<div class="pnote">מסך ילדים מתחבר פעם אחת בקוד קצר. הקוד מופיע כאן מיד (ונשלח גם במייל), תקף ל-15 דקות, ומקלידים אותו במסך (בכתובת של מסך הילדים).</div>
+        <button type="button" class="btn" id="tv-code-new">קוד למסך חדש</button>
+        ${(r.data || []).map(d => `<div class="pmine-row"><span><b>${pEsc(d.name)}</b><br><small>חובר ${when(d.created_at)} · נראה לאחרונה ${when(d.last_seen)}${d.active ? '' : ' · מנותק'}</small></span>${d.active ? `<button type="button" class="btn ghost small" data-tv-off="${d.id}">ניתוק</button>` : ''}</div>`).join('') || '<div class="pnote">עוד אין מסכים מחוברים.</div>'}`;
+      return { html, wire:box => {
+        box.querySelector('#tv-code-new').addEventListener('click', async e => { e.target.disabled = true; const x = await sbPersonal.rpc('tv_code_new'); e.target.disabled = false; if(x.error){ toast('יצירת הקוד נכשלה'); return; }
+          // the code at once on the screen (the e-mail goes out with the hourly sending, later than the 15 minutes): read from her own notice
+          const n = await sbPersonal.from('notices').select('text').eq('to_staff', srv.me).eq('kind', 'tv').order('created_at', { ascending:false }).limit(1), code = ((((n.data || [])[0] || {}).text || '').match(/\b(\d{6})\b/) || [])[1];
+          if(!code){ toast('הקוד נשלח למייל שלך. הוא תקף ל-15 דקות'); return; }
+          portalSheet(`<h2>הקוד למסך הילדים</h2><div class="tv-code-big" dir="ltr">${code}</div><div class="pnote">מקלידים אותו במסך הילדים (בכתובת של מסך הילדים). תקף ל-15 דקות, לשימוש אחד. נשלח גם למייל שלך.</div><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn" data-close>סגירה</button></div>`); });
+        box.querySelectorAll('[data-tv-off]').forEach(b => b.addEventListener('click', async () => { if(!(await confirmSheet({ title:'לנתק את המסך?', text:'המסך יפסיק להציג עד שיחובר מחדש בקוד.', okLabel:'כן, לנתק', cancelLabel:'חזרה', danger:true }))) return; const x = await sbPersonal.rpc('tv_revoke', { p_id:b.dataset.tvOff }); toast(x.error ? 'הניתוק נכשל' : 'המסך נותק'); await again(); }));
+      } };
 }
 
 // a photo from the phone or computer -> a small square JPEG (centre cut), so that it stays light for everybody
@@ -11060,7 +11222,7 @@ async function srvSaveSimplePrefs(patch){
 }
 function openPortalSettings(){
   const coord = leopardAllowed(), leo = coord && portalThemeNow() === 'leopard';          // (the leopard look: exclusive — the coordinator, the admin, and whom the admin chose; never the default)          // (the leopard look: only the coordinator's portal)
-  const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { return localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){ return '0'; } })();          // ('0' usual, '1' large, '2' very large)
+  const st = portalLoad(), v = portalVoice(), dark = st.settings.theme === 'dark', big = (() => { try { const v = localStorage.getItem('ramzor-portal-big') || '0'; return v === '2' ? '1' : v; } catch(e){ return '0'; } })();          // ('0' usual, '1' large; the very large one is gone from the settings: Guy 2026-11-08)
   const role = srv.meRow ? srv.meRow.role : '', isInstr = role === 'instructor', remOn = ['instructor', 'service'].includes(role);
   const ps = srv.prefStart || '', PS = { '':'הכל לא סומן', yes:'הכל "כן"', no:'הכל "לא"' };
   const gf = portalUi.gearFold = portalUi.gearFold || {};
@@ -11077,7 +11239,7 @@ function openPortalSettings(){
     ${remOn ? `<h3 class="psec">תזכורות במייל להגשת ההעדפות</h3>
     <div class="pchoice wrap"><button type="button" class="${srv.reminders === false ? '' : 'on'}" data-set-rem="1">לקבל תזכורות</button><button type="button" class="${srv.reminders === false ? 'on' : ''}" data-set-rem="0">בלי תזכורות</button></div>` : ''}`)}
     ${fold('look', 'מראה', lookNow, `<div class="pchoice wrap"><button type="button" class="${dark && !leo ? 'on' : ''}" data-set-theme="dark">מצב כהה</button><button type="button" class="${dark || leo ? '' : 'on'}" data-set-theme="light">מצב בהיר</button>${coord ? `<button type="button" class="${leo ? 'on' : ''}" data-set-theme="leopard">מצב מנומר 🐆</button>` : ''}</div>
-    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button><button type="button" class="${big === '2' ? 'on' : ''}" data-set-big="2">טקסט גדול מאוד</button></div>`)}
+    <div class="pchoice wrap" style="margin-top:8px"><button type="button" class="${big === '0' ? 'on' : ''}" data-set-big="0">טקסט רגיל</button><button type="button" class="${big === '1' ? 'on' : ''}" data-set-big="1">טקסט גדול</button></div>`)}
     ${isInstr ? fold('prefs', 'ההעדפות שלי', PS[ps], `<h3 class="psec">איך מתחילות ההעדפות בכל חודש?</h3>
     <div class="pchoice wrap pref-start">${Object.keys(PS).map(k => `<button type="button" class="${ps === k ? 'on' : ''}" data-pref-start="${k}">${PS[k]}</button>`).join('')}</div>
     <div class="pnote">כשנפתח חודש חדש, כל המשמרות מסומנות אצלך כך מההתחלה, ומשנים רק את מה שצריך. ההעדפות הקבועות שלך נשארות "לא".</div>
@@ -11224,7 +11386,7 @@ function openChangePassword(){
   sh.querySelector('#chpw-new2').addEventListener('keydown', e => { if(e.key === 'Enter') save.click(); });
 }
 function applyPortalSize(){
-  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}
+  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; if(big === '2'){ big = '1'; localStorage.setItem('ramzor-portal-big', '1'); } } catch(e){}          // (who had "טקסט גדול מאוד" gets "טקסט גדול": Guy 2026-11-08)
   document.body.classList.toggle('portal-big', big === '1');
   document.body.classList.toggle('portal-huge', big === '2');
 }
@@ -11234,7 +11396,7 @@ function applyPortalSize(){
 // Nothing here changes the real schedule: the people changes are for the kids' TV of today only.
 const ctl = { fold:{ shifts:true }, shifts:null, tt:null, ttEdit:null, ttFixedDay:null, log:null };
 const canControl = () => typeof ramzorPersonal !== 'undefined' && ramzorPersonal && !!(srv.profile && srv.profile.control);
-const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.kind === 'manager' || srv.profile.admin));          // (the manager edits the fixed timetable too: scheduling-v52.sql)
+const ctlIsCoord = () => !!(srv.profile && (srv.profile.kind === 'coordinator' || srv.profile.kind === 'manager' || srv.profile.kind === 'secretary' || srv.profile.admin));          // (the manager edits the fixed timetable too: scheduling-v52.sql)
 const CTL_SHIFTS = [['M', 'בוקר'], ['A', 'צהריים'], ['N', 'לילה']];
 const WEEKDAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const ctlToday = () => isoDate(new Date());
@@ -11302,6 +11464,7 @@ function renderControl(){
     <div class="ctl-top"><button type="button" class="back-btn" id="ctl-back">→ חזרה</button><h1 class="ctl-title">בקרת אחמ"ש</h1><div class="ctl-date">${dayLabel(today)}</div></div>
     ${fold('shifts', 'מי מוצג היום במסך הילדים', 'רק במסך הילדים, ורק להיום')}
     ${fold('tt', 'הלו"ז של היום')}
+    ${typeof secOn === 'function' && secOn() ? fold('ev', 'חונכויות והתנדבויות היום') : ''}
     ${fold('diary', 'יומן הילדים היום', 'יציאות, שיחות ופגישות')}
     ${fold('bonus', 'בונוסים היום')}
     ${fold('duties', 'לוח התורנויות')}
@@ -11316,6 +11479,7 @@ async function ctlFill(id){
   try {
     if(id === 'shifts') await ctlShifts(box);
     if(id === 'tt') await ctlTimetable(box);
+    if(id === 'ev') await ctlEvents(box);
     if(id === 'diary'){ if(liveCut()){ box.closest('details') ? box.closest('details').remove() : box.remove(); return; } await ctlDiary(box); }
     if(id === 'bonus') await ctlBonuses(box);
     if(id === 'duties') await ctlDuties(box);
@@ -11348,7 +11512,7 @@ async function ctlShifts(box){
   }));
   box.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => {
     const code = b.dataset.add, here = new Set(groups[code].filter(p => !p.removed).map(p => p.id));
-    const people = st.instructors.filter(p => p.active && !['coordinator', 'therapist'].includes(p.role) && !here.has(p.id)).sort((a, c) => String(a.first).localeCompare(String(c.first), 'he'));
+    const people = st.instructors.filter(p => p.active && !['coordinator', 'therapist', 'secretary'].includes(p.role) && !here.has(p.id)).sort((a, c) => String(a.first).localeCompare(String(c.first), 'he'));
     const sh = portalSheet(`<h2>הוספה למשמרת ה${CTL_SHIFTS.find(x => x[0] === code)[1]}</h2>
       <input type="search" class="ctl-search" id="ctl-search" placeholder="חיפוש שם" autocomplete="off">
       <div class="ctl-pick">${people.map(p => `<button type="button" class="ctl-pick-item" data-pick="${p.id}" data-name="${pEsc(p.first)}"><img src="${p.photo}" alt=""><span>${pEsc(instrName(p, st.instructors))}</span><small>${KIND_WORD[p.role] || ''}</small></button>`).join('')}</div>
@@ -11372,9 +11536,20 @@ function personFace(p){
 const ctlFace = p => p.photo ? `<img class="ctl-face" src="${p.photo}" alt="">` : `<span class="ctl-face ctl-face-art">${personArt(p)}</span>`;
 
 // ---- 2. today's timetable (and, for the coordinator, the fixed timetable of each weekday)
+// an ahmash changes the timetable and the events only during the shift (Guy 5 Nov; the database keeps it: scheduling-v62.sql). Before v62 nothing changes
+const ctlMayEdit = async () => typeof secOn !== 'function' || !secOn() || ctlIsCoord() || (await secApi.canEdit()) !== false;
+async function ctlEvents(box){
+  const today = secToday(), [r, evs, may] = await Promise.all([sb.rpc('tv_timetable_today'), secApi.between(today, today).catch(() => null), ctlMayEdit()]);
+  if(evs === null){ box.innerHTML = '<div class="pnote">האירועים עוד לא זמינים כאן.</div>'; return; }
+  const items = ((r.data && r.data.items) || []).filter(x => ttOn(x, today));
+  box.innerHTML = `${evs.length ? ttAlignedHtml(items, evs) : '<div class="pnote">אין היום חונכויות או התנדבויות.</div>'}
+    ${may ? '<div class="ctl-actions"><button type="button" class="btn ghost" id="ctl-ev-manage">ניהול חונכויות והתנדבויות</button></div>' : '<div class="pnote">אפשר לשנות רק בזמן המשמרת שלך.</div>'}`;
+  { const b = box.querySelector('#ctl-ev-manage'); if(b) b.addEventListener('click', () => showSecScreen('ev', 'control')); }
+}
 async function ctlTimetable(box){
   const r = await sb.rpc('tv_timetable_today'); if(r.error) throw r.error;
   r.data.items = (r.data.items || []).filter(x => ttOn(x, r.data.day));          // (what repeats every few weeks or once a month: only on its days)
+  if(!(await ctlMayEdit())){ box.innerHTML = `<div class="pnote">אפשר לשנות את הלו"ז רק בזמן המשמרת שלך.</div>${r.data.items.length ? ttAlignedHtml(r.data.items, []) : '<div class="pnote">אין לו"ז להיום.</div>'}`; return; }
   ctl.tt = r.data;
   if(!ctl.ttEdit || ctl.ttEdit.day !== r.data.day) ctl.ttEdit = { day:r.data.day, items:(r.data.items || []).map(x => Object.assign({}, x)) };          // (what was kept: its end is never suggested over)
   ctlTimetableDraw(box);
@@ -11457,7 +11632,7 @@ function ctlTimetableDraw(box){
       const it = editing.items[i]; it.i = o.dataset.icon; if(!it.n) it.n = ttIcon(it.i)[1]; sh.close(); ctlTimetableDraw(box);
     }));
   }));
-  const saved = (res, msg) => { if(res.error){ toast('השמירה נכשלה. נסו שוב.'); return false; } toast(msg); return true; };
+  const saved = (res, msg) => { if(res.error){ toast('השמירה נכשלה. נסו שוב.'); return false; } toast(msg); if(typeof ttNudgeTv === 'function') ttNudgeTv(); return true; };
   const on = (id, fn) => { const b = box.querySelector('#' + id); if(b) b.addEventListener('click', fn); };
   on('tt-save', async () => { const items = clean(); if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ await keepRepeats(items); ctl.ttEdit = null; ctlTimetable(box); } });
   on('tt-reset', async () => { if(saved(await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'חזרנו ללו"ז הקבוע של היום.')){ ctl.ttEdit = null; ctlTimetable(box); } });
@@ -11616,12 +11791,14 @@ async function ctlLog(box){
 
 // ---------- THE KIDS' TV, from the database (config "portalTv"): who is on shift today, today's timetable, the night and morning screens ----------
 // Read without signing in (scheduling-v15.sql: tv_shifts_today, tv_timetable_today). The ahmash control's changes of today are already applied.
-var tvShifts = null, tvTimetable = null, tvTodayAt = 0;          // (var: the TV screens of 14d-portal-tv.js ask for them while the page is still starting)
+var tvShifts = null, tvTimetable = null, tvEvents = [], tvBirthdays = [], tvTodayAt = 0;          // (var: the TV screens of 14d-portal-tv.js ask for them while the page is still starting)
 async function loadTvToday(force){
   if(!force && Date.now() - tvTodayAt < 60 * 1000) return;
   tvTodayAt = Date.now();
   try { const r = await sb.rpc('tv_shifts_today'); if(!r.error) tvShifts = r.data; } catch(e){ /* keep the last one */ }
   try { const r = await sb.rpc('tv_timetable_today'); if(!r.error){ if(r.data && typeof ttOn === 'function') r.data.items = (r.data.items || []).filter(x => ttOn(x, r.data.day)); tvTimetable = r.data; } } catch(e){ /* keep the last one */ }
+  try { const r = await sb.rpc('tv_events_today'); if(!r.error) tvEvents = r.data || []; } catch(e){ /* keep the last one */ }          // (mentoring and volunteering: scheduling-v62.sql; before it there are none)
+  try { const r = await sb.rpc('tv_birthdays_today'); if(!r.error) tvBirthdays = r.data || []; } catch(e){ /* keep the last one */ }          // (today's birthdays, no dates: scheduling-v63.sql)
 }
 const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 const hm = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
@@ -11655,18 +11832,25 @@ function renderShiftsLive(){
   el.className = 'tv-instructors tvs';
   el.style.setProperty('--tvs-size', most <= 5 ? '15vh' : most <= 7 ? '12.5vh' : most <= 9 ? '10.5vh' : '9vh');
   el.innerHTML = ['M', 'A', 'N'].map(code => `<div class="tvs-band ${tvShiftPhase(code)}"><div class="tvs-art">${TV_SHIFT_ART[code]}</div>
-      <div class="tvs-people">${shown(code).map(p => `<div class="tvs-person">${p.photo ? `<img class="tvs-photo" src="${p.photo}" alt="">` : `<div class="tvs-photo tvs-face">${personArt(p)}</div>`}<div class="tvs-name">${escapeHtml(p.label)}</div></div>`).join('') || '<div class="tvs-none">·</div>'}</div></div>`).join('');
+      <div class="tvs-people">${shown(code).map(p => `<div class="tvs-person">${p.photo && !(typeof tvdOff === 'function' && tvdOff('shifts_photos')) ? `<img class="tvs-photo" src="${p.photo}" alt="">` : `<div class="tvs-photo tvs-face">${personArt(p)}</div>`}<div class="tvs-name">${escapeHtml(p.label)}</div></div>`).join('') || '<div class="tvs-none">·</div>'}</div></div>`).join('');
 }
 function renderTimetableLive(){
-  const el = document.getElementById('tv-timetable'), list = (tvTimetable && tvTimetable.items) || [];
-  if(!list.length){ el.innerHTML = '<div class="empty">אין לו"ז להיום</div>'; return; }
+  const el = document.getElementById('tv-timetable'), list = (tvTimetable && tvTimetable.items) || [], evs = (typeof tvdOff === 'function' && tvdOff('timetable_events')) ? [] : (tvEvents || []);
+  if(!list.length && !evs.length){ el.innerHTML = '<div class="empty">אין לו"ז להיום</div>'; return; }
+  if(evs.length){          // a day with mentoring or volunteering: two columns, one row per hour (a day without them stays as it is below: Guy 5 Nov)
+    const n = nowMin(), all = [...list, ...evs], endOf = a => a.end ? hm(a.end) : (() => { const later = all.map(b => hm(b.t)).filter(x => x > hm(a.t)).sort((x, y) => x - y)[0]; return later === undefined ? hm(a.t) + 60 : later; })();
+    const isNow = a => n >= hm(a.t) && n < endOf(a), isPast = a => n >= endOf(a);
+    el.className = 'tv-timetable tvt3';
+    el.innerHTML = `${tvTimetable && tvTimetable.title && !(typeof tvdOff === 'function' && tvdOff('timetable_title')) ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}${ttAlignedHtml(list, evs, { tv:true, art:ttArt, phase:r => { const xs = [...r.main, ...r.ev]; return xs.some(isNow) ? ' now' : xs.every(isPast) ? ' past' : ''; } })}`;
+    return;
+  }
   // "now" by the hours (Guy 2026-11-04, SCHEDULE-SPEC): from its start to its end — or, with no end written, to the next activity that starts later;
   // two activities at the same time (different groups) are both "now"
   const n = nowMin(), endOf = (a, i) => a.end ? hm(a.end) : (() => { const nx = list.slice(i + 1).find(b => hm(b.t) > hm(a.t)); return nx ? hm(nx.t) : hm(a.t) + 60; })();
   const phase = (a, i) => n >= hm(a.t) && n < endOf(a, i) ? ' now' : n >= endOf(a, i) ? ' past' : '';
   el.className = 'tv-timetable tvt2';
   el.style.setProperty('--tvt-cols', list.length > 8 ? 6 : list.length > 4 ? 4 : list.length);
-  el.innerHTML = `${tvTimetable.title ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${phase(a, i)}">
+  el.innerHTML = `${tvTimetable.title && !(typeof tvdOff === 'function' && tvdOff('timetable_title')) ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${phase(a, i)}">
       <div class="tvt2-time"><bdi dir="ltr">${escapeHtml(a.t)}${a.end ? '–' + escapeHtml(a.end) : ''}</bdi></div><div class="tvt2-icon">${ttArt(a.i)}</div><div class="tvt2-name">${escapeHtml(a.n)}</div></div>`).join('')}</div>`;
 }
 // the picture of an activity (the drawings of 14p-timetable-art.js when there is one, else the emoji)
@@ -11677,8 +11861,8 @@ const ttArt = id => (typeof TT_ART !== 'undefined' && TT_ART[id]) || `<span clas
 const tvClock = () => typeof israelNow === 'function' ? israelNow() : { minutes:nowMin(), date:isoDate(new Date()) };
 function tvQuietNow(){
   const n = tvClock().minutes;
-  if(n >= hm('05:30') && n < hm('07:30')) return 'morning';
-  if(n >= hm('19:30') || n < hm('05:30')) return 'night';
+  if(n >= hm('05:30') && n < hm('07:30')) return (typeof tvdOff === 'function' && tvdOff('morning')) ? null : 'morning';          // (the admin may hide each of them: 14zp-tv-display.js)
+  if(n >= hm('19:30') || n < hm('05:30')) return (typeof tvdOff === 'function' && tvdOff('night')) ? null : 'night';
   return null;
 }
 // the morning: the whole sequence at once — getting ready (washing the face with the teeth first, Guy 2026-11-04; dressing; shoes), and only then breakfast, apart (a sandwich; cornflakes on Saturday).
@@ -11885,7 +12069,7 @@ async function adminStaff(box, body){
   const isTh = {}; if(mercury) (thr.data || []).forEach(r => { isTh[r.staff_id] = !!r.is_therapist; });
   if(staff.error || priv.error) throw staff.error || priv.error;
   const pv = {}; (priv.data || []).forEach(p => { pv[p.staff_id] = p; });
-  const KIND = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', therapist:'איש/אשת טיפול', admin:'מנהל' };
+  const KIND = { instructor:'מדריך/ה', service:'בת שירות', teacher:'מורה / גננת', coordinator:'רכזת', secretary:'מזכירה', therapist:'איש/אשת טיפול', admin:'מנהל' };
   const flags = (s, p) => [p.is_admin ? 'מנהל' : '', isTh[s.id] && s.kind !== 'therapist' ? 'גם איש/אשת טיפול' : '', p.is_leader ? 'מוביל/ה' : '', p.ahmash_rank ? `אחמ"ש ${p.ahmash_rank}` : '', p.no_nights ? 'בלי לילות' : '', p.latest_end_hour ? `עד ${p.latest_end_hour}:00` : '', p.manual_only ? 'שיבוץ ידני בלבד' : '', p.only_long_weekend ? 'רק סופ"ש ארוך' : '', p.female === false ? 'גבר' : '',
     [p.min_mid, p.min_nights, p.min_weekend].some(x => x != null) ? `מינימום אישי ${p.min_mid ?? 2}/${p.min_nights ?? 1}/${p.min_weekend ?? 4}` : '', p.day_buddy ? `יום עדיף עם ${nameOf(p.day_buddy)}` : '', p.lang === 'ar' ? 'ערבית' : ''].filter(Boolean).join(' · ');
   box.innerHTML = (staff.data || []).map(s => { const p = pv[s.id] || {}; return `<div class="pmine-row adm-row${s.active ? '' : ' inactive'}"><span><b>${pEsc(s.display_name)}</b> <small>${KIND[s.kind] || s.kind}${gone[s.id] ? ' · הוסר/ה מהרשימה' : s.active ? '' : ' · לא פעיל/ה'}</small><br><small>${pEsc(flags(s, p)) || '—'}</small></span>${gone[s.id] ? `<button type="button" class="btn ghost small" data-adm-return="${s.id}">החזרה לרשימה</button>` : `<button type="button" class="btn ghost small" data-adm-edit="${s.id}">✏️ עריכה</button>`}</div>`; }).join('');
@@ -11904,7 +12088,7 @@ async function adminStaff(box, body){
       ${twoNames ? `<label class="pfield">שם פרטי<input type="text" id="ae-name" maxlength="40" value="${pEsc(firstOf[s.id] || s.display_name)}"></label>
       <label class="pfield">שם משפחה<input type="text" id="ae-last" maxlength="40" value="${pEsc(lastOf[s.id] || '')}"></label>
       <div class="pnote">בכל מקום מופיע רק השם הפרטי. האות הראשונה של שם המשפחה מופיעה רק כשיש עוד מישהו עם אותו שם.</div>` : `<label class="pfield">השם (כפי שמוצג)<input type="text" id="ae-name" maxlength="40" value="${pEsc(s.display_name)}"></label>`}
-      <label class="pfield">תפקיד<select id="ae-kind">${Object.keys(KIND).filter(k => k !== 'admin' && (k !== 'therapist' || mercury)).map(k => `<option value="${k}"${s.kind === k ? ' selected' : ''}>${KIND[k]}</option>`).join('')}</select></label>
+      <label class="pfield">תפקיד<select id="ae-kind">${Object.keys(KIND).filter(k => k !== 'admin' && (k !== 'therapist' || mercury) && (k !== 'secretary' || secOn())).map(k => `<option value="${k}"${s.kind === k ? ' selected' : ''}>${KIND[k]}</option>`).join('')}</select></label>
       <div class="adm-checks">${yes('ae-active', 'פעיל/ה', s.active)}${yes('ae-female', 'אישה', p.female !== false)}${yes('ae-leader', 'מוביל/ה', p.is_leader)}${yes('ae-nonights', 'לא עושה לילות', p.no_nights)}${yes('ae-manual', 'שיבוץ ידני בלבד', p.manual_only)}${yes('ae-long', 'רק סופ"ש ארוך', p.only_long_weekend)}${yes('ae-admin', 'מנהל (פורטל ניהול)', p.is_admin)}</div>
       ${mercury ? `<div class="adm-checks">${yes('ae-therapist', 'גם איש/אשת טיפול (רואה את הילדים שבאחריותו בפורטל הטיפול)', s.kind === 'therapist' || isTh[s.id])}</div>` : ''}
       <label class="pfield">אחמ"ש<select id="ae-ahm"><option value="0"${!p.ahmash_rank ? ' selected' : ''}>לא</option><option value="1"${p.ahmash_rank === 1 ? ' selected' : ''}>כן, דרגה 1</option><option value="2"${p.ahmash_rank === 2 ? ' selected' : ''}>כן, דרגה 2 (רק כשאין אחר)</option></select></label>
@@ -12643,8 +12827,8 @@ async function thpLoad(){
 
 // the size of the text: the same three choices as in everybody's settings, kept the same way; "רגיל" until she chooses (Guy 2026-11-04)
 function thpTextSizeHtml(){
-  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; } catch(e){}
-  return `<div class="pfield th-text-size"><span>גודל הכתב</span><div class="pchoice wrap">${[['0', 'טקסט רגיל'], ['1', 'טקסט גדול'], ['2', 'טקסט גדול מאוד']].map(([k, w]) => `<button type="button" class="${big === k ? 'on' : ''}" data-th-big="${k}">${w}</button>`).join('')}</div></div>`;
+  let big = '0'; try { big = localStorage.getItem('ramzor-portal-big') || '0'; if(big === '2') big = '1'; } catch(e){}
+  return `<div class="pfield th-text-size"><span>גודל הכתב</span><div class="pchoice wrap">${[['0', 'טקסט רגיל'], ['1', 'טקסט גדול']].map(([k, w]) => `<button type="button" class="${big === k ? 'on' : ''}" data-th-big="${k}">${w}</button>`).join('')}</div></div>`;
 }
 // the tabs of each portal
 function thpTabs(){
@@ -16488,7 +16672,7 @@ async function mgrTimetable(body){
   const box = body.querySelector('#mgr-tt');
   try {
     if(!edit) return await mgrTimetableView(box);
-    box.insertAdjacentHTML('beforebegin', '<div class="pnote">שינוי נשמר בלחיצה על "שמירה", מופיע במסך הילדים תוך רגע, והרכזת מקבלת על כך הודעה בפורטל.</div>');
+    box.insertAdjacentHTML('beforebegin', `<div class="pnote">שינוי נשמר בלחיצה על "שמירה", ומופיע במסך הילדים תוך רגע${mgrIsMe() ? ', והרכזת מקבלת על כך הודעה בפורטל' : ''}.</div>`);
     await ctlTimetable(box);
   } catch(e){ box.innerHTML = '<div class="pstatus bad">הלו"ז לא נטען. אפשר לנסות שוב.</div>'; }
 }
@@ -16498,15 +16682,18 @@ async function mgrTimetableView(box){
   const today = isoDate(new Date()), sun = addDays(today, -dowOf(today)), week = mgr.ttView === 'week', days = Array.from({ length:7 }, (_, i) => addDays(sun, i));
   const [r, fixed, daily] = await Promise.all([sb.rpc('tv_timetable_today'), sbPersonal.from('timetable_fixed').select('weekday,items'), sbPersonal.from('timetable_day').select('day,items').gte('day', days[0]).lte('day', days[6])]);
   if(r.error) throw r.error;
+  const evs = secOn() ? await secApi.between(days[0], days[6]).catch(() => []) : [], evOf = d => evs.filter(e => e.occ === d);          // (mentoring and volunteering: next to the timetable, 14zo-secretary.js)
   if(!box.isConnected) return;
   const itemsOf = d => (d === today ? (r.data.items || []) : ((daily.data || []).find(x => x.day === d) || (fixed.data || []).find(x => x.weekday === dowOf(d)) || {}).items || []).filter(x => ttOn(x, d));
-  const card = a => `<div class="mgr-ttv-item"><div class="mgr-ttv-time"><bdi dir="ltr">${pEsc(a.t || '')}${a.end ? '–' + pEsc(a.end) : ''}</bdi></div><div class="mgr-ttv-icon">${typeof ttArt === 'function' ? ttArt(a.i) : ''}</div><div class="mgr-ttv-name">${pEsc(a.n || '')}</div></div>`;
+  const card = a => `<div class="mgr-ttv-item${a.ev ? ' mgr-ttv-ev' : ''}"><div class="mgr-ttv-time"><bdi dir="ltr">${pEsc(a.t || '')}${a.end ? '–' + pEsc(a.end) : ''}</bdi></div><div class="mgr-ttv-icon">${typeof ttArt === 'function' ? ttArt(a.i) : ''}</div><div class="mgr-ttv-name">${pEsc(a.n || '')}</div></div>`;
   const grid = list => list.length ? `<div class="mgr-ttv" style="--c:${list.length > 12 ? 4 : 3}">${list.map(card).join('')}</div>` : '<div class="pnote">אין לו"ז ליום הזה.</div>';
+  const dayHtml = d => evOf(d).length ? ttAlignedHtml(itemsOf(d), evOf(d)) : grid(itemsOf(d));
+  const colOf = d => itemsOf(d).concat(evOf(d).map(e => ({ t:e.t, end:e.end, i:e.i, n:evText(e), ev:true }))).sort((a, b) => String(a.t).localeCompare(String(b.t)));
   const phone = matchMedia('(max-width:700px)').matches, pick = mgr.ttDay && days.includes(mgr.ttDay) ? mgr.ttDay : today;
   const seg = `<div class="mx-seg mgr-tt-mode" role="group" aria-label="תצוגה"><button type="button" data-mtv="day" aria-pressed="${!week}">היום</button><button type="button" data-mtv="week" aria-pressed="${week}">השבוע</button></div>`;
-  box.innerHTML = seg + (!week ? `<div class="mgr-ttv-fit">${grid(itemsOf(today))}</div>`
-    : phone ? `<div class="mgr-ttv-days">${days.map(d => `<button type="button" data-mtd="${d}" aria-pressed="${d === pick}"><b>${DOW_SHORT[dowOf(d)]}</b><small>${mgrShort(d)}</small></button>`).join('')}</div><div class="mgr-ttv-fit">${grid(itemsOf(pick))}</div>`
-    : `<div class="mgr-ttv-week">${days.map(d => `<div class="mgr-ttv-col${d === today ? ' today' : ''}"><b>${DOW_NAMES[dowOf(d)]} ${mgrShort(d)}</b>${itemsOf(d).map(card).join('') || '<div class="pnote">—</div>'}</div>`).join('')}</div>`);
+  box.innerHTML = seg + (!week ? `<div class="mgr-ttv-fit">${dayHtml(today)}</div>`
+    : phone ? `<div class="mgr-ttv-days">${days.map(d => `<button type="button" data-mtd="${d}" aria-pressed="${d === pick}"><b>${DOW_SHORT[dowOf(d)]}</b><small>${mgrShort(d)}</small></button>`).join('')}</div><div class="mgr-ttv-fit">${dayHtml(pick)}</div>`
+    : `<div class="mgr-ttv-week">${days.map(d => `<div class="mgr-ttv-col${d === today ? ' today' : ''}"><b>${DOW_NAMES[dowOf(d)]} ${mgrShort(d)}</b>${colOf(d).map(card).join('') || '<div class="pnote">—</div>'}</div>`).join('')}</div>`);
   box.querySelectorAll('[data-mtv]').forEach(b => b.addEventListener('click', () => { mgr.ttView = b.dataset.mtv; mgrTimetableView(box); }));
   box.querySelectorAll('[data-mtd]').forEach(b => b.addEventListener('click', () => { mgr.ttDay = b.dataset.mtd; mgrTimetableView(box); }));
   const fit = box.querySelector('.mgr-ttv-fit');
@@ -16822,6 +17009,518 @@ function obsWireNotify(box){
     srv.therapistNotify = b.dataset.thNotify; box.querySelectorAll('[data-th-notify]').forEach(x => x.classList.toggle('on', x === b)); toast('נשמר');
   }));
 }
+
+// ---------- THE SECRETARY (Alex card c36860ff, Guy's answers of 5 Nov; supabase/scheduling-v62.sql) ----------
+// Her home: הרמזור, לו"ז, חונכויות והתנדבויות. The admin has all of her new abilities too. The rules are kept in the database, not only here.
+//   * the stars: lower, reset or set one child's stars, reset everybody's; a way back for 5 seconds that never overwrites what others did since
+//   * mentoring and volunteering next to the timetable: right the timetable, left the events, one row per hour — on the kids' TV (a day with events only) and on the staff's screens
+//   * the contact page: a person kept once, linked to many events; phones never reach the kids' TV
+// On live since Guy's "תעלה" of 2026-11-08 (until then behind liveCut).
+const sec = { mode:'ev', from:null, tab:'events', start:null };
+const secMe = () => { try { return portalMe() || {}; } catch(e){ return {}; } };
+const secOn = () => typeof portalServerOn !== 'undefined' && portalServerOn;          // (on live too: Guy 2026-11-08)
+const secIsMe = () => secOn() && (secMe().role === 'secretary' || !!(srv.profile && srv.profile.kind === 'secretary'));
+const secStarsOk = () => secOn() && typeof ramzorPersonal !== 'undefined' && ramzorPersonal && (secIsMe() || !!(srv.profile && srv.profile.admin));          // (stars and "ילדים במסגרת": the secretary and the admin)
+const secEventsOk = () => secOn() && (secIsMe() || ['coordinator', 'manager'].includes(secMe().role) || !!secMe().admin);          // (the home card; an ahmash reaches them from the control, during the shift)
+
+// everything that talks to the database (the demo puts its own in: 19-demo.js)
+const secApi = {
+  between:async (from, to) => { const r = await sbPersonal.rpc('tt_events_between', { p_from:from, p_to:to }); if(r.error) throw r.error; return r.data || []; },
+  save:async (id, scope, day, row) => { const r = await sbPersonal.rpc('tt_event_save', { p_id:id || null, p_scope:scope, p_day:day || null, p:row }); if(r.error) throw r.error; return r.data; },
+  remove:async (id, scope, day) => { const r = await sbPersonal.rpc('tt_event_remove', { p_id:id, p_scope:scope, p_day:day }); if(r.error) throw r.error; },
+  contacts:async () => { const r = await sbPersonal.from('tt_contact').select('id,name,phone').order('name'); if(r.error) throw r.error; return r.data || []; },
+  contactAdd:async c => { const r = await sbPersonal.from('tt_contact').insert(c).select('id,name,phone').single(); if(r.error) throw r.error; return r.data; },
+  contactChange:async (id, c) => { const r = await sbPersonal.from('tt_contact').update(c).eq('id', id); if(r.error) throw r.error; },
+  contactRemove:async id => { const r = await sbPersonal.rpc('tt_contact_remove', { p_id:id }); if(r.error) throw r.error; return r.data; },
+  canEdit:async () => { const r = await sbPersonal.rpc('can_edit_timetable'); return r.error ? null : !!r.data; },          // (null: the database has no v62 yet)
+  stars:async () => { const r = await sb.from('child_state').select('child_id,stars'); if(r.error) throw r.error; const m = {}; (r.data || []).forEach(x => { m[x.child_id] = x.stars || 0; }); return m; },
+  setStars:(id, compute) => updateChildState(id, compute)
+};
+
+// ---- the home cards
+function secHomeCards(){
+  const card = (id, ico, title, sub) => `<button type="button" class="home-card" id="${id}"><span class="apphome-emoji apphome-ico">${psIco(ico)}</span><span class="home-card-title">${title}</span><span class="home-card-sub">${sub}</span></button>`;
+  return (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '')
+    + (typeof kidsOk === 'function' && kidsOk() ? card('apphome-kidstv', 'tv', 'מסך הילדים', 'מה מוצג, ימי הולדת וחיבור מסכים') : '');          // (the admin only for now: Guy 2026-11-08, 14zp-tv-display.js)
+}
+function secHomeWire(){
+  { const b = document.getElementById('apphome-sectt'); if(b) b.addEventListener('click', () => showSecScreen('tt')); }
+  { const b = document.getElementById('apphome-secev'); if(b) b.addEventListener('click', () => showSecScreen('ev')); }
+  { const b = document.getElementById('apphome-kidstv'); if(b) b.addEventListener('click', () => showSecScreen('kids')); }
+}
+// ---- the Ramzor's first screen: two more cards
+function secHubButtons(){
+  const on = secStarsOk();
+  { const b = document.getElementById('hub-stars-btn'); if(b) b.hidden = !on; }
+  { const b = document.getElementById('hub-kidslist-btn'); if(b) b.hidden = !on; }
+}
+// "ילדים במסגרת" with the personal sign-in: only this part of the management screen, and writing with her own session (09a-management-lock.js)
+const manageKidsOnly = () => { const v = document.getElementById('view-manage'); return !!(v && v.classList.contains('manage-kids-only')) && secStarsOk(); };
+function showKidsList(){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const v = document.getElementById('view-manage'); v.classList.add('active', 'manage-kids-only');
+  document.body.classList.remove('portal-mode'); window.scrollTo(0, 0);
+  renderManageRoster();
+}
+
+// ---- the screen
+function showSecScreen(mode, from){
+  sec.mode = mode || sec.mode; sec.from = from || null;
+  if(typeof sbPersonal !== 'undefined' && sbPersonal && typeof portalServerOn !== 'undefined' && portalServerOn) sb = sbPersonal;
+  document.body.classList.remove('leopard-bg');
+  portalActivateView('view-sec');
+  let look = 'dark';
+  try { look = (srv.portalTheme && srv.portalTheme !== 'leopard' ? srv.portalTheme : portalLoad().settings.theme) || 'dark'; } catch(e){}
+  const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות', kids:'מסך הילדים' }[sec.mode];
+  document.getElementById('view-sec').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc(look)}">
+    <div class="portal-top"><button type="button" class="back-btn portal-back" id="sec-back">→ ${sec.mode === 'stars' || sec.from === 'control' ? 'חזרה' : 'מסך ראשי'}</button><h1 class="portal-title">${title}</h1><span class="portal-top-actions"></span></div>
+    <div id="sec-screen"><div class="pnote">רק רגע...</div></div></div>`;
+  document.getElementById('sec-back').addEventListener('click', () => { if(sec.from === 'control') showControl(); else if(sec.mode === 'stars') showHub(); else showAppHome(); });
+  const box = document.getElementById('sec-screen');
+  if(sec.mode === 'stars') return renderSecStars(box);
+  if(sec.mode === 'tt') return mgrTimetable(box);
+  if(sec.mode === 'kids') return renderKidsScreen(box);
+  return renderSecEvents(box);
+}
+
+// ---- the stars
+const secName = id => { const c = (typeof roster !== 'undefined' ? roster : []).find(x => x.id === id); return c ? displayName(c) : '?'; };
+const secKids = () => (typeof roster !== 'undefined' ? roster : []).slice().sort((a, b) => displayName(a).localeCompare(displayName(b), 'he'));
+async function renderSecStars(box){
+  let stars;
+  try { stars = await secApi.stars(); } catch(e){ box.innerHTML = '<div class="pstatus bad">הכוכבים לא נטענו. אפשר לנסות שוב.</div>'; return; }
+  if(!box.isConnected) return;
+  const kids = secKids(), withStars = kids.filter(c => stars[c.id] > 0);
+  box.innerHTML = `<div class="pnote">בחירה בילד/ה פותחת גריעה, איפוס או קביעת מספר מדויק.</div>
+    <div class="sec-stars">${kids.map(c => `<button type="button" class="sec-star-row" data-sec-child="${c.id}"><span>${pEsc(displayName(c))}</span><b><bdi dir="ltr">⭐ ${stars[c.id] || 0}</bdi></b></button>`).join('') || '<div class="pnote">אין ילדים ברשימה.</div>'}</div>
+    <div class="sec-danger"><button type="button" class="btn ghost danger" id="sec-reset-all"${withStars.length ? '' : ' disabled'}>איפוס כוכבים לכל הילדים</button></div>`;
+  box.querySelectorAll('[data-sec-child]').forEach(b => b.addEventListener('click', () => secStarSheet(b.dataset.secChild, stars[b.dataset.secChild] || 0, box)));
+  box.querySelector('#sec-reset-all').addEventListener('click', () => secResetAll(withStars.length, box));
+}
+// the way back gives back what THIS action took: stars given or taken by others since stay (never "the number it was")
+async function secGiveBack(changes, box){
+  const res = await Promise.all(changes.map(x => secApi.setStars(x.id, b => { const to = Math.max(0, (b.stars || 0) + x.delta); return to === b.stars ? null : { set:{ stars:to }, guard:['stars'] }; })));
+  if(box.isConnected) renderSecStars(box);
+  return res.every(r => r.ok || r.reason === 'declined');
+}
+async function secChangeOne(id, to, box){
+  let delta = 0;
+  const r = await secApi.setStars(id, b => { const now = b.stars || 0; if(now === to) return null; delta = now - to; return { set:{ stars:to }, guard:['stars'] }; });
+  if(r.ok){ if(box.isConnected) renderSecStars(box); toastUndo(`${secName(id)}: ${to} כוכבים`, () => secGiveBack([{ id, delta }], box), 5000); return; }
+  if(r.reason === 'declined'){ toast('לא היה מה לשנות'); return; }
+  toast('השינוי לא נשמר. נסו שוב.');
+}
+function secStarSheet(id, now, box){
+  const name = secName(id);
+  const sh = portalSheet(`<h2>${pEsc(name)}</h2><div class="pnote">עכשיו: <b>${now}</b> כוכבים</div>
+    <div class="sec-star-actions"><button type="button" class="btn ghost" id="sec-minus"${now > 0 ? '' : ' disabled'}>גריעת כוכב</button><button type="button" class="btn ghost" id="sec-zero"${now > 0 ? '' : ' disabled'}>איפוס</button></div>
+    <label class="pfield">מספר כוכבים מדויק<input type="number" id="sec-exact" min="0" max="999" inputmode="numeric" value="${now}"></label>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button><button type="button" class="btn" id="sec-set">קביעה</button></div>`);
+  const go = async (to, text) => { sh.close(); if(await confirmSheet({ title:name, text, okLabel:'כן', cancelLabel:'חזרה' })) secChangeOne(id, to, box); };
+  sh.querySelector('#sec-minus').addEventListener('click', () => go(now - 1, `לגרוע כוכב אחד? יישארו ${now - 1}.`));
+  sh.querySelector('#sec-zero').addEventListener('click', () => go(0, `לאפס את ${now} הכוכבים?`));
+  sh.querySelector('#sec-set').addEventListener('click', () => {
+    const v = sh.querySelector('#sec-exact').value.trim(), to = Number(v);
+    if(v === '' || !Number.isInteger(to) || to < 0 || to > 999){ toast('כתבו מספר שלם, מ-0 עד 999'); return; }
+    if(to === now){ sh.close(); return; }
+    go(to, `לקבוע ${to} כוכבים במקום ${now}?`);
+  });
+}
+async function secResetAll(n, box){
+  if(!(await confirmSheet({ title:'איפוס כוכבים לכל הילדים', text:`הכוכבים של ${n} ילדים יתאפסו. אפשר יהיה לבטל במשך 5 שניות.`, okLabel:`כן, לאפס ${n} ילדים`, cancelLabel:'חזרה', danger:true }))) return;
+  const ids = secKids().map(c => c.id), changes = [];
+  const res = await Promise.all(ids.map(id => secApi.setStars(id, b => { const now = b.stars || 0; if(!now) return null; const c = changes.find(x => x.id === id); if(c) c.delta = now; else changes.push({ id, delta:now }); return { set:{ stars:0 }, guard:['stars'] }; })));
+  if(box.isConnected) renderSecStars(box);
+  const failed = res.filter(r => !r.ok && r.reason !== 'declined'), done = changes.filter(c => res[ids.indexOf(c.id)].ok);
+  if(failed.length) toast(`⚠ ${failed.length} ילדים לא אופסו. נסו שוב.`);
+  if(done.length) toastUndo(`אופסו הכוכבים של ${done.length} ילדים`, () => secGiveBack(done, box), 5000);
+}
+
+// ---- the events
+const EV_GROUP = { small:'קטנים', big:'גדולים', all:'כולם', other:'אחר' };
+const evGroupWord = e => e.group === 'other' ? (e.group_text || 'אחר') : EV_GROUP[e.group] || '';
+const evText = e => e.kind === 'mentor' ? `חונכות ל${e.child || '?'} עם ${e.person}` : `${e.activity} עם ${e.person}`;
+const evSub = e => e.kind === 'volunteer' ? `קבוצה: ${evGroupWord(e)}` : '';
+const evRep = e => e.every_weeks ? (e.every_weeks === 1 ? 'כל שבוע' : `כל ${e.every_weeks} שבועות`) : e.monthly_nth ? 'כל חודש' : '';
+const evTime = e => `${e.t}${e.end ? '–' + e.end : ''}`;
+const evSeries = e => !!(e && (e.every_weeks || e.monthly_nth));
+// one row per hour: an hour of the timetable and of an event is the same row; an event between two activities gets a row of its own, in its place;
+// what starts together stays together (the row grows, the two sides stay level)
+function ttRows(items, events){
+  const hours = [...new Set([...items.map(a => a.t), ...events.map(e => e.t)])].filter(Boolean).sort();
+  return hours.map(t => ({ t, main:items.filter(a => a.t === t), ev:events.filter(e => e.t === t) }));
+}
+function ttAlignedHtml(items, events, opts){
+  const o = opts || {}, art = o.art || (id => `<span class="tta-emoji">${ttIcon(id)[2]}</span>`), cls = o.phase || (() => ''), tall = x => (o.tv ? 5.2 : x.end || x.kind === 'volunteer' ? 2.5 : 1.5), sum = l => l.reduce((n, x) => n + tall(x), 0), units = ttRows(items, events).reduce((n, r) => n + Math.max(o.tv ? 5.2 : 1.5, sum(r.main), sum(r.ev)) + (o.tv ? .5 : .7), 2.5);          // (the kids' TV: the drawings three times bigger, the words beside them: Guy 2026-11-08)          // (the height of it all, in letters: the TV sizes the letters by it)
+  return `<div class="tta${o.tv ? ' tta-tv' : ''}" style="--units:${units}"><div class="tta-head"><span></span><b>לו"ז</b><b>חונכויות והתנדבויות</b></div>${ttRows(items, events).map(r => `<div class="tta-row${cls(r)}">
+      <div class="tta-time"><bdi dir="ltr">${pEsc(r.t)}</bdi></div>
+      <div class="tta-main">${r.main.map(a => `<div class="tta-item">${art(a.i)}<span class="tta-name">${pEsc(a.n || '')}${a.end ? `<small><bdi dir="ltr">עד ${pEsc(a.end)}</bdi></small>` : ''}</span></div>`).join('')}</div>
+      <div class="tta-ev">${r.ev.map(e => `<div class="tta-item tta-${e.kind}">${art(e.i)}<span class="tta-name">${pEsc(evText(e))}${e.end || e.kind === 'volunteer' ? `<small>${e.end ? `<bdi dir="ltr">עד ${pEsc(e.end)}</bdi>` : ''}${e.end && e.kind === 'volunteer' ? ' · ' : ''}${pEsc(evSub(e))}</small>` : ''}</span></div>`).join('')}</div>
+    </div>`).join('')}</div>`;
+}
+const secToday = () => (typeof israelNow === 'function' ? israelNow().date : isoDate(new Date()));
+const secShort = d => { const [, m, x] = d.split('-'); return `${+x}/${+m}`; };
+async function renderSecEvents(box){
+  const seg = `<div class="mx-seg mgr-tt-mode" role="group" aria-label="חונכויות והתנדבויות"><button type="button" data-sec-tab="events" aria-pressed="${sec.tab === 'events'}">אירועים</button><button type="button" data-sec-tab="contacts" aria-pressed="${sec.tab === 'contacts'}">דף קשר</button></div>`;
+  box.innerHTML = seg + '<div id="sec-body"><div class="pnote">רק רגע...</div></div>';
+  box.querySelectorAll('[data-sec-tab]').forEach(b => b.addEventListener('click', () => { sec.tab = b.dataset.secTab; renderSecEvents(box); }));
+  const body = box.querySelector('#sec-body');
+  if(!secKids().length && typeof mgrKids === 'function'){ try { await mgrKids(); } catch(e){} }
+  if(sec.tab === 'contacts') return renderSecContacts(body);
+  const from = sec.start || secToday(), to = addDays(from, 13);
+  let list;
+  try { list = await secApi.between(from, to); } catch(e){ body.innerHTML = '<div class="pstatus bad">האירועים לא נטענו. אפשר לנסות שוב.</div>'; return; }
+  if(!body.isConnected) return;
+  const byDay = {}; list.forEach(o => { (byDay[o.occ] = byDay[o.occ] || []).push(o); });
+  body.innerHTML = `<div class="sec-add"><button type="button" class="btn small" data-ev-new="mentor">+ חונכות</button><button type="button" class="btn small" data-ev-new="volunteer">+ התנדבות</button></div>
+    <div class="mcal-weeknav dg-weeknav"><button type="button" class="mcal-wk" data-ev-wk="-14" aria-label="שבועיים אחורה"><bdi dir="ltr">›</bdi></button><b><bdi dir="ltr">${secShort(from)}–${secShort(to)}</bdi></b><button type="button" class="mcal-wk" data-ev-wk="14" aria-label="שבועיים קדימה"><bdi dir="ltr">‹</bdi></button></div>
+    ${Object.keys(byDay).length ? Object.keys(byDay).map(d => `<h3 class="psec">${pEsc(DOW_NAMES[dowOf(d)])} ${secShort(d)}</h3><div class="sec-evs">${byDay[d].map(o => `<button type="button" class="sec-ev" data-ev-open="${o.id}|${o.occ}"><span class="sec-ev-time"><bdi dir="ltr">${pEsc(evTime(o))}</bdi></span><span class="tta-emoji">${ttIcon(o.i)[2]}</span><span class="sec-ev-text">${pEsc(evText(o))}${evSub(o) || evRep(o) ? `<small>${pEsc([evSub(o), evRep(o)].filter(Boolean).join(' · '))}</small>` : ''}</span></button>`).join('')}</div>`).join('') : '<div class="pnote">אין אירועים בשבועיים האלה.</div>'}`;
+  const again = () => renderSecEvents(box);
+  body.querySelectorAll('[data-ev-new]').forEach(b => b.addEventListener('click', () => evEdit(null, b.dataset.evNew, again)));
+  body.querySelectorAll('[data-ev-wk]').forEach(b => b.addEventListener('click', () => { sec.start = addDays(from, +b.dataset.evWk); again(); }));
+  body.querySelectorAll('[data-ev-open]').forEach(b => b.addEventListener('click', () => { const [id, occ] = b.dataset.evOpen.split('|'); evEdit(list.find(o => o.id === id && o.occ === occ), null, again); }));
+}
+// a series: only this time, or from this time on. There is no "all of the series": what was is left as it was (null: a tap outside, nothing changes)
+const evScope = verb => new Promise(res => {
+  const q = portalSheet(`<h2>${verb}</h2><div class="pnote">זה אירוע חוזר. מה ${verb === 'מחיקה' ? 'למחוק' : 'לשנות'}?</div><div class="confirm-actions dg-scope"><button type="button" class="btn ghost" data-sc="one">רק הפעם</button><button type="button" class="btn" data-sc="on">מהפעם הזאת והלאה</button></div>`);
+  q.querySelectorAll('[data-sc]').forEach(b => b.addEventListener('click', () => { q.close(); res(b.dataset.sc); }));
+  q.addEventListener('click', e => { if(e.target === q) res(null); });
+});
+async function evEdit(o, kind, done){
+  let contacts = [];
+  try { contacts = await secApi.contacts(); } catch(e){ toast('דף הקשר לא נטען. אפשר לנסות שוב.'); return; }
+  const k = o ? o.kind : kind, mentor = k === 'mentor', series = evSeries(o), day0 = o ? o.occ : secToday();
+  let icon = (o && o.i) || (mentor ? 'reading' : 'other');
+  const rep0 = !o ? 'once' : o.monthly_nth ? 'month' : o.every_weeks === 1 ? 'week' : o.every_weeks ? 'nw' : 'once';
+  const people = sel => `<option value="">בחירה מהרשימה</option>${contacts.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${pEsc(c.name)}</option>`).join('')}<option value="new">+ איש קשר חדש</option>`;
+  const sh = portalSheet(`<h2>${o ? 'עריכת' : 'הוספת'} ${mentor ? 'חונכות' : 'התנדבות'}</h2>
+    ${mentor ? `<label class="pfield">ילד/ה<select id="ev-child"><option value="">בחירה</option>${secKids().map(c => `<option value="${c.id}"${o && o.child_id === c.id ? ' selected' : ''}>${pEsc(displayName(c))}</option>`).join('')}</select></label>`
+             : `<label class="pfield">שם פעילות<input type="text" id="ev-activity" maxlength="60" value="${pEsc((o && o.activity) || '')}"></label>`}
+    <label class="pfield">${mentor ? 'שם החונך' : 'שם המתנדב'}<select id="ev-person">${people(o && o.contact_id)}</select></label>
+    <div class="sec-new-person" hidden><label class="pfield">שם<input type="text" id="ev-new-name" maxlength="80"></label><label class="pfield">טלפון (לא חובה)<input type="tel" id="ev-new-phone" maxlength="20" dir="ltr"></label></div>
+    ${mentor ? '' : `<label class="pfield">קבוצה<select id="ev-group">${Object.keys(EV_GROUP).map(g => `<option value="${g}"${o && o.group === g ? ' selected' : ''}>${EV_GROUP[g]}</option>`).join('')}</select></label>
+      <label class="pfield" id="ev-group-other"${o && o.group === 'other' ? '' : ' hidden'}>פירוט<input type="text" id="ev-group-text" maxlength="40" value="${pEsc((o && o.group_text) || '')}"></label>`}
+    <label class="pfield">תאריך<input type="date" id="ev-day" value="${day0}"></label>
+    <div class="sec-times"><div class="pfield"><span>שעת התחלה</span>${ttTimeHtml(o ? o.t : '', 0)}</div><div class="pfield"><span>שעת סיום (לא חובה)</span>${ttTimeHtml(o ? o.end || '' : '', 0, true)}</div></div>
+    <div class="pfield"><span>תמונה</span><button type="button" class="ctl-tt-icon sec-ev-icon" id="ev-icon" aria-label="בחירת תמונה">${ttIcon(icon)[2]}</button></div>
+    <label class="pfield">תדירות<select id="ev-rep">${TT_REP.map(([v, w]) => `<option value="${v}"${rep0 === v ? ' selected' : ''}>${w}</option>`).join('')}</select></label>
+    <label class="pfield" id="ev-n-wrap"${rep0 === 'nw' ? '' : ' hidden'}>כל כמה שבועות<input type="number" id="ev-n" min="2" max="12" value="${(o && o.every_weeks > 1 && o.every_weeks) || 2}"></label>
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="ev-save">שמירה</button></div>
+    ${o ? '<button type="button" class="btn ghost danger sec-ev-del" id="ev-del">מחיקה</button>' : ''}`);
+  const $ = id => sh.querySelector('#' + id);
+  $('ev-person').addEventListener('change', () => { sh.querySelector('.sec-new-person').hidden = $('ev-person').value !== 'new'; });
+  if(!mentor) $('ev-group').addEventListener('change', () => { $('ev-group-other').hidden = $('ev-group').value !== 'other'; });
+  $('ev-rep').addEventListener('change', () => { $('ev-n-wrap').hidden = $('ev-rep').value !== 'nw'; });
+  $('ev-icon').addEventListener('click', () => {
+    const opt = ([id, word, e]) => `<button type="button" class="ctl-icon-opt${icon === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`;
+    const p = portalSheet(`<h2>תמונה</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div><details class="ctl-icons-more"><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}</details><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+    p.querySelectorAll('[data-icon]').forEach(b => b.addEventListener('click', () => { icon = b.dataset.icon; $('ev-icon').textContent = ttIcon(icon)[2]; p.close(); }));
+  });
+  $('ev-save').addEventListener('click', async () => {
+    const start = ttTimeOf(sh.querySelector('[data-tt-time]')), end = ttTimeOf(sh.querySelector('[data-tt-end]')), day = $('ev-day').value, rep = $('ev-rep').value, n = Math.max(2, Math.min(12, +$('ev-n').value || 2));
+    if(mentor && !$('ev-child').value){ toast('בחרו ילד/ה'); return; }
+    if(!mentor && !$('ev-activity').value.trim()){ toast('כתבו שם פעילות'); $('ev-activity').focus(); return; }
+    if(!$('ev-person').value){ toast(`בחרו ${mentor ? 'חונך' : 'מתנדב'}`); return; }
+    if(!day || !start){ toast('בחרו תאריך ושעת התחלה'); return; }
+    if(end && end <= start){ toast('שעת הסיום לפני שעת ההתחלה'); return; }
+    let scope = 'all';
+    if(series){ scope = await evScope('שינוי'); if(!scope) return; }
+    try {
+      let contact = $('ev-person').value;
+      if(contact === 'new'){
+        const name = $('ev-new-name').value.trim(), phone = secPhone($('ev-new-phone').value);
+        if(!name){ toast('כתבו את שם איש הקשר'); $('ev-new-name').focus(); return; }
+        if(phone === false){ toast('מספר הטלפון לא תקין'); return; }
+        const c = await secApi.contactAdd({ name, phone }); contact = c.id;
+      }
+      const row = { kind:k, contact_id:contact, icon, day, start_time:start, end_time:end || null, every_weeks:rep === 'week' ? 1 : rep === 'nw' ? n : null, monthly_nth:rep === 'month' ? Math.ceil(parseIso(day).getDate() / 7) : null };
+      if(mentor) row.child_id = $('ev-child').value; else Object.assign(row, { activity:$('ev-activity').value.trim(), group_kind:$('ev-group').value, group_text:$('ev-group').value === 'other' ? $('ev-group-text').value.trim() || null : null });
+      await secApi.save(o ? o.id : null, scope, o ? o.occ : null, row);
+    } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
+    sh.close(); toast('נשמר'); ttNudgeTv(); done();
+  });
+  if(o) $('ev-del').addEventListener('click', async () => {
+    let scope = 'one';
+    if(series){ scope = await evScope('מחיקה'); if(!scope) return; }
+    else if(!(await confirmSheet({ title:'למחוק את האירוע?', text:evText(o), okLabel:'כן, למחוק', cancelLabel:'חזרה', danger:true }))) return;
+    try { await secApi.remove(o.id, scope, o.occ); } catch(e){ console.error(e); toast('המחיקה נכשלה. נסו שוב.'); return; }
+    sh.close(); toast('נמחק'); ttNudgeTv(); done();
+  });
+}
+// a phone: empty (null), a good one (kept with the digits only), or false
+function secPhone(v){ const d = digitsOnly(v); if(!d) return null; return /^0\d{8,9}$/.test(d) || /^972\d{8,9}$/.test(d) ? d : false; }
+const secWa = phone => { const d = digitsOnly(phone); return d ? 'https://wa.me/' + (d.startsWith('0') ? '972' + d.slice(1) : d) : ''; };
+async function renderSecContacts(body){
+  let list;
+  try { list = await secApi.contacts(); } catch(e){ body.innerHTML = '<div class="pstatus bad">דף הקשר לא נטען. אפשר לנסות שוב.</div>'; return; }
+  if(!body.isConnected) return;
+  body.innerHTML = `<div class="sec-add"><button type="button" class="btn small" id="sec-contact-new">+ איש קשר</button></div>
+    <div class="sec-contacts">${list.map(c => `<div class="sec-contact"><button type="button" class="sec-contact-main" data-contact="${c.id}"><b>${pEsc(c.name)}</b>${c.phone ? `<small><bdi dir="ltr">${pEsc(formatPhone(c.phone))}</bdi></small>` : '<small>אין טלפון</small>'}</button>${secPhone(c.phone) ? `<a class="btn ghost small" href="${secWa(c.phone)}" target="_blank" rel="noopener">וואטסאפ</a>` : ''}</div>`).join('') || '<div class="pnote">עוד אין אנשי קשר.</div>'}</div>`;
+  const again = () => renderSecContacts(body);
+  body.querySelector('#sec-contact-new').addEventListener('click', () => secContactSheet(null, again));
+  body.querySelectorAll('[data-contact]').forEach(b => b.addEventListener('click', () => secContactSheet(list.find(c => c.id === b.dataset.contact), again)));
+}
+function secContactSheet(c, done){
+  const sh = portalSheet(`<h2>${c ? 'עריכת איש קשר' : 'איש קשר חדש'}</h2>
+    <label class="pfield">שם<input type="text" id="sc-name" maxlength="80" value="${pEsc((c && c.name) || '')}"></label>
+    <label class="pfield">טלפון<input type="tel" id="sc-phone" maxlength="20" dir="ltr" value="${pEsc((c && c.phone && formatPhone(c.phone)) || '')}"></label>
+    ${c ? '<div class="pnote">שינוי כאן יחול בכל החונכויות וההתנדבויות של איש הקשר.</div>' : ''}
+    <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="sc-save">שמירה</button></div>
+    ${c ? '<button type="button" class="btn ghost danger sec-ev-del" id="sc-del">הסרה</button>' : ''}`);
+  sh.querySelector('#sc-save').addEventListener('click', async () => {
+    const name = sh.querySelector('#sc-name').value.trim(), phone = secPhone(sh.querySelector('#sc-phone').value);
+    if(!name){ toast('כתבו שם'); return; }
+    if(phone === false){ toast('מספר הטלפון לא תקין'); return; }
+    try { if(c) await secApi.contactChange(c.id, { name, phone }); else await secApi.contactAdd({ name, phone }); } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
+    sh.close(); toast('נשמר'); ttNudgeTv(); done();
+  });
+  if(c) sh.querySelector('#sc-del').addEventListener('click', async () => {
+    if(!(await confirmSheet({ title:`להסיר את ${c.name}?`, text:'איש הקשר ייצא מהדף.', okLabel:'כן, להסיר', cancelLabel:'חזרה', danger:true }))) return;
+    let r; try { r = await secApi.contactRemove(c.id); } catch(e){ console.error(e); toast('ההסרה נכשלה. נסו שוב.'); return; }
+    sh.close();
+    if(r && r.ok){ toast('הוסר'); done(); return; }
+    // nothing is removed in silence: what is still ahead is shown, and it is handled first (Guy 5 Nov)
+    const line = e => `<li>${pEsc(e.kind === 'mentor' ? `חונכות ל${e.child || '?'}` : e.activity)} · <bdi dir="ltr">${pEsc(e.t)}</bdi> · ${pEsc(evRep(e) || secShort(e.day))}</li>`;
+    portalSheet(`<h2>אי אפשר להסיר עדיין</h2><div class="pnote">ל${pEsc(c.name)} יש אירועים קדימה. קודם מוחקים אותם, או מחליפים בהם את איש הקשר ("מהפעם הזאת והלאה"), ואז מסירים.</div><ul class="sec-ahead">${((r && r.ahead) || []).map(line).join('')}</ul><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>הבנתי</button></div>`);
+  });
+}
+// the kids' TV reads again at once (it would anyway within a minute). Nothing depends on it
+function ttNudgeTv(){
+  try {
+    if(typeof sendTvCommand === 'function' && sendTvCommand('tt')) return;
+    const ch = sb.channel(TV_CHANNEL, { config:{ broadcast:{ self:false } } });
+    ch.subscribe(st => { if(st === 'SUBSCRIBED'){ ch.send({ type:'broadcast', event:'cmd', payload:{ cmd:'tt' } }); setTimeout(() => sb.removeChannel(ch), 1500); } });
+  } catch(e){ /* the minute's reading will bring it */ }
+}
+// ---------- THE KIDS' SCREEN: WHAT IT SHOWS, AND THE BIRTHDAYS (Guy 2026-11-08; supabase/scheduling-v63.sql) ----------
+//   * the admin hides or shows again every screen of the kids' TV and some parts of them: one list for all the screens in the room,
+//     kept in the database (tv_display), reaching the TV at once (a 'display' command on the TV channel; checked again every minute too).
+//     Everything is shown until the admin hides it. A screen with its own condition (birthdays: only on a birthday) keeps it.
+//   * the old Mercury boards (the word planet, the climb up the mountain, the space journey) are off for now: Guy is designing a new
+//     experience. Their code and the children's steps stay; delete them from the code when the new space journey goes up (Guy asked to be reminded).
+//   * the children's birthdays: a real list kept by the admin and the secretary (until now the screen made the dates up). The TV gets today's only.
+
+// [key, the words, parts]
+const TVD_GROUPS = [
+  ['מסכים בסבב', [
+    ['bonuses', 'בונוסים', [['bonuses_daily', 'בונוסים יומיים'], ['bonuses_weekly', 'בונוסים שבועיים']]],
+    ['stars', 'לוח הכוכבים'],
+    ['duties', 'התורנויות השבוע'],
+    ['timetable', 'הלו"ז של היום', [['timetable_title', 'כותרת הלו"ז'], ['timetable_events', 'חונכויות והתנדבויות']]],
+    ['shifts', 'מי במשמרת היום', [['shifts_photos', 'התמונות (בלעדיהן: ציור)']]],
+    ['birthdays', 'ימי הולדת'],
+    ['walls', 'המקדשים שלנו']
+  ]],
+  ['מסכים מיוחדים', [
+    ['morning', 'מסך הבוקר (05:30–07:30)'],
+    ['night', 'מסך הלילה (19:30–05:30)'],
+    ['celebration', 'חגיגה עם קול כשילד מקבל כוכב או לבנה'],
+    ['summary', 'סיכום לילד שנשלח מהטלפון']
+  ]],
+  ['בפס העליון', [
+    ['top_label', 'שם המסך'],
+    ['top_dots', 'הנקודות של הסבב']
+  ]]
+];
+const TVD_SLIDE = { 3:'bonuses', 5:'stars', 14:'duties', 10:'timetable', 9:'shifts', 12:'birthdays', 8:'walls' };
+const TVD_GONE = [6, 7, 13];          // (the old Mercury boards: off for now, Guy 2026-11-08)
+const TVD_PARENT = {};
+TVD_GROUPS.forEach(([, items]) => items.forEach(([k, , parts]) => (parts || []).forEach(([p]) => { TVD_PARENT[p] = k; })));
+
+let tvdOffSet = new Set();
+const tvdOff = k => tvdOffSet.has(k) || (!!TVD_PARENT[k] && tvdOffSet.has(TVD_PARENT[k]));
+const tvdSlideOff = id => TVD_GONE.includes(id) || (!!TVD_SLIDE[id] && tvdOff(TVD_SLIDE[id]));
+
+// every board of the carousel: hidden by its own condition OR by the admin's list (the conditions keep setting .hidden as before)
+function tvdWrapSlides(){
+  if(typeof SLIDES === 'undefined') return;
+  SLIDES.forEach(s => {
+    const d = Object.getOwnPropertyDescriptor(s, 'hidden');
+    if(d && d.get) return;
+    let own = !!s.hidden;
+    Object.defineProperty(s, 'hidden', { get(){ return own || tvdSlideOff(s.id); }, set(v){ own = !!v; }, configurable:true, enumerable:true });
+  });
+}
+tvdWrapSlides();
+
+async function tvdLoad(){
+  try {
+    const r = await sb.rpc('tv_display');
+    if(!r.error && r.data) tvdOffSet = new Set((r.data.off || []).filter(x => typeof x === 'string'));
+  } catch(e){ /* keep the last one */ }
+  tvdApply();
+}
+// what changes on the TV at once
+function tvdApply(){
+  tvdWrapSlides();
+  document.body.classList.toggle('tvd-no-label', tvdOff('top_label'));
+  document.body.classList.toggle('tvd-no-dots', tvdOff('top_dots'));
+  const view = document.getElementById('view-display');
+  if(!view || !view.classList.contains('active') || typeof SLIDES === 'undefined') return;
+  if(typeof tvQuietShown !== 'undefined'){ tvQuietShown = undefined; if(typeof tvQuietTick === 'function') tvQuietTick(); }
+  if(typeof renderDots === 'function') renderDots();
+  const cur = SLIDES[carouselIndex];
+  if(cur && cur.hidden){ const ids = visibleSlideIds(); if(ids.length) showSlide(ids.find(id => id > carouselIndex) ?? ids[0]); }
+  else if(cur) cur.render();
+}
+let tvdTimer = null;
+function tvdStart(){ tvdLoad(); clearInterval(tvdTimer); tvdTimer = setInterval(tvdLoad, 60 * 1000); }
+
+// the admin: tell the screens in the room to read the list again (the open remote channel, or a short one of its own)
+// One channel that stays open while the page is open: a short channel per change lost the second of two quick changes (checked 2026-11-08)
+let tvdSender = null, tvdSenderReady = false, tvdSenderQueue = [];
+function tvdTellScreens(cmd){
+  if(typeof sendTvCommand === 'function' && sendTvCommand(cmd)) return;
+  try {
+    if(tvdSenderReady && tvdSender){ tvdSender.send({ type:'broadcast', event:'cmd', payload:{ cmd } }); return; }
+    tvdSenderQueue.push(cmd);
+    if(tvdSender) return;
+    tvdSender = sb.channel(TV_CHANNEL, { config:{ broadcast:{ self:false } } });
+    tvdSender.subscribe(st => {
+      if(st === 'SUBSCRIBED'){ tvdSenderReady = true; tvdSenderQueue.splice(0).forEach(c => tvdSender.send({ type:'broadcast', event:'cmd', payload:{ cmd:c } })); }
+      else if(st === 'CLOSED' || st === 'CHANNEL_ERROR' || st === 'TIMED_OUT'){ try { sb.removeChannel(tvdSender); } catch(e){} tvdSender = null; tvdSenderReady = false; }
+    });
+  } catch(e){ /* the screens read it again within a minute anyway */ }
+}
+
+// ---- the admin's switches (the portal settings, "מסכי הילדים בחדר"; admin only)
+async function tvdAdminHtml(){
+  let off = [];
+  try { const r = await sbPersonal.rpc('tv_display'); if(r.error) return '<div class="pnote">כדי לבחור מה מוצג במסך צריך להריץ את SQL 63.</div>'; off = (r.data && r.data.off) || []; } catch(e){ return ''; }
+  tvdOffSet = new Set(off);
+  const sw = (k, label, part) => `<label class="tvd-row${part ? ' tvd-part' : ''}"><input type="checkbox" data-tvd="${k}"${off.includes(k) ? '' : ' checked'}><span>${label}</span></label>`;
+  return `<h3 class="psec">מה מוצג במסך הילדים</h3>
+    <div class="pnote">מה שמסומן מוצג בכל מסכי הילדים בחדר. מורידים סימון כדי להסתיר, ומסמנים שוב כדי להחזיר. השינוי מגיע למסך מיד.</div>
+    <div class="tvd-list" id="tvd-list">${TVD_GROUPS.map(([title, items]) => `<div class="tvd-group"><div class="tvd-gtitle">${title}</div>${items.map(([k, label, parts]) =>
+      sw(k, label) + (parts || []).map(([p, pl]) => sw(p, pl, true)).join('')).join('')}</div>`).join('')}</div>`;
+}
+function tvdAdminWire(box){
+  const list = box.querySelector('#tvd-list'); if(!list) return;
+  const sync = () => list.querySelectorAll('.tvd-part input').forEach(i => { const on = list.querySelector(`[data-tvd="${TVD_PARENT[i.dataset.tvd]}"]`).checked; i.disabled = !on; i.closest('label').classList.toggle('off', !on); });
+  sync();
+  list.addEventListener('change', async e => {
+    const inp = e.target.closest('[data-tvd]'); if(!inp) return;
+    const off = [...list.querySelectorAll('[data-tvd]')].filter(i => !i.checked).map(i => i.dataset.tvd);
+    const slidesOn = Object.values(TVD_SLIDE).filter(k => !off.includes(k));
+    if(!slidesOn.length){ inp.checked = true; toast('צריך להשאיר לפחות מסך אחד בסבב'); return; }
+    sync();
+    const r = await sbPersonal.rpc('tv_display_save', { p_off:off });
+    if(r.error){ inp.checked = !inp.checked; sync(); toast('השמירה נכשלה'); return; }
+    tvdOffSet = new Set(off);
+    tvdTellScreens('display');
+    toast(inp.checked ? 'מוצג שוב במסך הילדים' : 'הוסתר ממסך הילדים');
+  });
+}
+
+// ---- the birthdays (a part of the admin's "מסך הילדים" card; the database lets the secretary too, her place comes later)
+if(typeof PS_ICON !== 'undefined' && !PS_ICON.cake) PS_ICON.cake = 'M4 20.5h16M5 20.5v-7h14v7M5 16c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M12 13.5V10M12 7.5c-1.2-1-1.2-2.2 0-3.5 1.2 1.3 1.2 2.5 0 3.5z';
+const bdApi = {
+  list:async () => { const r = await sbPersonal.from('kid_birthday').select('child_id,born'); if(r.error) throw r.error; const m = {}; (r.data || []).forEach(x => { m[x.child_id] = x.born; }); return m; },
+  set:async (id, born) => { const r = await sbPersonal.from('kid_birthday').upsert({ child_id:id, born, updated_at:new Date().toISOString() }); if(r.error) throw r.error; },
+  clear:async id => { const r = await sbPersonal.from('kid_birthday').delete().eq('child_id', id); if(r.error) throw r.error; }
+};
+// age on a day, and the days until the next birthday (29 Feb: on 28 Feb in a year without it)
+function bdInfo(born, todayIso){
+  const [by, bm, bd] = born.split('-').map(Number), [ty, tm, td] = todayIso.split('-').map(Number);
+  const leap = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const on = y => (bm === 2 && bd === 29 && !leap(y)) ? [2, 28] : [bm, bd];
+  const [m1, d1] = on(ty), passed = tm > m1 || (tm === m1 && td >= d1);
+  const age = ty - by - (passed ? 0 : 1);
+  const today = Date.UTC(ty, tm - 1, td);
+  let [m2, d2] = on(ty), next = Date.UTC(ty, m2 - 1, d2);
+  if(next < today){ [m2, d2] = on(ty + 1); next = Date.UTC(ty + 1, m2 - 1, d2); }
+  return { age, days:Math.round((next - today) / 86400000) };
+}
+async function renderBirthdays(box){
+  const today = typeof israelNow === 'function' ? israelNow().date : isoDate(new Date());
+  if(typeof roster !== 'undefined' && !roster.length && typeof getRoster === 'function') roster = await getRoster();
+  let dates;
+  try { dates = await bdApi.list(); } catch(e){ box.innerHTML = `<div class="pnote">${/kid_birthday|does not exist|schema cache/i.test(String(e && e.message)) ? 'צריך להריץ את SQL 63.' : 'הטעינה נכשלה. נסו שוב.'}</div>`; return; }
+  const kids = secKids(), word = (born) => { if(!born) return '<span class="bd-none">אין תאריך</span>'; const i = bdInfo(born, today);
+    return `גיל ${i.age}${i.days === 0 ? ' · <b class="bd-today">🎂 יום הולדת היום!</b>' : i.days <= 30 ? ` · בעוד ${i.days} ימים` : ''}`; };
+  const soon = kids.filter(c => dates[c.id]).map(c => ({ c, i:bdInfo(dates[c.id], today) })).filter(x => x.i.days <= 30).sort((a, b) => a.i.days - b.i.days);
+  box.innerHTML = `<div class="pnote">ילד עם תאריך מופיע במסך הילדים ביום ההולדת שלו, עם הגיל. ילד שיוצא מהרשימה של המסגרת יוצא גם מכאן.</div>
+    ${soon.length ? `<h3 class="psec">בחודש הקרוב</h3>${soon.map(({ c, i }) => `<div class="pmine-row"><span><b>${pEsc(displayName(c))}</b> · ${i.days === 0 ? `היום! 🎂 · חוגג/ת ${i.age}` : `${i.days === 1 ? 'מחר' : `בעוד ${i.days} ימים`} · יהיה/תהיה בן/בת ${i.age + 1}`}</span></div>`).join('')}` : ''}
+    <h3 class="psec">כל הילדים</h3>
+    ${kids.map(c => `<div class="pmine-row bd-row" data-bd="${pEsc(c.id)}"><span><b>${pEsc(displayName(c))}</b><br><small data-bd-word>${word(dates[c.id])}</small></span>
+      <span class="bd-edit"><input type="date" max="${today}" min="1990-01-02" value="${dates[c.id] || ''}" aria-label="תאריך הלידה של ${pEsc(displayName(c))}">${dates[c.id] ? '<button type="button" class="btn ghost small" data-bd-clear>מחיקה</button>' : ''}</span></div>`).join('') || '<div class="pnote">אין ילדים ברשימה.</div>'}`;
+  box.querySelectorAll('[data-bd]').forEach(row => {
+    const id = row.dataset.bd, inp = row.querySelector('input[type=date]');
+    // saved when the typing is over (leaving the field, Enter, or a date chosen in the phone's picker): while a year is typed digit by digit
+    // the field already holds a "date" like 0002-05-03, which is not a mistake yet (Guy 2026-11-08)
+    let busy = false;
+    const done = async () => {
+      const v = inp.value;
+      if(busy || !v || v === (dates[id] || '')) return;
+      if(v > today || v < '1990-01-02'){ toast('התאריך לא נראה נכון. בודקים את היום, החודש והשנה'); return; }
+      busy = true;
+      try { await bdApi.set(id, v); } catch(e){ busy = false; toast('השמירה נכשלה'); return; }
+      busy = false; dates[id] = v; toast('נשמר'); tvdTellScreens('tt'); renderBirthdays(box);
+    };
+    inp.addEventListener('change', () => { if(document.activeElement !== inp) done(); });
+    inp.addEventListener('blur', done);
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); done(); } });
+    const del = row.querySelector('[data-bd-clear]');
+    if(del) del.addEventListener('click', async () => {
+      if(!(await confirmSheet({ title:'למחוק את התאריך?', text:`התאריך של ${displayName(roster.find(c => c.id === id) || { firstName:'' })} יימחק, ויום ההולדת לא יופיע במסך הילדים.`, okLabel:'כן, למחוק', cancelLabel:'חזרה', danger:true }))) return;
+      try { await bdApi.clear(id); } catch(e){ toast('המחיקה נכשלה'); return; }
+      toast('נמחק'); tvdTellScreens('tt'); renderBirthdays(box);
+    });
+  });
+}
+
+// ---- the admin's "מסך הילדים" card on the home screen (Guy 2026-11-08): everything about controlling the kids' screen, in folded parts, one open at a time.
+//   1. what the screen shows now + a child's summary (the same card the instructors have in the Ramzor, moved here while this part is open)
+//   2. what is shown on the screen (the switches)   3. the birthdays   4. the screens in the room (also in the coordinator's settings)
+// The admin only for now; the secretary's place for the birthdays, the timetable and the duties comes in a later version.
+if(typeof PS_ICON !== 'undefined' && !PS_ICON.tv) PS_ICON.tv = 'M3 5.5h18v11.5H3zM8.5 21h7M12 17v4';
+const kidsOk = () => typeof secOn === 'function' && secOn() && (!!secMe().admin || !!(srv.profile && srv.profile.admin));
+const KIDS_PARTS = [
+  ['remote', 'מה המסך מציג עכשיו', 'בחירת לוח, השהיה, תצוגה מקדימה וסיכום לילד'],
+  ['show', 'מה מוצג במסך', 'להסתיר מסכים וחלקים, או להחזיר אותם'],
+  ['birthdays', 'ימי הולדת', 'תאריכי הלידה של הילדים'],
+  ['screens', 'חיבור מסכים', 'קוד למסך חדש וניתוק']
+];
+const kidsUi = { open:null };
+// the remote card lives in the Ramzor's control area; while "מה המסך מציג עכשיו" is open it is moved here, and it goes back afterwards
+let kidsRemoteHome = null;
+function kidsRemoteBack(){
+  const card = document.getElementById('tv-remote-card');
+  if(card && kidsRemoteHome && card.parentNode !== kidsRemoteHome.parent){ kidsRemoteHome.parent.insertBefore(card, kidsRemoteHome.next); if(typeof disconnectTvRemote === 'function') disconnectTvRemote(); }
+}
+function kidsRemoteHere(box){
+  const card = document.getElementById('tv-remote-card'); if(!card) return;
+  if(!kidsRemoteHome) kidsRemoteHome = { parent:card.parentNode, next:card.nextSibling };
+  box.innerHTML = ''; box.appendChild(card);
+  const body = document.getElementById('tv-remote-body'), tgl = document.getElementById('tv-remote-toggle');
+  if(body){ body.hidden = false; tgl.setAttribute('aria-expanded', 'true'); }
+  if(typeof connectTvRemote === 'function') connectTvRemote();
+}
+{ const v = document.getElementById('view-sec');          // (leaving the screen in any way puts the card back and closes the connection)
+  if(v) new MutationObserver(() => { if(!v.classList.contains('active') || !document.getElementById('kids-parts')) kidsRemoteBack(); }).observe(v, { attributes:true, attributeFilter:['class'], childList:true }); }
+
+async function renderKidsScreen(box){
+  if(typeof roster !== 'undefined' && !roster.length && typeof getRoster === 'function') roster = await getRoster();
+  box.innerHTML = `<div id="kids-parts">${KIDS_PARTS.map(([id, title, sub]) => `<details class="pfold" data-kfold="${id}"${kidsUi.open === id ? ' open' : ''}><summary><span>${title}<small class="kids-sub">${sub}</small></span></summary><div class="pfold-body" data-kbody="${id}"></div></details>`).join('')}</div>`;
+  const fill = async id => {
+    const b = box.querySelector(`[data-kbody="${id}"]`); if(!b) return;
+    if(id === 'remote') return kidsRemoteHere(b);
+    b.innerHTML = '<div class="pnote">רק רגע...</div>';
+    try {
+      if(id === 'show'){ b.innerHTML = await tvdAdminHtml(); tvdAdminWire(b); }
+      else if(id === 'birthdays') await renderBirthdays(b);
+      else if(id === 'screens'){ const again = async () => { if(b.isConnected){ const r2 = await tvScreensSection(again); b.innerHTML = r2.html; r2.wire(b); } }; const r = await tvScreensSection(again); b.innerHTML = r.html; r.wire(b); }
+    } catch(e){ b.innerHTML = '<div class="pnote">הטעינה נכשלה. נסו לפתוח שוב.</div>'; }
+  };
+  box.querySelectorAll('details[data-kfold]').forEach(d => d.addEventListener('toggle', () => {
+    const id = d.dataset.kfold;
+    if(!d.open){ if(kidsUi.open === id) kidsUi.open = null; if(id === 'remote') kidsRemoteBack(); return; }
+    kidsUi.open = id;
+    box.querySelectorAll('details[data-kfold]').forEach(o => { if(o !== d && o.open) o.open = false; });          // (one part open at a time)
+    fill(id);
+  }));
+  if(kidsUi.open) fill(kidsUi.open);
+}
 // ---------- bottom navigation bar (phones) ----------
 // One button, "בית": back to the first screen — the choice between the Ramzor and the portal (when the portal is on), or the Ramzor's home.
 // It is there in the Ramzor and in the portal alike.
@@ -16883,7 +17582,8 @@ updateBottomNav();
     }
     if(v.id === 'view-portal' && portalOn()) return `portal:${portalUi.tab || ''}|${portalUi.viewAs || ''}${portalUi.actAs ? 'a' : ''}${portalUi.editPrefs ? 'e' : ''}${portalUi.manager ? 'm' : ''}${portalUi.prefsPast ? 'p' : ''}`;
     if(v.id === 'view-therapy' && typeof thp !== 'undefined') return `therapy:${thp.mode}|${thp.tab || ''}|${thp.editing || ''}|${thp.editing ? thp.wtab || '' : ''}`;
-    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control', 'view-learn':'learn', 'view-oncall':'oncall', 'view-chats':'chats' })[v.id] || 'hub';
+    if(v.id === 'view-manage' && v.classList.contains('manage-kids-only')) return 'kidslist';
+    return ({ 'view-manage':'manage', 'view-display':'display', 'view-apphome':'apphome', 'view-control':'control', 'view-learn':'learn', 'view-oncall':'oncall', 'view-chats':'chats', 'view-sec':'sec' })[v.id] || 'hub';
   }
   function snapshot(key){
     if(key.startsWith('portal:')) return { tab:portalUi.tab, viewAs:portalUi.viewAs || null, actAs:!!portalUi.actAs, editPrefs:!!portalUi.editPrefs, manager:!!portalUi.manager, persona:portalUi.persona, prefsPast:!!portalUi.prefsPast };
@@ -16909,10 +17609,12 @@ updateBottomNav();
   // any other page: brought back as it was
   async function restorePage(key, snap){
     if(key === 'apphome' && typeof showAppHome === 'function') return showAppHome();
+    if(key === 'kidslist' && typeof showKidsList === 'function') return showKidsList();
     if(key === 'manage' && typeof openManagement === 'function') return openManagement();
     if(key === 'control' && typeof showControl === 'function') return showControl();
     if(key === 'learn' && typeof showLearnHome === 'function') return showLearnHome();
     if(key === 'oncall' && typeof showOncallScreen === 'function') return showOncallScreen();
+    if(key === 'sec' && typeof showSecScreen === 'function') return showSecScreen();
     if(key === 'chats' && typeof showChatsScreen === 'function') return showChatsScreen();
     if(key.startsWith('portal:') && snap){
       if(portalUi.editPrefs && !snap.editPrefs && typeof srvFlush === 'function'){ clearTimeout(srv.timer); await srvFlush(); }          // (what was filled for somebody is saved before leaving)
