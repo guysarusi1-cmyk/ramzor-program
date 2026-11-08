@@ -353,7 +353,7 @@
 
     // ---- the ship's own stunt on the board: out to the front of the screen, then back to its new spot
     await step('stunt flight', async () => {
-      if(typeof TVD_GONE !== 'undefined' && TVD_GONE.includes(7)){ check('the stunt flight waits: the word-planet board is off for now (Guy 2026-11-08)', SLIDES[7].hidden); return; }
+      if(typeof TVD_GONE !== 'undefined' && TVD_GONE.includes(7)){ activateDisplayView(); stopCarousel(); await sleep(300); check('the stunt flight waits: the word-planet board is off for now (Guy 2026-11-08)', SLIDES[7].hidden); stopCarousel(); showHub(); return; }          // (the same way in and out of the kids' screen as before: the steps after it start from there)
       activateDisplayView(); stopCarousel();
       await showSlide(7); await sleep(300);
       const kid = 'c7', now = (await getChildState(kid)).mercurySteps;   // c7 is on step 6 in the test data
