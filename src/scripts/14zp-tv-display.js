@@ -73,11 +73,19 @@ let tvdTimer = null;
 function tvdStart(){ tvdLoad(); clearInterval(tvdTimer); tvdTimer = setInterval(tvdLoad, 60 * 1000); }
 
 // the admin: tell the screens in the room to read the list again (the open remote channel, or a short one of its own)
+// One channel that stays open while the page is open: a short channel per change lost the second of two quick changes (checked 2026-11-08)
+let tvdSender = null, tvdSenderReady = false, tvdSenderQueue = [];
 function tvdTellScreens(cmd){
   if(typeof sendTvCommand === 'function' && sendTvCommand(cmd)) return;
   try {
-    const real = sb.channel(TV_CHANNEL, { config:{ broadcast:{ self:false } } });
-    real.subscribe(st => { if(st === 'SUBSCRIBED'){ real.send({ type:'broadcast', event:'cmd', payload:{ cmd } }); setTimeout(() => sb.removeChannel(real), 2000); } });
+    if(tvdSenderReady && tvdSender){ tvdSender.send({ type:'broadcast', event:'cmd', payload:{ cmd } }); return; }
+    tvdSenderQueue.push(cmd);
+    if(tvdSender) return;
+    tvdSender = sb.channel(TV_CHANNEL, { config:{ broadcast:{ self:false } } });
+    tvdSender.subscribe(st => {
+      if(st === 'SUBSCRIBED'){ tvdSenderReady = true; tvdSenderQueue.splice(0).forEach(c => tvdSender.send({ type:'broadcast', event:'cmd', payload:{ cmd:c } })); }
+      else if(st === 'CLOSED' || st === 'CHANNEL_ERROR' || st === 'TIMED_OUT'){ try { sb.removeChannel(tvdSender); } catch(e){} tvdSender = null; tvdSenderReady = false; }
+    });
   } catch(e){ /* the screens read it again within a minute anyway */ }
 }
 
