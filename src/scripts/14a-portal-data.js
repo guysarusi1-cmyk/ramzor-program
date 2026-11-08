@@ -153,6 +153,8 @@ function kidBirthday(child, index){
   return st.birthdays[child.id];
 }
 function birthdaysToday(){
+  if(typeof PORTAL_TV_LIVE !== 'undefined' && PORTAL_TV_LIVE)          // (the real screen: the list of the admin and the secretary, today's only, scheduling-v63.sql)
+    return (typeof tvBirthdays !== 'undefined' ? tvBirthdays : []).map(x => ({ child:roster.find(c => c.id === x.child_id), b:{ age:x.age } })).filter(x => x.child);
   const md = isoDate(new Date()).slice(5);
   return roster.map((c, i) => ({ child:c, b:kidBirthday(c, i) })).filter(x => x.b.md === md);
 }

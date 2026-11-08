@@ -33,6 +33,7 @@ function tvRelease(){
 }
 function tvStep(delta){
   const ids = visibleSlideIds();
+  if(!ids.length) return;
   const at = ids.indexOf(carouselIndex);
   const next = ids[(Math.max(at, 0) + delta + ids.length) % ids.length];
   return showSlide(next);
@@ -47,8 +48,9 @@ function handleTvCommand(c){
   else if(c.cmd === 'tt' && typeof loadTvToday === 'function') loadTvToday(true).then(() => { if(document.getElementById('tv-timetable') && tvTimetable) renderTimetableLive(); });          // (a change of the timetable or the events: at once)
   else if(c.cmd === 'next'){ tvHold(); tvStep(1); }
   else if(c.cmd === 'prev'){ tvHold(); tvStep(-1); }
-  else if(c.cmd === 'summary' && c.child && typeof showChildSummary === 'function') showChildSummary(c.child);
-  else if(c.cmd === 'journey' && c.child && typeof journeyShowMilestone === 'function') journeyShowMilestone(c.child, c.milestone);          // (Mercury: a milestone, when the instructor says the child may watch)          // (a child's summary: 14q-child-summary.js)
+  else if(c.cmd === 'display' && typeof tvdLoad === 'function') tvdLoad();          // (the admin changed what the screen shows: 14zp-tv-display.js)
+  else if(c.cmd === 'summary' && c.child && typeof showChildSummary === 'function' && !(typeof tvdOff === 'function' && tvdOff('summary'))) showChildSummary(c.child);
+  else if(c.cmd === 'journey' && !(typeof TVD_GONE !== 'undefined' && TVD_GONE.includes(13)) && c.child && typeof journeyShowMilestone === 'function') journeyShowMilestone(c.child, c.milestone);          // (Mercury: a milestone, when the instructor says the child may watch)          // (a child's summary: 14q-child-summary.js)
 }
 function announceTvStatus(){
   if(tvControlChannel && !IS_TV_PREVIEW) tvControlChannel.send({ type:'broadcast', event:'status', payload: tvStatusPayload() });

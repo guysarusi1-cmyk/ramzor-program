@@ -348,7 +348,7 @@
       await refreshJourneyBoards();
       const rows = (await sb.from('child_state').select('child_id, moon_steps')).data;
       const expected = journeyBoardsNeeded(rows, roster.map(c => c.id));
-      check('rotation flags follow the real data', SLIDES[6].hidden === !expected.moon && SLIDES[7].hidden === !expected.mercury, `hidden6=${SLIDES[6].hidden} hidden7=${SLIDES[7].hidden}`);
+      check('the moon and word-planet boards stay out of the rotation for now, whatever the data (Guy 2026-11-08)', SLIDES[6].hidden && SLIDES[7].hidden, `hidden6=${SLIDES[6].hidden} hidden7=${SLIDES[7].hidden} expected=${JSON.stringify(expected)}`);
     });
 
     // ---- the ship's own stunt on the board: out to the front of the screen, then back to its new spot
@@ -716,7 +716,7 @@
         if(stage === 'moon'){
           // a child on the first journey gets the moon board, and only the children still on that journey are drawn on it
           await refreshJourneyBoards();
-          check('moon board joins the rotation for a child on the moon journey', SLIDES[6].hidden === false, 'still hidden');
+          check('the moon board stays out of the rotation even for a child on the moon journey (Guy 2026-11-08)', SLIDES[6].hidden === true, 'shown');
           activateDisplayView(); stopCarousel();
           await showSlide(6); await sleep(300);
           const drawn = [...document.querySelectorAll('#moon-board .kid-marker')].map(m => m.dataset.childId);
@@ -3358,6 +3358,49 @@
         await secApi.setStars('c1', () => ({ set:{ stars:0 } })); db.c1 += 1;          // (reset, and meanwhile somebody gave a star)
         const ok = await secGiveBack([{ id:'c1', delta:5 }], box); secApi.setStars = real;
         check('secretary: the way back gives back what was taken and keeps what others did since', ok && db.c1 === 6, String(db.c1)); }
+    });
+    await step('kids screen display', async () => {          // (14zp-tv-display.js, Guy 2026-11-08; the database side: scheduling-v63.sql)
+      const was = tvdOffSet;
+      try {
+        tvdOffSet = new Set();
+        check('kids screen: everything is shown until the admin hides it', !tvdOff('birthdays') && !tvdOff('timetable_events') && !tvdOff('night'));
+        check('kids screen: the old Mercury boards are off (the word planet, the mountain, the space journey)', SLIDES[6].hidden && SLIDES[7].hidden && (!SLIDES[13] || SLIDES[13].hidden));
+        const own = SLIDES[3].hidden;
+        tvdOffSet = new Set(['bonuses']);
+        check('kids screen: a hidden screen leaves the carousel', SLIDES[3].hidden === true && !visibleSlideIds().includes(3));
+        check('kids screen: a part follows its screen', tvdOff('bonuses_daily') && tvdOff('bonuses_weekly') && !tvdOff('stars'));
+        tvdOffSet = new Set();
+        check('kids screen: shown again, the screen keeps its own condition', SLIDES[3].hidden === own);
+        { const s12 = SLIDES[12], o12 = s12.hidden; s12.hidden = false; tvdOffSet = new Set(['birthdays']); const hid = s12.hidden; tvdOffSet = new Set(); const back = s12.hidden; s12.hidden = o12;
+          check('kids screen: the birthdays screen hides and comes back', hid === true && back === false); }
+        { const tt = tvTimetable, ev = tvEvents, el = document.getElementById('tv-timetable');
+          tvTimetable = { items:[{ t:'08:00', n:'א', i:'wake' }, { t:'16:00', n:'ב', i:'snack' }], day:'2026-11-08', title:'כותרת בדיקה' };
+          tvEvents = [{ kind:'mentor', t:'16:00', i:'reading', person:'חונך', child:'ילד' }];
+          renderTimetableLive();
+          const icon = el.querySelector('.tta-item svg, .tta-item .tvt2-emoji'), name = el.querySelector('.tta-name');
+          const ih = icon ? (icon.tagName === 'svg' ? parseFloat(getComputedStyle(icon).height) : parseFloat(getComputedStyle(icon).fontSize)) : 0, nh = name ? parseFloat(getComputedStyle(name).fontSize) : 1;
+          check('kids screen: on a day with events the drawings are much bigger than the words', ih >= 2.5 * nh, ih + ' / ' + nh);
+          check('kids screen: the title is shown', el.textContent.includes('כותרת בדיקה'));
+          tvdOffSet = new Set(['timetable_events', 'timetable_title']); renderTimetableLive();
+          check('kids screen: without the events and the title the timetable is the cards of every day', el.classList.contains('tvt2') && !el.querySelector('.tta') && !el.textContent.includes('כותרת בדיקה'));
+          tvdOffSet = new Set(); tvTimetable = tt; tvEvents = ev; }
+        { const box = document.createElement('div'); box.innerHTML = ttAlignedHtml([{ t:'08:00', n:'א', i:'wake' }], [], {}); document.body.appendChild(box);
+          const ic = box.querySelector('.tta-emoji'), size = ic ? ic.getBoundingClientRect().height : 0; box.remove();
+          check('kids screen: the staff screens keep their small drawings', !!ic && size < 40, String(size)); }
+        { const ni = window.israelNow; window.israelNow = () => ({ minutes:21 * 60, date:'2026-11-08' });
+          const a = tvQuietNow(); tvdOffSet = new Set(['night']); const b = tvQuietNow(); tvdOffSet = new Set();
+          window.israelNow = () => ({ minutes:6 * 60, date:'2026-11-08' }); const c = tvQuietNow(); tvdOffSet = new Set(['morning']); const d = tvQuietNow(); tvdOffSet = new Set();
+          window.israelNow = ni;
+          check('kids screen: the night and the morning screens may be hidden', a === 'night' && b === null && c === 'morning' && d === null, [a, b, c, d].join()); }
+        check('kids screen: the age and the days to the birthday', JSON.stringify(bdInfo('2015-11-08', '2026-11-08')) === '{"age":11,"days":0}' && JSON.stringify(bdInfo('2015-11-09', '2026-11-08')) === '{"age":10,"days":1}' && bdInfo('2015-11-07', '2026-11-08').days === 364);
+        check('kids screen: born on 29 February: 28 February in a year without it', bdInfo('2016-02-29', '2027-02-28').days === 0 && bdInfo('2016-02-29', '2027-02-28').age === 11 && bdInfo('2016-02-29', '2028-02-28').days === 1);
+        { const live = PORTAL_TV_LIVE, b = tvBirthdays; PORTAL_TV_LIVE = true; tvBirthdays = roster[0] ? [{ child_id:roster[0].id, age:9 }, { child_id:'no-such-child', age:7 }] : [];
+          const list = birthdaysToday(); PORTAL_TV_LIVE = live; tvBirthdays = b;
+          check('kids screen: the real screen shows only the birthdays of the list, with the age', !roster[0] || (list.length === 1 && list[0].b.age === 9 && list[0].child.id === roster[0].id), JSON.stringify(list.map(x => x.b))); }
+        { const on = portalServerOn, asl = window.__asLive; window.__asLive = true; portalServerOn = true;
+          check('kids screen: the birthdays card is not on live until Guy says so', !bdOk());
+          window.__asLive = asl; portalServerOn = on; }
+      } finally { tvdOffSet = was; }
     });
     await step('learn', async () => {
       if(!PORTAL_ENABLED) return;

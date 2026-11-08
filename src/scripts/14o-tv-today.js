@@ -1,13 +1,14 @@
 
 // ---------- THE KIDS' TV, from the database (config "portalTv"): who is on shift today, today's timetable, the night and morning screens ----------
 // Read without signing in (scheduling-v15.sql: tv_shifts_today, tv_timetable_today). The ahmash control's changes of today are already applied.
-var tvShifts = null, tvTimetable = null, tvEvents = [], tvTodayAt = 0;          // (var: the TV screens of 14d-portal-tv.js ask for them while the page is still starting)
+var tvShifts = null, tvTimetable = null, tvEvents = [], tvBirthdays = [], tvTodayAt = 0;          // (var: the TV screens of 14d-portal-tv.js ask for them while the page is still starting)
 async function loadTvToday(force){
   if(!force && Date.now() - tvTodayAt < 60 * 1000) return;
   tvTodayAt = Date.now();
   try { const r = await sb.rpc('tv_shifts_today'); if(!r.error) tvShifts = r.data; } catch(e){ /* keep the last one */ }
   try { const r = await sb.rpc('tv_timetable_today'); if(!r.error){ if(r.data && typeof ttOn === 'function') r.data.items = (r.data.items || []).filter(x => ttOn(x, r.data.day)); tvTimetable = r.data; } } catch(e){ /* keep the last one */ }
   try { const r = await sb.rpc('tv_events_today'); if(!r.error) tvEvents = r.data || []; } catch(e){ /* keep the last one */ }          // (mentoring and volunteering: scheduling-v62.sql; before it there are none)
+  try { const r = await sb.rpc('tv_birthdays_today'); if(!r.error) tvBirthdays = r.data || []; } catch(e){ /* keep the last one */ }          // (today's birthdays, no dates: scheduling-v63.sql)
 }
 const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 const hm = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
@@ -41,16 +42,16 @@ function renderShiftsLive(){
   el.className = 'tv-instructors tvs';
   el.style.setProperty('--tvs-size', most <= 5 ? '15vh' : most <= 7 ? '12.5vh' : most <= 9 ? '10.5vh' : '9vh');
   el.innerHTML = ['M', 'A', 'N'].map(code => `<div class="tvs-band ${tvShiftPhase(code)}"><div class="tvs-art">${TV_SHIFT_ART[code]}</div>
-      <div class="tvs-people">${shown(code).map(p => `<div class="tvs-person">${p.photo ? `<img class="tvs-photo" src="${p.photo}" alt="">` : `<div class="tvs-photo tvs-face">${personArt(p)}</div>`}<div class="tvs-name">${escapeHtml(p.label)}</div></div>`).join('') || '<div class="tvs-none">·</div>'}</div></div>`).join('');
+      <div class="tvs-people">${shown(code).map(p => `<div class="tvs-person">${p.photo && !(typeof tvdOff === 'function' && tvdOff('shifts_photos')) ? `<img class="tvs-photo" src="${p.photo}" alt="">` : `<div class="tvs-photo tvs-face">${personArt(p)}</div>`}<div class="tvs-name">${escapeHtml(p.label)}</div></div>`).join('') || '<div class="tvs-none">·</div>'}</div></div>`).join('');
 }
 function renderTimetableLive(){
-  const el = document.getElementById('tv-timetable'), list = (tvTimetable && tvTimetable.items) || [], evs = tvEvents || [];
+  const el = document.getElementById('tv-timetable'), list = (tvTimetable && tvTimetable.items) || [], evs = (typeof tvdOff === 'function' && tvdOff('timetable_events')) ? [] : (tvEvents || []);
   if(!list.length && !evs.length){ el.innerHTML = '<div class="empty">אין לו"ז להיום</div>'; return; }
   if(evs.length){          // a day with mentoring or volunteering: two columns, one row per hour (a day without them stays as it is below: Guy 5 Nov)
     const n = nowMin(), all = [...list, ...evs], endOf = a => a.end ? hm(a.end) : (() => { const later = all.map(b => hm(b.t)).filter(x => x > hm(a.t)).sort((x, y) => x - y)[0]; return later === undefined ? hm(a.t) + 60 : later; })();
     const isNow = a => n >= hm(a.t) && n < endOf(a), isPast = a => n >= endOf(a);
     el.className = 'tv-timetable tvt3';
-    el.innerHTML = `${tvTimetable && tvTimetable.title ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}${ttAlignedHtml(list, evs, { tv:true, art:ttArt, phase:r => { const xs = [...r.main, ...r.ev]; return xs.some(isNow) ? ' now' : xs.every(isPast) ? ' past' : ''; } })}`;
+    el.innerHTML = `${tvTimetable && tvTimetable.title && !(typeof tvdOff === 'function' && tvdOff('timetable_title')) ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}${ttAlignedHtml(list, evs, { tv:true, art:ttArt, phase:r => { const xs = [...r.main, ...r.ev]; return xs.some(isNow) ? ' now' : xs.every(isPast) ? ' past' : ''; } })}`;
     return;
   }
   // "now" by the hours (Guy 2026-11-04, SCHEDULE-SPEC): from its start to its end — or, with no end written, to the next activity that starts later;
@@ -59,7 +60,7 @@ function renderTimetableLive(){
   const phase = (a, i) => n >= hm(a.t) && n < endOf(a, i) ? ' now' : n >= endOf(a, i) ? ' past' : '';
   el.className = 'tv-timetable tvt2';
   el.style.setProperty('--tvt-cols', list.length > 8 ? 6 : list.length > 4 ? 4 : list.length);
-  el.innerHTML = `${tvTimetable.title ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${phase(a, i)}">
+  el.innerHTML = `${tvTimetable.title && !(typeof tvdOff === 'function' && tvdOff('timetable_title')) ? `<div class="tvt2-title">${escapeHtml(tvTimetable.title)}</div>` : ''}<div class="tvt2-grid">${list.map((a, i) => `<div class="tvt2-item${phase(a, i)}">
       <div class="tvt2-time"><bdi dir="ltr">${escapeHtml(a.t)}${a.end ? '–' + escapeHtml(a.end) : ''}</bdi></div><div class="tvt2-icon">${ttArt(a.i)}</div><div class="tvt2-name">${escapeHtml(a.n)}</div></div>`).join('')}</div>`;
 }
 // the picture of an activity (the drawings of 14p-timetable-art.js when there is one, else the emoji)
@@ -70,8 +71,8 @@ const ttArt = id => (typeof TT_ART !== 'undefined' && TT_ART[id]) || `<span clas
 const tvClock = () => typeof israelNow === 'function' ? israelNow() : { minutes:nowMin(), date:isoDate(new Date()) };
 function tvQuietNow(){
   const n = tvClock().minutes;
-  if(n >= hm('05:30') && n < hm('07:30')) return 'morning';
-  if(n >= hm('19:30') || n < hm('05:30')) return 'night';
+  if(n >= hm('05:30') && n < hm('07:30')) return (typeof tvdOff === 'function' && tvdOff('morning')) ? null : 'morning';          // (the admin may hide each of them: 14zp-tv-display.js)
+  if(n >= hm('19:30') || n < hm('05:30')) return (typeof tvdOff === 'function' && tvdOff('night')) ? null : 'night';
   return null;
 }
 // the morning: the whole sequence at once — getting ready (washing the face with the teeth first, Guy 2026-11-04; dressing; shoes), and only then breakfast, apart (a sandwich; cornflakes on Saturday).

@@ -29,11 +29,13 @@ const secApi = {
 // ---- the home cards
 function secHomeCards(){
   const card = (id, ico, title, sub) => `<button type="button" class="home-card" id="${id}"><span class="apphome-emoji apphome-ico">${psIco(ico)}</span><span class="home-card-title">${title}</span><span class="home-card-sub">${sub}</span></button>`;
-  return (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '');
+  return (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '')
+    + (typeof bdOk === 'function' && bdOk() ? card('apphome-secbd', 'cake', 'ימי הולדת', 'תאריכי הלידה של הילדים, למסך הילדים') : '');          // (Guy 2026-11-08: 14zp-tv-display.js)
 }
 function secHomeWire(){
   { const b = document.getElementById('apphome-sectt'); if(b) b.addEventListener('click', () => showSecScreen('tt')); }
   { const b = document.getElementById('apphome-secev'); if(b) b.addEventListener('click', () => showSecScreen('ev')); }
+  { const b = document.getElementById('apphome-secbd'); if(b) b.addEventListener('click', () => showSecScreen('bd')); }
 }
 // ---- the Ramzor's first screen: two more cards
 function secHubButtons(){
@@ -58,7 +60,7 @@ function showSecScreen(mode, from){
   portalActivateView('view-sec');
   let look = 'dark';
   try { look = (srv.portalTheme && srv.portalTheme !== 'leopard' ? srv.portalTheme : portalLoad().settings.theme) || 'dark'; } catch(e){}
-  const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות' }[sec.mode];
+  const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות', bd:'ימי הולדת' }[sec.mode];
   document.getElementById('view-sec').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc(look)}">
     <div class="portal-top"><button type="button" class="back-btn portal-back" id="sec-back">→ ${sec.mode === 'stars' || sec.from === 'control' ? 'חזרה' : 'מסך ראשי'}</button><h1 class="portal-title">${title}</h1><span class="portal-top-actions"></span></div>
     <div id="sec-screen"><div class="pnote">רק רגע...</div></div></div>`;
@@ -66,6 +68,7 @@ function showSecScreen(mode, from){
   const box = document.getElementById('sec-screen');
   if(sec.mode === 'stars') return renderSecStars(box);
   if(sec.mode === 'tt') return mgrTimetable(box);
+  if(sec.mode === 'bd') return renderBirthdays(box);
   return renderSecEvents(box);
 }
 
@@ -137,7 +140,7 @@ function ttRows(items, events){
   return hours.map(t => ({ t, main:items.filter(a => a.t === t), ev:events.filter(e => e.t === t) }));
 }
 function ttAlignedHtml(items, events, opts){
-  const o = opts || {}, art = o.art || (id => `<span class="tta-emoji">${ttIcon(id)[2]}</span>`), cls = o.phase || (() => ''), tall = x => (x.end || x.kind === 'volunteer' ? 2.5 : 1.5), sum = l => l.reduce((n, x) => n + tall(x), 0), units = ttRows(items, events).reduce((n, r) => n + Math.max(1.5, sum(r.main), sum(r.ev)) + .7, 2.5);          // (the height of it all, in letters: the TV sizes the letters by it)
+  const o = opts || {}, art = o.art || (id => `<span class="tta-emoji">${ttIcon(id)[2]}</span>`), cls = o.phase || (() => ''), tall = x => (o.tv ? 5.2 : x.end || x.kind === 'volunteer' ? 2.5 : 1.5), sum = l => l.reduce((n, x) => n + tall(x), 0), units = ttRows(items, events).reduce((n, r) => n + Math.max(o.tv ? 5.2 : 1.5, sum(r.main), sum(r.ev)) + (o.tv ? .5 : .7), 2.5);          // (the kids' TV: the drawings three times bigger, the words beside them: Guy 2026-11-08)          // (the height of it all, in letters: the TV sizes the letters by it)
   return `<div class="tta${o.tv ? ' tta-tv' : ''}" style="--units:${units}"><div class="tta-head"><span></span><b>לו"ז</b><b>חונכויות והתנדבויות</b></div>${ttRows(items, events).map(r => `<div class="tta-row${cls(r)}">
       <div class="tta-time"><bdi dir="ltr">${pEsc(r.t)}</bdi></div>
       <div class="tta-main">${r.main.map(a => `<div class="tta-item">${art(a.i)}<span class="tta-name">${pEsc(a.n || '')}${a.end ? `<small><bdi dir="ltr">עד ${pEsc(a.end)}</bdi></small>` : ''}</span></div>`).join('')}</div>

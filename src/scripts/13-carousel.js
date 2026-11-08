@@ -64,8 +64,8 @@ function bonusBoardSection(title, list, revocationsByBonus){
 async function renderBonusesSlide(){
   const el = document.getElementById('bonuses-slide-content');
   await loadBonusDay();          // (the ahmash control may have hidden or added a bonus a moment ago)
-  const todayDaily = bonusesForToday(bonusesDaily, false);
-  const todayWeekly = bonusesForToday(bonusesWeekly, true);
+  const todayDaily = typeof tvdOff === 'function' && tvdOff('bonuses_daily') ? [] : bonusesForToday(bonusesDaily, false);          // (the admin's list: 14zp-tv-display.js)
+  const todayWeekly = typeof tvdOff === 'function' && tvdOff('bonuses_weekly') ? [] : bonusesForToday(bonusesWeekly, true);
   if(!todayDaily.length && !todayWeekly.length){ el.innerHTML = '<div class="empty">אין בונוסים מוגדרים להיום</div>'; return; }
   const revocationsByBonus = {};          // (the kids' screen does not even read who lost a bonus: BONUSES-SPEC)
   // few bonuses are shown big in one column; more than 4 switch to two columns so they all fit on the screen
@@ -103,7 +103,9 @@ function resumeRotation(){
   carouselTimer = setInterval(async ()=>{
     await refreshJourneyBoards();
     let next = (carouselIndex + 1) % SLIDES.length;
-    while(SLIDES[next].hidden) next = (next + 1) % SLIDES.length;
+    let k = 0;
+    while(SLIDES[next].hidden && k++ < SLIDES.length) next = (next + 1) % SLIDES.length;
+    if(SLIDES[next].hidden) return;          // (nothing to show: the admin hid it all and the rest wait for their day — stay)
     showSlide(next);
   }, CAROUSEL_MS);
 }
@@ -191,6 +193,8 @@ function celebrateFeedbackEvent(ev){
   if(!document.getElementById('view-display').classList.contains('active')) return;
   const type = ev.type, childId = ev.child_id;
   const child = roster.find(c => c.id === childId);
+  if(type === 'moon' || type === 'mercury' || type === 'journey') return;          // (the old Mercury boards are off for now: Guy 2026-11-08)
+  if(typeof tvdOff === 'function' && tvdOff('celebration')) return;          // (the admin hid the celebrations; the boards show the news in their turn)
   if(type === 'journey'){ if(child && typeof journeyCelebrate === 'function') journeyCelebrate(ev, child); return; }          // (Mercury: a step of the new journey)
   if(!(type in EVENT_TYPE_SLIDE) || type === 'bonus' || !child) return;
   queueCelebration(async () => {
@@ -198,8 +202,8 @@ function celebrateFeedbackEvent(ev){
     const now = type === 'star' ? (state.stars || 0) : type === 'bricks' ? (state.bricks || 0) : type === 'moon' ? (state.moonSteps || 0) : (state.mercurySteps || 0);
     const why = type === 'bricks' ? ((ev.message || '').match(/ · כוח: (.+)$/) || [])[1] || '' : '';        // the strength the instructor named
     await playCelebration(type, child, now, why, type === 'bricks' ? state.brickWhy : undefined);
-    if(type === 'star') interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard);
-    else if(type === 'bricks') interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard);
+    if(type === 'star'){ if(!SLIDES[EVENT_TYPE_SLIDE.star].hidden) interruptToSlide(EVENT_TYPE_SLIDE.star, renderStarBoard); }
+    else if(type === 'bricks'){ if(!SLIDES[EVENT_TYPE_SLIDE.bricks].hidden) interruptToSlide(EVENT_TYPE_SLIDE.bricks, renderWallsBoard); }
     else if(type === 'moon') interruptToSlide(EVENT_TYPE_SLIDE.moon,
       () => flyMarkerStunt(childId, document.getElementById('moon-board'), o => renderMoonBoard(Object.assign({ justArrivedChildId: childId }, o)), now - 1), STUNT_BOARD_MS);
     else interruptToSlide(EVENT_TYPE_SLIDE.mercury,
@@ -257,6 +261,7 @@ function startCarousel(){
   startFeedbackListener();
   startTvControlListener();
   if(typeof startTvQuiet === 'function') startTvQuiet();          // (the "good night" and "good morning" screens)
+  if(typeof tvdStart === 'function') tvdStart();          // (what the admin chose to show: 14zp-tv-display.js)
 }
 function stopCarousel(){
   pauseRotation();
