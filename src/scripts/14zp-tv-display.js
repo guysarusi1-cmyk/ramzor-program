@@ -118,9 +118,8 @@ function tvdAdminWire(box){
   });
 }
 
-// ---- the birthdays (the admin and the secretary; a card on their home screen)
+// ---- the birthdays (a part of the admin's "מסך הילדים" card; the database lets the secretary too, her place comes later)
 if(typeof PS_ICON !== 'undefined' && !PS_ICON.cake) PS_ICON.cake = 'M4 20.5h16M5 20.5v-7h14v7M5 16c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M12 13.5V10M12 7.5c-1.2-1-1.2-2.2 0-3.5 1.2 1.3 1.2 2.5 0 3.5z';
-const bdOk = () => typeof secOn === 'function' && secOn() && (secIsMe() || !!secMe().admin || !!(srv.profile && srv.profile.admin));
 const bdApi = {
   list:async () => { const r = await sbPersonal.from('kid_birthday').select('child_id,born'); if(r.error) throw r.error; const m = {}; (r.data || []).forEach(x => { m[x.child_id] = x.born; }); return m; },
   set:async (id, born) => { const r = await sbPersonal.from('kid_birthday').upsert({ child_id:id, born, updated_at:new Date().toISOString() }); if(r.error) throw r.error; },
@@ -174,4 +173,57 @@ async function renderBirthdays(box){
       toast('נמחק'); tvdTellScreens('tt'); renderBirthdays(box);
     });
   });
+}
+
+// ---- the admin's "מסך הילדים" card on the home screen (Guy 2026-11-08): everything about controlling the kids' screen, in folded parts, one open at a time.
+//   1. what the screen shows now + a child's summary (the same card the instructors have in the Ramzor, moved here while this part is open)
+//   2. what is shown on the screen (the switches)   3. the birthdays   4. the screens in the room (also in the coordinator's settings)
+// The admin only for now; the secretary's place for the birthdays, the timetable and the duties comes in a later version.
+if(typeof PS_ICON !== 'undefined' && !PS_ICON.tv) PS_ICON.tv = 'M3 5.5h18v11.5H3zM8.5 21h7M12 17v4';
+const kidsOk = () => typeof secOn === 'function' && secOn() && (!!secMe().admin || !!(srv.profile && srv.profile.admin));
+const KIDS_PARTS = [
+  ['remote', 'מה המסך מציג עכשיו', 'בחירת לוח, השהיה, תצוגה מקדימה וסיכום לילד'],
+  ['show', 'מה מוצג במסך', 'להסתיר מסכים וחלקים, או להחזיר אותם'],
+  ['birthdays', 'ימי הולדת', 'תאריכי הלידה של הילדים'],
+  ['screens', 'חיבור מסכים', 'קוד למסך חדש וניתוק']
+];
+const kidsUi = { open:null };
+// the remote card lives in the Ramzor's control area; while "מה המסך מציג עכשיו" is open it is moved here, and it goes back afterwards
+let kidsRemoteHome = null;
+function kidsRemoteBack(){
+  const card = document.getElementById('tv-remote-card');
+  if(card && kidsRemoteHome && card.parentNode !== kidsRemoteHome.parent){ kidsRemoteHome.parent.insertBefore(card, kidsRemoteHome.next); if(typeof disconnectTvRemote === 'function') disconnectTvRemote(); }
+}
+function kidsRemoteHere(box){
+  const card = document.getElementById('tv-remote-card'); if(!card) return;
+  if(!kidsRemoteHome) kidsRemoteHome = { parent:card.parentNode, next:card.nextSibling };
+  box.innerHTML = ''; box.appendChild(card);
+  const body = document.getElementById('tv-remote-body'), tgl = document.getElementById('tv-remote-toggle');
+  if(body){ body.hidden = false; tgl.setAttribute('aria-expanded', 'true'); }
+  if(typeof connectTvRemote === 'function') connectTvRemote();
+}
+{ const v = document.getElementById('view-sec');          // (leaving the screen in any way puts the card back and closes the connection)
+  if(v) new MutationObserver(() => { if(!v.classList.contains('active') || !document.getElementById('kids-parts')) kidsRemoteBack(); }).observe(v, { attributes:true, attributeFilter:['class'], childList:true }); }
+
+async function renderKidsScreen(box){
+  if(typeof roster !== 'undefined' && !roster.length && typeof getRoster === 'function') roster = await getRoster();
+  box.innerHTML = `<div id="kids-parts">${KIDS_PARTS.map(([id, title, sub]) => `<details class="pfold" data-kfold="${id}"${kidsUi.open === id ? ' open' : ''}><summary><span>${title}<small class="kids-sub">${sub}</small></span></summary><div class="pfold-body" data-kbody="${id}"></div></details>`).join('')}</div>`;
+  const fill = async id => {
+    const b = box.querySelector(`[data-kbody="${id}"]`); if(!b) return;
+    if(id === 'remote') return kidsRemoteHere(b);
+    b.innerHTML = '<div class="pnote">רק רגע...</div>';
+    try {
+      if(id === 'show'){ b.innerHTML = await tvdAdminHtml(); tvdAdminWire(b); }
+      else if(id === 'birthdays') await renderBirthdays(b);
+      else if(id === 'screens'){ const again = async () => { if(b.isConnected){ const r2 = await tvScreensSection(again); b.innerHTML = r2.html; r2.wire(b); } }; const r = await tvScreensSection(again); b.innerHTML = r.html; r.wire(b); }
+    } catch(e){ b.innerHTML = '<div class="pnote">הטעינה נכשלה. נסו לפתוח שוב.</div>'; }
+  };
+  box.querySelectorAll('details[data-kfold]').forEach(d => d.addEventListener('toggle', () => {
+    const id = d.dataset.kfold;
+    if(!d.open){ if(kidsUi.open === id) kidsUi.open = null; if(id === 'remote') kidsRemoteBack(); return; }
+    kidsUi.open = id;
+    box.querySelectorAll('details[data-kfold]').forEach(o => { if(o !== d && o.open) o.open = false; });          // (one part open at a time)
+    fill(id);
+  }));
+  if(kidsUi.open) fill(kidsUi.open);
 }

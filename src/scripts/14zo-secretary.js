@@ -30,12 +30,12 @@ const secApi = {
 function secHomeCards(){
   const card = (id, ico, title, sub) => `<button type="button" class="home-card" id="${id}"><span class="apphome-emoji apphome-ico">${psIco(ico)}</span><span class="home-card-title">${title}</span><span class="home-card-sub">${sub}</span></button>`;
   return (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '')
-    + (typeof bdOk === 'function' && bdOk() ? card('apphome-secbd', 'cake', 'ימי הולדת', 'תאריכי הלידה של הילדים, למסך הילדים') : '');          // (Guy 2026-11-08: 14zp-tv-display.js)
+    + (typeof kidsOk === 'function' && kidsOk() ? card('apphome-kidstv', 'tv', 'מסך הילדים', 'מה מוצג, ימי הולדת וחיבור מסכים') : '');          // (the admin only for now: Guy 2026-11-08, 14zp-tv-display.js)
 }
 function secHomeWire(){
   { const b = document.getElementById('apphome-sectt'); if(b) b.addEventListener('click', () => showSecScreen('tt')); }
   { const b = document.getElementById('apphome-secev'); if(b) b.addEventListener('click', () => showSecScreen('ev')); }
-  { const b = document.getElementById('apphome-secbd'); if(b) b.addEventListener('click', () => showSecScreen('bd')); }
+  { const b = document.getElementById('apphome-kidstv'); if(b) b.addEventListener('click', () => showSecScreen('kids')); }
 }
 // ---- the Ramzor's first screen: two more cards
 function secHubButtons(){
@@ -60,7 +60,7 @@ function showSecScreen(mode, from){
   portalActivateView('view-sec');
   let look = 'dark';
   try { look = (srv.portalTheme && srv.portalTheme !== 'leopard' ? srv.portalTheme : portalLoad().settings.theme) || 'dark'; } catch(e){}
-  const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות', bd:'ימי הולדת' }[sec.mode];
+  const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות', kids:'מסך הילדים' }[sec.mode];
   document.getElementById('view-sec').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc(look)}">
     <div class="portal-top"><button type="button" class="back-btn portal-back" id="sec-back">→ ${sec.mode === 'stars' || sec.from === 'control' ? 'חזרה' : 'מסך ראשי'}</button><h1 class="portal-title">${title}</h1><span class="portal-top-actions"></span></div>
     <div id="sec-screen"><div class="pnote">רק רגע...</div></div></div>`;
@@ -68,7 +68,7 @@ function showSecScreen(mode, from){
   const box = document.getElementById('sec-screen');
   if(sec.mode === 'stars') return renderSecStars(box);
   if(sec.mode === 'tt') return mgrTimetable(box);
-  if(sec.mode === 'bd') return renderBirthdays(box);
+  if(sec.mode === 'kids') return renderKidsScreen(box);
   return renderSecEvents(box);
 }
 

@@ -21,3 +21,10 @@ body.tvd-no-label #slide-label, body.tvd-no-dots #slide-dots{ visibility:hidden;
 .bd-today{ color:var(--p-accent, #c77700); }
 @media (max-width:420px){ .bd-row{ flex-wrap:wrap; } .bd-edit{ width:100%; justify-content:flex-start; } }
 @media (forced-colors:active){ .tvd-row, .bd-edit input[type=date]{ border-color:CanvasText; } }
+
+/* the admin's "מסך הילדים" card: the folded parts, each with a short line under its name */
+#kids-parts{ display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+#kids-parts summary > span{ display:flex; flex-direction:column; gap:2px; }
+.kids-sub{ font-weight:400; font-size:.82em; opacity:.75; }
+#kids-parts #tv-remote-card{ margin:0; box-shadow:none; }
+#kids-parts .tv-remote-title{ display:none; }          /* (the part's own name already says it) */

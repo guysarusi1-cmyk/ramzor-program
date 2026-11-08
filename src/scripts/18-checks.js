@@ -3398,7 +3398,7 @@
           const list = birthdaysToday(); PORTAL_TV_LIVE = live; tvBirthdays = b;
           check('kids screen: the real screen shows only the birthdays of the list, with the age', !roster[0] || (list.length === 1 && list[0].b.age === 9 && list[0].child.id === roster[0].id), JSON.stringify(list.map(x => x.b))); }
         { const on = portalServerOn, asl = window.__asLive; window.__asLive = true; portalServerOn = true;
-          check('kids screen: the birthdays card is not on live until Guy says so', !bdOk());
+          check('kids screen: the "מסך הילדים" card is not on live until Guy says so', !kidsOk());
           window.__asLive = asl; portalServerOn = on; }
       } finally { tvdOffSet = was; }
     });
