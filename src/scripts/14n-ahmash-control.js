@@ -188,6 +188,13 @@ async function ttSunThuSpread(items, skip){
     return { weekday:wd, items:have.filter(h => !st.some(x => x.n === h.n && x.t === h.t)).concat(st).sort((a, b) => a.t.localeCompare(b.t)) }; });
   const w = await sb.from('timetable_fixed').upsert(rows); if(w.error) toast('"ראשון עד חמישי" לא נשמר בכל הימים. נסו שוב.');
 }
+// an activity of Sunday to Thursday deleted "from today on": out of the fixed timetable of each of these days (skip: the weekday already saved)
+async function ttSunThuDrop(gone, skip){
+  if(!gone.length) return;
+  const r = await sb.from('timetable_fixed').select('weekday,items').lte('weekday', 4); if(r.error){ toast('המחיקה לא נשמרה בכל הימים. נסו שוב.'); return; }
+  const rows = (r.data || []).filter(x => x.weekday !== skip).map(x => ({ weekday:x.weekday, items:(x.items || []).filter(h => !gone.some(g => g.n === h.n && g.t === h.t)) }));
+  if(rows.length){ const w = await sb.from('timetable_fixed').upsert(rows); if(w.error) toast('המחיקה לא נשמרה בכל הימים. נסו שוב.'); }
+}
 function ctlTimetableDraw(box){
   const tt = ctl.tt, coord = ctlIsCoord(), fixedDay = ctl.ttFixedDay;
   const editing = fixedDay != null ? ctl.ttFixed : ctl.ttEdit;
@@ -198,12 +205,12 @@ function ctlTimetableDraw(box){
       <button type="button" class="ctl-x" data-tt-del="${i}" aria-label="מחיקה">✕</button>
       ${coord ? `<span class="ctl-tt-rep"><select data-tt-rep="${i}" aria-label="תדירות">${TT_REP.filter(r => fixedDay == null || r[0] !== 'once').map(([k, w]) => `<option value="${k}"${ttRepOf(x, fixedDay != null) === k ? ' selected' : ''}>${w}</option>`).join('')}</select>${ttRepOf(x, fixedDay != null) === 'nw' ? `<label>כל <input type="number" min="2" max="12" value="${(x.rep && x.rep.n) || 2}" data-tt-n="${i}" aria-label="כל כמה שבועות"> שבועות</label>` : ''}</span>` : ''}</div>`).join('');
   box.innerHTML = `
-    ${fixedDay == null ? `<div class="pnote">${tt.title ? `<b>${pEsc(tt.title)}</b> · ` : ''}${tt.changed ? 'הלו"ז של היום שונה מהלו"ז הקבוע.' : `זה הלו"ז הקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}. שינוי כאן ישנה רק את היום.`}</div>`
+    ${fixedDay == null ? `<div class="pnote">${tt.title ? `<b>${pEsc(tt.title)}</b> · ` : ''}${coord ? `כל פעילות נשמרת לפי התדירות שלה: "חד-פעמי" רק להיום, וכל השאר גם בלו"ז הקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}.` : tt.changed ? 'הלו"ז של היום שונה מהלו"ז הקבוע.' : `זה הלו"ז הקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}. שינוי כאן ישנה רק את היום.`}</div>`
                        : `<div class="pnote">עריכת <b>הלו"ז הקבוע של יום ${WEEKDAY_NAMES[fixedDay]}</b>. השינוי יחול מהשבוע הזה והלאה.</div>`}
     <div class="ctl-tt">${rows || '<div class="pnote">אין פעילויות.</div>'}</div>
     <button type="button" class="btn ghost small" id="tt-add">+ פעילות</button>
     <div class="ctl-actions">${fixedDay == null
-      ? `<button type="button" class="btn" id="tt-save">שמירה להיום</button>${tt.changed ? '<button type="button" class="btn ghost" id="tt-reset">חזרה ללו"ז הקבוע</button>' : ''}${coord ? `<button type="button" class="btn ghost" id="tt-save-fixed">שמירה גם כקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}</button>` : ''}`
+      ? `<button type="button" class="btn" id="tt-save">${coord ? 'שמירה' : 'שמירה להיום'}</button>${tt.changed ? '<button type="button" class="btn ghost" id="tt-reset">חזרה ללו"ז הקבוע</button>' : ''}`          // (no "שמירה גם כקבוע": each activity is saved by its "how often" — Guy 2026-11-09)
       : `<button type="button" class="btn" id="tt-fixed-save">שמירת הלו"ז הקבוע</button><button type="button" class="btn ghost" id="tt-fixed-close">חזרה להיום</button>`}</div>
     ${coord && fixedDay == null ? `<div class="ctl-fixed-pick"><span>עריכת הלו"ז הקבוע של:</span>${WEEKDAY_NAMES.map((n, i) => `<button type="button" class="btn ghost small" data-fixed="${i}">${n}</button>`).join('')}</div>` : ''}`;
   // the end is offered, never asked for: the start of the next activity, until somebody sets it or empties it by hand (Guy 2026-11-04)
@@ -234,12 +241,20 @@ function ctlTimetableDraw(box){
     x.rep = k === 'nw' ? { k, n:2, from:day } : k === 'month' ? { k, nth:Math.ceil(parseIso(day).getDate() / 7) } : { k }; ctlTimetableDraw(box);
   }));
   box.querySelectorAll('[data-tt-n]').forEach(inp => inp.addEventListener('change', () => { const x = editing.items[+inp.dataset.ttN]; x.rep.n = Math.max(2, Math.min(12, +inp.value || 2)); }));
-  const clean = asFixed => { sync(); return editing.items.filter(x => x.t && x.n).sort((a, b) => a.t.localeCompare(b.t)).map(x => Object.assign({ t:x.t, n:x.n, i:x.i || 'other' }, x.end && x.end > x.t ? { end:x.end } : {}, x.rep ? { rep:x.rep } : x.fresh && fixedDay == null && !asFixed ? { rep:{ k:'once' } } : {})); };          // (asFixed: "שמירה גם כקבוע" - a new activity with no "how often" chosen becomes fixed, it is not dropped: Guy 2026-11-08)
-  // what comes again goes into the fixed timetable of its weekday too; what is not due today stays there
-  const keepRepeats = async items => { if(!coord) return; const wd = ctl.tt.weekday, again = items.filter(x => x.rep && x.rep.k !== 'once' && x.rep.k !== 'sunthu'); await ttSunThuSpread(items, -1); if(!again.length) return;
-    const f = await sb.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle(), have = (f.data && f.data.items) || [], rest = have.filter(h => !again.some(x => x.n === h.n && x.t === h.t));
-    await sb.from('timetable_fixed').upsert({ weekday:wd, items:rest.concat(again).sort((a, b) => a.t.localeCompare(b.t)) }); };          // (an end before the start is left out)
-  box.querySelectorAll('[data-tt-del]').forEach(b => b.addEventListener('click', () => { sync(); editing.items.splice(+b.dataset.ttDel, 1); ctlTimetableDraw(box); }));
+  const strip = x => Object.assign({ t:x.t, n:x.n, i:x.i || 'other' }, x.end && x.end > x.t ? { end:x.end } : {}, x.rep ? { rep:x.rep } : x.fresh && fixedDay == null ? { rep:{ k:'once' } } : {});          // (an end before the start is left out; a new activity with no "how often" chosen is "חד-פעמי", as its list shows)
+  const clean = () => { sync(); return editing.items.filter(x => x.t && x.n).sort((a, b) => a.t.localeCompare(b.t)).map(strip); };
+  // ✕ on an activity that comes again (the coordinator, the manager, the secretary, on today's timetable): only today, or from today on (Guy 2026-11-09)
+  box.querySelectorAll('[data-tt-del]').forEach(b => b.addEventListener('click', async () => {
+    sync(); const x = editing.items[+b.dataset.ttDel];
+    if(coord && fixedDay == null && !x.fresh && ttRepOf(x, false) !== 'once' && x.t && x.n){
+      const sc = await new Promise(res => { const q = portalSheet(`<h2>מחיקת ${pEsc(x.n)}</h2><div class="pnote">זו פעילות חוזרת. ממתי למחוק אותה?</div><div class="confirm-actions dg-scope"><button type="button" class="btn ghost" data-sc="today">רק היום</button><button type="button" class="btn" data-sc="on">מהיום והלאה</button></div>`);
+        q.querySelectorAll('[data-sc]').forEach(o => o.addEventListener('click', () => { q.close(); res(o.dataset.sc); })); q.addEventListener('click', e => { if(e.target === q) res(null); }); });
+      if(!sc) return;
+      if(sc === 'today') (editing.keepFixed = editing.keepFixed || []).push(strip(x));          // (stays in the fixed timetable)
+      else if(x.rep && x.rep.k === 'sunthu') (editing.goneSunThu = editing.goneSunThu || []).push({ n:x.n, t:x.t });          // (Sunday to Thursday: out of all five days)
+    }
+    editing.items.splice(editing.items.indexOf(x), 1); ctlTimetableDraw(box);
+  }));
   box.querySelector('#tt-add').addEventListener('click', () => { sync(); editing.items.push({ t:'', n:'', i:'other', endAuto:true, fresh:true }); ctlTimetableDraw(box); const last = box.querySelector('.ctl-tt-row:last-child [data-tt-h]'); if(last) last.focus(); });
   box.querySelectorAll('[data-tt-icon]').forEach(b => b.addEventListener('click', () => {
     sync(); const i = +b.dataset.ttIcon, opt = ([id, word, e]) => `<button type="button" class="ctl-icon-opt${editing.items[i].i === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`;
@@ -256,23 +271,24 @@ function ctlTimetableDraw(box){
   const on = (id, fn) => { const b = box.querySelector('#' + id); if(b) b.addEventListener('click', fn); };
   // one saving at a time: a second tap while saving does nothing (no doubles); a failed saving leaves everything on the screen as it was typed
   const once = fn => async e => { const b = e.currentTarget; if(b.disabled) return; b.disabled = true; try { await fn(); } finally { if(b.isConnected) b.disabled = false; } };
-  on('tt-save', once(async () => { const items = clean(); if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ await keepRepeats(items); ctl.ttEdit = null; ctlTimetable(box); } }));
-  on('tt-reset', async () => { if(saved(await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'חזרנו ללו"ז הקבוע של היום.')){ ctl.ttEdit = null; ctlTimetable(box); } });
-  // "שמירה גם כקבוע": everything on the screen is kept - the fixed timetable of this weekday gets what comes again (a new activity included), and an activity
-  // marked "חד-פעמי" stays for today (before, it was dropped and today's copy deleted: the activity was lost - Guy 2026-11-08)
-  on('tt-save-fixed', once(async () => {
-    const all = clean(true), today = all.filter(x => x.rep && x.rep.k === 'once');
-    const f0 = await sb.from('timetable_fixed').select('items').eq('weekday', ctl.tt.weekday).maybeSingle();
+  // one "שמירה" (Guy 2026-11-09): each activity by its "how often" — "חד-פעמי" for today only, everything else into the fixed timetable of this weekday too
+  // (a changed hour or name of a fixed activity included; Sunday to Thursday into all five days). What is not due today stays in the fixed timetable.
+  // An ahmash on shift saves today only, as before
+  on('tt-save', once(async () => {
+    const items = clean();
+    if(!coord){ if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ ctl.ttEdit = null; ctlTimetable(box); } return; }
+    const wd = ctl.tt.weekday, keep = editing.keepFixed || [], same = (a, b) => a.n === b.n && a.t === b.t;
+    const f0 = await sb.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle();
     if(f0.error){ toast('השמירה נכשלה. נסו שוב.'); return; }
-    const notToday = ((f0.data && f0.data.items) || []).filter(x => !ttOn(x, ctl.tt.day) && !all.some(a => a.n === x.n && a.t === x.t));
-    const items = all.filter(x => !x.rep || x.rep.k !== 'once').concat(notToday).sort((a, b) => a.t.localeCompare(b.t));
-    if(!(await confirmSheet({ title:`לשמור כלו"ז הקבוע של יום ${WEEKDAY_NAMES[ctl.tt.weekday]}?`, text:'מעכשיו כל יום כזה יתחיל מהלו"ז הזה.' + (today.length ? ' ' + (today.length === 1 ? 'פעילות אחת שמסומנת "חד-פעמי" תישאר רק להיום.' : `${today.length} פעילויות שמסומנות "חד-פעמי" יישארו רק להיום.`) : ''), okLabel:'כן, לשמור', cancelLabel:'חזרה' }))) return;
-    if(!saved(await sb.from('timetable_fixed').upsert({ weekday:ctl.tt.weekday, items }), 'נשמר כלו"ז הקבוע.')) return;
-    await ttSunThuSpread(items, ctl.tt.weekday);
-    const d = today.length ? await sb.from('timetable_day').upsert({ day:ctl.tt.day, items:all }) : await sb.from('timetable_day').delete().eq('day', ctl.tt.day);
-    if(d.error) toast('הלו"ז הקבוע נשמר, אבל השינוי של היום לא נשמר. נסו שוב.');
-    ctl.ttEdit = null; ctlTimetable(box);
+    const notToday = ((f0.data && f0.data.items) || []).filter(x => !ttOn(x, ctl.tt.day) && !items.some(a => same(a, x)) && !keep.some(a => same(a, x)));
+    const fixed = items.filter(x => !x.rep || x.rep.k !== 'once').concat(keep, notToday).sort((a, b) => a.t.localeCompare(b.t));
+    const w = await sb.from('timetable_fixed').upsert({ weekday:wd, items:fixed });
+    if(w.error){ toast('השמירה נכשלה. נסו שוב.'); return; }
+    await ttSunThuSpread(fixed, wd); await ttSunThuDrop(editing.goneSunThu || [], wd);
+    const onlyToday = items.some(x => x.rep && x.rep.k === 'once') || keep.length;          // (today differs from the fixed timetable: kept as today's)
+    if(saved(onlyToday ? await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }) : await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ ctl.ttEdit = null; ctlTimetable(box); }
   }));
+  on('tt-reset', async () => { if(saved(await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'חזרנו ללו"ז הקבוע של היום.')){ ctl.ttEdit = null; ctlTimetable(box); } });
   box.querySelectorAll('[data-fixed]').forEach(b => b.addEventListener('click', async () => {
     const wd = +b.dataset.fixed, r = await sb.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle();
     ctl.ttFixedDay = wd; ctl.ttFixed = { items:((r.data && r.data.items) || []).map(x => Object.assign({}, x)) }; ctlTimetableDraw(box);
