@@ -72,6 +72,8 @@
       Object.assign(thp, { tab:snap.tab, editing:snap.editing, wtab:snap.wtab });
       return thpRender();
     }
+    if(key === 'hub') return showHub();
+    if(typeof goHome === 'function') return goHome();          // (a page with no way back of its own: home, not the Ramzor — Guy 2026-11-09)
     showHub();
   }
 
@@ -90,14 +92,15 @@
   // guard back. On the first page there is no guard, so Back leaves the app, as usual. (Never several history steps at once:
   // the browser does those late, and a quick second Back got lost.)
   let stack = ['hub'], snaps = [null], rootSet = false, guardOn = false;
-  let ignoreUntil = 0;                // the moment our own history.back() (taking the guard away) lands: not a Back of the person
+  let ownBack = false, ownBackTimer = 0;          // our own history.back() (taking the guard away) is on its way: its popstate is not a Back of the person.
+                                                // (a flag until it lands, not 1.2 seconds: on a slow phone it landed later and moved the page — Guy 2026-11-09)
   let muteScreenWatcher = false;      // while the app answers a Back press, the watcher stays quiet
   history.replaceState({ nav:'base' }, '');
   const flowBack = () => typeof prefFlowCanBack === 'function' && prefFlowCanBack();          // (a step of the preferences process to go back to: 14zj)
   const canGoBack = () => stack.length > 1 || flowBack();
   function syncGuard(){
     if(canGoBack() && !guardOn){ history.pushState({ nav:'guard' }, ''); guardOn = true; }
-    else if(!canGoBack() && guardOn){ guardOn = false; ignoreUntil = Date.now() + 1200; history.back(); }
+    else if(!canGoBack() && guardOn){ guardOn = false; ownBack = true; clearTimeout(ownBackTimer); ownBackTimer = setTimeout(() => { ownBack = false; }, 8000); history.back(); }
   }
 
   let queued = false;
@@ -120,7 +123,7 @@
   }
 
   window.addEventListener('popstate', async () => {
-    if(Date.now() < ignoreUntil){ ignoreUntil = 0; return; }             // our own move (the guard taken away)
+    if(ownBack){ ownBack = false; clearTimeout(ownBackTimer); return; }    // our own move (the guard taken away)
     guardOn = false;                                                      // (the person's Back took the guard)
     if(closeOpenSheet()){ syncGuard(); return; }                          // Back only closed a sheet: the page stays
     if(typeof prefFlowBack === 'function' && prefFlowBack()){ syncGuard(); updateBack(); return; }          // one step back in the preferences process, same page

@@ -265,9 +265,9 @@ function prefMonthExtras(body, mk, prefs, locked, submitted){
   }
 }
 
-// ---- the small switch of the preferences: "שלב שלב, בלי יכול" (the staged process) or "שבוע-שבוע" (with the colours and "יכול", one week of the calendar at a time).
+// ---- the small switch of the preferences: "שלב אחרי שלב" (the staged process; was "שלב שלב, בלי יכול" until Guy 2026-11-09) or "שבוע-שבוע" (with the colours and "יכול", one week of the calendar at a time).
 // Only the instructor's screen changes: the marks are stored as always, and the coordinator sees them in her colours.
-const prefViewBtnHtml = () => portalServerOn ? `<div class="pview-row"><div class="mx-seg pview-seg" role="group" aria-label="תצוגת ההעדפות"><button type="button" data-pview="week" aria-pressed="${!!srv.prefWeekly}">שלב שלב, בלי יכול</button><button type="button" data-pview="month" aria-pressed="${!srv.prefWeekly}">שבוע-שבוע</button></div></div>` : '';
+const prefViewBtnHtml = () => portalServerOn ? `<div class="pview-row"><div class="mx-seg pview-seg" role="group" aria-label="תצוגת ההעדפות"><button type="button" data-pview="week" aria-pressed="${!!srv.prefWeekly}">שלב אחרי שלב</button><button type="button" data-pview="month" aria-pressed="${!srv.prefWeekly}">שבוע-שבוע</button></div></div>` : '';
 function prefViewWire(body){
   body.querySelectorAll('[data-pview]').forEach(b => b.addEventListener('click', async () => {
     const week = b.dataset.pview === 'week';

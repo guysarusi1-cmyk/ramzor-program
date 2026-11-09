@@ -160,6 +160,7 @@ function renderInstructorPrefs(body){
   let cells = '', neutral = 0;
   // "שבוע-שבוע": the same calendar, one week of the month at a time (the whole month stays for looking, and for who is not filling for herself)
   const oneWeek = portalServerOn && !srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !portalUi.prefsPast && !portalUi.prefsWholeMonth;
+  const wholeOfWeeks = portalServerOn && !srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !portalUi.prefsPast && !!portalUi.prefsWholeMonth;          // ("שבוע-שבוע" seen as the whole month: Guy 2026-11-09)
   const allWeeks = oneWeek ? prefWeeksOf(mk) : null, wkIdx = oneWeek ? Math.max(0, Math.min(portalUi.prefWk || 0, allWeeks.length - 1)) : 0, wkShown = oneWeek ? allWeeks[wkIdx] : null;
   for(let i = 0; i < (oneWeek ? wkShown.filter(d => d < days[0]).length : lead); i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
@@ -192,7 +193,7 @@ function renderInstructorPrefs(body){
       : `<div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>`}
     ${portalServerOn && !locked && me.role === 'instructor' && !prefOther() ? prefFixedLineHtml() : portalServerOn && prefFixedKinds().size && !locked ? `<div class="pnote pnote-soft" id="nonight-note">${prefFixedNote()}</div>` : ''}
     <div class="pshift-key" aria-label="שעות המשמרות">${portalLoad().shiftTypes.map(s => `<span><b>${pEsc(s.label)}</b> <bdi dir="ltr">${pEsc(s.start)}–${pEsc(s.end)}</bdi></span>`).join('')}</div>          
-    ${oneWeek ? `<div class="pweek-weeknav">${mcalWeekNavHtml(mk, wkIdx)}</div>` : ''}
+    ${oneWeek ? `<div class="pweek-weeknav">${mcalWeekNavHtml(mk, wkIdx)}</div><div class="pweek-tools"><button type="button" class="btn ghost small" id="pw-month-wk">לראות את כל החודש</button></div>` : wholeOfWeeks ? '<div class="pweek-tools"><button type="button" class="btn ghost small" id="pw-month-wk-back">חזרה לשבוע-שבוע</button></div>' : ''}
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
     ${portalServerOn ? `
     <div class="pgoal">
@@ -215,6 +216,8 @@ function renderInstructorPrefs(body){
     ${locked ? '' : `<div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
     <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`}`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
+  { const b = body.querySelector('#pw-month-wk'); if(b) b.addEventListener('click', () => { portalUi.prefsWholeMonth = true; renderInstructorPrefs(body); if(window.navRefresh) window.navRefresh(); }); }
+  { const b = body.querySelector('#pw-month-wk-back'); if(b) b.addEventListener('click', () => { portalUi.prefsWholeMonth = false; renderInstructorPrefs(body); if(window.navRefresh) window.navRefresh(); }); }
   if(oneWeek) body.querySelectorAll('[data-mwk]').forEach(b => { const to = wkIdx + parseInt(b.dataset.mwk, 10); if(to < 0 || to >= allWeeks.length) b.disabled = true; b.addEventListener('click', () => { portalUi.prefWk = to; renderInstructorPrefs(body); }); });
   { const fe = body.querySelector('#prefs-fixed-edit'); if(fe) fe.addEventListener('click', () => { portalUi.gearFold = Object.assign(portalUi.gearFold || {}, { prefs:true }); openPortalSettings(); }); }
   { const pp = body.querySelector('#prefs-past'), pe = body.querySelector('#prefs-past-end');
@@ -318,9 +321,10 @@ function canTakeShift(pid, key){
   if(Object.keys(m.assignments).some(k => k.startsWith(date + '|') && (m.assignments[k] || []).includes(pid))) return false;      // already working that day
   if(!portalServerOn) return levelOf(ctx.prefs, pid, slot) !== 'no';
   if((portalPerson(pid) || {}).role !== 'instructor') return true;          // (the service girls: their own availability, checked by the database)
-  // an instructor: only who marked "כן" or "יכול" for this very shift, and no night next to a morning (= public.swap_ok, scheduling-v53.sql; Guy 2026-11-03)
+  // an instructor: everybody who is free for this shift, also with no mark (Guy 2026-11-09) — not who marked "לא" — and no night next to a morning
+  // (= public.swap_offer_ok, scheduling-v65.sql; the database checks the rest of the rules: leave, no nights, fixed "no"...)
   const sid = slot.shift || splitKey(key).shiftId, lv = (((ctx.prefs || {})[pid] || {}).slots || {})[key];
-  if(!['yes', 'avoid'].includes(lv)) return false;
+  if(lv === 'no') return false;
   const on = (d, ids) => ids.some(id => ((portalMonth(monthKeyOf(d)).assignments || {})[`${d}|${id}`] || []).includes(pid));
   if(['m', 's'].includes(sid) && on(addDays(date, -1), ['n'])) return false;
   if(sid === 'n' && on(addDays(date, 1), ['m', 's'])) return false;

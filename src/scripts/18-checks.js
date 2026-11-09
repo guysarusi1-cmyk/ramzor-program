@@ -2704,7 +2704,7 @@
         { srv.prefWeekly = false; srv.prefPlain = false; portalUi.prefsWholeMonth = false; portalUi.prefWk = 0; portalUi.level = 'yes'; renderInstructorPrefs(pb()); await sleep(200);
           const nums = () => [...pb().querySelectorAll('.pcal .pday-num')].map(x => x.textContent).join(',');
           const n1 = nums(), sw = [...pb().querySelectorAll('[data-pview]')].map(x => x.textContent).join('|');
-          check('the switch: "שלב שלב, בלי יכול" and "שבוע-שבוע"', sw === 'שלב שלב, בלי יכול|שבוע-שבוע', sw);
+          check('the switch: "שלב אחרי שלב" and "שבוע-שבוע"', sw === 'שלב אחרי שלב|שבוע-שבוע', sw);
           check('"שבוע-שבוע": the calendar with one week only, the days side by side, with "יכול"', pb().querySelectorAll('.pcal .pday:not(.blank)').length <= 7 && !!pb().querySelector('[data-plevel="avoid"]') && getComputedStyle(pb().querySelector('.pcal')).display === 'grid', n1);
           pb().querySelector('[data-mwk="1"]').click(); await sleep(200);
           check('... the arrow moves to the next week, and back', nums() !== n1 && portalUi.prefWk === 1, nums());
@@ -2932,7 +2932,8 @@
           check('the therapist comes in to the first screen, with the cards of the therapy portal and of the on-call', document.querySelector('.view.active').id === 'view-apphome' && !!document.getElementById('apphome-oncall') && !!document.getElementById('apphome-therapy'), document.querySelector('.view.active').id);
           await showTherapyPortal(); await sleep(100);
           check('the therapy portal has no on-call tab, and no conversations tab', !document.querySelector('[data-th-tab="oncall"]') && !document.querySelector('[data-th-tab="chats"]'), '');
-          showAppHome(); await sleep(120); { const c = document.getElementById('apphome-chats'); check('the conversations are a card of their own', !!c, ''); if(c){ c.click(); await sleep(700); check('... it opens its screen', document.querySelector('.view.active').id === 'view-chats' && !document.querySelector('#view-chats .pstatus.bad') && !!document.querySelector('#chats-screen *'), document.querySelector('.view.active').id); } }
+          showAppHome(); await sleep(120); { const c = document.getElementById('apphome-chats'); check('the conversations are a card of their own', !!c, ''); if(c){ c.click(); for(let w = 0; w < 40 && !(document.querySelector('.view.active').id === 'view-chats' && document.querySelector('#chats-screen *')); w++) await sleep(100);          // (waits for the screen to load, up to 4 seconds: 0.7 was too short on a slow night)
+            check('... it opens its screen', document.querySelector('.view.active').id === 'view-chats' && !document.querySelector('#view-chats .pstatus.bad') && !!document.querySelector('#chats-screen *'), document.querySelector('.view.active').id); } }
           window.__asLive = true; showAppHome(); await sleep(120); check('live: the social worker has the Ramzor, the on-call and the conversations, and no therapy portal', !!document.getElementById('apphome-ramzor') && !!document.getElementById('apphome-oncall') && !!document.getElementById('apphome-chats') && !document.getElementById('apphome-therapy'), ''); window.__asLive = false;
           await showTherapyPortal(); await sleep(100);
           try { localStorage.removeItem('ramzor-portal-big'); } catch(e){} applyPortalSize();
