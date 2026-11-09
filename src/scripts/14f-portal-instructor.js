@@ -286,7 +286,8 @@ function renderInstructorPrefs(body){
         um.forEach(k => { prefs.slots[k] = how === 'can' ? 'avoid' : 'no'; }); portalSave(); renderInstructorPrefs(body);          // ("avoid" is the "יכול" of the screen)
       }
       try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim(), m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
-      if(neutral > 0) toast(tx('submit_neutral', neutral), 8000); else toast(tx('submit_ok'));          // (the "not complete yet" message stays long enough to be read)
+      const left = prefUnmarkedKeys(mk, prefs).length;          // (counted again: the shifts just filled by "יכול"/"לא" are no longer left, Guy 2026-11-09)
+      if(left > 0) toast(tx('submit_neutral', left), 8000); else toast(tx('submit_ok'));          // (the "not complete yet" message stays long enough to be read)
       renderInstructorPrefs(body); return;
     }
     m.submitted[me.id] = true; portalSave(); toast(tx('submit_ok')); renderInstructorPrefs(body);
