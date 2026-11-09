@@ -2993,8 +2993,8 @@ html[data-contrast=high] body[data-rlook=light] .toast{
 .mgr-ttv-name, .mgr-ttv-time{ flex:none; position:relative; }
 @media (max-width:700px){ .mgr-ttv-fit .mgr-ttv-item{ min-height:0; } .mgr-ttv-fit .mgr-ttv-icon{ flex:1 1 0; height:auto; min-height:0; } .mgr-ttv-fit .mgr-ttv-icon .tvt2-emoji{ font-size:24px; line-height:1; } }
 @media (min-width:701px){ .mgr-ttv-fit .mgr-ttv{ height:auto; grid-auto-rows:auto; } .mgr-ttv{ --c:6 !important; } }
-/* the editor: hours from left to right, how often under the row */
-.ctl-tt-times{ direction:ltr; }
+/* the editor: the start on the right and the end on the left, as in every form of the timetable, mentoring and volunteering (Guy 2026-11-08); each hour reads 16:30 inside. How often: under the row */
+.ctl-tt-times{ direction:rtl; }
 .ctl-tt-rep{ grid-column:1 / -1; display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:14px; }
 .ctl-tt-rep select{ min-height:36px; padding:2px 6px; border-radius:8px; font:inherit; background:var(--color-surface, var(--panel-2)); color:var(--color-text, var(--text)); border:1px solid var(--color-border-strong, var(--line)); }
 .ctl-tt-rep input{ width:52px; min-height:36px; text-align:center; }
@@ -3206,6 +3206,31 @@ body:has(.view.active .mx-login[data-ptheme=light])::before{ display:none; }
 #view-manage.manage-kids-only .roster-th{ display:none; }
 #view-manage.manage-kids-only .roster-row{ flex-wrap:wrap; }
 #view-manage.manage-kids-only .roster-name{ flex:1 1 100%; white-space:normal; order:-1; }
+
+/* ---------- the secretary's round (Alex card 59b4f012, Guy 2026-11-08) ---------- */
+/* the contact page: two folded groups, the mentors and the volunteers */
+.sec-cgroups{ display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+.sec-cgroup .pcount{ font-weight:400; opacity:.75; margin-inline-start:4px; }
+.sec-roles button[aria-pressed="true"]{ background:var(--p-accent, var(--gold)); border-color:var(--p-accent, var(--gold)); color:var(--p-accent-ink, #1b1b1b); }
+/* all the emoji, under "עוד תמונות" (14na-emoji.js) */
+.emj{ margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+.emj .psec{ margin:4px 0 0; }
+.emj-search, .emj-type{ width:100%; min-height:44px; font:inherit; padding:6px 10px; border-radius:10px; border:1px solid var(--color-border-strong, var(--line)); background:var(--color-surface, var(--panel-2)); color:var(--color-text, var(--text)); }
+.emj-cats{ display:flex; flex-wrap:wrap; gap:6px; }
+.emj-cats button[aria-pressed="true"]{ border-color:var(--gold); font-weight:800; }
+.ctl-icons.emj-grid{ grid-template-columns:repeat(auto-fill, minmax(48px, 1fr)); gap:4px; }
+.emj-grid .emj-opt{ padding:6px 2px; min-height:48px; justify-content:center; }
+.emj-grid .emj-opt span{ font-size:28px; line-height:1.1; }
+.emj-own{ display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; }
+.emj-own .pfield{ flex:1 1 180px; margin:0; }
+.emj-own .emj-use{ min-height:44px; }
+@media (forced-colors:active){ .emj-cats button[aria-pressed="true"], .sec-roles button[aria-pressed="true"]{ border:2px solid Highlight; } }
+/* the hours under their titles (Guy 2026-11-09): in the forms each hour sits right under its title; in the timetable editor a small title over each hour */
+.sec-times .ctl-tt-time{ align-self:flex-start; }
+.ctl-tt-times{ align-items:flex-end; }
+.ctl-tt-cap{ display:inline-flex; flex-direction:column; align-items:flex-start; gap:2px; }
+.ctl-tt-cap > small{ font-size:12.5px; font-weight:600; color:var(--color-text-secondary, var(--muted)); padding-inline-start:2px; }
+.ctl-tt-times .ctl-tt-dash{ padding-bottom:10px; }
 
 /* ---------- the Ramzor's staff screens on the new look (Guy 2026-10-30; the look is chosen in 14zk-ramzor-look.js) ----------
    body[data-rlook] is set only while a staff screen of the Ramzor is open (never the kids' TV). The base variables every Ramzor rule reads are
@@ -7900,6 +7925,7 @@ function renderInstructorPrefs(body){
   let cells = '', neutral = 0;
   // "שבוע-שבוע": the same calendar, one week of the month at a time (the whole month stays for looking, and for who is not filling for herself)
   const oneWeek = portalServerOn && !srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !portalUi.prefsPast && !portalUi.prefsWholeMonth;
+  const wholeOfWeeks = portalServerOn && !srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !portalUi.prefsPast && !!portalUi.prefsWholeMonth;          // ("שבוע-שבוע" seen as the whole month: Guy 2026-11-09)
   const allWeeks = oneWeek ? prefWeeksOf(mk) : null, wkIdx = oneWeek ? Math.max(0, Math.min(portalUi.prefWk || 0, allWeeks.length - 1)) : 0, wkShown = oneWeek ? allWeeks[wkIdx] : null;
   for(let i = 0; i < (oneWeek ? wkShown.filter(d => d < days[0]).length : lead); i++) cells += '<div class="pday blank"></div>';
   days.forEach(date => {
@@ -7932,7 +7958,7 @@ function renderInstructorPrefs(body){
       : `<div class="pstatus ${submitted ? 'ok' : 'bad'}">${submitted ? tx('st_sub') : tx('st_unsub')}${dl ? ` · אפשר להגיש עד ${dl.getDate()}/${dl.getMonth() + 1}${m.deadlineTime ? ' בשעה ' + m.deadlineTime : ''}` : ''}${portalServerOn ? ' · <span id="srv-save-state">נשמר ✓</span>' : ''}</div>`}
     ${portalServerOn && !locked && me.role === 'instructor' && !prefOther() ? prefFixedLineHtml() : portalServerOn && prefFixedKinds().size && !locked ? `<div class="pnote pnote-soft" id="nonight-note">${prefFixedNote()}</div>` : ''}
     <div class="pshift-key" aria-label="שעות המשמרות">${portalLoad().shiftTypes.map(s => `<span><b>${pEsc(s.label)}</b> <bdi dir="ltr">${pEsc(s.start)}–${pEsc(s.end)}</bdi></span>`).join('')}</div>          
-    ${oneWeek ? `<div class="pweek-weeknav">${mcalWeekNavHtml(mk, wkIdx)}</div>` : ''}
+    ${oneWeek ? `<div class="pweek-weeknav">${mcalWeekNavHtml(mk, wkIdx)}</div><div class="pweek-tools"><button type="button" class="btn ghost small" id="pw-month-wk">לראות את כל החודש</button></div>` : wholeOfWeeks ? '<div class="pweek-tools"><button type="button" class="btn ghost small" id="pw-month-wk-back">חזרה לשבוע-שבוע</button></div>' : ''}
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
     ${portalServerOn ? `
     <div class="pgoal">
@@ -7955,6 +7981,8 @@ function renderInstructorPrefs(body){
     ${locked ? '' : `<div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
     <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`}`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
+  { const b = body.querySelector('#pw-month-wk'); if(b) b.addEventListener('click', () => { portalUi.prefsWholeMonth = true; renderInstructorPrefs(body); if(window.navRefresh) window.navRefresh(); }); }
+  { const b = body.querySelector('#pw-month-wk-back'); if(b) b.addEventListener('click', () => { portalUi.prefsWholeMonth = false; renderInstructorPrefs(body); if(window.navRefresh) window.navRefresh(); }); }
   if(oneWeek) body.querySelectorAll('[data-mwk]').forEach(b => { const to = wkIdx + parseInt(b.dataset.mwk, 10); if(to < 0 || to >= allWeeks.length) b.disabled = true; b.addEventListener('click', () => { portalUi.prefWk = to; renderInstructorPrefs(body); }); });
   { const fe = body.querySelector('#prefs-fixed-edit'); if(fe) fe.addEventListener('click', () => { portalUi.gearFold = Object.assign(portalUi.gearFold || {}, { prefs:true }); openPortalSettings(); }); }
   { const pp = body.querySelector('#prefs-past'), pe = body.querySelector('#prefs-past-end');
@@ -8058,9 +8086,10 @@ function canTakeShift(pid, key){
   if(Object.keys(m.assignments).some(k => k.startsWith(date + '|') && (m.assignments[k] || []).includes(pid))) return false;      // already working that day
   if(!portalServerOn) return levelOf(ctx.prefs, pid, slot) !== 'no';
   if((portalPerson(pid) || {}).role !== 'instructor') return true;          // (the service girls: their own availability, checked by the database)
-  // an instructor: only who marked "כן" or "יכול" for this very shift, and no night next to a morning (= public.swap_ok, scheduling-v53.sql; Guy 2026-11-03)
+  // an instructor: everybody who is free for this shift, also with no mark (Guy 2026-11-09) — not who marked "לא" — and no night next to a morning
+  // (= public.swap_offer_ok, scheduling-v65.sql; the database checks the rest of the rules: leave, no nights, fixed "no"...)
   const sid = slot.shift || splitKey(key).shiftId, lv = (((ctx.prefs || {})[pid] || {}).slots || {})[key];
-  if(!['yes', 'avoid'].includes(lv)) return false;
+  if(lv === 'no') return false;
   const on = (d, ids) => ids.some(id => ((portalMonth(monthKeyOf(d)).assignments || {})[`${d}|${id}`] || []).includes(pid));
   if(['m', 's'].includes(sid) && on(addDays(date, -1), ['n'])) return false;
   if(sid === 'n' && on(addDays(date, 1), ['m', 's'])) return false;
@@ -8857,10 +8886,12 @@ async function srvStart(){
   portalServerOn = true;
   if(!(await srvLoadFirst())) return false;
   if(personalIsTherapistOnly()) return personalEnter();          // (a therapist with no shifts: never the shifts portal, also after a refresh)
+  if(personalIsSecretary()){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} return personalEnter(); }          // (the secretary has no shifts: her home, also when the page reloads itself on an address with #portal — Guy 2026-11-09)
   portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null;
   showPortal();
   return true;
 }
+const personalIsSecretary = () => (portalMe() || {}).role === 'secretary' || !!(srv.profile && srv.profile.kind === 'secretary');
 const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' || !!(srv.profile && srv.profile.kind === 'therapist');
 // ---- one personal sign-in for the portal AND the Ramzor: after it, the Ramzor reads its data with the personal session
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
@@ -11391,6 +11422,72 @@ function applyPortalSize(){
   document.body.classList.toggle('portal-huge', big === '2');
 }
 
+// ---------- ALL THE EMOJI, behind "עוד תמונות" (Alex card 59b4f012, Guy 2026-11-08) ----------
+// In the timetable, mentoring and volunteering: about 400 emoji in subjects, a search in Hebrew, and a box to type or paste any emoji from the keyboard (a phone's too).
+// What is kept is the emoji itself, in place of a picture's name; the staff screens and the kids' TV show it as it is.
+// Only an emoji is ever kept or drawn (ttEmojiOk): nothing else typed there reaches a screen.
+// (Emoji up to Unicode 12 here, which the TVs in the room show; a newer one typed by hand may be an empty box on an old TV — said under the box.)
+const TT_EMOJI = [
+  ['פרצופים', '😀 חיוך שמח|😃 שמח|😄 צוחק|😁 חיוך רחב|😆 צחוק|😅 הקלה|😂 דמעות צחוק|🤣 מתגלגל מצחוק|😊 מחייך|😇 מלאך|🙂 חיוך קטן|😉 קריצה|😌 רגוע|😍 מאוהב|🥰 אהבה|😘 נשיקה|😋 טעים|😛 לשון|😜 מצחיק|🤪 משוגע|🤓 חנון|😎 מגניב|🥳 מסיבה חגיגה|🤩 מוקסם כוכבים|🤗 חיבוק|🤔 חושב|🤫 שקט|🤭 אופס|😐 רגיל|😶 בלי מילים|🙄 גלגול עיניים|😏 מחוייך|😴 ישן שינה|😪 עייף|🤤 מזיל ריר|😷 מסכה חולה|🤒 חום חולה|🤕 פצוע|🤢 בחילה|🤧 מתעטש|🥵 חם|🥶 קר|😵 מסוחרר|🤯 מפוצץ|🤠 בוקר|😕 מבולבל|😟 מודאג|🙁 עצוב קצת|😮 מופתע|😲 נדהם|😳 נבוך|🥺 מתחנן|😢 בוכה|😭 בכי|😱 מפוחד|😖 מתוסכל|😣 מתאמץ|😞 מאוכזב|😓 זיעה|😩 מותש|😤 כועס קיטור|😡 כועס|🤬 צועק|😈 שובב|👻 רוח רפאים|💀 גולגולת|🤖 רובוט|👽 חייזר|💩 קקי|🤡 ליצן|😺 חתול מחייך'],
+  ['אנשים וידיים', '👋 שלום נפנוף|👍 לייק אגודל|👎 לא אגודל למטה|👏 מחיאות כפיים|🙌 הידד|🙏 תודה בבקשה|🤝 לחיצת יד|✌️ ניצחון שלום|🤞 בהצלחה|👌 בסדר|🤙 תתקשר|💪 שריר כוח|✋ יד עצור|👊 אגרוף|✍️ כותב|👀 עיניים|👂 אוזן|👃 אף|👄 פה|🧠 מוח|🦷 שן|👶 תינוק|🧒 ילד|👦 בן|👧 בת|🧑 אדם|👩 אישה|👨 איש|🧓 מבוגר|👵 סבתא|👴 סבא|👮 שוטר|👩‍⚕️ רופאה|👨‍⚕️ רופא|👩‍🏫 מורה|👨‍🍳 שף טבח|👩‍🎨 ציירת|👨‍🚒 כבאי|🧙 קוסם|🦸 גיבור על|🧚 פיה|👸 נסיכה|🤴 נסיך|👪 משפחה|💏 זוג|🗣️ מדבר|👥 קבוצה אנשים|🚶 הולך|🏃 רץ|💃 רוקדת|🕺 רוקד|🧘 יוגה מדיטציה|🛀 אמבטיה|🛌 במיטה|🤸 התעמלות|🧗 טיפוס'],
+  ['חיות', '🐶 כלב|🐱 חתול|🐭 עכבר|🐹 אוגר|🐰 ארנב|🦊 שועל|🐻 דוב|🐼 פנדה|🐨 קואלה|🐯 נמר|🦁 אריה|🐮 פרה|🐷 חזיר|🐸 צפרדע|🐵 קוף|🐔 תרנגולת|🐧 פינגווין|🐦 ציפור|🐤 אפרוח|🦆 ברווז|🦉 ינשוף|🦄 חד קרן|🐝 דבורה|🐛 זחל|🦋 פרפר|🐌 חילזון|🐞 פרת משה רבנו|🐢 צב|🐍 נחש|🦖 דינוזאור|🐙 תמנון|🦀 סרטן|🐠 דג טרופי|🐟 דג|🐬 דולפין|🐳 לוויתן|🦈 כריש|🐊 תנין|🐘 פיל|🦒 ג׳ירפה|🦓 זברה|🐪 גמל|🐴 סוס|🐑 כבשה|🐐 עז|🦔 קיפוד|🐾 עקבות'],
+  ['טבע ומזג אוויר', '🌞 שמש|☀️ שמש בהירה|🌤️ שמש ועננים|⛅ מעונן חלקית|☁️ ענן|🌧️ גשם|⛈️ סערה|🌩️ ברק|❄️ שלג פתית|☃️ איש שלג|⛄ בובת שלג|🌈 קשת|☔ מטריה גשם|💧 טיפה מים|🌊 גל ים|🔥 אש|⭐ כוכב|🌟 כוכב נוצץ|✨ ניצוצות|🌙 ירח|🌛 חצי ירח|🌍 כדור הארץ|🪐 כוכב לכת|☄️ שביט|🌸 פרח דובדבן|🌹 ורד|🌻 חמנייה|🌷 צבעוני|🌼 פרח|🌱 נבט|🌿 עלה|🍀 תלתן|🍁 עלה שלכת|🍂 שלכת|🌲 עץ אורן|🌳 עץ|🌴 דקל|🌵 קקטוס|🍄 פטרייה|🐚 צדף|⛰️ הר|🏔️ הר מושלג|🏝️ אי|🏖️ חוף ים|🏜️ מדבר'],
+  ['אוכל ושתייה', '🍎 תפוח|🍏 תפוח ירוק|🍐 אגס|🍊 תפוז|🍋 לימון|🍌 בננה|🍉 אבטיח|🍇 ענבים|🍓 תות|🍒 דובדבן|🍑 אפרסק|🥭 מנגו|🍍 אננס|🥥 קוקוס|🥝 קיווי|🍅 עגבנייה|🥑 אבוקדו|🥦 ברוקולי|🥒 מלפפון|🌽 תירס|🥕 גזר|🥔 תפוח אדמה|🧅 בצל|🍞 לחם|🥐 קרואסון|🥖 באגט|🥨 בייגלה|🧀 גבינה|🥚 ביצה|🍳 ביצה מטוגנת בישול|🥞 פנקייק|🧇 וופל|🥓 בייקון|🍗 עוף|🍖 בשר|🌭 נקניקייה|🍔 המבורגר|🍟 צ׳יפס|🍕 פיצה|🥪 כריך|🌮 טאקו|🌯 בוריטו|🥙 פיתה פלאפל|🧆 פלאפל|🥗 סלט|🍝 פסטה|🍜 מרק|🍲 תבשיל|🍛 אורז קארי|🍣 סושי|🍚 אורז|🥟 כיסונים|🍿 פופקורן|🧂 מלח|🍦 גלידה|🍧 ברד|🍨 גלידה בכוס|🍩 סופגנייה|🍪 עוגייה|🎂 עוגת יום הולדת|🍰 עוגה|🧁 קאפקייק|🍫 שוקולד|🍬 סוכרייה|🍭 סוכרייה על מקל|🍯 דבש|🥛 חלב|🍼 בקבוק תינוק|☕ קפה|🍵 תה|🧃 מיץ שתייה|🥤 שתייה קרה|🧊 קרח|🍴 סכו״ם|🥄 כפית|🍽️ צלחת'],
+  ['ספורט ומשחק', '⚽ כדורגל|🏀 כדורסל|🏈 פוטבול|⚾ בייסבול|🎾 טניס|🏐 כדורעף|🏉 רוגבי|🎱 ביליארד|🏓 פינג פונג|🏸 בדמינטון|🥅 שער|⛳ גולף|🏹 קשת וחץ|🎣 דיג|🤿 צלילה|🥊 איגרוף|🥋 קראטה ג׳ודו|⛸️ החלקה|🛹 סקייטבורד|🛼 גלגיליות|🎿 סקי|🏊 שחייה|🚴 אופניים רכיבה|🏆 גביע|🥇 מדליה ראשון|🥈 מקום שני|🥉 מקום שלישי|🏅 מדליה|🎯 מטרה|🎮 משחק מחשב|🕹️ ג׳ויסטיק|🎲 קובייה משחק קופסה|🧩 פאזל|♟️ שחמט|🃏 קלפים|🀄 מהג׳ונג|🪁 עפיפון|🪀 יו יו|🧸 דובי|🎳 באולינג|🤹 להטוטן|🎪 קרקס|🎠 קרוסלה|🎡 גלגל ענק|🎢 רכבת הרים'],
+  ['יצירה, מוזיקה ולימוד', '🎨 צבעים ציור|🖌️ מכחול|🖍️ צבעונים|✏️ עיפרון|✒️ עט|📝 כתיבה|✂️ מספריים|📏 סרגל|📐 משולש|📎 אטב|📌 נעץ|📚 ספרים|📖 ספר פתוח קריאה|📕 ספר|📓 מחברת|🎒 תיק בית ספר|🏫 בית ספר|🧮 חשבונייה|🔢 מספרים חשבון|🔤 אותיות|💻 מחשב|🖥️ מסך|📱 טלפון|⌨️ מקלדת|🔬 מיקרוסקופ מדע|🔭 טלסקופ|🧪 מבחנה ניסוי|🧲 מגנט|🌐 אינטרנט|🗺️ מפה|🎵 תו מוזיקה|🎶 מוזיקה שירים|🎤 מיקרופון שירה|🎧 אוזניות|🎸 גיטרה|🎹 פסנתר|🥁 תוף|🎺 חצוצרה|🎻 כינור|🪕 בנג׳ו|🎷 סקסופון|🎭 תיאטרון|🎬 סרט צילום|📺 טלוויזיה|📷 מצלמה|🎞️ סרט|🖼️ תמונה|🧶 צמר סריגה|🧵 חוט תפירה|🏺 כד קדרות'],
+  ['בית ויומיום', '🏠 בית|🏡 בית עם גינה|🛏️ מיטה|🛋️ ספה|🚪 דלת|🚿 מקלחת|🛁 אמבטיה|🚽 שירותים|🧼 סבון|🧽 ספוג|🧹 מטאטא ניקיון|🧺 סל כביסה|🧴 קרם|👕 חולצה|👖 מכנסיים|👗 שמלה|👟 נעלי ספורט|👞 נעל|🧦 גרביים|🧢 כובע|🎩 כובע צילינדר|🧣 צעיף|🧤 כפפות|🧥 מעיל|👓 משקפיים|🕶️ משקפי שמש|⌚ שעון יד|⏰ שעון מעורר השכמה|⏳ שעון חול|📅 לוח שנה|🗓️ יומן|🔑 מפתח|🔒 מנעול|💡 נורה רעיון|🔦 פנס|🕯️ נר|🧯 מטף|🧸 בובה|🎈 בלון|🎁 מתנה|🎀 סרט מתנה|🛒 עגלת קניות|💊 תרופה|🩹 פלסטר|🩺 סטטוסקופ רופא|🌡️ מדחום|💰 כסף|✉️ מכתב|📦 חבילה|🧳 מזוודה|☂️ מטרייה'],
+  ['מקומות ותחבורה', '🚗 מכונית|🚕 מונית|🚌 אוטובוס|🚎 טרוליבוס|🚓 ניידת משטרה|🚑 אמבולנס|🚒 כבאית|🚚 משאית|🚜 טרקטור|🚲 אופניים|🛴 קורקינט|🏍️ אופנוע|🚂 רכבת|🚆 רכבת מהירה|🚇 רכבת תחתית|✈️ מטוס|🚁 מסוק|🚀 טיל חללית|🛸 צלחת מעופפת|⛵ סירת מפרש|🚤 סירה|🚢 אונייה|⚓ עוגן|🚦 רמזור|🚧 עבודות|⛽ דלק|🗺️ מפה|🏥 בית חולים|🏦 בנק|🏪 מכולת|🏬 קניון|🏛️ מוזיאון|🏟️ אצטדיון|🏰 טירה|⛺ אוהל קמפינג|🏕️ קמפינג|🎡 לונה פארק|⛲ מזרקה|🌉 גשר|🏙️ עיר|🌃 לילה בעיר|🌅 זריחה|🌄 שקיעה הרים|🕍 בית כנסת|🕌 מסגד|⛪ כנסייה'],
+  ['חגים ושמחות', '🎉 מסיבה|🎊 קונפטי|🎂 יום הולדת|🎁 מתנה|🎈 בלונים|🥳 חגיגה|🕎 חנוכייה חנוכה|🍩 סופגנייה|🎭 פורים מסכות|🍷 יין קידוש|🍞 חלה שבת|🕯️ נרות שבת|🍎 תפוח בדבש ראש השנה|🍯 דבש|🌿 סוכה|🍋 אתרוג|🌾 שבועות|🇮🇱 דגל ישראל|🎆 זיקוקים|🎇 זיקוק|🏮 פנס|🎃 דלעת|🎄 עץ אשוח|❤️ לב אהבה|🧡 לב כתום|💛 לב צהוב|💚 לב ירוק|💙 לב כחול|💜 לב סגול|🤍 לב לבן|💖 לב נוצץ|💕 לבבות|👑 כתר|💎 יהלום|🏆 גביע|🎖️ עיטור|🎗️ סרט'],
+  ['סמלים', '✅ וי בוצע|☑️ סימון|❌ איקס|❗ סימן קריאה|❓ סימן שאלה|⚠️ זהירות|⛔ אסור כניסה|🚫 אסור|🔴 עיגול אדום|🟠 עיגול כתום|🟡 עיגול צהוב|🟢 עיגול ירוק|🔵 עיגול כחול|🟣 עיגול סגול|⚫ עיגול שחור|⚪ עיגול לבן|🟥 ריבוע אדום|🟩 ריבוע ירוק|🔺 משולש|💯 מאה|🔔 פעמון|🔕 בלי צלצול|📣 מגאפון הודעה|📢 כריזה|💬 בועת דיבור|💭 מחשבה|🗯️ צעקה|♻️ מיחזור|⬆️ למעלה|⬇️ למטה|➡️ ימינה|⬅️ שמאלה|🔄 חזרה|➕ פלוס|➖ מינוס|✖️ כפול|➗ חילוק|🔟 עשר|#️⃣ סולמית|*️⃣ כוכבית|1️⃣ אחת|2️⃣ שתיים|3️⃣ שלוש|🆗 בסדר|🆕 חדש|🆒 מגניב|🔝 למעלה|💤 שינה|♾️ אינסוף|☮️ שלום|☯️ יין יאנג|🎵 תו']
+].map(([w, l]) => [w, l.split('|').map(x => { const at = x.indexOf(' '); return [x.slice(0, at), x.slice(at + 1)]; })]);
+const TT_EMOJI_ALL = TT_EMOJI.flatMap(([, l]) => l);
+// an emoji, and only an emoji: the first one of what was typed or pasted (with its skin tone, flag, keycap or joined family), or ''
+function ttEmojiOf(s){
+  s = String(s || '').trim(); if(!s || s.length > 30) return '';
+  let first = s;
+  try { if(typeof Intl !== 'undefined' && Intl.Segmenter){ const seg = new Intl.Segmenter('he', { granularity:'grapheme' }).segment(s)[Symbol.iterator]().next(); first = seg.done ? '' : seg.value.segment; } } catch(e){}
+  return ttEmojiOk(first) ? first : '';
+}
+function ttEmojiOk(s){
+  if(typeof s !== 'string' || !s || s.length > 30) return false;
+  try {
+    if(!/^[\p{Extended_Pictographic}\p{Emoji_Component}\p{Regional_Indicator}‍︎️⃣\u{E0020}-\u{E007F}]+$/u.test(s)) return false;
+    return /\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u.test(s);
+  } catch(e){ return false; }          // (a browser without these letters' classes: no free emoji, the pictures as before)
+}
+const ttEmojiWord = e => (TT_EMOJI_ALL.find(x => x[0] === e) || [e, ''])[1];
+// the part under "עוד תמונות": subjects, the search, and the box for the keyboard. The buttons carry data-icon, as the pictures do, so each sheet picks them the same way
+function ttEmojiHtml(cur){
+  const opt = ([e, w]) => `<button type="button" class="ctl-icon-opt emj-opt${cur === e ? ' on' : ''}" data-icon="${pEsc(e)}" data-emj-words="${pEsc(w)}" aria-label="${pEsc(w.split(' ')[0])}"><span>${e}</span></button>`;
+  return `<div class="emj">
+    <h3 class="psec">כל האימוג׳ים</h3>
+    <input type="search" class="emj-search" placeholder="חיפוש: כדור, עוגה, שמש..." aria-label="חיפוש אימוג׳י" maxlength="30">
+    <div class="emj-cats" role="group" aria-label="נושאים">${TT_EMOJI.map(([w], i) => `<button type="button" class="btn ghost small" data-emj-cat="${i}" aria-pressed="${i === 0}">${pEsc(w)}</button>`).join('')}</div>
+    ${TT_EMOJI.map(([, l], i) => `<div class="ctl-icons emj-grid" data-emj-group="${i}"${i === 0 ? '' : ' hidden'}>${l.map(opt).join('')}</div>`).join('')}
+    <div class="pnote emj-none" hidden>לא נמצא. אפשר להקליד או להדביק אימוג׳י בתיבה שלמטה.</div>
+    <div class="emj-own"><label class="pfield">או להקליד / להדביק אימוג׳י מהמקלדת<input type="text" class="emj-type" maxlength="30" inputmode="text" autocomplete="off" aria-label="אימוג׳י מהמקלדת"></label>
+      <button type="button" class="btn small emj-use" data-icon="" disabled>בחירה</button></div>
+    <small class="pnote">אימוג׳י חדש מאוד עלול להופיע כריבוע ריק בטלוויזיה ישנה.</small>
+  </div>`;
+}
+function ttEmojiWire(sh){
+  const box = sh.querySelector('.emj'); if(!box) return;
+  const q = box.querySelector('.emj-search'), none = box.querySelector('.emj-none'), groups = [...box.querySelectorAll('[data-emj-group]')], cats = [...box.querySelectorAll('[data-emj-cat]')];
+  let cat = 0;
+  const show = () => {
+    const t = q.value.trim();
+    groups.forEach((g, i) => { let n = 0; g.querySelectorAll('.emj-opt').forEach(b => { const hit = t ? b.dataset.emjWords.includes(t) || b.dataset.icon === t : true; b.hidden = !hit; if(hit) n++; }); g.hidden = t ? !n : i !== cat; });
+    none.hidden = !t || groups.some(g => !g.hidden);
+    box.querySelector('.emj-cats').hidden = !!t;
+  };
+  cats.forEach(b => b.addEventListener('click', () => { cat = +b.dataset.emjCat; cats.forEach(x => x.setAttribute('aria-pressed', String(x === b))); show(); }));
+  q.addEventListener('input', show);
+  const type = box.querySelector('.emj-type'), use = box.querySelector('.emj-use');
+  type.addEventListener('input', () => { const e = ttEmojiOf(type.value); use.dataset.icon = e; use.disabled = !e; use.textContent = e ? `בחירה ${e}` : 'בחירה'; });
+  type.addEventListener('keydown', e => { if(e.key === 'Enter' && !use.disabled){ e.preventDefault(); use.click(); } });
+  { const on = groups.findIndex(g => g.querySelector('.emj-opt.on')); if(on > 0) cats[on].click(); }          // (the subject of the emoji chosen before)
+}
+
 // ---------- THE AHMASH CONTROL (בקרת אחמ"ש): who the kids' TV shows today, today's timetable, today's bonuses, a log ----------
 // Only after the personal sign-in, for an ahmash (rank 1 or 2), the coordinator and the admin (supabase/scheduling-v15.sql: can_control()).
 // Nothing here changes the real schedule: the people changes are for the kids' TV of today only.
@@ -11418,7 +11515,7 @@ const TT_ICON_MORE = [
   ['בית וחגים', [['laundry', 'כביסה', '🧦'], ['handwash', 'רחיצת ידיים', '🧼'], ['haircut', 'תספורת', '💇'], ['birthday', 'יום הולדת', '🎂'], ['party', 'מסיבה', '🎉'], ['prayer', 'תפילה', '🙏'], ['kiddush', 'קידוש', '🍷'], ['holiday', 'חג', '🕎'], ['talk', 'שיחה', '💬'], ['phone', 'שיחת טלפון', '📞']]]
 ];
 const TT_ICON_ALL = TT_ICON_LIST.concat(...TT_ICON_MORE.map(g => g[1]));
-const ttIcon = id => TT_ICON_ALL.find(x => x[0] === id) || ['other', 'פעילות', '⭐'];
+const ttIcon = id => TT_ICON_ALL.find(x => x[0] === id) || (typeof ttEmojiOk === 'function' && ttEmojiOk(id) ? [id, ttEmojiWord(id), id] : ['other', 'פעילות', '⭐']);          // (an emoji kept as it is: 14na-emoji.js — and only an emoji)
 
 // who is on which of today's shifts: the schedule's rows, then today's changes (removed / added); the order: teachers first, then the instructors
 // with the (best) ahmash in the first place, the service girls last. Used by the control and by the kids' TV.
@@ -11555,11 +11652,12 @@ async function ctlTimetable(box){
   ctlTimetableDraw(box);
 }
 // how often an activity comes (Guy 2026-11-04): once (today only), every week, every N weeks from a day, or a month's first / second ... weekday. Kept on the activity itself
-const TT_REP = [['once', 'חד-פעמי'], ['week', 'שבועי'], ['nw', 'כל כמה שבועות'], ['month', 'חודשי']];
+const TT_REP = [['once', 'חד-פעמי'], ['week', 'שבועי'], ['sunthu', 'בכל יום ראשון עד חמישי'], ['nw', 'כל כמה שבועות'], ['month', 'חודשי']];          // (ראשון עד חמישי: Guy 2026-11-08 — in the timetable it goes into the fixed timetable of Sunday to Thursday)
 function ttOn(x, day){
   const r = x.rep; if(!r || !day) return true;
   if(r.k === 'nw'){ const w = Math.round((parseIso(day) - parseIso(r.from)) / (7 * 864e5)); return w >= 0 && w % (r.n || 2) === 0; }
   if(r.k === 'month') return Math.ceil(parseIso(day).getDate() / 7) === r.nth;
+  if(r.k === 'sunthu') return dowOf(day) <= 4;
   return true;
 }
 const ttRepOf = (x, fixed) => (x.rep && x.rep.k) || (x.fresh && !fixed ? 'once' : 'week');
@@ -11570,22 +11668,38 @@ function ttTimeHtml(t, i, end){          // (end: the hour it ends — Guy 2026-
   return `<span class="ctl-tt-time" ${end ? 'data-tt-end' : 'data-tt-time'}="${i}" dir="ltr"><select data-tt-h aria-label="${end ? 'שעת סיום' : 'שעת התחלה'}"><option value="">${end ? 'סיום' : '--'}</option>${Array.from({ length:24 }, (_, k) => String(k).padStart(2, '0')).map(x => `<option${x === h ? ' selected' : ''}>${x}</option>`).join('')}</select>:<select data-tt-m aria-label="דקות">${mins.map(x => `<option${x === (m || '00') ? ' selected' : ''}>${x}</option>`).join('')}</select></span>`;
 }
 const ttTimeOf = el => { const h = el.querySelector('[data-tt-h]').value; return h ? h + ':' + el.querySelector('[data-tt-m]').value : ''; };
+// "בכל יום ראשון עד חמישי" in the timetable: the activity goes into the fixed timetable of each of these days (the same name and hour replaced, the rest kept).
+// skip: the weekday already saved (-1: none). Removing it later is done day by day, as any fixed activity
+async function ttSunThuSpread(items, skip){
+  const st = items.filter(x => x.rep && x.rep.k === 'sunthu'); if(!st.length) return;
+  const r = await sb.from('timetable_fixed').select('weekday,items').lte('weekday', 4); if(r.error){ toast('"ראשון עד חמישי" לא נשמר בכל הימים. נסו שוב.'); return; }
+  const rows = [0, 1, 2, 3, 4].filter(wd => wd !== skip).map(wd => { const have = ((r.data || []).find(x => x.weekday === wd) || {}).items || [];
+    return { weekday:wd, items:have.filter(h => !st.some(x => x.n === h.n && x.t === h.t)).concat(st).sort((a, b) => a.t.localeCompare(b.t)) }; });
+  const w = await sb.from('timetable_fixed').upsert(rows); if(w.error) toast('"ראשון עד חמישי" לא נשמר בכל הימים. נסו שוב.');
+}
+// an activity of Sunday to Thursday deleted "from today on": out of the fixed timetable of each of these days (skip: the weekday already saved)
+async function ttSunThuDrop(gone, skip){
+  if(!gone.length) return;
+  const r = await sb.from('timetable_fixed').select('weekday,items').lte('weekday', 4); if(r.error){ toast('המחיקה לא נשמרה בכל הימים. נסו שוב.'); return; }
+  const rows = (r.data || []).filter(x => x.weekday !== skip).map(x => ({ weekday:x.weekday, items:(x.items || []).filter(h => !gone.some(g => g.n === h.n && g.t === h.t)) }));
+  if(rows.length){ const w = await sb.from('timetable_fixed').upsert(rows); if(w.error) toast('המחיקה לא נשמרה בכל הימים. נסו שוב.'); }
+}
 function ctlTimetableDraw(box){
   const tt = ctl.tt, coord = ctlIsCoord(), fixedDay = ctl.ttFixedDay;
   const editing = fixedDay != null ? ctl.ttFixed : ctl.ttEdit;
   const rows = editing.items.map((x, i) => `<div class="ctl-tt-row" data-row="${i}">
-      <span class="ctl-tt-times">${ttTimeHtml(x.t, i)}<span class="ctl-tt-dash" aria-hidden="true">–</span>${ttTimeHtml(x.end, i, true)}</span>
+      <span class="ctl-tt-times"><span class="ctl-tt-cap"><small>התחלה</small>${ttTimeHtml(x.t, i)}</span><span class="ctl-tt-dash" aria-hidden="true">–</span><span class="ctl-tt-cap"><small>סיום</small>${ttTimeHtml(x.end, i, true)}</span></span>          <!-- (a small title over each hour: Guy 2026-11-09) -->
       <button type="button" class="ctl-tt-icon" data-tt-icon="${i}" title="${pEsc(ttIcon(x.i)[1])}">${ttIcon(x.i)[2]}</button>
       <input type="text" value="${pEsc(x.n || '')}" data-tt-name="${i}" placeholder="שם הפעילות" maxlength="40">
       <button type="button" class="ctl-x" data-tt-del="${i}" aria-label="מחיקה">✕</button>
       ${coord ? `<span class="ctl-tt-rep"><select data-tt-rep="${i}" aria-label="תדירות">${TT_REP.filter(r => fixedDay == null || r[0] !== 'once').map(([k, w]) => `<option value="${k}"${ttRepOf(x, fixedDay != null) === k ? ' selected' : ''}>${w}</option>`).join('')}</select>${ttRepOf(x, fixedDay != null) === 'nw' ? `<label>כל <input type="number" min="2" max="12" value="${(x.rep && x.rep.n) || 2}" data-tt-n="${i}" aria-label="כל כמה שבועות"> שבועות</label>` : ''}</span>` : ''}</div>`).join('');
   box.innerHTML = `
-    ${fixedDay == null ? `<div class="pnote">${tt.title ? `<b>${pEsc(tt.title)}</b> · ` : ''}${tt.changed ? 'הלו"ז של היום שונה מהלו"ז הקבוע.' : `זה הלו"ז הקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}. שינוי כאן ישנה רק את היום.`}</div>`
+    ${fixedDay == null ? `<div class="pnote">${tt.title ? `<b>${pEsc(tt.title)}</b> · ` : ''}${coord ? `כל פעילות נשמרת לפי התדירות שלה: "חד-פעמי" רק להיום, וכל השאר גם בלו"ז הקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}.` : tt.changed ? 'הלו"ז של היום שונה מהלו"ז הקבוע.' : `זה הלו"ז הקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}. שינוי כאן ישנה רק את היום.`}</div>`
                        : `<div class="pnote">עריכת <b>הלו"ז הקבוע של יום ${WEEKDAY_NAMES[fixedDay]}</b>. השינוי יחול מהשבוע הזה והלאה.</div>`}
     <div class="ctl-tt">${rows || '<div class="pnote">אין פעילויות.</div>'}</div>
     <button type="button" class="btn ghost small" id="tt-add">+ פעילות</button>
     <div class="ctl-actions">${fixedDay == null
-      ? `<button type="button" class="btn" id="tt-save">שמירה להיום</button>${tt.changed ? '<button type="button" class="btn ghost" id="tt-reset">חזרה ללו"ז הקבוע</button>' : ''}${coord ? `<button type="button" class="btn ghost" id="tt-save-fixed">שמירה גם כקבוע של יום ${WEEKDAY_NAMES[tt.weekday]}</button>` : ''}`
+      ? `<button type="button" class="btn" id="tt-save">${coord ? 'שמירה' : 'שמירה להיום'}</button>${tt.changed ? '<button type="button" class="btn ghost" id="tt-reset">חזרה ללו"ז הקבוע</button>' : ''}`          // (no "שמירה גם כקבוע": each activity is saved by its "how often" — Guy 2026-11-09)
       : `<button type="button" class="btn" id="tt-fixed-save">שמירת הלו"ז הקבוע</button><button type="button" class="btn ghost" id="tt-fixed-close">חזרה להיום</button>`}</div>
     ${coord && fixedDay == null ? `<div class="ctl-fixed-pick"><span>עריכת הלו"ז הקבוע של:</span>${WEEKDAY_NAMES.map((n, i) => `<button type="button" class="btn ghost small" data-fixed="${i}">${n}</button>`).join('')}</div>` : ''}`;
   // the end is offered, never asked for: the start of the next activity, until somebody sets it or empties it by hand (Guy 2026-11-04)
@@ -11616,37 +11730,59 @@ function ctlTimetableDraw(box){
     x.rep = k === 'nw' ? { k, n:2, from:day } : k === 'month' ? { k, nth:Math.ceil(parseIso(day).getDate() / 7) } : { k }; ctlTimetableDraw(box);
   }));
   box.querySelectorAll('[data-tt-n]').forEach(inp => inp.addEventListener('change', () => { const x = editing.items[+inp.dataset.ttN]; x.rep.n = Math.max(2, Math.min(12, +inp.value || 2)); }));
-  const clean = () => { sync(); return editing.items.filter(x => x.t && x.n).sort((a, b) => a.t.localeCompare(b.t)).map(x => Object.assign({ t:x.t, n:x.n, i:x.i || 'other' }, x.end && x.end > x.t ? { end:x.end } : {}, x.rep ? { rep:x.rep } : x.fresh && fixedDay == null ? { rep:{ k:'once' } } : {})); };
-  // what comes again goes into the fixed timetable of its weekday too; what is not due today stays there
-  const keepRepeats = async items => { if(!coord) return; const wd = ctl.tt.weekday, again = items.filter(x => x.rep && x.rep.k !== 'once'); if(!again.length) return;
-    const f = await sb.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle(), have = (f.data && f.data.items) || [], rest = have.filter(h => !again.some(x => x.n === h.n && x.t === h.t));
-    await sb.from('timetable_fixed').upsert({ weekday:wd, items:rest.concat(again).sort((a, b) => a.t.localeCompare(b.t)) }); };          // (an end before the start is left out)
-  box.querySelectorAll('[data-tt-del]').forEach(b => b.addEventListener('click', () => { sync(); editing.items.splice(+b.dataset.ttDel, 1); ctlTimetableDraw(box); }));
+  const strip = x => Object.assign({ t:x.t, n:x.n, i:x.i || 'other' }, x.end && x.end > x.t ? { end:x.end } : {}, x.rep ? { rep:x.rep } : x.fresh && fixedDay == null ? { rep:{ k:'once' } } : {});          // (an end before the start is left out; a new activity with no "how often" chosen is "חד-פעמי", as its list shows)
+  const clean = () => { sync(); return editing.items.filter(x => x.t && x.n).sort((a, b) => a.t.localeCompare(b.t)).map(strip); };
+  // ✕ on an activity that comes again (the coordinator, the manager, the secretary, on today's timetable): only today, or from today on (Guy 2026-11-09)
+  box.querySelectorAll('[data-tt-del]').forEach(b => b.addEventListener('click', async () => {
+    sync(); const x = editing.items[+b.dataset.ttDel];
+    if(coord && fixedDay == null && !x.fresh && ttRepOf(x, false) !== 'once' && x.t && x.n){
+      const sc = await new Promise(res => { const q = portalSheet(`<h2>מחיקת ${pEsc(x.n)}</h2><div class="pnote">זו פעילות חוזרת. ממתי למחוק אותה?</div><div class="confirm-actions dg-scope"><button type="button" class="btn ghost" data-sc="today">רק היום</button><button type="button" class="btn" data-sc="on">מהיום והלאה</button></div>`);
+        q.querySelectorAll('[data-sc]').forEach(o => o.addEventListener('click', () => { q.close(); res(o.dataset.sc); })); q.addEventListener('click', e => { if(e.target === q) res(null); }); });
+      if(!sc) return;
+      if(sc === 'today') (editing.keepFixed = editing.keepFixed || []).push(strip(x));          // (stays in the fixed timetable)
+      else if(x.rep && x.rep.k === 'sunthu') (editing.goneSunThu = editing.goneSunThu || []).push({ n:x.n, t:x.t });          // (Sunday to Thursday: out of all five days)
+    }
+    editing.items.splice(editing.items.indexOf(x), 1); ctlTimetableDraw(box);
+  }));
   box.querySelector('#tt-add').addEventListener('click', () => { sync(); editing.items.push({ t:'', n:'', i:'other', endAuto:true, fresh:true }); ctlTimetableDraw(box); const last = box.querySelector('.ctl-tt-row:last-child [data-tt-h]'); if(last) last.focus(); });
   box.querySelectorAll('[data-tt-icon]').forEach(b => b.addEventListener('click', () => {
     sync(); const i = +b.dataset.ttIcon, opt = ([id, word, e]) => `<button type="button" class="ctl-icon-opt${editing.items[i].i === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`;
     const sh = portalSheet(`<h2>תמונה לפעילות</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div>
-      <details class="ctl-icons-more"${TT_ICON_MORE.some(g => g[1].some(x => x[0] === editing.items[i].i)) ? ' open' : ''}><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}</details>
+      <details class="ctl-icons-more"${TT_ICON_MORE.some(g => g[1].some(x => x[0] === editing.items[i].i)) || ttEmojiOk(editing.items[i].i) ? ' open' : ''}><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}${ttEmojiHtml(editing.items[i].i)}</details>
       <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+    ttEmojiWire(sh);
     sh.querySelectorAll('[data-icon]').forEach(o => o.addEventListener('click', () => {
+      if(!o.dataset.icon) return;
       const it = editing.items[i]; it.i = o.dataset.icon; if(!it.n) it.n = ttIcon(it.i)[1]; sh.close(); ctlTimetableDraw(box);
     }));
   }));
   const saved = (res, msg) => { if(res.error){ toast('השמירה נכשלה. נסו שוב.'); return false; } toast(msg); if(typeof ttNudgeTv === 'function') ttNudgeTv(); return true; };
   const on = (id, fn) => { const b = box.querySelector('#' + id); if(b) b.addEventListener('click', fn); };
-  on('tt-save', async () => { const items = clean(); if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ await keepRepeats(items); ctl.ttEdit = null; ctlTimetable(box); } });
+  // one saving at a time: a second tap while saving does nothing (no doubles); a failed saving leaves everything on the screen as it was typed
+  const once = fn => async e => { const b = e.currentTarget; if(b.disabled) return; b.disabled = true; try { await fn(); } finally { if(b.isConnected) b.disabled = false; } };
+  // one "שמירה" (Guy 2026-11-09): each activity by its "how often" — "חד-פעמי" for today only, everything else into the fixed timetable of this weekday too
+  // (a changed hour or name of a fixed activity included; Sunday to Thursday into all five days). What is not due today stays in the fixed timetable.
+  // An ahmash on shift saves today only, as before
+  on('tt-save', once(async () => {
+    const items = clean();
+    if(!coord){ if(saved(await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ ctl.ttEdit = null; ctlTimetable(box); } return; }
+    const wd = ctl.tt.weekday, keep = editing.keepFixed || [], same = (a, b) => a.n === b.n && a.t === b.t;
+    const f0 = await sb.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle();
+    if(f0.error){ toast('השמירה נכשלה. נסו שוב.'); return; }
+    const notToday = ((f0.data && f0.data.items) || []).filter(x => !ttOn(x, ctl.tt.day) && !items.some(a => same(a, x)) && !keep.some(a => same(a, x)));
+    const fixed = items.filter(x => !x.rep || x.rep.k !== 'once').concat(keep, notToday).sort((a, b) => a.t.localeCompare(b.t));
+    const w = await sb.from('timetable_fixed').upsert({ weekday:wd, items:fixed });
+    if(w.error){ toast('השמירה נכשלה. נסו שוב.'); return; }
+    await ttSunThuSpread(fixed, wd); await ttSunThuDrop(editing.goneSunThu || [], wd);
+    const onlyToday = items.some(x => x.rep && x.rep.k === 'once') || keep.length;          // (today differs from the fixed timetable: kept as today's)
+    if(saved(onlyToday ? await sb.from('timetable_day').upsert({ day:ctl.tt.day, items }) : await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'נשמר. מסך הילדים יתעדכן תוך רגע.')){ ctl.ttEdit = null; ctlTimetable(box); }
+  }));
   on('tt-reset', async () => { if(saved(await sb.from('timetable_day').delete().eq('day', ctl.tt.day), 'חזרנו ללו"ז הקבוע של היום.')){ ctl.ttEdit = null; ctlTimetable(box); } });
-  on('tt-save-fixed', async () => {
-    const f0 = await sb.from('timetable_fixed').select('items').eq('weekday', ctl.tt.weekday).maybeSingle(), notToday = ((f0.data && f0.data.items) || []).filter(x => !ttOn(x, ctl.tt.day));
-    const items = clean().filter(x => !x.rep || x.rep.k !== 'once').concat(notToday).sort((a, b) => a.t.localeCompare(b.t));
-    if(!(await confirmSheet({ title:`לשמור כלו"ז הקבוע של יום ${WEEKDAY_NAMES[ctl.tt.weekday]}?`, text:'מעכשיו כל יום כזה יתחיל מהלו"ז הזה.', okLabel:'כן, לשמור', cancelLabel:'חזרה' }))) return;
-    if(saved(await sb.from('timetable_fixed').upsert({ weekday:ctl.tt.weekday, items }), 'נשמר כלו"ז הקבוע.')){ await sb.from('timetable_day').delete().eq('day', ctl.tt.day); ctl.ttEdit = null; ctlTimetable(box); }
-  });
   box.querySelectorAll('[data-fixed]').forEach(b => b.addEventListener('click', async () => {
     const wd = +b.dataset.fixed, r = await sb.from('timetable_fixed').select('items').eq('weekday', wd).maybeSingle();
     ctl.ttFixedDay = wd; ctl.ttFixed = { items:((r.data && r.data.items) || []).map(x => Object.assign({}, x)) }; ctlTimetableDraw(box);
   }));
-  on('tt-fixed-save', async () => { const items = clean(); if(saved(await sb.from('timetable_fixed').upsert({ weekday:ctl.ttFixedDay, items }), 'הלו"ז הקבוע נשמר.')){ ctl.ttFixedDay = null; ctlTimetable(box); } });
+  on('tt-fixed-save', once(async () => { const items = clean(); if(saved(await sb.from('timetable_fixed').upsert({ weekday:ctl.ttFixedDay, items }), 'הלו"ז הקבוע נשמר.')){ await ttSunThuSpread(items, ctl.ttFixedDay); ctl.ttFixedDay = null; ctlTimetable(box); } }));
   on('tt-fixed-close', () => { ctl.ttFixedDay = null; ctlTimetableDraw(box); });
 }
 
@@ -12522,7 +12658,7 @@ const AR = {
   'יציאה':'خروج', '→ מסך ראשי':'→ الشاشة الرئيسية', 'בית':'الرئيسية', 'חזור':'رجوع', 'נכנסת בחלון אחר עם משתמש אחר. הדף מתרענן כדי להמשיך עם המשתמש החדש':'دخلت في نافذة أخرى بمستخدم آخر. الصفحة تتحدّث للمتابعة مع المستخدم الجديد', 'יצאת מהמערכת בחלון אחר. הדף מתרענן':'خرجت من النظام في نافذة أخرى. الصفحة تتحدّث', 'העדפות מערכת':'إعدادات النظام', 'סיום':'إنهاء',
   'המשמרות שלי':'مناوباتي', 'הצוות כולו':'الطاقم كله', 'איך הלכו הבקשות שלך':'كيف سارت طلباتك', 'משמרות פתוחות':'مناوبات مفتوحة', 'הודעות חדשות':'رسائل جديدة',
   'המשמרת הבאה שלך':'مناوبتك القادمة', 'בקשת החלפה':'طلب استبدال', 'הבנתי, תודה':'فهمت، شكرًا', 'סימון של כולן כנקראו':'تعليم الكل كمقروء',
-  'שלב שלב, בלי יכול':'خطوة خطوة، بدون «ممكن»', 'שבוע-שבוע':'أسبوعًا بأسبوع', 'לא רלוונטי':'غير ذي صلة', 'חזרה לתהליך':'العودة إلى المسار', 'האם יש יום קבוע בשבוע שבו לא תגיעי החודש?':'هل هناك يوم ثابت في الأسبوع لن تأتي فيه هذا الشهر؟', 'האם יש יום קבוע בשבוע שבו לא תגיע החודש?':'هل هناك يوم ثابت في الأسبوع لن تأتي فيه هذا الشهر؟', 'כל המופעים של הימים שבחרת יסומנו מראש כ׳לא׳.':'كل مرات الأيام التي اخترتها ستُعلَّم مسبقًا «لا».', 'אפשר לבחור יותר מאחת. הן יסומנו "לא" בכל החודש.':'يمكن اختيار أكثر من واحدة. ستُعلَّم "لا" طوال الشهر.', 'אפשר לבחור יותר מיום אחד. כל המשמרות בימים האלה יסומנו "לא".':'يمكن اختيار أكثر من يوم. كل المناوبات في هذه الأيام ستُعلَّم "لا".', 'יש משמרות שאת לא עושה החודש?':'هل هناك مناوبات لا تعملين فيها هذا الشهر؟', 'יש משמרות שאתה לא עושה החודש?':'هل هناك مناوبات لا تعمل فيها هذا الشهر؟', 'יש יום בשבוע שאת לא באה בו החודש?':'هل هناك يوم في الأسبوع لا تأتين فيه هذا الشهر؟', 'יש יום בשבוע שאתה לא בא בו החודש?':'هل هناك يوم في الأسبوع لا تأتي فيه هذا الشهر؟', 'דלג':'تخطٍّ', 'המשך ←':'متابعة ←', '→ הקודם':'→ السابق', 'השבוע הבא ←':'الأسبوع القادم ←', 'לסיום ←':'للإنهاء ←', 'כמעט סיימנו':'أوشكنا على الانتهاء', 'הגשת ההעדפות':'تقديم التفضيلات', 'לראות את כל החודש':'رؤية الشهر كله', 'חזרה לשבוע אחרי שבוע':'العودة إلى أسبوع بعد أسبوع', 'אם נצטרך, האם יהיה לך נוח להישאר עד 16:00 במשמרת בוקר?':'إذا احتجنا، هل يناسبك البقاء حتى 16:00 في مناوبة الصباح؟', 'אם נצטרך, האם יהיה לך נוח להמשיך משבת בלילה עד יום ראשון ב-11:00?':'إذا احتجنا، هل يناسبك الاستمرار من ليلة السبت حتى يوم الأحد الساعة 11:00؟', 'תבדקו איתי':'تحقّقوا معي', 'באיזה יום?':'في أي يوم؟', 'משמרת אמצע':'مناوبة وسط', 'קבוע בהגדרות':'ثابت في الإعدادات', 'איך מסמנים':'كيف نعلّم', 'לחיצה אחת = כן':'ضغطة واحدة = نعم', 'עוד לחיצה = לא':'ضغطة أخرى = لا', 'נקודה = עוד לא סימנת':'نقطة = لم تعلّم/ي بعد', 'לחיצה ארוכה = חוזרים לנקודה':'ضغطة طويلة = العودة إلى النقطة', 'הבנתי':'فهمت', 
+  'שלב אחרי שלב':'خطوة بعد خطوة', 'שבוע-שבוע':'أسبوعًا بأسبوع', 'חזרה לשבוע-שבוע':'العودة إلى أسبوع بأسبوع', 'לא רלוונטי':'غير ذي صلة', 'חזרה לתהליך':'العودة إلى المسار', 'האם יש יום קבוע בשבוע שבו לא תגיעי החודש?':'هل هناك يوم ثابت في الأسبوع لن تأتي فيه هذا الشهر؟', 'האם יש יום קבוע בשבוע שבו לא תגיע החודש?':'هل هناك يوم ثابت في الأسبوع لن تأتي فيه هذا الشهر؟', 'כל המופעים של הימים שבחרת יסומנו מראש כ׳לא׳.':'كل مرات الأيام التي اخترتها ستُعلَّم مسبقًا «لا».', 'אפשר לבחור יותר מאחת. הן יסומנו "לא" בכל החודש.':'يمكن اختيار أكثر من واحدة. ستُعلَّم "لا" طوال الشهر.', 'אפשר לבחור יותר מיום אחד. כל המשמרות בימים האלה יסומנו "לא".':'يمكن اختيار أكثر من يوم. كل المناوبات في هذه الأيام ستُعلَّم "لا".', 'יש משמרות שאת לא עושה החודש?':'هل هناك مناوبات لا تعملين فيها هذا الشهر؟', 'יש משמרות שאתה לא עושה החודש?':'هل هناك مناوبات لا تعمل فيها هذا الشهر؟', 'יש יום בשבוע שאת לא באה בו החודש?':'هل هناك يوم في الأسبوع لا تأتين فيه هذا الشهر؟', 'יש יום בשבוע שאתה לא בא בו החודש?':'هل هناك يوم في الأسبوع لا تأتي فيه هذا الشهر؟', 'דלג':'تخطٍّ', 'המשך ←':'متابعة ←', '→ הקודם':'→ السابق', 'השבוע הבא ←':'الأسبوع القادم ←', 'לסיום ←':'للإنهاء ←', 'כמעט סיימנו':'أوشكنا على الانتهاء', 'הגשת ההעדפות':'تقديم التفضيلات', 'לראות את כל החודש':'رؤية الشهر كله', 'חזרה לשבוע אחרי שבוע':'العودة إلى أسبوع بعد أسبوع', 'אם נצטרך, האם יהיה לך נוח להישאר עד 16:00 במשמרת בוקר?':'إذا احتجنا، هل يناسبك البقاء حتى 16:00 في مناوبة الصباح؟', 'אם נצטרך, האם יהיה לך נוח להמשיך משבת בלילה עד יום ראשון ב-11:00?':'إذا احتجنا، هل يناسبك الاستمرار من ليلة السبت حتى يوم الأحد الساعة 11:00؟', 'תבדקו איתי':'تحقّقوا معي', 'באיזה יום?':'في أي يوم؟', 'משמרת אמצע':'مناوبة وسط', 'קבוע בהגדרות':'ثابت في الإعدادات', 'איך מסמנים':'كيف نعلّم', 'לחיצה אחת = כן':'ضغطة واحدة = نعم', 'עוד לחיצה = לא':'ضغطة أخرى = لا', 'נקודה = עוד לא סימנת':'نقطة = لم تعلّم/ي بعد', 'לחיצה ארוכה = חוזרים לנקודה':'ضغطة طويلة = العودة إلى النقطة', 'הבנתי':'فهمت', 
   'שיחות':'محادثات', 'השבוע':'هذا الأسبوع', 'אין כרגע.':'لا يوجد حاليًا.', 'קראתי ✓':'قرأت ✓', 'העדכונים שלך':'تحديثاتك', 'הודעות מהרכזת':'رسائل من المركّزة', 'הבקשות שלי':'طلباتي', 'בקשות החלפה פתוחות':'طلبات استبدال مفتوحة',
   'טוען…':'جارٍ التحميل…', 'רק רגע...':'لحظة...', 'רק רגע':'لحظة', 'נשמר ✓':'تم الحفظ ✓', 'עוד לא נשמר, ננסה שוב':'لم يُحفظ بعد، سنحاول مرة أخرى',
   // the colour key and the levels
@@ -16094,9 +16230,9 @@ function prefMonthExtras(body, mk, prefs, locked, submitted){
   }
 }
 
-// ---- the small switch of the preferences: "שלב שלב, בלי יכול" (the staged process) or "שבוע-שבוע" (with the colours and "יכול", one week of the calendar at a time).
+// ---- the small switch of the preferences: "שלב אחרי שלב" (the staged process; was "שלב שלב, בלי יכול" until Guy 2026-11-09) or "שבוע-שבוע" (with the colours and "יכול", one week of the calendar at a time).
 // Only the instructor's screen changes: the marks are stored as always, and the coordinator sees them in her colours.
-const prefViewBtnHtml = () => portalServerOn ? `<div class="pview-row"><div class="mx-seg pview-seg" role="group" aria-label="תצוגת ההעדפות"><button type="button" data-pview="week" aria-pressed="${!!srv.prefWeekly}">שלב שלב, בלי יכול</button><button type="button" data-pview="month" aria-pressed="${!srv.prefWeekly}">שבוע-שבוע</button></div></div>` : '';
+const prefViewBtnHtml = () => portalServerOn ? `<div class="pview-row"><div class="mx-seg pview-seg" role="group" aria-label="תצוגת ההעדפות"><button type="button" data-pview="week" aria-pressed="${!!srv.prefWeekly}">שלב אחרי שלב</button><button type="button" data-pview="month" aria-pressed="${!srv.prefWeekly}">שבוע-שבוע</button></div></div>` : '';
 function prefViewWire(body){
   body.querySelectorAll('[data-pview]').forEach(b => b.addEventListener('click', async () => {
     const week = b.dataset.pview === 'week';
@@ -17024,13 +17160,17 @@ const secStarsOk = () => secOn() && typeof ramzorPersonal !== 'undefined' && ram
 const secEventsOk = () => secOn() && (secIsMe() || ['coordinator', 'manager'].includes(secMe().role) || !!secMe().admin);          // (the home card; an ahmash reaches them from the control, during the shift)
 
 // everything that talks to the database (the demo puts its own in: 19-demo.js)
+let secRolesDb = true;          // (false: the database has no SQL 64 yet)
+const SEC_ROLE = { mentor:'חונך', volunteer:'מתנדב' }, SEC_ROLES = { mentor:'חונכים', volunteer:'מתנדבים' };
+const secRolesOf = c => (c && Array.isArray(c.roles) && c.roles.length ? c.roles : ['mentor']);
 const secApi = {
   between:async (from, to) => { const r = await sbPersonal.rpc('tt_events_between', { p_from:from, p_to:to }); if(r.error) throw r.error; return r.data || []; },
   save:async (id, scope, day, row) => { const r = await sbPersonal.rpc('tt_event_save', { p_id:id || null, p_scope:scope, p_day:day || null, p:row }); if(r.error) throw r.error; return r.data; },
   remove:async (id, scope, day) => { const r = await sbPersonal.rpc('tt_event_remove', { p_id:id, p_scope:scope, p_day:day }); if(r.error) throw r.error; },
-  contacts:async () => { const r = await sbPersonal.from('tt_contact').select('id,name,phone').order('name'); if(r.error) throw r.error; return r.data || []; },
-  contactAdd:async c => { const r = await sbPersonal.from('tt_contact').insert(c).select('id,name,phone').single(); if(r.error) throw r.error; return r.data; },
-  contactChange:async (id, c) => { const r = await sbPersonal.from('tt_contact').update(c).eq('id', id); if(r.error) throw r.error; },
+  // (a contact's roles: mentor / volunteer / both, from SQL 64. Before it everybody counts as a mentor and nothing about roles is sent)
+  contacts:async () => { let r = await sbPersonal.from('tt_contact').select('id,name,phone,roles').order('name'); if(r.error && /roles/.test(String(r.error.message))){ secRolesDb = false; r = await sbPersonal.from('tt_contact').select('id,name,phone').order('name'); } else if(!r.error) secRolesDb = true; if(r.error) throw r.error; return (r.data || []).map(c => Object.assign({ roles:['mentor'] }, c, { roles:c.roles && c.roles.length ? c.roles : ['mentor'] })); },
+  contactAdd:async c => { const row = secRolesDb ? c : { name:c.name, phone:c.phone }; const r = await sbPersonal.from('tt_contact').insert(row).select(secRolesDb ? 'id,name,phone,roles' : 'id,name,phone').single(); if(r.error) throw r.error; return r.data; },
+  contactChange:async (id, c) => { const row = secRolesDb ? c : { name:c.name, phone:c.phone }; const r = await sbPersonal.from('tt_contact').update(row).eq('id', id); if(r.error) throw r.error; },
   contactRemove:async id => { const r = await sbPersonal.rpc('tt_contact_remove', { p_id:id }); if(r.error) throw r.error; return r.data; },
   canEdit:async () => { const r = await sbPersonal.rpc('can_edit_timetable'); return r.error ? null : !!r.data; },          // (null: the database has no v62 yet)
   stars:async () => { const r = await sb.from('child_state').select('child_id,stars'); if(r.error) throw r.error; const m = {}; (r.data || []).forEach(x => { m[x.child_id] = x.stars || 0; }); return m; },
@@ -17041,7 +17181,7 @@ const secApi = {
 function secHomeCards(){
   const card = (id, ico, title, sub) => `<button type="button" class="home-card" id="${id}"><span class="apphome-emoji apphome-ico">${psIco(ico)}</span><span class="home-card-title">${title}</span><span class="home-card-sub">${sub}</span></button>`;
   return (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '')
-    + (typeof kidsOk === 'function' && kidsOk() ? card('apphome-kidstv', 'tv', 'מסך הילדים', 'מה מוצג, ימי הולדת וחיבור מסכים') : '');          // (the admin only for now: Guy 2026-11-08, 14zp-tv-display.js)
+    + (typeof kidsOk === 'function' && kidsOk() ? card('apphome-kidstv', 'tv', 'מסך הילדים', 'מה מוצג, ימי הולדת וחיבור מסכים') : '');          // (the admin and the secretary: Guy 2026-11-08, 14zp-tv-display.js)
 }
 function secHomeWire(){
   { const b = document.getElementById('apphome-sectt'); if(b) b.addEventListener('click', () => showSecScreen('tt')); }
@@ -17141,9 +17281,9 @@ const EV_GROUP = { small:'קטנים', big:'גדולים', all:'כולם', other
 const evGroupWord = e => e.group === 'other' ? (e.group_text || 'אחר') : EV_GROUP[e.group] || '';
 const evText = e => e.kind === 'mentor' ? `חונכות ל${e.child || '?'} עם ${e.person}` : `${e.activity} עם ${e.person}`;
 const evSub = e => e.kind === 'volunteer' ? `קבוצה: ${evGroupWord(e)}` : '';
-const evRep = e => e.every_weeks ? (e.every_weeks === 1 ? 'כל שבוע' : `כל ${e.every_weeks} שבועות`) : e.monthly_nth ? 'כל חודש' : '';
+const evRep = e => e.sun_thu ? 'ראשון עד חמישי' : e.every_weeks ? (e.every_weeks === 1 ? 'כל שבוע' : `כל ${e.every_weeks} שבועות`) : e.monthly_nth ? 'כל חודש' : '';
 const evTime = e => `${e.t}${e.end ? '–' + e.end : ''}`;
-const evSeries = e => !!(e && (e.every_weeks || e.monthly_nth));
+const evSeries = e => !!(e && (e.every_weeks || e.monthly_nth || e.sun_thu));
 // one row per hour: an hour of the timetable and of an event is the same row; an event between two activities gets a row of its own, in its place;
 // what starts together stays together (the row grows, the two sides stay level)
 function ttRows(items, events){
@@ -17191,8 +17331,9 @@ async function evEdit(o, kind, done){
   try { contacts = await secApi.contacts(); } catch(e){ toast('דף הקשר לא נטען. אפשר לנסות שוב.'); return; }
   const k = o ? o.kind : kind, mentor = k === 'mentor', series = evSeries(o), day0 = o ? o.occ : secToday();
   let icon = (o && o.i) || (mentor ? 'reading' : 'other');
-  const rep0 = !o ? 'once' : o.monthly_nth ? 'month' : o.every_weeks === 1 ? 'week' : o.every_weeks ? 'nw' : 'once';
-  const people = sel => `<option value="">בחירה מהרשימה</option>${contacts.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${pEsc(c.name)}</option>`).join('')}<option value="new">+ איש קשר חדש</option>`;
+  const rep0 = !o ? 'once' : o.sun_thu ? 'sunthu' : o.monthly_nth ? 'month' : o.every_weeks === 1 ? 'week' : o.every_weeks ? 'nw' : 'once';
+  const fits = contacts.filter(c => secRolesOf(c).includes(k) || (o && c.id === o.contact_id));          // (mentoring: the mentors only, volunteering: the volunteers; an event keeps the contact it has: Guy 2026-11-08)
+  const people = sel => `<option value="">בחירה מהרשימה</option>${fits.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${pEsc(c.name)}</option>`).join('')}<option value="new">+ ${mentor ? 'חונך חדש' : 'מתנדב חדש'}</option>`;
   const sh = portalSheet(`<h2>${o ? 'עריכת' : 'הוספת'} ${mentor ? 'חונכות' : 'התנדבות'}</h2>
     ${mentor ? `<label class="pfield">ילד/ה<select id="ev-child"><option value="">בחירה</option>${secKids().map(c => `<option value="${c.id}"${o && o.child_id === c.id ? ' selected' : ''}>${pEsc(displayName(c))}</option>`).join('')}</select></label>`
              : `<label class="pfield">שם פעילות<input type="text" id="ev-activity" maxlength="60" value="${pEsc((o && o.activity) || '')}"></label>`}
@@ -17213,8 +17354,9 @@ async function evEdit(o, kind, done){
   $('ev-rep').addEventListener('change', () => { $('ev-n-wrap').hidden = $('ev-rep').value !== 'nw'; });
   $('ev-icon').addEventListener('click', () => {
     const opt = ([id, word, e]) => `<button type="button" class="ctl-icon-opt${icon === id ? ' on' : ''}" data-icon="${id}"><span>${e}</span><small>${word}</small></button>`;
-    const p = portalSheet(`<h2>תמונה</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div><details class="ctl-icons-more"><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}</details><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
-    p.querySelectorAll('[data-icon]').forEach(b => b.addEventListener('click', () => { icon = b.dataset.icon; $('ev-icon').textContent = ttIcon(icon)[2]; p.close(); }));
+    const p = portalSheet(`<h2>תמונה</h2><div class="ctl-icons">${TT_ICON_LIST.map(opt).join('')}</div><details class="ctl-icons-more"${ttEmojiOk(icon) ? ' open' : ''}><summary>עוד תמונות</summary>${TT_ICON_MORE.map(([w, l]) => `<h3 class="psec">${w}</h3><div class="ctl-icons">${l.map(opt).join('')}</div>`).join('')}${ttEmojiHtml(icon)}</details><div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
+    ttEmojiWire(p);
+    p.querySelectorAll('[data-icon]').forEach(b => b.addEventListener('click', () => { if(!b.dataset.icon) return; icon = b.dataset.icon; $('ev-icon').textContent = ttIcon(icon)[2]; p.close(); }));
   });
   $('ev-save').addEventListener('click', async () => {
     const start = ttTimeOf(sh.querySelector('[data-tt-time]')), end = ttTimeOf(sh.querySelector('[data-tt-end]')), day = $('ev-day').value, rep = $('ev-rep').value, n = Math.max(2, Math.min(12, +$('ev-n').value || 2));
@@ -17231,9 +17373,9 @@ async function evEdit(o, kind, done){
         const name = $('ev-new-name').value.trim(), phone = secPhone($('ev-new-phone').value);
         if(!name){ toast('כתבו את שם איש הקשר'); $('ev-new-name').focus(); return; }
         if(phone === false){ toast('מספר הטלפון לא תקין'); return; }
-        const c = await secApi.contactAdd({ name, phone }); contact = c.id;
+        const c = await secApi.contactAdd({ name, phone, roles:[k] }); contact = c.id;          // (made from this form: its role)
       }
-      const row = { kind:k, contact_id:contact, icon, day, start_time:start, end_time:end || null, every_weeks:rep === 'week' ? 1 : rep === 'nw' ? n : null, monthly_nth:rep === 'month' ? Math.ceil(parseIso(day).getDate() / 7) : null };
+      const row = { kind:k, contact_id:contact, icon, day, start_time:start, end_time:end || null, every_weeks:rep === 'week' ? 1 : rep === 'nw' ? n : null, monthly_nth:rep === 'month' ? Math.ceil(parseIso(day).getDate() / 7) : null, sun_thu:rep === 'sunthu' };          // (ראשון עד חמישי: SQL 64)
       if(mentor) row.child_id = $('ev-child').value; else Object.assign(row, { activity:$('ev-activity').value.trim(), group_kind:$('ev-group').value, group_text:$('ev-group').value === 'other' ? $('ev-group-text').value.trim() || null : null });
       await secApi.save(o ? o.id : null, scope, o ? o.occ : null, row);
     } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
@@ -17254,8 +17396,11 @@ async function renderSecContacts(body){
   let list;
   try { list = await secApi.contacts(); } catch(e){ body.innerHTML = '<div class="pstatus bad">דף הקשר לא נטען. אפשר לנסות שוב.</div>'; return; }
   if(!body.isConnected) return;
+  // two groups, folded when the page opens: the mentors and the volunteers; somebody who is both is in both (Guy 2026-11-08)
+  const one = c => `<div class="sec-contact"><button type="button" class="sec-contact-main" data-contact="${c.id}"><b>${pEsc(c.name)}</b>${c.phone ? `<small><bdi dir="ltr">${pEsc(formatPhone(c.phone))}</bdi></small>` : '<small>אין טלפון</small>'}</button>${secPhone(c.phone) ? `<a class="btn ghost small" href="${secWa(c.phone)}" target="_blank" rel="noopener">וואטסאפ</a>` : ''}</div>`;
+  const group = r => { const l = list.filter(c => secRolesOf(c).includes(r)); return `<details class="pfold sec-cgroup" data-cgroup="${r}"><summary><span>${SEC_ROLES[r]} <small class="pcount">${l.length}</small></span></summary><div class="pfold-body"><div class="sec-contacts">${l.map(one).join('') || `<div class="pnote">עוד אין ${SEC_ROLES[r]}.</div>`}</div></div></details>`; };
   body.innerHTML = `<div class="sec-add"><button type="button" class="btn small" id="sec-contact-new">+ איש קשר</button></div>
-    <div class="sec-contacts">${list.map(c => `<div class="sec-contact"><button type="button" class="sec-contact-main" data-contact="${c.id}"><b>${pEsc(c.name)}</b>${c.phone ? `<small><bdi dir="ltr">${pEsc(formatPhone(c.phone))}</bdi></small>` : '<small>אין טלפון</small>'}</button>${secPhone(c.phone) ? `<a class="btn ghost small" href="${secWa(c.phone)}" target="_blank" rel="noopener">וואטסאפ</a>` : ''}</div>`).join('') || '<div class="pnote">עוד אין אנשי קשר.</div>'}</div>`;
+    ${list.length ? `<div class="sec-cgroups">${group('mentor')}${group('volunteer')}</div>` : '<div class="pnote">עוד אין אנשי קשר.</div>'}`;
   const again = () => renderSecContacts(body);
   body.querySelector('#sec-contact-new').addEventListener('click', () => secContactSheet(null, again));
   body.querySelectorAll('[data-contact]').forEach(b => b.addEventListener('click', () => secContactSheet(list.find(c => c.id === b.dataset.contact), again)));
@@ -17264,14 +17409,18 @@ function secContactSheet(c, done){
   const sh = portalSheet(`<h2>${c ? 'עריכת איש קשר' : 'איש קשר חדש'}</h2>
     <label class="pfield">שם<input type="text" id="sc-name" maxlength="80" value="${pEsc((c && c.name) || '')}"></label>
     <label class="pfield">טלפון<input type="tel" id="sc-phone" maxlength="20" dir="ltr" value="${pEsc((c && c.phone && formatPhone(c.phone)) || '')}"></label>
+    ${secRolesDb ? `<div class="pfield"><span>תפקיד (אפשר את שניהם)</span><div class="pchoice sec-roles">${Object.keys(SEC_ROLE).map(r => `<button type="button" data-role="${r}" aria-pressed="${!!(c ? secRolesOf(c).includes(r) : r === 'mentor')}">${SEC_ROLE[r]}</button>`).join('')}</div></div>` : ''}
     ${c ? '<div class="pnote">שינוי כאן יחול בכל החונכויות וההתנדבויות של איש הקשר.</div>' : ''}
     <div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="sc-save">שמירה</button></div>
     ${c ? '<button type="button" class="btn ghost danger sec-ev-del" id="sc-del">הסרה</button>' : ''}`);
+  sh.querySelectorAll('[data-role]').forEach(b => b.addEventListener('click', () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'))));
   sh.querySelector('#sc-save').addEventListener('click', async () => {
     const name = sh.querySelector('#sc-name').value.trim(), phone = secPhone(sh.querySelector('#sc-phone').value);
+    const roles = [...sh.querySelectorAll('[data-role][aria-pressed="true"]')].map(b => b.dataset.role);
     if(!name){ toast('כתבו שם'); return; }
     if(phone === false){ toast('מספר הטלפון לא תקין'); return; }
-    try { if(c) await secApi.contactChange(c.id, { name, phone }); else await secApi.contactAdd({ name, phone }); } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
+    if(secRolesDb && !roles.length){ toast('בחרו חונך, מתנדב או את שניהם'); return; }
+    try { if(c) await secApi.contactChange(c.id, { name, phone, roles }); else await secApi.contactAdd({ name, phone, roles }); } catch(e){ console.error(e); toast('השמירה נכשלה. נסו שוב.'); return; }
     sh.close(); toast('נשמר'); ttNudgeTv(); done();
   });
   if(c) sh.querySelector('#sc-del').addEventListener('click', async () => {
@@ -17472,9 +17621,9 @@ async function renderBirthdays(box){
 // ---- the admin's "מסך הילדים" card on the home screen (Guy 2026-11-08): everything about controlling the kids' screen, in folded parts, one open at a time.
 //   1. what the screen shows now + a child's summary (the same card the instructors have in the Ramzor, moved here while this part is open)
 //   2. what is shown on the screen (the switches)   3. the birthdays   4. the screens in the room (also in the coordinator's settings)
-// The admin only for now; the secretary's place for the birthdays, the timetable and the duties comes in a later version.
+// The admin and the secretary (Guy 2026-11-08, scheduling-v64.sql).
 if(typeof PS_ICON !== 'undefined' && !PS_ICON.tv) PS_ICON.tv = 'M3 5.5h18v11.5H3zM8.5 21h7M12 17v4';
-const kidsOk = () => typeof secOn === 'function' && secOn() && (!!secMe().admin || !!(srv.profile && srv.profile.admin));
+const kidsOk = () => typeof secOn === 'function' && secOn() && (!!secMe().admin || !!(srv.profile && srv.profile.admin) || secIsMe());          // (the secretary too, all of it: Guy 2026-11-08, Alex card 59b4f012; the database agrees from SQL 64)
 const KIDS_PARTS = [
   ['remote', 'מה המסך מציג עכשיו', 'בחירת לוח, השהיה, תצוגה מקדימה וסיכום לילד'],
   ['show', 'מה מוצג במסך', 'להסתיר מסכים וחלקים, או להחזיר אותם'],
@@ -17628,6 +17777,8 @@ updateBottomNav();
       Object.assign(thp, { tab:snap.tab, editing:snap.editing, wtab:snap.wtab });
       return thpRender();
     }
+    if(key === 'hub') return showHub();
+    if(typeof goHome === 'function') return goHome();          // (a page with no way back of its own: home, not the Ramzor — Guy 2026-11-09)
     showHub();
   }
 
@@ -17646,14 +17797,15 @@ updateBottomNav();
   // guard back. On the first page there is no guard, so Back leaves the app, as usual. (Never several history steps at once:
   // the browser does those late, and a quick second Back got lost.)
   let stack = ['hub'], snaps = [null], rootSet = false, guardOn = false;
-  let ignoreUntil = 0;                // the moment our own history.back() (taking the guard away) lands: not a Back of the person
+  let ownBack = false, ownBackTimer = 0;          // our own history.back() (taking the guard away) is on its way: its popstate is not a Back of the person.
+                                                // (a flag until it lands, not 1.2 seconds: on a slow phone it landed later and moved the page — Guy 2026-11-09)
   let muteScreenWatcher = false;      // while the app answers a Back press, the watcher stays quiet
   history.replaceState({ nav:'base' }, '');
   const flowBack = () => typeof prefFlowCanBack === 'function' && prefFlowCanBack();          // (a step of the preferences process to go back to: 14zj)
   const canGoBack = () => stack.length > 1 || flowBack();
   function syncGuard(){
     if(canGoBack() && !guardOn){ history.pushState({ nav:'guard' }, ''); guardOn = true; }
-    else if(!canGoBack() && guardOn){ guardOn = false; ignoreUntil = Date.now() + 1200; history.back(); }
+    else if(!canGoBack() && guardOn){ guardOn = false; ownBack = true; clearTimeout(ownBackTimer); ownBackTimer = setTimeout(() => { ownBack = false; }, 8000); history.back(); }
   }
 
   let queued = false;
@@ -17676,7 +17828,7 @@ updateBottomNav();
   }
 
   window.addEventListener('popstate', async () => {
-    if(Date.now() < ignoreUntil){ ignoreUntil = 0; return; }             // our own move (the guard taken away)
+    if(ownBack){ ownBack = false; clearTimeout(ownBackTimer); return; }    // our own move (the guard taken away)
     guardOn = false;                                                      // (the person's Back took the guard)
     if(closeOpenSheet()){ syncGuard(); return; }                          // Back only closed a sheet: the page stays
     if(typeof prefFlowBack === 'function' && prefFlowBack()){ syncGuard(); updateBack(); return; }          // one step back in the preferences process, same page
