@@ -8,7 +8,8 @@
   window.__portalNoHome = true; window.__staffPasswordOn = true;          // (the checks still sign in with the staff password of the test site)
   const results = [];
   window.__checkResults = results;                 // (so that a person watching the page can see how far the checks got)
-  const check =(name, ok, detail) => results.push({ name, ok: !!ok, detail: ok ? '' : String(detail ?? '') });
+  let curStep = null; const ranSteps = [];          // (each result says its step: release.ps1 runs again only the steps that failed — Guy 2026-11-09)
+  const check =(name, ok, detail) => results.push({ name, ok: !!ok, detail: ok ? '' : String(detail ?? ''), step:curStep });
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const $ = id => document.getElementById(id);
   const activeView = () => (document.querySelector('.view.active') || {}).id;
@@ -71,9 +72,10 @@
   const ONLY = (location.search.match(/[?&]only=([^&]+)/) || [])[1];              // ?runchecks&only=portal%20people  runs just that step (after the sign-in)
   async function step(name, fn){
     if(ONLY && name !== 'sign in' && !decodeURIComponent(ONLY).split('|').includes(name)) return;
+    curStep = name; ranSteps.push(name);
     try { await fn(); } catch(e){ check(name + ' (crashed)', false, e && e.stack || (e && e.message ? e.message + ' ' + (e.details || e.hint || '') : JSON.stringify(e)));
       if(typeof portalServerOn !== 'undefined' && portalServerOn){ portalServerOn = false; portalState = null; try { await sbPersonal.auth.signOut(); } catch(e2){} }          // a crashed server step must not leave the demo broken for the steps after it
-    }
+    } finally { curStep = null; }
   }
 
   async function run(){
@@ -3487,7 +3489,7 @@
     const out = document.createElement('pre'); out.id = 'check-results';
     try { await run(); } catch(e){ check('run crashed', false, e && e.stack || e); }
     const failed = results.filter(r => !r.ok);
-    out.textContent = JSON.stringify({ total: results.length, failed: failed.length, results });
+    out.textContent = JSON.stringify({ total: results.length, failed: failed.length, results, steps:ranSteps });
     document.body.appendChild(out);
     document.title = 'CHECKS-DONE';
     // the runner's little server collects the outcome (see tests\run-checks.ps1)

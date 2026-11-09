@@ -2,9 +2,13 @@
 # I only pass it after Guy says it's OK to publish.
 #   .\release.ps1 -Message "short description"            -> dry run: checks, build, backups, shows what would change
 #   .\release.ps1 -Message "short description" -Approved   -> same, then publishes (main branch -> GitHub Pages)
+#   -Full : all the checks, even when only the steps that failed last time could run again
+# After a release that failed in the checks, the next one runs again only the steps that failed (in all three sizes), when the site's own code
+# (src\ without the checks, config\, build.ps1) is the same and less than 24 hours passed; anything else: all the checks (Guy 2026-11-09)
 param(
   [Parameter(Mandatory)][string]$Message,
-  [switch]$Approved
+  [switch]$Approved,
+  [switch]$Full
 )
 $ErrorActionPreference = 'Stop'
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -20,8 +24,55 @@ if(git status --porcelain){ throw "uncommitted changes — commit them first" }
 
 Step "2/6 automated checks (all screens and flows)"
 $checks = Join-Path $root 'tests\run-checks.ps1'
-if(Test-Path $checks){ & $checks -Sizes 'phone,desktop,tv'; if($LASTEXITCODE -ne 0){ throw "automated checks failed — not releasing" } }
-else { throw "check suite missing (tests\run-checks.ps1) — not releasing" }
+if(-not (Test-Path $checks)){ throw "check suite missing (tests\run-checks.ps1) — not releasing" }
+# the site's own code: what the live file is built from (the checks file is not part of it)
+function Get-SiteHash {
+  $files = @(Get-ChildItem (Join-Path $root 'src') -Recurse -File | Where-Object { $_.Name -ne '18-checks.js' }) + @(Get-ChildItem (Join-Path $root 'config') -File) + @(Get-Item (Join-Path $root 'build.ps1'))
+  $sb = New-Object Text.StringBuilder
+  foreach($f in ($files | Sort-Object FullName)){ [void]$sb.Append($f.FullName.Substring($root.Length)).Append(':').Append((Get-FileHash $f.FullName -Algorithm SHA256).Hash).Append(';') }
+  $bytes = [Text.Encoding]::UTF8.GetBytes($sb.ToString())
+  return ([BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($bytes))).Replace('-', '')
+}
+$stateFile = Join-Path $env:TEMP 'ramzor-release-checks-state.json'
+$siteHash = Get-SiteHash
+$state = $null
+if((Test-Path $stateFile) -and -not $Full){ try { $state = Get-Content $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $state = $null } }
+$partial = $false
+if($state){
+  $age = ((Get-Date) - [datetime]::Parse($state.since)).TotalHours
+  if($state.siteHash -ne $siteHash){ Write-Host "the site's code changed since the failed run: all the checks" -ForegroundColor Yellow }
+  elseif($age -ge 24){ Write-Host ("the failed run was {0:N0} hours ago (24 or more): all the checks" -f $age) -ForegroundColor Yellow }
+  elseif(@($state.failed).Count -gt 0){ $partial = $true }
+}
+if($Full){ Write-Host "-Full: all the checks" -ForegroundColor Yellow }
+$runStart = Get-Date
+if($partial){
+  $failedBefore = @($state.failed)
+  Write-Host ("running again only the {0} step(s) that failed: {1}" -f $failedBefore.Count, ($failedBefore -join ' | ')) -ForegroundColor Yellow
+  Write-Host ("the other {0} step(s) passed in the run of {1} (same site code)" -f (@($state.allSteps).Count - $failedBefore.Count), ([datetime]::Parse($state.since)).ToString('dd/MM HH:mm')) -ForegroundColor Yellow
+  & $checks -Sizes 'phone,desktop,tv' -Only ($failedBefore -join '|')
+} else { & $checks -Sizes 'phone,desktop,tv' }
+if($LASTEXITCODE -ne 0){
+  # which steps failed, from this run's results of each size; a size with no result, or a failure outside any step: next time all the checks
+  $failedNow = @(); $allNow = @(); $clear = $true
+  foreach($sz in 'phone','desktop','tv'){
+    $f = Join-Path $env:TEMP "ramzor-check-results-$sz.json"
+    if(-not (Test-Path $f) -or (Get-Item $f).LastWriteTime -lt $runStart){ $clear = $false; continue }
+    $res = Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json
+    $allNow += @($res.steps)
+    foreach($b in @($res.results | Where-Object { -not $_.ok })){ if($b.step){ $failedNow += $b.step } else { $clear = $false } }
+  }
+  $failedNow = @($failedNow | Select-Object -Unique)
+  if($clear -and $failedNow.Count -gt 0){
+    $since = if($partial){ $state.since } else { $runStart.ToString('o') }
+    $all = if($partial){ @($state.allSteps) } else { @($allNow | Select-Object -Unique) }
+    [IO.File]::WriteAllText($stateFile, (@{ siteHash = $siteHash; since = $since; failed = $failedNow; allSteps = $all } | ConvertTo-Json -Depth 4), (New-Object Text.UTF8Encoding $false))
+    throw ("automated checks failed — not releasing. Next release (same site code, within 24 hours of {0}) runs again only: {1}" -f ([datetime]::Parse($since)).ToString('dd/MM HH:mm'), ($failedNow -join ' | '))
+  }
+  if(Test-Path $stateFile){ Remove-Item $stateFile -Force }
+  throw "automated checks failed — not releasing (next release: all the checks)"
+}
+if(Test-Path $stateFile){ Remove-Item $stateFile -Force }          # (every step passed: within 24 hours, with the same site code)
 & (Join-Path $root 'tests\offline-check.ps1'); if($LASTEXITCODE -ne 0){ throw "offline check failed — not releasing" }
 
 Step "3/6 build the live file"
