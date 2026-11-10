@@ -207,7 +207,8 @@ const LEARN_TABLES = {
   mini_lists:() => [
     { key:'bonusesDaily', items:[{ id:'bd1', text:'סבב מיץ פטל, למי שעשה תורנות חצר', startTime:'13:30', endTime:'15:30' }, { id:'bd2', text:'בארוחת ארבע: משהו מתוק קטן', startTime:'15:30', endTime:'17:00' }, { id:'bd3', text:'אחרי ארוחת הערב: זמן טלוויזיה', startTime:'18:00', endTime:'20:00' }] },
     { key:'bonusesWeekly', items:[{ id:'bw1', text:'תורנויות מהנות, לפי הלוח' }, { id:'bw2', text:'בשישי: עוזרי אפייה', days:[5] }] },
-    { key:'dutyRoster', items:[] }, { key:'childSettings', items:[] }]
+    { key:'dutyRoster', items:[] }, { key:'childSettings', items:[] }],
+  staff_private:() => Object.entries(LEARN_AHMASH).map(([staff_id, ahmash_rank]) => ({ staff_id, ahmash_rank }))          // (the coordinator's checks look for an ahmash here)
 };
 // what the made-up database answers; a request changes the made-up portal, so the screen shows what really happens
 function learnRpc(name, a){
@@ -227,6 +228,7 @@ function learnRpc(name, a){
   return null;
 }
 // the made-up month: "today" is the 1st; this month is published, the preferences of next month are open
+const LEARN_AHMASH = { p1:1, p4:2, p7:1, p10:2, p13:1, p16:2 };          // (who of the made-up team may be ahmash; the coordinator's month puts one in every morning and afternoon)
 function learnDemoState(dense){
   const cur = monthKeyOf(srvToday()), next = addMonths(cur, 1), today = srvToday();
   const names = ['נועה', 'יוסי', 'מיכל', 'אלי', 'תמר', 'רן', 'שירה', 'עומר', 'ליאת', 'גיא'].concat(dense ? ['דנה', 'אורי', 'נוי', 'בן', 'הדר', 'עדי', 'אסף', 'מור'] : []);
@@ -236,11 +238,25 @@ function learnDemoState(dense){
     notices:[{ id:'n1', to:'me', at:new Date().toISOString(), text:`הסידור של ${monthLabel(cur)} פורסם. אפשר לראות את המשמרות שלך כאן, בלשונית "הסידור".`, kind:'info', seen:false, sent:true, fromServer:false }],
     settings:{ theme:'dark' }, pending:{ waiting:0, discarded:0 } };
   [-1, 0, 1].forEach(n => { const mk = addMonths(cur, n); st.months[mk] = { deadline:addMonths(mk, -1) + '-24', deadlineTime:'22:30', prefs:{}, submitted:{}, notes:{}, goals:{}, assignments:{}, annot:{}, approvals:{}, published:n < 1, status:n < 1 ? 'published' : null }; });
-  let k = 0, at = 0;
-  if(dense) daysOfMonth(cur).forEach(d => [['M', '07:00', '15:00'], ['A', '14:00', '22:00'], ['N', '22:00', '08:00']].forEach(([s, f, t]) => {          // (the coordinator's month: as many as the standard numbers ask for)
-    const n = s === 'M' ? ([5, 6].includes(dowOf(d)) ? 5 : 1) : s === 'A' ? ([4, 5, 6].includes(dowOf(d)) ? 5 : 4) : 2;
-    for(let i = 0; i < n; i++){ const id = people[at++ % names.length].id; srvAddRow(st, { id:'a' + k++, staff_id:id, day:d, shift:s, from_time:f, to_time:t, flags:[] }); }
-  }));
+  let k = 0;
+  // the coordinator's month: as many as the standard numbers ask for, an ahmash (LEARN_AHMASH) in every morning and afternoon, nobody twice a day
+  // or in the morning after her night; a few mornings stay one short, so "דברים שדורשים תשומת לב" shows a handful (Guy 2026-11-10: about 6, not 62)
+  if(dense){
+    const pool = names.map((_, i) => i ? 'p' + i : 'me'), ahm = pool.filter(id => LEARN_AHMASH[id]), rest = pool.filter(id => !LEARN_AHMASH[id]);
+    let ai = 0, ri = 0, lastNight = [];
+    daysOfMonth(cur).forEach((d, di) => {
+      const used = new Set(lastNight), take = (list, from) => { for(let j = 0; j < list.length; j++){ const id = list[(from + j) % list.length]; if(!used.has(id)){ used.add(id); return [id, from + j + 1]; } } return [null, from]; };
+      [['M', '07:00', '15:00'], ['A', '14:00', '22:00'], ['N', '22:00', '08:00']].forEach(([s, f, t]) => {
+        let n = s === 'M' ? ([5, 6].includes(dowOf(d)) ? 5 : dowOf(d) === 0 ? 3 : 2) : s === 'A' ? ([4, 5, 6].includes(dowOf(d)) ? 5 : 4) : 2;
+        if(s === 'M' && di % 5 === 2) n--;          // (one short on six mornings: the few notes of the list)
+        const ids = [];
+        if(s !== 'N' && !(s === 'A' && di === 15)){ const [id, nx] = take(ahm, ai); ai = nx; if(id) ids.push(id); }          // (and one afternoon without an ahmash)
+        while(ids.length < n){ const [id, nx] = take(rest, ri); ri = nx; if(!id) break; ids.push(id); }
+        if(s === 'N') lastNight = ids;
+        ids.forEach(id => srvAddRow(st, { id:'a' + k++, staff_id:id, day:d, shift:s, from_time:f, to_time:t, flags:[] }));
+      });
+    });
+  }
   else daysOfMonth(cur).forEach((d, di) => [['M', '07:00', '15:00'], ['A', '14:00', '22:00'], ['N', '22:00', '08:00']].forEach(([s, f, t], si) => {
     const mine = di % 3 === 1 && si === Math.floor(di / 3) % 3 % 2;          // (about every third day, a morning or an afternoon)
     srvAddRow(st, { id:'a' + k++, staff_id:mine ? 'me' : 'p' + (1 + (di * 3 + si) % 9), day:d, shift:s, from_time:f, to_time:t, flags:[] });
@@ -279,7 +295,7 @@ async function learnScene(name){
   }
   if(/^therapy/.test(name)){ simplicityData(); portalActivateView('view-therapy'); simplicityShow(name === 'therapy-staff' ? 'staff' : 'plan'); window.scrollTo(0, 0); return; }
   portalState = learnDemoState(name === 'coord'); portalServerOn = true;
-  Object.assign(srv, { me:'me', meRow:portalState.instructors[0], profile:{ kind:'instructor', female:true, manual_only:false, admin:false }, profileFor:'me', ahmash:{ p1:1, p4:2 }, photos:{},
+  Object.assign(srv, { me:'me', meRow:portalState.instructors[0], profile:{ kind:'instructor', female:true, manual_only:false, admin:false }, profileFor:'me', ahmash:Object.assign({}, LEARN_AHMASH), photos:{},
     prefsOpenSrv:{ [prefsMonthNow()]:true }, showLong:false, pickOne:false, fixedNo:[], failed:false, busy:false, portalTheme:null });
   srvResnap();
   Object.assign(portalUi, { persona:'me', tab:null, month:monthKeyOf(srvToday()), pmonth:null, level:'yes', viewAs:null, actAs:false, editPrefs:false, manager:false, prefsPast:false, fold:{ mine:false, team:true, swap:false } });
