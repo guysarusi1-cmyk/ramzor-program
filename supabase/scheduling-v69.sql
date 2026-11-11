@@ -3,8 +3,8 @@
 -- The shared staff sign-in (staff@) is cancelled:
 --   1. is_staff(): the shared address no longer counts as staff. Only the TEST database keeps it, for the automatic checks
 --      (TEST = the marker of supabase/test-marker.sql). The manager's address and every personal sign-in are as before.
---   2. Not on TEST: every open sign-in of the shared user is closed (its sessions and refresh tokens). Nobody else is touched.
--- On the live database, FIRST replace the shared user's password with a long random one (Authentication -> Users), then run this.
+--   2. Not on TEST: the shared user's password becomes a long random one that is made here and written nowhere (nobody knows it),
+--      and every open sign-in of the shared user is closed (its sessions and refresh tokens). Nobody else is touched.
 -- An access token already given out may keep working for up to an hour; after this file it gives no staff rights anyway.
 -- ================================================================
 
@@ -38,11 +38,12 @@ begin
   if public.is_test_env() then raise notice 'TEST: the shared user stays (the automatic checks use it)'; return; end if;
   select id into uid from auth.users where email = 'staff@merkaz-cherum.local';
   if uid is null then raise notice 'no shared user here: nothing to close'; return; end if;
+  update auth.users set encrypted_password = extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), updated_at = now() where id = uid;
   delete from auth.refresh_tokens where user_id = uid::text;
   get diagnostics n_r = row_count;
   delete from auth.sessions where user_id = uid;
   get diagnostics n_s = row_count;
-  raise notice 'shared user: % session(s) and % refresh token(s) closed', n_s, n_r;
+  raise notice 'shared user: a new random password, % session(s) and % refresh token(s) closed', n_s, n_r;
 end $$;
 
 -- the result: is the shared address still staff here, and how many open sign-ins it has
