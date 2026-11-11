@@ -24,7 +24,8 @@ async function saveChildCharacter(childId, key){
 }
 // the ship picked in management, else the one the child always had before the picker existed
 function shipFor(childId){
-  const key = childSettings[childId] && childSettings[childId].ship;
+  let key = childSettings[childId] && childSettings[childId].ship;
+  if(key && !SHIP_OPTIONS[key]) key = key.length === 4 ? 'ufo_blue' : key.length === 3 ? 'ufo_pink' : key;          // (two ship keys were renamed 2026-11-11: a row saved with an old key, of 4 / 3 letters, keeps its ship until scheduling-v68.sql has run)
   return (key && SHIP_OPTIONS[key]) || CHILD_SHIP[childId] || null;
 }
 

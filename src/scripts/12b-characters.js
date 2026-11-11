@@ -45,7 +45,7 @@ function tinyKidHtml(child){
 // ---- the ship: the character sits in its window. Where the window is differs per ship (fractions of the picture's width / height)
 const SHIP_WINDOWS = {
   ufo_watercolor:{ x:.50, y:.30, d:.27 }, ufo_purple:{ x:.50, y:.30, d:.25 }, ufo_green:{ x:.45, y:.30, d:.25 },
-  rocket_redcream:{ x:.50, y:.26, d:.34 }, mia:{ x:.49, y:.20, d:.20 }, amit:{ x:.50, y:.27, d:.26 },
+  rocket_redcream:{ x:.50, y:.26, d:.34 }, ufo_pink:{ x:.49, y:.20, d:.20 }, ufo_blue:{ x:.50, y:.27, d:.26 },
   rocket_pink:{ x:.675, y:.285, d:.24 }, rocket_bluegray:{ x:.55, y:.43, d:.23 }, ufo_pinkwhite:{ x:.49, y:.20, d:.20 }, ufo_sky:{ x:.50, y:.30, d:.27 }
 };
 function shipKeyOf(src){ return Object.keys(SHIP_OPTIONS).find(k => SHIP_OPTIONS[k] === src) || null; }

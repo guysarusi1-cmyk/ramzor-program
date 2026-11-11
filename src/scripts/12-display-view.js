@@ -35,8 +35,8 @@ const SHIP_ufo_watercolor = '@asset(ships/SHIP_ufo_watercolor.png)';
 const SHIP_ufo_purple = '@asset(ships/SHIP_ufo_purple.png)';
 const SHIP_ufo_green = '@asset(ships/SHIP_ufo_green.png)';
 const SHIP_rocket_redcream = '@asset(ships/SHIP_rocket_redcream.png)';
-const SHIP_mia = '@asset(ships/SHIP_mia.png)';
-const SHIP_amit = '@asset(ships/SHIP_amit.png)';
+const SHIP_ufo_pink = '@asset(ships/SHIP_ufo_pink.png)';
+const SHIP_ufo_blue = '@asset(ships/SHIP_ufo_blue.png)';
 const SHIP_rocket_pink = '@asset(ships/SHIP_rocket_pink.png)';
 const SHIP_rocket_bluegray = '@asset(ships/SHIP_rocket_bluegray.png)';
 const SHIP_ufo_pinkwhite = '@asset(ships/SHIP_ufo_pinkwhite.png)';
@@ -46,7 +46,7 @@ const SHIP_ufo_sky = '@asset(ships/SHIP_ufo_sky.svg)';
 const SHIP_OPTIONS = {
   ufo_watercolor: SHIP_ufo_watercolor, ufo_purple: SHIP_ufo_purple, ufo_green: SHIP_ufo_green,
   ufo_pinkwhite: SHIP_ufo_pinkwhite, rocket_redcream: SHIP_rocket_redcream, rocket_pink: SHIP_rocket_pink,
-  rocket_bluegray: SHIP_rocket_bluegray, mia: SHIP_mia, amit: SHIP_amit, ufo_sky: SHIP_ufo_sky
+  rocket_bluegray: SHIP_rocket_bluegray, ufo_pink: SHIP_ufo_pink, ufo_blue: SHIP_ufo_blue, ufo_sky: SHIP_ufo_sky
 };
 // default ships (the ones children had before ships became selectable)
 const CHILD_SHIP = {
@@ -54,7 +54,7 @@ const CHILD_SHIP = {
   c3: SHIP_ufo_sky,
   c2: SHIP_rocket_bluegray,
   c4: SHIP_ufo_watercolor,
-  c5: SHIP_amit,
+  c5: SHIP_ufo_blue,
   c7: SHIP_rocket_bluegray,
   c8: SHIP_ufo_green,
   c9: SHIP_ufo_purple,
@@ -62,7 +62,7 @@ const CHILD_SHIP = {
   c11: SHIP_ufo_pinkwhite,
   c12: SHIP_ufo_purple,
   c13: SHIP_rocket_redcream,
-  c14: SHIP_mia
+  c14: SHIP_ufo_pink
 };
 // stage-2 path (moon -> Mercury/"star of words") — measured from the real artwork (2000x1414)
 const MERCURY_PATH = [
