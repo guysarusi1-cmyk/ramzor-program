@@ -107,6 +107,7 @@
     border-radius:14px; color:var(--text); font-family:inherit; cursor:pointer;
     transition:border-color .2s, background .2s;
   }
+  .home-card[hidden], .home-card-wrap[hidden]{ display:none !important; }          /* (the card's display:flex hid nothing: stars / children / control showed to everyone — Perplexity review 2026-11-11) */
   .home-card-icon{ color:var(--muted); margin-bottom:12px; transition:color .2s; }
   .home-card-title{ font-size:18px; font-weight:600; }
   .home-card-sub{ font-size:13.5px; color:var(--muted); line-height:1.5; }
