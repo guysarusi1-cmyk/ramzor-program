@@ -2,7 +2,7 @@
 // The kids' screen (#tv) needs nobody's sign-in: it only shows what anybody may see. To keep strangers out, a screen joins once with a
 // short code: the coordinator or the admin asks for it in the portal settings ("מסכי הילדים בחדר"), it arrives by e-mail (15 minutes),
 // and is typed here. The screen keeps its own token; disconnected from the portal, it asks for a code again. A screen that is signed in
-// (a person, or the old staff password still on it) goes straight in. (scheduling-v32.sql; decisions 32, 60)
+// (a person) goes straight in; one still on the old staff password is signed out first (20-init.js). (scheduling-v32.sql; decisions 32, 60)
 const TV_TOKEN_KEY = 'ramzor-tv-token';
 function tvToken(){ try { return localStorage.getItem(TV_TOKEN_KEY) || null; } catch(e){ return null; } }
 // true = this screen may show; a missing function on the server (before scheduling-v32.sql) or a moment without the network never locks a known screen

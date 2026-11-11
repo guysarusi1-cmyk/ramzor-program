@@ -12,8 +12,8 @@
     } catch(e){ /* the staff password screen, as usual */ }
   }
   let authed = await checkAuth();
-  // Mercury stage 6: the shared staff password is gone. A device still signed in with it (not the kids' TV, not the checks of the test site) is signed out: the personal sign-in.
-  if(authed && !staffPasswordOn() && location.hash !== '#tv'){
+  // Mercury stage 6: the shared staff password is gone. A device still signed in with it (not the checks of the test site) is signed out: the personal sign-in; a kids' TV then asks for its code (Guy 2026-11-11: no screen stays on the shared password).
+  if(authed && !staffPasswordOn()){
     try { const { data:{ session } } = await sb.auth.getSession(); if(session && session.user && session.user.email === STAFF_EMAIL){ await sb.auth.signOut(); authed = await checkAuth(); } } catch(e){}
   }
   if(authed){
