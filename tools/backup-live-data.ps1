@@ -1,16 +1,16 @@
 ﻿# READ-ONLY backup of the live data (children, stars, progress, lists, events) to C:\dev\ramzor-backups\.
 # It only reads — it cannot change anything. Backups stay on this computer (never in git).
 # Since the privacy hardening (supabase\hardening.sql) the public key may read only each child's first name
-# and initial. For a COMPLETE copy of the roster (age, social workers) type the manager's password for this
-# session first:   $env:RAMZOR_MANAGER_PASSWORD = '<the manager password>'   (never saved anywhere).
+# and initial. For a COMPLETE copy of the roster (age, social workers) sign in for this
+# session first:   $env:RAMZOR_BACKUP_EMAIL = '<your own sign-in e-mail>'; $env:RAMZOR_BACKUP_PASSWORD = '<its password>'   (the admin's personal sign-in; never saved anywhere).
 param([string]$Dir = 'C:\dev\ramzor-backups')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $cfg = Get-Content (Join-Path $root 'config\live.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $token = $cfg.anonKey
 $signedIn = $false
-if($env:RAMZOR_MANAGER_PASSWORD){
-  $login = Invoke-RestMethod -Method Post -Uri "$($cfg.supabaseUrl)/auth/v1/token?grant_type=password" -Headers @{ apikey = $cfg.anonKey } -ContentType 'application/json' -Body (@{ email = 'manager@merkaz-cherum.local'; password = $env:RAMZOR_MANAGER_PASSWORD } | ConvertTo-Json)
+if($env:RAMZOR_BACKUP_EMAIL -and $env:RAMZOR_BACKUP_PASSWORD){
+  $login = Invoke-RestMethod -Method Post -Uri "$($cfg.supabaseUrl)/auth/v1/token?grant_type=password" -Headers @{ apikey = $cfg.anonKey } -ContentType 'application/json' -Body (@{ email = $env:RAMZOR_BACKUP_EMAIL; password = $env:RAMZOR_BACKUP_PASSWORD } | ConvertTo-Json)
   $token = $login.access_token; $signedIn = $true
 }
 $h = @{ apikey = $cfg.anonKey; Authorization = "Bearer $token" }
@@ -34,4 +34,4 @@ foreach($t in 'roster','child_state','mini_lists','feedback_events','bonus_revoc
 }
 $summary = ($counts.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '
 Write-Output "data backup -> $dest  ($summary)"
-if($partial){ Write-Host 'NOTE: the roster copy has names only (no age / social workers) because the privacy hardening is on. Set $env:RAMZOR_MANAGER_PASSWORD for a full copy.' -ForegroundColor Yellow }
+if($partial){ Write-Host 'NOTE: the roster copy has names only (no age / social workers) because the privacy hardening is on. Run full-backup.cmd (your own sign-in) for a full copy.' -ForegroundColor Yellow }
