@@ -1,8 +1,1591 @@
 {
  "about": "What every kind of user may do in the database (TEST). Made by tests/rls-matrix.py --approve from results of supabase/rls-matrix-test.sql that Guy approved. read: X no right, 0 sees no row, + sees rows. add (i own row, j foreign row): X no right, P stopped by a row rule, A passed. change / delete: X, 0, + rows.",
  "approved": "2026-11-12",
- "functions": {},
- "pointed": {},
+ "functions": {
+  "ahmash_on_shift()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=true",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "ahmash_staff()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "ar_words(p text)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "brick_strengths(p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "can_control()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "can_converse(p_staff uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "can_diary_child(p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "can_edit_timetable()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=true",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "can_fill_open(p_staff uuid, p_day date, p_shift text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "can_oncall()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "can_replace(p_staff uuid, a assignment)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "can_see_child_therapy(p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "cancel_open_request(p_id uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "cancel_swap(p_swap uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "child_name(p_child text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "coordinator_tell(p_staff uuid, p_subject text, p_text text, p_kind text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "decide_open_shift(p_id uuid, p_approve boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "decide_swap(p_swap uuid, p_approve boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "decide_vacation(p_id uuid, p_approve boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "diary_for_control(p_day date)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "duty_board()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:+",
+    "stranger": "R:0"
+   }
+  },
+  "duty_shuffle(p_week date)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "duty_shuffle_do(p_week date, p_force boolean)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "exit_invite(p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "family_next()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "goal_achieved_notice(p_child text, p_goal text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "goal_week()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "gx(p_staff uuid, p_male text, p_female text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "in_conv(p_conv uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "intake_task_done(p_child text, p_index integer, p_done boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "is_active_staff()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=true",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_admin()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_ahmash()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_coordinator()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_coordinator_person()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_director()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_manager()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_personal()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=true",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_secretary()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_staff()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=false",
+    "shared": "R=true",
+    "stranger": "R=false"
+   }
+  },
+  "is_staff_person()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=true",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "is_test_env()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=true",
+    "shared": "R=true",
+    "stranger": "R=true"
+   }
+  },
+  "is_therapist(p_staff uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "journey_approve_next(p_child text, p_ok boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "journey_choose(p_child text, p_point text, p_choice text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "journey_day()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:+",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:+",
+    "stranger": "R:+"
+   }
+  },
+  "journey_place(p_child text, p_planet_idx integer, p_stage text, p_step integer)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "journey_set_route(p_child text, p_route text[])": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "journey_set_ship(p_child text, p_ship text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "journey_step(p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "lang_of(p_staff uuid)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "library_approve(p_item uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "library_use_counts()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "month_ar(p date)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "month_he(p date)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "my_fixed_hours()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "my_kind()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "my_profile()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "my_staff_id()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "my_therapy_children()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "note_strength(p_child text, p_strength text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "offer_swap(p_swap uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "oncall_assign(p_day date, p_shift text, p_staff uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "oncall_in_window(p_day date, p_shift text)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "oncall_may_assign()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "oncall_unassign(p_id uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "open_conversation(p_members uuid[], p_title text, p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "open_day_fits(o open_days, p_staff uuid)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "open_day_join(p_id uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "open_day_overlap(s1 text, f1 time without time zone, t1 time without time zone, s2 text, f2 time without time zone, t2 time without time zone)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=null",
+    "instructor": "R=null",
+    "instructor2": "R=null",
+    "service": "R=null",
+    "shared": "R=null",
+    "stranger": "R=null"
+   }
+  },
+  "open_day_publish(p_day date, p_scope text, p_from time without time zone, p_to time without time zone, p_min integer, p_max integer, p_audience text, p_note text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "open_day_taken(p_id uuid)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "open_day_text(o open_days)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "open_day_text_ar(o open_days)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "open_days_for_me()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "open_days_status()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "open_have(p_day date, p_shift text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "open_need(p_day date, p_shift text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "open_shifts(p_month date)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "plan_guidance()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "plan_publish(p_child text, p_important boolean, p_full boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "plan_video_decide(p_video uuid, p_ok boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "plan_video_request(p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "plan_videos_current()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "post_announcement(p_text text, p_via text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "post_staff_message(p_text text, p_via text, p_to uuid[], p_need_ack boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "prefs_deadline_passed(m date)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=null",
+    "instructor": "R=null",
+    "instructor2": "R=null",
+    "service": "R=null",
+    "shared": "R=null",
+    "stranger": "R=null"
+   }
+  },
+  "prefs_open(m date)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=null",
+    "instructor": "R=null",
+    "instructor2": "R=null",
+    "service": "R=null",
+    "shared": "R=null",
+    "stranger": "R=null"
+   }
+  },
+  "report_cannot_come(p_assignment uuid, p_note text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "request_open_shift(p_day date, p_shift text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "request_swap(p_assignment uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "rest_conflict(p_staff uuid, p_day date, p_shift text, p_from time without time zone, p_to time without time zone)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "sched_discard_updates()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "sched_pending_write(p_op text, p_target uuid, p_data jsonb)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "sched_restore_updates()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "sched_rows(p_months date[])": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "sched_safety_net()": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "sched_send_updates()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "set_oncall_assign(p_staff uuid, p_on boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "set_simple_prefs(p_staff uuid, p_weekly boolean, p_plain boolean)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "shift_text(p_day date, p_shift text, p_from time without time zone, p_to time without time zone)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "shift_windows(p_day date, p_shift text, p_from time without time zone, p_to time without time zone)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "shift_word(p_shift text)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "staff_names_refresh()": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "stage_length(p_stage text)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "stay_guidance()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "strength_set(p_child text, p_strength text, p_status text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "swap_candidates(p_assignment uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "swap_candidates2(p_assignment uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "swap_offer_ok(p_staff uuid, a assignment)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "swap_ok(p_staff uuid, a assignment)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "swaps_close_expired()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "tell_key(p_staff uuid, p_key text, a text, b text, c text, p_kind text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "tell_staff(p_staff uuid, p_subject text, p_text text, p_kind text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "tell_staff_ar(p_staff uuid, p_subject text, p_text text, p_kind text, p_subject_ar text, p_text_ar text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "tell_therapist(p_child text, p_subject text, p_text text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "therapy_purge(p_child text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "tt_child_label(p_child text)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "tt_contact_remove(p_id uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "R:+",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "tt_event_remove(p_id uuid, p_scope text, p_day date)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "R:0",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "tt_event_save(p_id uuid, p_scope text, p_day date, p jsonb)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "tt_events_between(p_from date, p_to date)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "E"
+   }
+  },
+  "tt_occurrences(p_from date, p_to date)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "tv_ahmash_picks(p_day date)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "tv_birthdays_today()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "tv_check(p_token text)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "tv_code_new()": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "tv_display()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:+",
+    "stranger": "R:0"
+   }
+  },
+  "tv_display_save(p_off text[])": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "tv_events_today()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "tv_journeys(p_token text)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:+",
+    "stranger": "R:0"
+   }
+  },
+  "tv_label(sid uuid)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "tv_may_see()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=true",
+    "instructor2": "R=true",
+    "service": "R=true",
+    "shared": "R=true",
+    "stranger": "R=false"
+   }
+  },
+  "tv_ok()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R=false",
+    "instructor": "R=false",
+    "instructor2": "R=false",
+    "service": "R=false",
+    "shared": "R=false",
+    "stranger": "R=false"
+   }
+  },
+  "tv_pair(p_code text, p_name text)": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "tv_revoke(p_id uuid)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  },
+  "tv_shifts_today()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:+",
+    "stranger": "R:0"
+   }
+  },
+  "tv_timetable_today()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:+",
+    "stranger": "R:0"
+   }
+  },
+  "tv_today()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:+",
+    "instructor2": "R:+",
+    "service": "R:+",
+    "shared": "R:+",
+    "stranger": "R:0"
+   }
+  },
+  "vacation_min_days()": {
+   "anon": true,
+   "auth": true,
+   "r": {
+    "anon": "R:0",
+    "instructor": "R:0",
+    "instructor2": "R:0",
+    "service": "R:0",
+    "shared": "R:0",
+    "stranger": "R:0"
+   }
+  },
+  "voice_of(p_staff uuid)": {
+   "anon": false,
+   "auth": false,
+   "r": {}
+  },
+  "welcome_staff(p_staff uuid, p_url text)": {
+   "anon": false,
+   "auth": true,
+   "r": {
+    "anon": "X",
+    "instructor": "E",
+    "instructor2": "E",
+    "service": "E",
+    "shared": "E",
+    "stranger": "E"
+   }
+  }
+ },
+ "pointed": {
+  "admin": {
+   "plain_edit": "1",
+   "role_admin": "1",
+   "role_manager": "1",
+   "role_service": "1",
+   "tick_admin": "1"
+  },
+  "coordinator": {
+   "plain_edit": "1",
+   "role_admin": "X",
+   "role_manager": "X",
+   "role_service": "1",
+   "tick_admin": "X"
+  },
+  "instructor": {
+   "plain_edit": "0",
+   "role_admin": "0",
+   "role_manager": "0",
+   "role_service": "0",
+   "tick_admin": "0"
+  },
+  "oldmanager": {
+   "plain_edit": "1",
+   "role_admin": "X",
+   "role_manager": "X",
+   "role_service": "1",
+   "tick_admin": "X"
+  },
+  "removed_instructor_reads": {
+   "announcements": "0",
+   "assignment": "0",
+   "child_journeys": "0",
+   "child_state": "0",
+   "mercury_library": "0",
+   "notices": "0",
+   "observations": "0",
+   "open_days": "0",
+   "roster": "0",
+   "sched_settings": "0",
+   "schedule": "0",
+   "special_days": "0",
+   "staff": "0",
+   "swap_requests": "0",
+   "timetable_fixed": "0"
+  }
+ },
  "tables": {
   "announcement_read": {
    "empty": false,
