@@ -13,7 +13,16 @@ const mercuryOn = () => APP_ENV === 'test';          // (set by the test-only ch
 const SUPABASE_URL = '@config(supabaseUrl)';
 const SUPABASE_ANON_KEY = '@config(anonKey)';
 const STAFF_EMAIL = 'staff@merkaz-cherum.local';
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);          // the Ramzor's connection: the shared staff login; after a personal sign-in it becomes the personal one (see personalEnter)
+// A kids' screen that joined with a code sends its token with every data request (the header "x-tv-token"): the server shows the
+// screen's data only to such a screen or to signed-in staff (scheduling-v74.sql). Only data requests carry it, not the sign-in ones.
+const tvFetch = (input, init) => {
+  let tok = null; try { tok = localStorage.getItem('ramzor-tv-token'); } catch(e){}
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  if(!tok || url.indexOf('/rest/v1/') < 0) return fetch(input, init);
+  const h = new Headers((init && init.headers) || {}); h.set('x-tv-token', tok);
+  return fetch(input, Object.assign({}, init, { headers:h }));
+};
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global:{ fetch:tvFetch } });          // the Ramzor's connection: the shared staff login; after a personal sign-in it becomes the personal one (see personalEnter)
 const sbShared = sb;
 
 // The manager has a login of his own (see supabase/roles.sql). Management screens write through this second
