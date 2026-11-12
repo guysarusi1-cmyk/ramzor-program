@@ -16,6 +16,10 @@ do $$ begin
   end if;
 end $$;
 
+-- which part to run: 'tables' or 'functions' (two runs keep each one short)
+set statement_timeout = '10min';
+select set_config('rls.part', 'tables', false);
+
 drop table if exists pg_temp.rls_out;
 create temp table rls_out (j jsonb);
 
@@ -28,7 +32,7 @@ declare
   p jsonb; t record; f record; r record;
   k text; res text; n bigint; q text; cols text; col1 text; rowj jsonb;
   tabs jsonb := '{}'::jsonb; funs jsonb := '[]'::jsonb; one jsonb; per jsonb; args text;
-  uid uuid; mail text; len bigint;
+  uid uuid; mail text; len bigint; tids tid[]; part text := current_setting('rls.part', true);
 begin
   -- who we try as
   personas := personas || jsonb_build_object('k', 'anon', 'role', 'anon', 'claims', jsonb_build_object('role', 'anon'));
@@ -52,11 +56,17 @@ begin
 
   -- ---------- tables and views ----------
   for t in select c.oid, c.relname, c.relkind, c.relrowsecurity, coalesce(array_to_string(c.reloptions, ','), '') as opts
-             from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p', 'v', 'm') order by c.relname loop
+             from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p', 'v', 'm') and part = 'tables' order by c.relname loop
     execute format('select count(*) from public.%I', t.relname) into n;
     select string_agg(quote_ident(a.attname), ', ' order by a.attnum), min(quote_ident(a.attname)) filter (where a.attnum = (select min(b.attnum) from pg_attribute b where b.attrelid = t.oid and b.attnum > 0 and not b.attisdropped and b.attgenerated = '' and b.attidentity <> 'a'))
       into cols, col1 from pg_attribute a where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped and a.attgenerated = '' and a.attidentity <> 'a';
-    rowj := null;
+    rowj := null; tids := null;
+    -- on a big table the tries touch only a random sample of rows (the row rules run a function per row)
+    if t.relkind in ('r', 'p') then
+      if n <= 400 then execute format('select array_agg(ctid) from public.%I', t.relname) into tids;
+      else execute format('select array_agg(c) from (select ctid as c from public.%I order by random() limit 200) z', t.relname) into tids; end if;
+      tids := coalesce(tids, '{}');
+    end if;
     if t.relkind in ('r', 'p') and n > 0 then execute format('select to_jsonb(x) from public.%I x limit 1', t.relname) into rowj; end if;
     per := '{}'::jsonb;
     for p in select * from jsonb_array_elements(personas) loop
@@ -64,7 +74,9 @@ begin
       -- read
       begin
         perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
-        execute format('select count(*) from public.%I', t.relname) into n; res := n::text;
+        if tids is null then execute format('select count(*) from public.%I', t.relname) into n;
+        else execute format('select count(*) from public.%I where ctid = any($1)', t.relname) into n using tids; end if;
+        res := n::text;
         raise exception using errcode = 'RB000', message = 'undo';
       exception when others then
         if sqlstate <> 'RB000' then res := case when sqlstate = '42501' then 'X' else 'E:' || sqlstate end; end if;
@@ -76,9 +88,9 @@ begin
           perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
           n := 0;
           begin
-            execute format('select count(*) from public.%I', t.relname) into n;
+            execute format('select count(*) from public.%I where ctid = any($1)', t.relname) into n using tids;
           exception when others then n := 0; end;
-          if n > 0 then execute format('insert into public.%I (%s) select %s from public.%I limit 1', t.relname, cols, cols, t.relname); res := 'A';
+          if n > 0 then execute format('insert into public.%I (%s) select %s from public.%I where ctid = any($1) limit 1', t.relname, cols, cols, t.relname) using tids; res := 'A';
           else execute format('insert into public.%I default values', t.relname); res := 'A:empty'; end if;
           raise exception using errcode = 'RB000', message = 'undo';
         exception when others then
@@ -99,7 +111,7 @@ begin
         -- change (every row it can, to the same value)
         begin
           perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
-          execute format('update public.%I set %s = %s', t.relname, col1, col1); get diagnostics n = row_count; res := n::text;
+          execute format('update public.%I set %s = %s where ctid = any($1)', t.relname, col1, col1) using tids; get diagnostics n = row_count; res := n::text;
           raise exception using errcode = 'RB000', message = 'undo';
         exception when others then
           if sqlstate <> 'RB000' then res := case when sqlstate = '42501' and sqlerrm ilike '%row-level security%' then 'P' when sqlstate = '42501' then 'X' else 'A:' || sqlstate end; end if;
@@ -108,7 +120,7 @@ begin
         -- delete (every row it can)
         begin
           perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
-          execute format('delete from public.%I', t.relname); get diagnostics n = row_count; res := n::text;
+          execute format('delete from public.%I where ctid = any($1)', t.relname) using tids; get diagnostics n = row_count; res := n::text;
           raise exception using errcode = 'RB000', message = 'undo';
         exception when others then
           if sqlstate <> 'RB000' then res := case when sqlstate = '42501' then 'X' else 'A:' || sqlstate end; end if;
@@ -119,7 +131,7 @@ begin
     end loop;
     execute format('select count(*) from public.%I', t.relname) into n;
     tabs := tabs || jsonb_build_object(t.relname, jsonb_build_object(
-      'kind', t.relkind, 'rls', t.relrowsecurity, 'opts', t.opts, 'rows', n, 'p', per,
+      'kind', t.relkind, 'rls', t.relrowsecurity, 'opts', t.opts, 'rows', n, 'tried', coalesce(cardinality(tids), n), 'p', per,
       'cols', (select jsonb_agg(a.attname order by a.attnum) from pg_attribute a where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped),
       'anon_cols', (select jsonb_agg(a.attname order by a.attnum) from pg_attribute a where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped and has_column_privilege('anon', t.oid, a.attnum, 'select')),
       'grants', (select jsonb_object_agg(g.role, g.privs) from (select x.role, string_agg(x.priv, ',') as privs from (values ('anon'), ('authenticated')) rr(role)
@@ -134,7 +146,7 @@ begin
                   pr.prosrc ~* '(is_staff|is_coordinator|is_admin|is_secretary|is_manager|is_personal|is_therapist|is_director|my_staff_id|auth\.uid|auth\.jwt|auth\.role|tv_device|device_token)' as guard,
                   has_function_privilege('anon', pr.oid, 'execute') as g_anon, has_function_privilege('authenticated', pr.oid, 'execute') as g_auth
              from pg_proc pr
-            where pr.pronamespace = 'public'::regnamespace and pr.prokind = 'f'
+            where pr.pronamespace = 'public'::regnamespace and pr.prokind = 'f' and part = 'functions'
               and pr.prorettype not in ('trigger'::regtype, 'event_trigger'::regtype)
               and not exists (select 1 from pg_depend d where d.objid = pr.oid and d.deptype = 'e')
             order by pr.proname, 5 loop
@@ -160,7 +172,7 @@ begin
     funs := funs || jsonb_build_object('n', f.proname, 'args', f.idargs, 'ret', f.ret, 'def', f.prosecdef, 'anon', f.g_anon, 'auth', f.g_auth, 'guard', f.guard, 'r', per);
   end loop;
 
-  insert into rls_out values (jsonb_build_object('made', now(), 'by', me, 'personas', (select jsonb_agg(x->>'k') from jsonb_array_elements(personas) x),
+  insert into rls_out values (jsonb_build_object('made', now(), 'by', me, 'part', part, 'personas', (select jsonb_agg(x->>'k') from jsonb_array_elements(personas) x),
     'missing', to_jsonb(missing), 'tables', tabs, 'functions', funs));
 end $$;
 
