@@ -297,7 +297,8 @@ function renderYellowScreen(ids){
 
 async function logFeedbackEvent(childId, type, message){
   const { error } = await sb.from('feedback_events').insert({ child_id: childId, type, message });
-  if(error) console.error(error);
+  if(error){ console.error(error); return; }
+  if(typeof tvdTellScreens === 'function') tvdTellScreens('feedback');          // (the kids' screens read the new event at once; a screen that is not signed in gets no database push: scheduling-v74.sql)
 }
 
 // Stars, steps and gifts: written safely even if two instructors act at once (see updateChildState), and

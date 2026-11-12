@@ -46,6 +46,7 @@ function handleTvCommand(c){
   else if(c.cmd === 'resume') tvRelease();
   else if(c.cmd === 'show' && visibleSlideIds().includes(c.slide)){ tvHold(); showSlide(c.slide); }
   else if(c.cmd === 'tt' && typeof loadTvToday === 'function') loadTvToday(true).then(() => { if(document.getElementById('tv-timetable') && tvTimetable) renderTimetableLive(); });          // (a change of the timetable or the events: at once)
+  else if(c.cmd === 'feedback' && typeof catchUpFeedback === 'function') catchUpFeedback();          // (a star or a step was just given: read it now, not at the next 8-second check. The message itself carries no data)
   else if(c.cmd === 'next'){ tvHold(); tvStep(1); }
   else if(c.cmd === 'prev'){ tvHold(); tvStep(-1); }
   else if(c.cmd === 'display' && typeof tvdLoad === 'function') tvdLoad();          // (the admin changed what the screen shows: 14zp-tv-display.js)
