@@ -324,7 +324,7 @@
     await step('privacy', async () => {
       const anon = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
       const minimal = await anon.from('roster').select('id, first_name, last_initial');
-      check('the TV (not signed in) can read the names it needs', !minimal.error && minimal.data.length === roster.length, minimal.error && minimal.error.message);
+      check('a visitor with no joined screen reads no names (only a screen with a code, or staff: scheduling-v74.sql)', !minimal.error && minimal.data.length === 0, minimal.error ? minimal.error.message : 'read ' + minimal.data.length);
       const full = await anon.from('roster').select('age, sw_phone');
       // true once supabase/hardening.sql was run in this project; until then it is only a reminder, never a failure
       check('(info) a visitor cannot read age / social-worker phones — ' + (full.error ? 'ENFORCED by the database' : 'NOT YET: run supabase/hardening.sql in this project'), true, '');
