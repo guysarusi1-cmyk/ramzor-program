@@ -50,10 +50,20 @@ function askCode({ title, text, okLabel, password }){
   });
 }
 
+// The management screen belongs to the admin, in their own personal sign-in: no extra password, and the server checks the same
+// (scheduling-v72.sql). The old manager address with its password stays only on the test site, for the automatic checks
+// (Guy 2026-11-12; on live it is cancelled by scheduling-v73.sql).
+const manageAdmin = () => typeof ramzorPersonal !== 'undefined' && !!ramzorPersonal && typeof srv !== 'undefined' && !!(srv.profile && srv.profile.admin);
+const manageOldWay = () => !liveCut();          // (the manager's password / the management code: the test site only)
+
 // the only way into the management screen (home gear, #manage address)
 async function openManagement(){
   document.getElementById('view-manage').classList.remove('manage-kids-only');
-  if(MANAGER_LOGIN){
+  if(manageAdmin()){
+    // the admin: straight in
+  } else if(!manageOldWay()){
+    toast('מסך הניהול מיועד למנהל מערכת בלבד'); return false;
+  } else if(MANAGER_LOGIN){
     if(!(await adminClient())) return false;                 // asks for the manager's password when needed
   } else {
     const lock = await getManagementLock();
@@ -92,6 +102,8 @@ async function signInAsManager(){
 // minutes of use) — or, before the manager login exists in a project, the ordinary one
 async function adminClient(){
   if(typeof manageKidsOnly === 'function' && manageKidsOnly()) return sb;          // ("ילדים במסגרת" of the secretary and the admin: their own sign-in, scheduling-v62.sql)
+  if(manageAdmin()) return sb;                               // (the admin writes with their own sign-in, scheduling-v72.sql)
+  if(!manageOldWay()) return null;                           // (live: nobody else manages)
   if(!MANAGER_LOGIN) return sb;
   if(await managerSessionValid()){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return sbAdmin; }
   return (await signInAsManager()) ? sbAdmin : null;
@@ -109,6 +121,14 @@ document.getElementById('tv-address-copy').addEventListener('click', async () =>
 
 // the "קוד ניהול" card at the top of the management screen
 async function renderManagementLockCard(){
+  document.getElementById('mgmt-lock-btn').hidden = false;
+  if(manageAdmin()){                                             // the admin's own sign-in: no code and no password to set
+    document.getElementById('mgmt-lock-status').textContent = 'מסך הניהול פתוח רק למנהל מערכת, בכניסה האישית שלו. השרת מאפשר רק לו לאפס לוחות ולערוך את כל הרשימות, וכל פעולה נרשמת על שמו.';
+    document.getElementById('mgmt-lock-card').classList.remove('unset');
+    document.getElementById('mgmt-lock-btn').hidden = true;
+    document.getElementById('mgmt-lock-off-btn').hidden = true;
+    return;
+  }
   if(MANAGER_LOGIN){                                             // the manager's own login: nothing to configure here
     document.getElementById('mgmt-lock-status').textContent = 'מסך הניהול מוגן בסיסמת מנהל נפרדת, והשרת מאפשר רק למנהל להוסיף ולמחוק ילדים, לאפס לוחות ולערוך רשימות.';
     document.getElementById('mgmt-lock-card').classList.remove('unset');

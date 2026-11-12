@@ -89,7 +89,8 @@ const rzLookOnly = () => typeof srv !== 'undefined' && !!srv.me && portalServerO
 function showHub(){
   document.body.classList.remove('portal-mode', 'leopard-bg');
   if(rzLookOnly()) sb = rzReadOnlyClient(sbPersonal);
-  { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly() || (typeof secIsMe === 'function' && secIsMe()); if(kids) kids.hidden = rzLookOnly(); }
+  // (on live the gear is the admin's alone, Guy 2026-11-12)
+  { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly() || (typeof secIsMe === 'function' && secIsMe()) || (typeof manageAdmin === 'function' && !manageAdmin() && !manageOldWay()); if(kids) kids.hidden = rzLookOnly(); }
   stopCarousel();
   { const pl = document.getElementById('hub-portal-link'), rp = typeof ramzorPersonal !== 'undefined' && ramzorPersonal, plain = rp && hubPlainBack();
     if(pl) pl.hidden = !rp || plain;
