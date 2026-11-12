@@ -4,7 +4,8 @@
 -- and for the low kinds of user it tries to call every function. Every try is undone at once (a savepoint that is always rolled back),
 -- so no row changes. The answer is one cell of JSON: copy it and give it to Claude (tests/rls-matrix.py reads it).
 -- Kinds of user: not signed in (anon), a signed-in address with no staff row (stranger), the shared address, the old manager address,
--- and the personal test users: instructor, service, secretary, therapist, coordinator, manager (+ an admin, if one has a sign-in here).
+-- and the personal test users: instructor (an ahmash), instructor2, service, secretary, therapist, coordinator, manager
+-- (+ an admin and somebody removed from the staff, if they have a sign-in here).
 -- Codes — read: X = no right at all, else the number of rows seen. add (own = a copy of a row this user sees, any = a copy of any row):
 -- X = no right, P = stopped by a row rule, A = passed the rights (A:<code> = stopped later by something else, e.g. "already exists").
 -- change / delete: X = no right, else the number of rows it could touch (A:<code> = passed the rights, stopped later).
@@ -28,7 +29,7 @@ declare
   me text := current_user;
   personas jsonb := '[]'::jsonb;   -- [{k, role, claims}]
   missing text[] := '{}';
-  low text[] := array['anon', 'stranger', 'shared', 'service', 'instructor'];   -- functions are tried only as these
+  low text[] := array['anon', 'stranger', 'inactive', 'shared', 'service', 'instructor', 'instructor2'];   -- functions are tried only as these
   p jsonb; t record; f record; r record;
   k text; res text; n bigint; q text; cols text; col1 text; rowj jsonb;
   tabs jsonb := '{}'::jsonb; funs jsonb := '[]'::jsonb; one jsonb; per jsonb; args text;
@@ -39,7 +40,7 @@ begin
   personas := personas || jsonb_build_object('k', 'stranger', 'role', 'authenticated', 'claims',
     jsonb_build_object('role', 'authenticated', 'aud', 'authenticated', 'sub', '00000000-0000-4000-8000-000000000001', 'email', 'nobody@example.invalid'));
   for r in select * from (values ('shared', 'staff@merkaz-cherum.local'), ('oldmanager', 'manager@merkaz-cherum.local'),
-                                 ('instructor', 'instructor-test@merkaz-cherum.local'), ('service', 'service-test@merkaz-cherum.local'),
+                                 ('instructor', 'instructor-test@merkaz-cherum.local'), ('instructor2', 'instructor2-test@merkaz-cherum.local'), ('service', 'service-test@merkaz-cherum.local'),
                                  ('secretary', 'secretary-test@merkaz-cherum.local'), ('therapist', 'therapist-test@merkaz-cherum.local'),
                                  ('coordinator', 'coordinator-test@merkaz-cherum.local'), ('manager', 'manager-test@merkaz-cherum.local')) v(k, email) loop
     select id into uid from auth.users where email = r.email;
@@ -51,6 +52,14 @@ begin
    where s.active and (s.kind = 'admin' or sp.is_admin) order by u.created_at limit 1;
   if uid is null then missing := missing || 'admin'::text;
   else personas := personas || jsonb_build_object('k', 'admin', 'role', 'authenticated', 'claims',
+         jsonb_build_object('role', 'authenticated', 'aud', 'authenticated', 'sub', uid, 'email', mail));
+  end if;
+
+  -- somebody who was removed from the staff (not active) and still has a sign-in
+  select u.id, u.email into uid, mail from public.staff s join public.staff_private sp on sp.staff_id = s.id join auth.users u on u.id = sp.auth_user_id
+   where not s.active order by u.created_at limit 1;
+  if uid is null then missing := missing || 'inactive'::text;
+  else personas := personas || jsonb_build_object('k', 'inactive', 'role', 'authenticated', 'claims',
          jsonb_build_object('role', 'authenticated', 'aud', 'authenticated', 'sub', uid, 'email', mail));
   end if;
 
