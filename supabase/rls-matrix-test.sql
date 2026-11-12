@@ -181,8 +181,50 @@ begin
     funs := funs || jsonb_build_object('n', f.proname, 'args', f.idargs, 'ret', f.ret, 'def', f.prosecdef, 'anon', f.g_anon, 'auth', f.g_auth, 'guard', f.guard, 'r', per);
   end loop;
 
+  -- ---------- pointed tries (with the functions part): the admin rights guard, and a person who was removed from the staff ----------
+  per := '{}'::jsonb;
+  select sp.staff_id into uid from public.staff_private sp where sp.email = 'instructor2-test@merkaz-cherum.local';
+  if part = 'functions' and uid is not null then
+    for p in select * from jsonb_array_elements(personas) loop
+      k := p->>'k';
+      continue when not (k = any(array['coordinator', 'oldmanager', 'admin', 'instructor']));
+      one := '{}'::jsonb;
+      for r in select * from (values ('tick_admin', 'update public.staff_private set is_admin = true where staff_id = $1'),
+                                     ('role_admin', 'update public.staff set kind = ''admin'' where id = $1'),
+                                     ('role_manager', 'update public.staff set kind = ''manager'' where id = $1'),
+                                     ('plain_edit', 'update public.staff set sort_order = sort_order where id = $1'),
+                                     ('role_service', 'update public.staff set kind = ''service'' where id = $1')) v(name, q) loop
+        begin
+          perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
+          execute r.q using uid; get diagnostics n = row_count; res := n::text;
+          raise exception using errcode = 'RB000', message = 'undo';
+        exception when others then
+          if sqlstate <> 'RB000' then res := case when sqlstate = '42501' and sqlerrm ilike '%row-level security%' then 'P' when sqlstate = '42501' then 'X' else 'A:' || sqlstate end; end if;
+        end;
+        one := one || jsonb_build_object(r.name, res);
+      end loop;
+      per := per || jsonb_build_object(k, one);
+    end loop;
+    -- the same instructor after a removal from the staff (active = false; undone at once): what is still read
+    select p2 into p from jsonb_array_elements(personas) p2 where p2->>'k' = 'instructor2';
+    one := '{}'::jsonb;
+    for r in select * from unnest(array['staff', 'assignment', 'schedule', 'special_days', 'open_days', 'sched_settings', 'timetable_fixed', 'roster', 'child_state',
+                                        'child_journeys', 'mercury_library', 'notices', 'announcements', 'swap_requests', 'observations']) v(name) loop
+      begin
+        update public.staff set active = false where id = uid;
+        perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role authenticated';
+        execute format('select count(*) from public.%I', r.name) into n; res := n::text;
+        raise exception using errcode = 'RB000', message = 'undo';
+      exception when others then
+        if sqlstate <> 'RB000' then res := case when sqlstate = '42501' then 'X' else 'E:' || sqlstate end; end if;
+      end;
+      one := one || jsonb_build_object(r.name, res);
+    end loop;
+    per := per || jsonb_build_object('removed_instructor_reads', one);
+  end if;
+
   insert into rls_out values (jsonb_build_object('made', now(), 'by', me, 'part', part, 'personas', (select jsonb_agg(x->>'k') from jsonb_array_elements(personas) x),
-    'missing', to_jsonb(missing), 'tables', tabs, 'functions', funs));
+    'missing', to_jsonb(missing), 'tables', tabs, 'functions', funs, 'pointed', per));
 end $$;
 
 select j::text as rls_matrix from rls_out;
