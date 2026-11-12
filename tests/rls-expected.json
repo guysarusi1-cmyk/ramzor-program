@@ -1,0 +1,7199 @@
+{
+ "about": "What every kind of user may do in the database (TEST). Made by tests/rls-matrix.py --approve from results of supabase/rls-matrix-test.sql that Guy approved. read: X no right, 0 sees no row, + sees rows. add (i own row, j foreign row): X no right, P stopped by a row rule, A passed. change / delete: X, 0, + rows.",
+ "approved": "2026-11-12",
+ "functions": {},
+ "pointed": {},
+ "tables": {
+  "announcement_read": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "announcements": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "service": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "shared": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "assignment": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "assignment_pending": {
+   "empty": true,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "audit_log": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "bonus_day": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "bonus_revocations": {
+   "empty": true,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "child_diary": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "child_diary_skip": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "child_journeys": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "child_plan_versions": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "child_plans": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "child_state": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "child_stays": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "child_strengths": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "child_therapist": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "client_errors": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "control_log": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "conv": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "conv_member": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "conv_msg": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "coordinator_flags": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "duties": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "duty_assign": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "email_outbox": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "family_contacts": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "feedback_events": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "goal_marks": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "goal_scale": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "incidents": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "intervention_feedback": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "journey_choices": {
+   "empty": true,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "journey_planets": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "journey_steps": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "kid_birthday": {
+   "empty": true,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "library_favs": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "mercury_library": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "mini_lists": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "+",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "notices": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "observations": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "oncall_address": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "oncall_event": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "oncall_period": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "oncall_trip": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "open_days": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "open_shift_requests": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "plan_videos": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "prefs_absence": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "prefs_consent": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "prefs_hours": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "prefs_pickone": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "prefs_service": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "+",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "prefs_slot": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "+",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "prefs_submission": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "roster": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "sched_removed": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "sched_requests": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "sched_settings": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "schedule": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "sick_reports": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "special_days": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "staff": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "staff_constraints": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "staff_letters": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "staff_private": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "staff_settings": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "+",
+     "u": "+"
+    }
+   },
+   "rls": true
+  },
+  "staff_standing": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "swap_requests": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "test_prefs_open": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "therapist_subs": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "therapy_access": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "0",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "A",
+     "j": "P",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "timetable_day": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "timetable_fixed": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "+",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "tt_contact": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "manager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "A",
+     "j": "A",
+     "s": "+",
+     "u": "+"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "tt_event": {
+   "empty": true,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "tt_event_skip": {
+   "empty": true,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "tv_codes": {
+   "empty": true,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "tv_day_changes": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "0",
+     "i": "A",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "tv_devices": {
+   "empty": false,
+   "own": false,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "manager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "+",
+     "u": "X"
+    },
+    "service": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "shared": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "0",
+     "u": "X"
+    }
+   },
+   "rls": true
+  },
+  "vacation_requests": {
+   "empty": false,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "+",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "j": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "+",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "manager": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "+",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "+",
+     "u": "0"
+    },
+    "shared": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "0",
+     "i": "P",
+     "j": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  },
+  "video_views": {
+   "empty": true,
+   "own": true,
+   "p": {
+    "admin": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "anon": {
+     "d": "X",
+     "i": "X",
+     "s": "X",
+     "u": "X"
+    },
+    "coordinator": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "instructor2": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "manager": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "oldmanager": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "secretary": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "service": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "shared": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "stranger": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    },
+    "therapist": {
+     "d": "X",
+     "i": "P",
+     "s": "0",
+     "u": "0"
+    }
+   },
+   "rls": true
+  }
+ }
+}

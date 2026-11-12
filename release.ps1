@@ -22,6 +22,13 @@ $branch = (git rev-parse --abbrev-ref HEAD).Trim()
 if($branch -ne 'dev'){ throw "run from the dev branch (currently '$branch')" }
 if(git status --porcelain){ throw "uncommitted changes — commit them first" }
 
+# the rights matrix (task 3, Guy 2026-11-12): if somebody can read more than what Guy approved (tests/rls-expected.json), nothing goes up.
+# TEST database only, reads only; about 3 minutes, so it runs before the long checks.
+Step "1b the rights matrix (who can read what)"
+$rls = Join-Path (Join-Path $root 'tests') 'rls-matrix.py'
+if(-not (Test-Path $rls)){ throw "the rights matrix is missing (tests/rls-matrix.py) - not releasing" }
+& python $rls --auto; if($LASTEXITCODE -ne 0){ throw "the rights matrix found a deviation - not releasing (python tests/rls-matrix.py --auto)" }
+
 Step "2/6 automated checks (all screens and flows)"
 $checks = Join-Path $root 'tests\run-checks.ps1'
 if(-not (Test-Path $checks)){ throw "check suite missing (tests\run-checks.ps1) — not releasing" }
