@@ -183,7 +183,8 @@ begin
 
   -- ---------- pointed tries (with the functions part): the admin rights guard, and a person who was removed from the staff ----------
   per := '{}'::jsonb;
-  select sp.staff_id into uid from public.staff_private sp where sp.email = 'instructor2-test@merkaz-cherum.local';
+  select sp.staff_id into uid from public.staff_private sp join auth.users u on u.id = sp.auth_user_id where u.email = 'instructor2-test@merkaz-cherum.local';
+  if part = 'functions' and uid is null then per := jsonb_build_object('skipped', 'no staff row for instructor2-test'); end if;
   if part = 'functions' and uid is not null then
     for p in select * from jsonb_array_elements(personas) loop
       k := p->>'k';
