@@ -3890,7 +3890,16 @@ const mercuryOn = () => APP_ENV === 'test';          // (set by the test-only ch
 const SUPABASE_URL = 'https://caggcgnjwigdyzltxofj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhZ2djZ25qd2lnZHl6bHR4b2ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODk0NjUsImV4cCI6MjEwNDk2NTQ2NX0.xwoijMsiXIyANEyFbAAzseHwgzINsapy9u3SSSVWj4o';
 const STAFF_EMAIL = 'staff@merkaz-cherum.local';
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);          // the Ramzor's connection: the shared staff login; after a personal sign-in it becomes the personal one (see personalEnter)
+// A kids' screen that joined with a code sends its token with every data request (the header "x-tv-token"): the server shows the
+// screen's data only to such a screen or to signed-in staff (scheduling-v74.sql). Only data requests carry it, not the sign-in ones.
+const tvFetch = (input, init) => {
+  let tok = null; try { tok = localStorage.getItem('ramzor-tv-token'); } catch(e){}
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  if(!tok || url.indexOf('/rest/v1/') < 0) return fetch(input, init);
+  const h = new Headers((init && init.headers) || {}); h.set('x-tv-token', tok);
+  return fetch(input, Object.assign({}, init, { headers:h }));
+};
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global:{ fetch:tvFetch } });          // the Ramzor's connection: the shared staff login; after a personal sign-in it becomes the personal one (see personalEnter)
 const sbShared = sb;
 
 // The manager has a login of his own (see supabase/roles.sql). Management screens write through this second
@@ -4739,10 +4748,20 @@ function askCode({ title, text, okLabel, password }){
   });
 }
 
+// The management screen belongs to the admin, in their own personal sign-in: no extra password, and the server checks the same
+// (scheduling-v72.sql). The old manager address with its password stays only on the test site, for the automatic checks
+// (Guy 2026-11-12; on live it is cancelled by scheduling-v73.sql).
+const manageAdmin = () => typeof ramzorPersonal !== 'undefined' && !!ramzorPersonal && typeof srv !== 'undefined' && !!(srv.profile && srv.profile.admin);
+const manageOldWay = () => !liveCut();          // (the manager's password / the management code: the test site only)
+
 // the only way into the management screen (home gear, #manage address)
 async function openManagement(){
   document.getElementById('view-manage').classList.remove('manage-kids-only');
-  if(MANAGER_LOGIN){
+  if(manageAdmin()){
+    // the admin: straight in
+  } else if(!manageOldWay()){
+    toast('מסך הניהול מיועד למנהל מערכת בלבד'); return false;
+  } else if(MANAGER_LOGIN){
     if(!(await adminClient())) return false;                 // asks for the manager's password when needed
   } else {
     const lock = await getManagementLock();
@@ -4781,6 +4800,8 @@ async function signInAsManager(){
 // minutes of use) — or, before the manager login exists in a project, the ordinary one
 async function adminClient(){
   if(typeof manageKidsOnly === 'function' && manageKidsOnly()) return sb;          // ("ילדים במסגרת" of the secretary and the admin: their own sign-in, scheduling-v62.sql)
+  if(manageAdmin()) return sb;                               // (the admin writes with their own sign-in, scheduling-v72.sql)
+  if(!manageOldWay()) return null;                           // (live: nobody else manages)
   if(!MANAGER_LOGIN) return sb;
   if(await managerSessionValid()){ managementOpenUntil = Date.now() + MANAGEMENT_OPEN_MINUTES * 60 * 1000; return sbAdmin; }
   return (await signInAsManager()) ? sbAdmin : null;
@@ -4798,6 +4819,14 @@ document.getElementById('tv-address-copy').addEventListener('click', async () =>
 
 // the "קוד ניהול" card at the top of the management screen
 async function renderManagementLockCard(){
+  document.getElementById('mgmt-lock-btn').hidden = false;
+  if(manageAdmin()){                                             // the admin's own sign-in: no code and no password to set
+    document.getElementById('mgmt-lock-status').textContent = 'מסך הניהול פתוח רק למנהל מערכת, בכניסה האישית שלו. השרת מאפשר רק לו לאפס לוחות ולערוך את כל הרשימות, וכל פעולה נרשמת על שמו.';
+    document.getElementById('mgmt-lock-card').classList.remove('unset');
+    document.getElementById('mgmt-lock-btn').hidden = true;
+    document.getElementById('mgmt-lock-off-btn').hidden = true;
+    return;
+  }
   if(MANAGER_LOGIN){                                             // the manager's own login: nothing to configure here
     document.getElementById('mgmt-lock-status').textContent = 'מסך הניהול מוגן בסיסמת מנהל נפרדת, והשרת מאפשר רק למנהל להוסיף ולמחוק ילדים, לאפס לוחות ולערוך רשימות.';
     document.getElementById('mgmt-lock-card').classList.remove('unset');
@@ -5254,7 +5283,8 @@ function renderYellowScreen(ids){
 
 async function logFeedbackEvent(childId, type, message){
   const { error } = await sb.from('feedback_events').insert({ child_id: childId, type, message });
-  if(error) console.error(error);
+  if(error){ console.error(error); return; }
+  if(typeof tvdTellScreens === 'function') tvdTellScreens('feedback');          // (the kids' screens read the new event at once; a screen that is not signed in gets no database push: scheduling-v74.sql)
 }
 
 // Stars, steps and gifts: written safely even if two instructors act at once (see updateChildState), and
@@ -6162,6 +6192,7 @@ function handleTvCommand(c){
   else if(c.cmd === 'resume') tvRelease();
   else if(c.cmd === 'show' && visibleSlideIds().includes(c.slide)){ tvHold(); showSlide(c.slide); }
   else if(c.cmd === 'tt' && typeof loadTvToday === 'function') loadTvToday(true).then(() => { if(document.getElementById('tv-timetable') && tvTimetable) renderTimetableLive(); });          // (a change of the timetable or the events: at once)
+  else if(c.cmd === 'feedback' && typeof catchUpFeedback === 'function') catchUpFeedback();          // (a star or a step was just given: read it now, not at the next 8-second check. The message itself carries no data)
   else if(c.cmd === 'next'){ tvHold(); tvStep(1); }
   else if(c.cmd === 'prev'){ tvHold(); tvStep(-1); }
   else if(c.cmd === 'display' && typeof tvdLoad === 'function') tvdLoad();          // (the admin changed what the screen shows: 14zp-tv-display.js)
@@ -6793,7 +6824,8 @@ const rzLookOnly = () => typeof srv !== 'undefined' && !!srv.me && portalServerO
 function showHub(){
   document.body.classList.remove('portal-mode', 'leopard-bg');
   if(rzLookOnly()) sb = rzReadOnlyClient(sbPersonal);
-  { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly() || (typeof secIsMe === 'function' && secIsMe()); if(kids) kids.hidden = rzLookOnly(); }
+  // (on live the gear is the admin's alone, Guy 2026-11-12)
+  { const gear = document.getElementById('hub-manage-gear'), kids = document.getElementById('hub-kids-btn'); if(gear) gear.hidden = rzLookOnly() || (typeof secIsMe === 'function' && secIsMe()) || (typeof manageAdmin === 'function' && !manageAdmin() && !manageOldWay()); if(kids) kids.hidden = rzLookOnly(); }
   stopCarousel();
   { const pl = document.getElementById('hub-portal-link'), rp = typeof ramzorPersonal !== 'undefined' && ramzorPersonal, plain = rp && hubPlainBack();
     if(pl) pl.hidden = !rp || plain;
