@@ -1,0 +1,167 @@
+-- ================================================================
+-- The rights matrix, TEST only — run in the SQL Editor of the TEST project. Changes nothing. (Guy 2026-11-12, task 3)
+-- For every table and view of "public" and for every kind of user it TRIES to read, add, change and delete,
+-- and for the low kinds of user it tries to call every function. Every try is undone at once (a savepoint that is always rolled back),
+-- so no row changes. The answer is one cell of JSON: copy it and give it to Claude (tests/rls-matrix.py reads it).
+-- Kinds of user: not signed in (anon), a signed-in address with no staff row (stranger), the shared address, the old manager address,
+-- and the personal test users: instructor, service, secretary, therapist, coordinator, manager (+ an admin, if one has a sign-in here).
+-- Codes — read: X = no right at all, else the number of rows seen. add (own = a copy of a row this user sees, any = a copy of any row):
+-- X = no right, P = stopped by a row rule, A = passed the rights (A:<code> = stopped later by something else, e.g. "already exists").
+-- change / delete: X = no right, else the number of rows it could touch (A:<code> = passed the rights, stopped later).
+-- ================================================================
+-- safety: TEST only. On any other database this stops here, before any change (the marker: supabase/test-marker.sql, run once on TEST)
+do $$ begin
+  if to_regclass('ops.environment') is null or not exists (select 1 from ops.environment where name = 'test') then
+    raise exception 'עצירה: זה לא מסד הבדיקות (TEST). לא שונה דבר.';
+  end if;
+end $$;
+
+drop table if exists pg_temp.rls_out;
+create temp table rls_out (j jsonb);
+
+do $$
+declare
+  me text := current_user;
+  personas jsonb := '[]'::jsonb;   -- [{k, role, claims}]
+  missing text[] := '{}';
+  low text[] := array['anon', 'stranger', 'shared', 'service', 'instructor'];   -- functions are tried only as these
+  p jsonb; t record; f record; r record;
+  k text; res text; n bigint; q text; cols text; col1 text; rowj jsonb;
+  tabs jsonb := '{}'::jsonb; funs jsonb := '[]'::jsonb; one jsonb; per jsonb; args text;
+  uid uuid; mail text; len bigint;
+begin
+  -- who we try as
+  personas := personas || jsonb_build_object('k', 'anon', 'role', 'anon', 'claims', jsonb_build_object('role', 'anon'));
+  personas := personas || jsonb_build_object('k', 'stranger', 'role', 'authenticated', 'claims',
+    jsonb_build_object('role', 'authenticated', 'aud', 'authenticated', 'sub', '00000000-0000-4000-8000-000000000001', 'email', 'nobody@example.invalid'));
+  for r in select * from (values ('shared', 'staff@merkaz-cherum.local'), ('oldmanager', 'manager@merkaz-cherum.local'),
+                                 ('instructor', 'instructor-test@merkaz-cherum.local'), ('service', 'service-test@merkaz-cherum.local'),
+                                 ('secretary', 'secretary-test@merkaz-cherum.local'), ('therapist', 'therapist-test@merkaz-cherum.local'),
+                                 ('coordinator', 'coordinator-test@merkaz-cherum.local'), ('manager', 'manager-test@merkaz-cherum.local')) v(k, email) loop
+    select id into uid from auth.users where email = r.email;
+    if uid is null then missing := missing || r.k; continue; end if;
+    personas := personas || jsonb_build_object('k', r.k, 'role', 'authenticated', 'claims',
+      jsonb_build_object('role', 'authenticated', 'aud', 'authenticated', 'sub', uid, 'email', r.email));
+  end loop;
+  select u.id, u.email into uid, mail from public.staff s join public.staff_private sp on sp.staff_id = s.id join auth.users u on u.id = sp.auth_user_id
+   where s.active and (s.kind = 'admin' or sp.is_admin) order by u.created_at limit 1;
+  if uid is null then missing := missing || 'admin'::text;
+  else personas := personas || jsonb_build_object('k', 'admin', 'role', 'authenticated', 'claims',
+         jsonb_build_object('role', 'authenticated', 'aud', 'authenticated', 'sub', uid, 'email', mail));
+  end if;
+
+  -- ---------- tables and views ----------
+  for t in select c.oid, c.relname, c.relkind, c.relrowsecurity, coalesce(array_to_string(c.reloptions, ','), '') as opts
+             from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p', 'v', 'm') order by c.relname loop
+    execute format('select count(*) from public.%I', t.relname) into n;
+    select string_agg(quote_ident(a.attname), ', ' order by a.attnum), min(quote_ident(a.attname)) filter (where a.attnum = (select min(b.attnum) from pg_attribute b where b.attrelid = t.oid and b.attnum > 0 and not b.attisdropped and b.attgenerated = '' and b.attidentity <> 'a'))
+      into cols, col1 from pg_attribute a where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped and a.attgenerated = '' and a.attidentity <> 'a';
+    rowj := null;
+    if t.relkind in ('r', 'p') and n > 0 then execute format('select to_jsonb(x) from public.%I x limit 1', t.relname) into rowj; end if;
+    per := '{}'::jsonb;
+    for p in select * from jsonb_array_elements(personas) loop
+      k := p->>'k'; one := '{}'::jsonb;
+      -- read
+      begin
+        perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
+        execute format('select count(*) from public.%I', t.relname) into n; res := n::text;
+        raise exception using errcode = 'RB000', message = 'undo';
+      exception when others then
+        if sqlstate <> 'RB000' then res := case when sqlstate = '42501' then 'X' else 'E:' || sqlstate end; end if;
+      end;
+      one := one || jsonb_build_object('s', res);
+      if t.relkind in ('r', 'p') then
+        -- add: a copy of a row this user sees (else an empty row)
+        begin
+          perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
+          n := 0;
+          begin
+            execute format('select count(*) from public.%I', t.relname) into n;
+          exception when others then n := 0; end;
+          if n > 0 then execute format('insert into public.%I (%s) select %s from public.%I limit 1', t.relname, cols, cols, t.relname); res := 'A';
+          else execute format('insert into public.%I default values', t.relname); res := 'A:empty'; end if;
+          raise exception using errcode = 'RB000', message = 'undo';
+        exception when others then
+          if sqlstate <> 'RB000' then res := case when sqlstate = '42501' and sqlerrm ilike '%row-level security%' then 'P' when sqlstate = '42501' then 'X' else 'A:' || sqlstate end || case when n > 0 then '' else '~' end; end if;
+        end;
+        one := one || jsonb_build_object('i', res);
+        -- add: a copy of any row (also one this user does not see)
+        if rowj is not null then
+          begin
+            perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
+            execute format('insert into public.%I (%s) select %s from jsonb_populate_record(null::public.%I, $1)', t.relname, cols, cols, t.relname) using rowj; res := 'A';
+            raise exception using errcode = 'RB000', message = 'undo';
+          exception when others then
+            if sqlstate <> 'RB000' then res := case when sqlstate = '42501' and sqlerrm ilike '%row-level security%' then 'P' when sqlstate = '42501' then 'X' else 'A:' || sqlstate end; end if;
+          end;
+          one := one || jsonb_build_object('j', res);
+        end if;
+        -- change (every row it can, to the same value)
+        begin
+          perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
+          execute format('update public.%I set %s = %s', t.relname, col1, col1); get diagnostics n = row_count; res := n::text;
+          raise exception using errcode = 'RB000', message = 'undo';
+        exception when others then
+          if sqlstate <> 'RB000' then res := case when sqlstate = '42501' and sqlerrm ilike '%row-level security%' then 'P' when sqlstate = '42501' then 'X' else 'A:' || sqlstate end; end if;
+        end;
+        one := one || jsonb_build_object('u', res);
+        -- delete (every row it can)
+        begin
+          perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
+          execute format('delete from public.%I', t.relname); get diagnostics n = row_count; res := n::text;
+          raise exception using errcode = 'RB000', message = 'undo';
+        exception when others then
+          if sqlstate <> 'RB000' then res := case when sqlstate = '42501' then 'X' else 'A:' || sqlstate end; end if;
+        end;
+        one := one || jsonb_build_object('d', res);
+      end if;
+      per := per || jsonb_build_object(k, one);
+    end loop;
+    execute format('select count(*) from public.%I', t.relname) into n;
+    tabs := tabs || jsonb_build_object(t.relname, jsonb_build_object(
+      'kind', t.relkind, 'rls', t.relrowsecurity, 'opts', t.opts, 'rows', n, 'p', per,
+      'cols', (select jsonb_agg(a.attname order by a.attnum) from pg_attribute a where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped),
+      'anon_cols', (select jsonb_agg(a.attname order by a.attnum) from pg_attribute a where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped and has_column_privilege('anon', t.oid, a.attnum, 'select')),
+      'grants', (select jsonb_object_agg(g.role, g.privs) from (select x.role, string_agg(x.priv, ',') as privs from (values ('anon'), ('authenticated')) rr(role)
+                   cross join lateral (select rr.role, pr as priv from unnest(array['select', 'insert', 'update', 'delete']) pr where has_table_privilege(rr.role, t.oid, pr)) x group by x.role) g),
+      'policies', (select jsonb_agg(jsonb_build_object('n', pl.policyname, 'cmd', pl.cmd, 'to', pl.roles, 'using', pl.qual, 'check', pl.with_check, 'perm', pl.permissive) order by pl.policyname)
+                     from pg_policies pl where pl.schemaname = 'public' and pl.tablename = t.relname)));
+  end loop;
+
+  -- ---------- functions ----------
+  for f in select pr.oid, pr.proname, pr.prosecdef, pr.proretset, pg_get_function_identity_arguments(pr.oid) as idargs, format_type(pr.prorettype, null) as ret,
+                  (select coalesce(string_agg('null::' || format_type(a.t, null), ', ' order by a.ord), '') from unnest(pr.proargtypes) with ordinality a(t, ord)) as nullargs,
+                  pr.prosrc ~* '(is_staff|is_coordinator|is_admin|is_secretary|is_manager|is_personal|is_therapist|is_director|my_staff_id|auth\.uid|auth\.jwt|auth\.role|tv_device|device_token)' as guard,
+                  has_function_privilege('anon', pr.oid, 'execute') as g_anon, has_function_privilege('authenticated', pr.oid, 'execute') as g_auth
+             from pg_proc pr
+            where pr.pronamespace = 'public'::regnamespace and pr.prokind = 'f'
+              and pr.prorettype not in ('trigger'::regtype, 'event_trigger'::regtype)
+              and not exists (select 1 from pg_depend d where d.objid = pr.oid and d.deptype = 'e')
+            order by pr.proname, 5 loop
+    per := '{}'::jsonb;
+    if f.g_anon or f.g_auth then
+      for p in select * from jsonb_array_elements(personas) loop
+        k := p->>'k';
+        continue when not (k = any(low));
+        begin
+          perform set_config('request.jwt.claims', (p->'claims')::text, true); execute 'set local role ' || quote_ident(p->>'role');
+          if f.ret = 'boolean' and not f.proretset then
+            execute format('select coalesce(public.%I(%s)::text, ''null'')', f.proname, f.nullargs) into res; res := 'R=' || res;
+          else
+            execute format('select count(*), coalesce(sum(length(x::text)), 0) from public.%I(%s) x', f.proname, f.nullargs) into n, len; res := 'R:' || n || '/' || len;
+          end if;
+          raise exception using errcode = 'RB000', message = 'undo';
+        exception when others then
+          if sqlstate <> 'RB000' then res := case when sqlstate = '42501' then 'X' else 'E:' || sqlstate end || ':' || left(regexp_replace(sqlerrm, '\s+', ' ', 'g'), 70); end if;
+        end;
+        per := per || jsonb_build_object(k, res);
+      end loop;
+    end if;
+    funs := funs || jsonb_build_object('n', f.proname, 'args', f.idargs, 'ret', f.ret, 'def', f.prosecdef, 'anon', f.g_anon, 'auth', f.g_auth, 'guard', f.guard, 'r', per);
+  end loop;
+
+  insert into rls_out values (jsonb_build_object('made', now(), 'by', me, 'personas', (select jsonb_agg(x->>'k') from jsonb_array_elements(personas) x),
+    'missing', to_jsonb(missing), 'tables', tabs, 'functions', funs));
+end $$;
+
+select j::text as rls_matrix from rls_out;
