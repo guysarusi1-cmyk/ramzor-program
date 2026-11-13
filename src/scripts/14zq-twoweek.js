@@ -239,7 +239,7 @@ function twBuildHtml(){
       <button type="button" class="btn" id="tw-build">${TW.asg.length ? 'בנייה מחדש' : 'בניית הסידור'}</button>
       ${TW.asg.length && p.status !== 'published' ? '<button type="button" class="btn" id="tw-publish">פרסום לצוות</button>' : ''}
       ${p.status === 'published' ? '<button type="button" class="btn ghost" id="tw-unpublish">ביטול הפרסום</button>' : ''}
-      ${typeof liveCut === 'function' && !liveCut() ? '<button type="button" class="btn ghost" id="tw-demo">נתוני הדגמה: מילוי אופציות למי שלא הגיש</button>' : ''}
+      ${typeof liveCut === 'function' && !liveCut() ? '<button type="button" class="btn ghost" id="tw-demo">נתוני הדגמה: מילוי אופציות למי שאין לו כניסה ולא הגיש</button>' : ''}
     </div>
     ${TW.asg.length ? `<div class="pnote">בסידור ${TW.asg.length} שיבוצים${TW.asg.some(a => a.by_hand) ? `, מהם ${TW.asg.filter(a => a.by_hand).length} ביד (נשמרים גם בבנייה מחדש)` : ''}. רואים ומתקנים בלשונית "הסידור".</div>` : ''}
     ${rep.length ? `<div class="tw-report"><h3>מה הבנייה מדווחת</h3><ul>${rep.map(l => `<li>${pEsc(l)}</li>`).join('')}</ul></div>` : ''}`;
@@ -256,7 +256,7 @@ function twBuildWire(box){
   on('#tw-publish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'published', published_at:new Date().toISOString() }).eq('start', TW.period); if(up.error) throw up.error; toast('הסידור פורסם לצוות'); });
   on('#tw-unpublish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'built', published_at:null }).eq('start', TW.period); if(up.error) throw up.error; toast('הפרסום בוטל'); });
   on('#tw-demo', async () => {
-    for(const p of TW.people.filter(x => x.active && !TW.subs.some(s => s.person === x.id))){ if(!(await twSaveOptions(p, twDemoOptions(p)))) throw new Error('demo options'); }
+    for(const p of TW.people.filter(x => x.active && !x.staff_id && !TW.subs.some(s => s.person === x.id))){          // (not for somebody with a sign-in: they hand in themselves) if(!(await twSaveOptions(p, twDemoOptions(p)))) throw new Error('demo options'); }
     toast('מולאו אופציות לדוגמה');
   });
 }
