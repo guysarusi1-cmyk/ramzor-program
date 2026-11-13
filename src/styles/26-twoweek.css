@@ -60,3 +60,11 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 .tw-pick-row small{ opacity:.75; }
 .tw-pick-row.on{ background:var(--gold); border-color:var(--gold); color:#1C1A17; }
 @media (max-width:420px){ #view-tw .tw-day{ grid-template-columns:1fr; } #view-tw .tw-day-name span{ display:inline; margin-inline-start:6px; } }
+#view-tw .tw-opt.fixed{ background:transparent; border-style:dashed; border-color:var(--gold); cursor:default; }
+#view-tw .tw-opt.fixed b::before{ content:"📌 "; }
+#view-tw .tw-cell .tw-fix::before{ content:"📌 "; }
+#view-tw .tw-fixed-box{ margin:12px 0; padding:10px 12px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); color:var(--p-text, var(--text)); }
+#view-tw .tw-fixed-box summary{ cursor:pointer; font-weight:700; min-height:32px; }
+#view-tw .tw-fixed-grid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); margin:8px 0; }
+#view-tw .tw-fixed-day{ display:grid; gap:4px; padding:8px; border-radius:10px; border:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-fixed-day label{ display:grid; gap:2px; font-size:13px; color:var(--p-muted, var(--muted)); }
