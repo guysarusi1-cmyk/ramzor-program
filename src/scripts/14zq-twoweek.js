@@ -255,8 +255,9 @@ function twBuildWire(box){
   });
   on('#tw-publish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'published', published_at:new Date().toISOString() }).eq('start', TW.period); if(up.error) throw up.error; toast('הסידור פורסם לצוות'); });
   on('#tw-unpublish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'built', published_at:null }).eq('start', TW.period); if(up.error) throw up.error; toast('הפרסום בוטל'); });
+  // (the demo fill is not for somebody with a sign-in: they hand in themselves)
   on('#tw-demo', async () => {
-    for(const p of TW.people.filter(x => x.active && !x.staff_id && !TW.subs.some(s => s.person === x.id))){          // (not for somebody with a sign-in: they hand in themselves) if(!(await twSaveOptions(p, twDemoOptions(p)))) throw new Error('demo options'); }
+    for(const p of TW.people.filter(x => x.active && !x.staff_id && !TW.subs.some(s => s.person === x.id))){ if(!(await twSaveOptions(p, twDemoOptions(p)))) throw new Error('demo options'); }
     toast('מולאו אופציות לדוגמה');
   });
 }
