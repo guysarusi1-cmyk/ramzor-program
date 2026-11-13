@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>@config(orgName)</title>
+<meta name="theme-color" content="#1C1A17">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<style>{{CSS}}</style>
+<style>
+  /* the product shell: one screen (the two-week schedule) and a sign-in */
+  body.product-shibutz{ margin:0; min-height:100vh; }
+  body.product-shibutz:has(.portal-shell[data-ptheme=dark]){ background:#1C1A17; color:#F3EEE4; }
+  body.product-shibutz:has(.portal-shell[data-ptheme=light]){ background:#FAF7F2; color:#1d2433; }
+  body.product-shibutz .view{ display:none; }
+  body.product-shibutz .view.active{ display:block; }
+  body.product-shibutz #tw-home-back{ display:none; }
+  body.product-shibutz .portal-shell{ max-width:980px; margin:0 auto; padding:12px 14px 48px; box-sizing:border-box; }
+  body.product-shibutz .portal-top{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  body.product-shibutz .portal-top .portal-title{ margin:0; flex:1 1 auto; }
+  body.product-shibutz .sb-org{ flex:0 0 100%; }
+  .sb-login{ max-width:420px; margin:8vh auto; padding:24px; }
+  .sb-login h1{ margin:0 0 4px; font-size:26px; }
+  .sb-login .sb-sub{ margin:0 0 20px; opacity:.75; }
+  .sb-login label{ display:grid; gap:6px; margin:12px 0; font-weight:700; }
+  .sb-login input{ min-height:48px; padding:8px 12px; border-radius:10px; border:1px solid var(--p-line, #777); background:var(--p-panel2, #2a2723); color:inherit; font:inherit; direction:ltr; text-align:left; }
+  .sb-login .btn{ width:100%; min-height:50px; margin-top:10px; }
+  .sb-login .sb-err{ min-height:24px; color:var(--p-no, #ff8a80); font-weight:700; margin-top:8px; }
+  .sb-bar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .sb-bar .sb-who{ opacity:.8; font-size:14px; }
+  .sb-org{ font-size:13px; letter-spacing:.04em; opacity:.75; margin:6px 0 0; }
+</style>
+</head>
+<body class="product-shibutz portal-mode">
+<div id="protected-app">
+  <section class="view" id="view-login"></section>
+  <section class="view" id="view-apphome"></section>
+  <section class="view" id="view-tw"></section>
+</div>
+<script>{{VENDOR_SUPABASE}}</script>
+<script>{{JS}}</script>
+</body>
+</html>
