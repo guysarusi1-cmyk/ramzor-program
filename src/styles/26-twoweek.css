@@ -170,3 +170,7 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw details.tw-report ul{ margin-top:6px; }
 /* (light look: the accent is a dark green there, so the active tab and step take white letters) */
 #view-tw .portal-shell[data-ptheme=light] .tw-tab.on, #view-tw .portal-shell[data-ptheme=light] .tw-step.on{ color:#fff; }
+/* "יכול" = a weak fill of the same hue as "כן" (Guy 2026-11-14): full = yes, a third = can, empty = no */
+#view-tw .tw-pref[data-lv=can]{ background:color-mix(in srgb, var(--p-text, var(--text)) 30%, transparent); border-color:color-mix(in srgb, var(--p-text, var(--text)) 55%, transparent); }
+#view-tw .tw-pref[data-lv=can] b{ font-weight:700; }
+#view-tw .tw-pref[data-lv=can] small{ color:var(--p-text, var(--text)); opacity:.8; }
