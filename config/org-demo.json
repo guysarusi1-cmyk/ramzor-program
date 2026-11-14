@@ -1,4 +1,5 @@
 {
+  "orgSlug": "demo",
   "supabaseUrl": "PUT-THE-PROJECT-URL-HERE",
   "anonKey": "PUT-THE-PUBLIC-ANON-KEY-HERE",
   "orgName": "מרקורי שיבוצים",

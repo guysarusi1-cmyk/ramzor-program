@@ -5,6 +5,7 @@
 // What was sent is written in tw_mail_log, so calling it again sends nothing twice.
 // Only the database calls it (core/mail-v2.sql: the hourly job and tw_publish), with the shared secret in the header x-tw-secret;
 // a call without it gets 401 and nothing else (Yigal 2026-11-14). The answer says only "ok": no names, no counts.
+// One database for many organisations (scheduling-v81.sql): it goes over every organisation, and every query carries its org_id.
 // Needs two secrets (Edge Functions, Secrets): RESEND_API_KEY and TW_MAIL_SECRET (the same value as tw_mail_secret in the Vault).
 // Deploy: Edge Functions, the function tw-mail, Code: paste this file, Deploy. "Verify JWT" stays OFF (the secret replaces it).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -29,19 +30,22 @@ Deno.serve(async (req) => {
     const url = Deno.env.get('SUPABASE_URL')!, service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, resend = Deno.env.get('RESEND_API_KEY') ?? '';
     const dry = false;
     const db = createClient(url, service, { auth: { persistSession: false } });
-    const [org, sets, people, priv] = await Promise.all([
-      db.from('org_profile').select('name').limit(1).maybeSingle(),
-      db.from('tw_settings').select('key,value'),
-      db.from('tw_people').select('id,name,staff_id,active'),
-      db.from('staff_private').select('staff_id,email,auth_user_id'),
+    const sent: unknown[] = [], errors: unknown[] = [];
+    const orgs = (await db.from('org').select('id,name')).data || [];
+    // one database, many organisations (scheduling-v81.sql): every organisation on its own, every query inside it
+    for (const org of orgs) {
+    const O = org.id;
+    const [sets, people, priv] = await Promise.all([
+      db.from('tw_settings').select('key,value').eq('org_id', O),
+      db.from('tw_people').select('id,name,staff_id,active').eq('org_id', O),
+      db.from('staff_private').select('staff_id,email,auth_user_id').eq('org_id', O),
     ]);
-    const orgName = org.data?.name || 'סידור העבודה';
+    const orgName = org.name || 'סידור העבודה';
     const site = String((sets.data || []).find((s) => s.key === 'site_url')?.value || '');
     const from = `${orgName} <no-reply@mercuryteam.app>`;
     const mailOf: Record<string, string> = {};
     (priv.data || []).forEach((p) => { if (p.email && p.auth_user_id) mailOf[p.staff_id] = p.email; });
     const reachable = (people.data || []).filter((p) => p.active && p.staff_id && mailOf[p.staff_id]);
-    const sent: unknown[] = [], errors: unknown[] = [];
     const send = async (to: string, subject: string, html: string) => {
       if (dry) { sent.push({ to, subject }); return true; }
       if (!resend) { errors.push('RESEND_API_KEY is missing'); return false; }
@@ -49,15 +53,15 @@ Deno.serve(async (req) => {
       if (!r.ok) { errors.push({ to, status: r.status, text: (await r.text()).slice(0, 200) }); return false; }
       sent.push({ to, subject }); return true;
     };
-    const logged = async (period: string, kind: string, mark: string) => (await db.from('tw_mail_log').select('period').eq('period', period).eq('kind', kind).eq('mark', mark).limit(1)).data?.length;
-    const log = async (period: string, kind: string, mark: string, count: number) => { if (!dry) await db.from('tw_mail_log').insert({ period, kind, mark, count }); };
+    const logged = async (period: string, kind: string, mark: string) => (await db.from('tw_mail_log').select('period').eq('org_id', O).eq('period', period).eq('kind', kind).eq('mark', mark).limit(1)).data?.length;
+    const log = async (period: string, kind: string, mark: string, count: number) => { if (!dry) await db.from('tw_mail_log').insert({ org_id: O, period, kind, mark, count }); };
 
     // 1. the reminder: the hand-in closes within a day
     const now = Date.now(), soon = new Date(now + 26 * 3600 * 1000).toISOString();
-    const open = (await db.from('tw_period').select('start,deadline').eq('status', 'open').not('deadline', 'is', null).gt('deadline', new Date(now).toISOString()).lte('deadline', soon)).data || [];
+    const open = (await db.from('tw_period').select('start,deadline').eq('org_id', O).eq('status', 'open').not('deadline', 'is', null).gt('deadline', new Date(now).toISOString()).lte('deadline', soon)).data || [];
     for (const p of open) {
       if (await logged(p.start, 'reminder', '')) continue;
-      const subs = new Set(((await db.from('tw_submission').select('person').eq('period', p.start)).data || []).map((s) => s.person));
+      const subs = new Set(((await db.from('tw_submission').select('person').eq('org_id', O).eq('period', p.start)).data || []).map((s) => s.person));
       const who = reachable.filter((x) => !subs.has(x.id));
       const until = new Date(p.deadline).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', weekday: 'long', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
       let n = 0;
@@ -69,11 +73,11 @@ Deno.serve(async (req) => {
     }
 
     // 2. the schedule was published (again after a new publishing)
-    const pub = (await db.from('tw_period').select('start,published_at').eq('status', 'published').not('published_at', 'is', null)).data || [];
+    const pub = (await db.from('tw_period').select('start,published_at').eq('org_id', O).eq('status', 'published').not('published_at', 'is', null)).data || [];
     for (const p of pub) {
       if (addDays(p.start, 13) < new Date().toISOString().slice(0, 10)) continue;          // (two weeks that already ended)
       if (await logged(p.start, 'published', p.published_at)) continue;
-      const asg = (await db.from('tw_assignment').select('day,shift,person').eq('period', p.start).order('day')).data || [];
+      const asg = (await db.from('tw_assignment').select('day,shift,person').eq('org_id', O).eq('period', p.start).order('day')).data || [];
       let n = 0;
       for (const x of reachable) {
         const mine = asg.filter((a) => a.person === x.id);
@@ -83,6 +87,7 @@ Deno.serve(async (req) => {
       }
       await log(p.start, 'published', p.published_at, n);
     }
+    }          // (the next organisation)
     if (errors.length) console.error('tw-mail', JSON.stringify(errors));          // (the details stay in the function's own log)
     return reply({ ok: true });
   } catch (e) {

@@ -1,10 +1,12 @@
 // Supabase Edge Function: create-staff-user
 // The coordinator presses "create login" next to a person who has an e-mail address. This function (running with the service key that
 // only Supabase holds) creates the sign-in account for that e-mail and links it to the person. Sign-ups stay closed for everybody else.
+// One database for many organisations (scheduling-v81.sql): the site sends its organisation in the header x-org; the person must be
+// on the list of THAT organisation, and the caller must be its coordinator or admin (the row rules decide: the caller's own token reads it).
 // Deploy: Supabase dashboard -> Edge Functions -> Deploy a new function -> name: create-staff-user -> paste this file.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-org' };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
 Deno.serve(async (req) => {
@@ -13,11 +15,14 @@ Deno.serve(async (req) => {
     const url = Deno.env.get('SUPABASE_URL')!, anon = Deno.env.get('SUPABASE_ANON_KEY')!, service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const auth = req.headers.get('Authorization') ?? '';
     // 1. who is asking? (their own token; only a coordinator or the manager may continue)
-    const asUser = createClient(url, anon, { global: { headers: { Authorization: auth } } });
+    const asUser = createClient(url, anon, { global: { headers: { Authorization: auth, 'x-org': req.headers.get('x-org') ?? '' } } });
     const allowed = await asUser.rpc('is_coordinator');
     if (allowed.error || allowed.data !== true) return reply({ error: 'not allowed' }, 403);
     const { staff_id } = await req.json();
     if (!staff_id) return reply({ error: 'staff_id is missing' }, 400);
+    // the caller sees this person's private row only if the person is in the caller's organisation and the caller may manage it
+    const mine = await asUser.from('staff_private').select('staff_id').eq('staff_id', staff_id).maybeSingle();
+    if (mine.error || !mine.data) return reply({ error: 'not allowed' }, 403);
     // 2. the address that the coordinator wrote for that person
     const admin = createClient(url, service, { auth: { persistSession: false } });
     const row = await admin.from('staff_private').select('email, auth_user_id').eq('staff_id', staff_id).single();

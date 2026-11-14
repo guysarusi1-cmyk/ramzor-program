@@ -5,7 +5,8 @@
 // calling, and a few small helpers that the big site has elsewhere. Nothing of the Ramzor or of the therapy portal is in this site.
 const ORG_NAME = '@config(orgName)';
 const DEMO_TOOLS = '@config(demoTools)' === 'True';          // (the "sample options" button: a demo database only)
-const sbPersonal = supabase.createClient('@config(supabaseUrl)', '@config(anonKey)', { auth:{ storageKey:'mercury-shibutz-auth', persistSession:true, autoRefreshToken:true } });
+const ORG_SLUG = '@config(orgSlug)';          // (one database, many organisations: every call says which one; the database checks the caller works there)
+const sbPersonal = supabase.createClient('@config(supabaseUrl)', '@config(anonKey)', { auth:{ storageKey:'mercury-shibutz-auth', persistSession:true, autoRefreshToken:true }, global:{ headers:{ 'x-org':ORG_SLUG } } });
 const srv = { me:null, profile:null, meRow:null, portalTheme:null };
 let portalServerOn = false;
 const liveCut = () => !DEMO_TOOLS;
