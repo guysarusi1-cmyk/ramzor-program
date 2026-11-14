@@ -643,7 +643,7 @@ function twSwapsHtml(){
   const line = s => `<b>${twShiftLine(s.day, s.shift)}</b><small>${pEsc(twName(s.from_person))}${s.taker ? ` ← ${pEsc(twName(s.taker))}` : ''} · ${TW_SWAP_WORD[s.status]}</small>${s.note ? `<small>״${pEsc(s.note)}״</small>` : ''}`;
   const decide = sw.filter(s => s.status === 'taken' && twBuilderOf(s.period));
   const open = sw.filter(s => s.status === 'open' && s.from_person !== me && s.day >= today);
-  const mine = sw.filter(s => me && (s.from_person === me || s.taker === me) && (s.status === 'open' || s.status === 'taken' || s.day >= today));
+  const mine = sw.filter(s => me && (s.from_person === me || s.taker === me) && s.status !== 'cancelled' && (s.status === 'open' || s.status === 'taken' || s.day >= today));          // (a cancelled request goes at once: Guy 2026-11-14)
   const done = sw.filter(s => s.status === 'approved' && s.day >= today && !mine.includes(s));
   const takeBtn = s => {
     if(!me) return '';
