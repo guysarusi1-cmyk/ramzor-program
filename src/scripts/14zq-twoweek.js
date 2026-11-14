@@ -164,6 +164,7 @@ function twMineHtml(){
   if(!person) return '<div class="pnote">אין שורה ברשימת הצוות של הסידור הדו-שבועי.</div>';
   const c = twCount(person), can = twCanMark(person), sub = TW.subs.find(s => s.person === person.id), days = twDays(TW.period);
   if(TW.week !== 0 && TW.week !== 1) TW.week = 0;
+  if(TW.cal === undefined){ try { TW.cal = !!localStorage.getItem('mercury-tw-cal'); } catch(e){ TW.cal = false; } }
   const pick = twIsBuilder() ? `<label class="tw-period"><span>ההעדפות של:</span><select id="tw-as">${TW.people.filter(p => p.active).map(p => `<option value="${p.id}"${p.id === person.id ? ' selected' : ''}>${pEsc(p.name)}${TW.subs.some(s => s.person === p.id) ? ' ✓' : ''}</option>`).join('')}</select></label>` : '';
   const cell = (day, s, span) => {
     if(twIsFixed(person.id, day, s.shift)) return `<div class="tw-pref fixed"${span ? ' style="grid-column:span 2"' : ''}><small>${TW_SHIFT[s.shift]}</small><b>קבועה</b><small>${s.hours}</small></div>`;
@@ -171,11 +172,31 @@ function twMineHtml(){
     return `<button type="button" class="tw-pref" data-lv="${lv}" data-tw-pref="${twKey(day, s.shift)}"${span ? ' style="grid-column:span 2"' : ''}${can ? '' : ' disabled'} aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}, ${TW_SHIFT[s.shift]}: ${TW_LV_WORD[lv]}">
       <small>${TW_SHIFT[s.shift]}</small><b>${TW_LV_WORD[lv]}</b><small>${s.hours}</small></button>`;
   };
+  const dayBtn = (day, cls) => can ? `<button type="button" class="${cls} tw-day-btn" data-tw-day="${day}" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}: כל המשמרות של היום">${DOW_NAMES[dowOf(day)]} <span>${twShort(day)}</span></button>`
+    : `<div class="${cls}">${DOW_NAMES[dowOf(day)]} <span>${twShort(day)}</span></div>`;
+  // the calendar view: the two weeks one under the other, the days side by side (Sunday on the right), a row per kind of shift
+  const mini = (day, s, rows) => {
+    const st = rows ? ` style="grid-row:span ${rows}"` : '';
+    if(twIsFixed(person.id, day, s.shift)) return `<div class="tw-pref mini fixed"${st}><b>קבועה</b></div>`;
+    const lv = twLvl(person.id, day, s.shift);
+    return `<button type="button" class="tw-pref mini" data-lv="${lv}" data-tw-pref="${twKey(day, s.shift)}"${st}${can ? '' : ' disabled'} aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}, ${TW_SHIFT[s.shift]}: ${TW_LV_WORD[lv]}"><b>${TW_LV_WORD[lv]}</b>${s.shift === 'W' ? '<small>סוף שבוע</small>' : ''}</button>`;
+  };
+  const calWeek = w => {
+    const wd = days.slice(w * 7, w * 7 + 7), others = wd.map(d => [d, twOtherOf(person.id, d)]).filter(x => x[1]);
+    const row = k => `<div class="tw-cal-kind">${TW_SHIFT[k]}</div>` + wd.map(day => {
+      const by = {}; twSlots(day).forEach(s => { by[s.shift] = s; });
+      if(by.W) return k === 'M' ? mini(day, by.M) : k === 'A' ? mini(day, by.W, 2) : '';
+      return by[k] ? mini(day, by[k]) : '<span class="tw-pref-none"></span>';
+    }).join('');
+    return `<section class="tw-pweek cur"><h3>שבוע ${w + 1} מתוך 2 <span class="tw-wk-range">${twShort(wd[0])}–${twShort(wd[6])}</span></h3>
+      <div class="tw-cal"><span></span>${wd.map(d => dayBtn(d, 'tw-cal-day')).join('')}${TW_ROWS.map(row).join('')}</div>
+      ${others.map(([d, o]) => `<div class="tw-pother">${DOW_NAMES[dowOf(d)]} ${twShort(d)}, שעות אחרות: <b>${twHm(o.from_time)}–${twHm(o.to_time)}</b>${twOtherHours(o) < TW_OTHER_MIN ? ` <small>(פחות מ-${TW_OTHER_MIN} שעות, לא נספר)</small>` : ''}${can ? ` <button type="button" class="tw-x" data-tw-other-del="${d}" aria-label="הסרת השעות האחרות של יום ${DOW_NAMES[dowOf(d)]}">✕</button>` : ''}</div>`).join('')}</section>`;
+  };
   const dayRow = day => {
     const sl = twSlots(day), by = {}, o = twOtherOf(person.id, day);
     sl.forEach(s => { by[s.shift] = s; });
     const cells = by.W ? cell(day, by.M) + cell(day, by.W, true) : TW_ROWS.map(k => by[k] ? cell(day, by[k]) : '<span class="tw-pref-none"></span>').join('');
-    return `<div class="tw-pday"><div class="tw-day-name">${DOW_NAMES[dowOf(day)]} <span>${twShort(day)}</span></div><div class="tw-pday-slots">${cells}</div>
+    return `<div class="tw-pday">${dayBtn(day, 'tw-day-name')}<div class="tw-pday-slots">${cells}</div>
       ${o ? `<div class="tw-pother">שעות אחרות: <b>${twHm(o.from_time)}–${twHm(o.to_time)}</b>${twOtherHours(o) < TW_OTHER_MIN ? ` <small>(פחות מ-${TW_OTHER_MIN} שעות, לא נספר)</small>` : ''}${can ? ` <button type="button" class="tw-x" data-tw-other-del="${day}" aria-label="הסרת השעות האחרות של יום ${DOW_NAMES[dowOf(day)]}">✕</button>` : ''}</div>` : ''}</div>`;
   };
   const week = w => `<section class="tw-pweek${TW.week === w ? ' cur' : ''}"><h3>שבוע ${w + 1} מתוך 2 <span class="tw-wk-range">${twShort(days[w * 7])}–${twShort(days[w * 7 + 6])}</span></h3>
@@ -184,15 +205,16 @@ function twMineHtml(){
   const state = !can ? '<div class="pnote">ההגשה לשבועיים האלה סגורה.</div>'
     : sub ? `<div class="pstatus ok">הוגש ב-${new Date(sub.submitted_at).toLocaleString('he-IL', { day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit' })}. אפשר עדיין לשנות, כל שינוי נשמר מיד.</div>` : '';
   const bar = can ? `<div class="tw-bar" role="toolbar" aria-label="פעולות ההעדפות">
-      ${TW.week === 1 ? '<button type="button" class="btn ghost tw-bar-week" id="tw-week-prev">→ שבוע 1</button>' : ''}
+      ${!TW.cal && TW.week === 1 ? '<button type="button" class="btn ghost tw-bar-week" id="tw-week-prev">→ שבוע 1</button>' : ''}
+      <button type="button" class="btn ghost" id="tw-cal" aria-pressed="${!!TW.cal}">${TW.cal ? 'שבוע-שבוע' : 'שבועיים יחד'}</button>
       <button type="button" class="btn ghost" id="tw-other">שעות אחרות</button>
-      ${TW.week === 0 ? '<button type="button" class="btn tw-bar-week" id="tw-week-next">לשבוע 2 ←</button>' : ''}
-      <button type="button" class="btn${TW.week === 0 ? ' tw-bar-wide' : ''}" id="tw-submit">${sub ? 'הגשה מחדש' : 'הגשה'}</button></div>` : '';
+      ${!TW.cal && TW.week === 0 ? '<button type="button" class="btn tw-bar-week" id="tw-week-next">לשבוע 2 ←</button>' : ''}
+      <button type="button" class="btn${!TW.cal && TW.week === 0 ? ' tw-bar-wide' : ''}" id="tw-submit">${sub ? 'הגשה מחדש' : 'הגשה'}</button></div>` : '';
   return `${pick}
     <div class="tw-phead">${twEggHtml(person, c, !!sub)}<div><b class="tw-pnum">${c.have} מתוך ${c.need}</b><span>משמרות שנפתחו בשבועיים${left ? ` · חסרות ${left}` : ''}</span></div></div>
     ${state}
-    ${can ? '<div class="pnote tw-legend">הקשה על משמרת מחליפה: <b>כן</b> ← <b>יכול</b> ← <b>לא</b>. כל הקשה נשמרת מיד.</div>' : ''}
-    <div class="tw-pweeks">${week(0)}${week(1)}</div>
+    ${can ? '<div class="pnote tw-legend">הקשה על משמרת מחליפה: <b>כן</b> ← <b>יכול</b> ← <b>לא</b>. הקשה על שם היום מחליפה את כל המשמרות שלו. כל הקשה נשמרת מיד.</div>' : ''}
+    ${TW.cal ? `<div class="tw-pweeks tw-cal-mode">${calWeek(0)}${calWeek(1)}</div>` : `<div class="tw-pweeks">${week(0)}${week(1)}</div>`}
     ${c.clash ? `<div class="pnote tw-warn">${c.clash === 1 ? 'יש זוג אחד של משמרות צמודות' : `יש ${c.clash} זוגות של משמרות צמודות`}: רק אחת מכל זוג יכולה להשתבץ.</div>` : ''}
     ${bar}`;
 }
@@ -204,8 +226,15 @@ function twQueue(fn){
   });
   return TW.chain;
 }
-function twTap(person, day, shift){
-  const cur = twLvl(person.id, day, shift), next = cur === 'no' ? 'yes' : cur === 'yes' ? 'can' : 'no';
+const twNextLv = cur => (cur === 'no' ? 'yes' : cur === 'yes' ? 'can' : 'no');
+function twTap(person, day, shift){ twSetLv(person, day, shift, twNextLv(twLvl(person.id, day, shift))); }
+// a tap on the day itself: all its shifts together (Guy 2026-11-14). When they are alike they all move one step; when they differ they all become "כן".
+function twDayTap(person, day){
+  const slots = twSlots(day).filter(s => !twIsFixed(person.id, day, s.shift)); if(!slots.length) return;
+  const lv = slots.map(s => twLvl(person.id, day, s.shift)), next = lv.every(x => x === lv[0]) ? twNextLv(lv[0]) : 'yes';
+  slots.forEach(s => twSetLv(person, day, s.shift, next));
+}
+function twSetLv(person, day, shift, next){
   TW.options = TW.options.filter(o => !(o.person === person.id && o.day === day && o.shift === shift));
   if(next !== 'no') TW.options.push({ period:TW.period, person:person.id, day, shift, level:next });
   const period = TW.period;
@@ -223,7 +252,9 @@ function twMineWire(box){
     twQueue(() => sbPersonal.from('tw_other').delete().eq('period', period).eq('person', person.id).eq('day', day));
     twKeepScroll();
   }));
+  box.querySelectorAll('[data-tw-day]').forEach(b => b.addEventListener('click', () => { twDayTap(person, b.dataset.twDay); twKeepScroll(); }));
   const go = (id, fn) => { const b = box.querySelector(id); if(b) b.addEventListener('click', fn); };
+  go('#tw-cal', () => { TW.cal = !TW.cal; try { localStorage.setItem('mercury-tw-cal', TW.cal ? '1' : ''); } catch(e){} twRender(); window.scrollTo(0, 0); });
   go('#tw-week-next', () => { TW.week = 1; twRender(); window.scrollTo(0, 0); });
   go('#tw-week-prev', () => { TW.week = 0; twRender(); window.scrollTo(0, 0); });
   go('#tw-other', () => twOtherSheet(person));
@@ -239,7 +270,7 @@ function twSheet(html){
 }
 // hours of one's own on a day: which day, from when, until when
 function twOtherSheet(person){
-  const all = twDays(TW.period), wide = window.matchMedia('(min-width:900px)').matches, days = wide ? all : all.slice(TW.week * 7, TW.week * 7 + 7);
+  const all = twDays(TW.period), wide = TW.cal || window.matchMedia('(min-width:900px)').matches, days = wide ? all : all.slice(TW.week * 7, TW.week * 7 + 7);
   const sh = twSheet(`<h2>שעות אחרות</h2><div class="pnote">יום שאפשר לעבוד בו בשעות שאינן משמרת מלאה. ${TW_OTHER_MIN} שעות ומעלה נספרות כמשמרת שנפתחה.</div>
     <div class="tw-form tw-form-col"><label>יום <select id="tw-o-day">${days.map(d => `<option value="${d}">${DOW_NAMES[dowOf(d)]} ${twShort(d)}</option>`).join('')}</select></label>
       <label>משעה <input type="time" id="tw-o-from" value="12:00" step="900"></label><label>עד שעה <input type="time" id="tw-o-to" value="20:00" step="900"></label></div>

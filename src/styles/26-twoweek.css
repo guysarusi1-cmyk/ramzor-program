@@ -116,3 +116,22 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
   #view-tw .tw-bar .tw-bar-week{ display:none; }
 }
 @media (max-width:380px){ #view-tw .tw-pday{ grid-template-columns:58px 1fr; padding:6px; gap:6px; } #view-tw .tw-pref b{ font-size:16px; } }
+
+/* ---- the preferences: a tap on a day, and the calendar view (two weeks, days side by side) ---- */
+#view-tw .tw-day-btn{ font:inherit; font-weight:700; color:var(--p-text, var(--text)); background:transparent; border:1px solid var(--p-line, var(--line)); border-radius:10px; cursor:pointer; min-height:48px; padding:4px 2px; text-align:center; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+#view-tw .tw-day-btn span{ display:block; font-weight:400; font-size:13px; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-day-btn:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
+#view-tw .tw-pday .tw-day-btn{ align-self:stretch; }
+#view-tw .tw-cal-mode{ grid-template-columns:1fr; }
+#view-tw .tw-cal{ display:grid; grid-template-columns:auto repeat(7, minmax(0, 1fr)); gap:4px; padding:8px 6px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); margin-bottom:6px; }
+#view-tw .tw-cal-day{ font-size:13px; min-height:46px; padding:2px 0; }
+#view-tw .tw-cal-day span{ font-size:11px; }
+#view-tw div.tw-cal-day{ text-align:center; font-weight:700; color:var(--p-text, var(--text)); }
+#view-tw div.tw-cal-day span{ display:block; font-weight:400; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-cal-kind{ display:flex; align-items:center; font-size:12px; font-weight:700; color:var(--p-muted, var(--muted)); padding-inline-end:2px; }
+#view-tw .tw-pref.mini{ min-height:48px; padding:2px 0; border-radius:10px; min-width:0; }
+#view-tw .tw-pref.mini b{ font-size:14px; }
+#view-tw .tw-pref.mini small{ font-size:10px; }
+#view-tw .tw-pref.mini.fixed b{ font-size:11px; }
+@media (min-width:700px){ #view-tw .tw-cal{ gap:8px; padding:12px; } #view-tw .tw-cal-day{ font-size:15px; } #view-tw .tw-pref.mini b{ font-size:17px; } #view-tw .tw-cal-kind{ font-size:14px; } }
+@media (max-width:899px){ #view-tw .tw-bar .btn{ font-size:14px; padding-inline:4px; } }
