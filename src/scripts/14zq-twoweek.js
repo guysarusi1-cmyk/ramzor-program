@@ -471,7 +471,7 @@ function twBuildWire(box){
     toast(res.missing ? `הסידור נבנה. חסרים ${res.missing} שיבוצים` : 'הסידור נבנה, כל המשמרות מלאות');
     TW.step = 3;
   });
-  on('#tw-publish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'published', published_at:new Date().toISOString() }).eq('start', TW.period); if(up.error) throw up.error; toast('הסידור פורסם לצוות'); TW.step = 4; });
+  on('#tw-publish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'published', published_at:new Date().toISOString() }).eq('start', TW.period); if(up.error) throw up.error; toast('הסידור פורסם לצוות'); TW.step = 4; sbPersonal.functions.invoke('tw-mail', { body:{} }).catch(() => {}); });          // (the e-mail to the staff right away: supabase/functions/tw-mail; a database without it just does not mail)
   on('#tw-reopen', async () => { const up = await sbPersonal.from('tw_period').update({ status:'open' }).eq('start', TW.period); if(up.error) throw up.error; toast('ההגשה נפתחה מחדש'); TW.step = 1; });
   on('#tw-unpublish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'built', published_at:null }).eq('start', TW.period); if(up.error) throw up.error; toast('הפרסום בוטל'); });
   // (the demo fill is not for somebody with a sign-in: they hand in themselves)
