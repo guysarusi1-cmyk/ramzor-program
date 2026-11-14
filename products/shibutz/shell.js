@@ -26,22 +26,22 @@ function portalLoad(){ return { settings:{ theme:sbTheme() } }; }
 function portalActivateView(id){ document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function showAppHome(){ sbOpen(); }          // (this site has one screen)
 
-// the top of the screen: the organisation, who is signed in, light / dark, sign out
+// the top of the screen, in one line (the review agents 2026-11-14: it took most of a phone screen): the logo with the version, the
+// organisation, and "הגדרות" (light / dark, text, language, installing, and signing out — signing out is not a big button any more)
 function sbDecorate(){
   const shell = document.querySelector('#view-tw .portal-shell'); if(!shell) return;
-  const act = shell.querySelector('.portal-top-actions');
-  if(act && !act.querySelector('#sb-out')){
-    act.classList.add('sb-bar');
-    act.innerHTML = `<span class="sb-who">${pEsc((srv.profile && srv.profile.name) || '')}</span>
-      <button type="button" class="btn ghost small" id="sb-theme">הגדרות</button>
-      <button type="button" class="btn ghost small" id="sb-out">יציאה</button>`;
-    act.querySelector('#sb-theme').addEventListener('click', sbSettings);
-    act.querySelector('#sb-out').addEventListener('click', async () => { try { await sbPersonal.auth.signOut(); } catch(e){} srv.me = null; srv.profile = null; portalServerOn = false; sbShowLogin(); });
+  const top = shell.querySelector('.portal-top'); if(top) top.classList.add('sb-hide-top');
+  if(!shell.querySelector('.sb-top')){
+    shell.insertAdjacentHTML('afterbegin', `<div class="sb-top">${sbBrandHtml(true)}<span class="sb-top-org">${pEsc((srv.profile && srv.profile.org && srv.profile.org.name) || ORG_NAME)}</span>
+      <button type="button" class="btn ghost small" id="sb-theme" aria-label="הגדרות">⚙ הגדרות</button></div>`);
+    shell.querySelector('#sb-theme').addEventListener('click', sbSettings);
   }
-  const title = shell.querySelector('.portal-title');
-  if(title && !shell.querySelector('.sb-org')) title.insertAdjacentHTML('beforebegin', `<p class="sb-org">${pEsc((srv.profile && srv.profile.org && srv.profile.org.name) || ORG_NAME)}</p>`);
-  if(!shell.querySelector('.mx-brand-wrap')) shell.insertAdjacentHTML('afterbegin', sbBrandHtml(true));
   if(!shell.querySelector('#sb-install-link')) shell.insertAdjacentHTML('beforeend', sbInstallLinkHtml());
+}
+async function sbSignOut(){
+  if(typeof twConfirm === 'function' && !(await twConfirm({ title:'לצאת מהחשבון?', text:'בכניסה הבאה צריך מייל וסיסמה, או קוד למייל.', ok:'כן, לצאת' }))) return;
+  try { await sbPersonal.auth.signOut(); } catch(e){}
+  srv.me = null; srv.profile = null; portalServerOn = false; sbShowLogin();
 }
 // the logo of Mercury with the version under it (as in the big site), and "install as an app" at the bottom (phones, before it is installed)
 function sbBrandHtml(small){ return `<div class="mx-brand-wrap${small ? ' mx-brand-small' : ''}"><div class="mx-brand-logo" role="img" aria-label="Mercury"></div><div class="eyebrow-gold mx-brand" dir="ltr">Mercury ${SB_VERSION}</div></div>`; }
@@ -86,13 +86,15 @@ function sbSettings(){
     <div class="sb-set-row"><b>גודל הטקסט</b>${seg('big', [['', 'רגיל'], ['1', 'גדול']], sbGet('big', ''))}</div>
     <div class="sb-set-row"><b>ניגודיות</b>${seg('contrast', [['', 'רגילה'], ['high', 'גבוהה']], sbGet('contrast', ''))}</div>
     <div class="sb-set-row"><b>שפה</b>${seg('lang', [['he', 'עברית'], ['ar', 'العربية']], sbGet('lang', 'he'))}</div>
-    <div class="sb-set-row"><b>אפליקציה</b>${install}</div></div>
+    <div class="sb-set-row"><b>אפליקציה</b>${install}</div>
+    <div class="sb-set-row"><b>חשבון</b><button type="button" class="btn ghost" id="sb-out">יציאה מהחשבון</button></div></div>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div></div>`;
   wrap.addEventListener('click', async e => {
     if(e.target === wrap || e.target.closest('[data-close]')){ wrap.remove(); return; }
     const b = e.target.closest('[data-k]');
     if(b){ sbSet(b.dataset.k, b.dataset.v); if(b.dataset.k === 'lang'){ location.reload(); return; } wrap.remove(); await sbOpen(); sbSettings(); return; }
     if(e.target.closest('#sb-install') && sbInstallEvent){ sbInstallEvent.prompt(); try { await sbInstallEvent.userChoice; } catch(err){} sbInstallEvent = null; wrap.remove(); }
+    if(e.target.closest('#sb-out')){ wrap.remove(); sbSignOut(); }
   });
   document.body.appendChild(wrap);
 }

@@ -50,6 +50,12 @@
   .sb-login .install-link{ display:block; margin:14px auto 0; }
   body.product-shibutz #view-tw .mx-brand-small{ justify-content:flex-start; margin:0 0 6px; }
   body.product-shibutz #view-tw .install-link{ display:block; margin:22px auto 8px; min-height:44px; }
+  /* the top in one line: logo + version, the organisation, settings (the review agents 2026-11-14) */
+  body.product-shibutz #view-tw .sb-top{ display:flex; align-items:center; gap:10px; margin:0 0 4px; }
+  body.product-shibutz #view-tw .sb-top .mx-brand-small{ margin:0; flex:none; }
+  body.product-shibutz #view-tw .sb-top-org{ flex:1; min-width:0; font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.product-shibutz #view-tw .sb-hide-top{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  body.product-shibutz #view-tw .sb-org{ display:none; }
   .sb-login #sb-code{ direction:ltr; text-align:center; font-size:22px; letter-spacing:.2em; }
 </style>
 </head>

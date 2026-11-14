@@ -8,7 +8,7 @@
 -- always ends with an error that rolls it all back, and only the answer is kept. It reads no real person's data (every try counts
 -- rows of the invented people only, or only asks whether a write is allowed). The answer is one cell: "pass" and the list of what
 -- failed. Copy it to Claude.
--- Needs: core-v1, core-v2, scheduling-v75 ... v81, core/mail-v1.
+-- Needs: core-v1, core-v2, scheduling-v75 ... v81, core/mail-v1 (and v82: its personal notices are tried when the table is there).
 -- ================================================================
 drop table if exists pg_temp.rls_probe_out;
 create temp table rls_probe_out (j jsonb);
@@ -59,6 +59,10 @@ begin
     insert into public.tw_message(org_id, body, from_staff) values (ob, 'probe-b message', (u->'badm'->>'staff')::uuid);
     -- the next two weeks: closed in probe-a, open in probe-b (a check that looks at the dates only would let probe-a in)
     insert into public.tw_period(org_id, start, status) values (oa, per + 14, 'built'), (ob, per + 14, 'open');
+    -- personal notices (scheduling-v82.sql): one for the instructor and one for the builder of probe-a (probe-b got its own by the trigger)
+    if to_regclass('public.tw_notice') is not null then
+      execute 'insert into public.tw_notice(org_id, person, period, day, shift, kind) values ($1, $2, $3, $3 + 1, ''M'', ''added''), ($1, $4, $3, $3 + 2, ''M'', ''removed'')' using oa, (u->'ins'->>'person')::uuid, per, (u->'bld'->>'person')::uuid;
+    end if;
 
     -- the tries: who, what, what is expected (deny = refused; zero = nothing seen or touched; some = something seen or touched; ok = allowed)
     for k, procedure_try, got in
@@ -144,15 +148,25 @@ begin
         ('owner', 'select count(*) from public.core_support', 'deny_or_zero'),
         -- an owner in support inside probe-a: probe-a only
         ('supa', 'select count(*) from public.tw_option where period = ' || quote_literal(per), 'some'), ('supa', 'select count(*) from public.tw_option where person = ' || quote_literal(bperson), 'zero'),
-        ('supb', 'select count(*) from public.tw_option', 'zero'), ('supb', 'select count(*) from public.staff', 'zero')
+        ('supb', 'select count(*) from public.tw_option', 'zero'), ('supb', 'select count(*) from public.staff', 'zero'),
+        -- the personal notices (scheduling-v82.sql): one's own only, nobody writes them, only "seen" may change
+        ('ins', 'select count(*) from public.tw_notice where person = (select id from public.tw_people where name = ''probe-ins'')', 'some'),
+        ('ins', 'select count(*) from public.tw_notice where person <> (select id from public.tw_people where name = ''probe-ins'')', 'zero'),
+        ('ins', 'update public.tw_notice set seen_at = now() where person <> (select id from public.tw_people where name = ''probe-ins'')', 'zero'),
+        ('ins', 'update public.tw_notice set seen_at = now()', 'some'),
+        ('ins', 'update public.tw_notice set kind = ''removed''', 'deny'),
+        ('ins', 'insert into public.tw_notice(person, period, day, shift, kind) values ((select id from public.tw_people where name = ''probe-ins''), ' || quote_literal(per) || ', ' || quote_literal(per) || ', ''M'', ''added'')', 'deny'),
+        ('adm', 'select count(*) from public.tw_notice', 'zero'), ('anon', 'select count(*) from public.tw_notice', 'deny_or_zero'),
+        ('bins', 'select count(*) from public.tw_notice', 'some'), ('spoof', 'select count(*) from public.tw_notice', 'zero')
       ) v(who, q, expect)
+      where not (v.q like '%tw_notice%' and to_regclass('public.tw_notice') is null)
     loop
       total := total + 1;
       -- who the try runs as, and the header of the site it comes from
       who_uid := case k when 'stranger' then gen_random_uuid() when 'insnohdr' then (u->'ins'->>'uid')::uuid when 'spoof' then (u->'ins'->>'uid')::uuid
                         when 'twonone' then two_uid when 'owner' then own1 when 'supa' then own2 when 'supb' then own2 when 'anon' then null
                         else (u->k->>'uid')::uuid end;
-      who_hdr := case when k in ('spoof', 'twob', 'supb') then 'probe-b' when k in ('insnohdr', 'twonone', 'anon', 'stranger') then null else 'probe-a' end;
+      who_hdr := case when k in ('spoof', 'twob', 'supb', 'bins') then 'probe-b' when k in ('insnohdr', 'twonone', 'anon', 'stranger') then null else 'probe-a' end;
       declare n bigint; outcome text;
       begin
         begin

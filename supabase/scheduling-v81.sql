@@ -69,10 +69,11 @@ begin
   end loop;
 end $$;
 
--- 6. the keys and the links, now with the organisation in them ---------------------------------
-do $$
-declare r record;
+-- 6. the keys and the links, now with the organisation in them (done once: a second run, or a run after scheduling-v82.sql, skips it)
+do $v81keys$
+declare r record; t text;
 begin
+  if exists (select 1 from pg_constraint where conname = 'tw_period_pkey' and conrelid = 'public.tw_period'::regclass and array_length(conkey, 1) = 2) then return; end if;
   -- every old link between these tables goes first (they are made again below)
   for r in select c.conname, c.conrelid::regclass as tbl from pg_constraint c
            where c.contype = 'f' and c.conrelid in ('public.staff'::regclass, 'public.staff_private'::regclass, 'public.tw_people'::regclass,
@@ -81,52 +82,46 @@ begin
                  'public.tw_message'::regclass, 'public.tw_build_log'::regclass, 'public.tw_mail_log'::regclass) loop
     execute format('alter table %s drop constraint %I', r.tbl, r.conname);
   end loop;
-end $$;
-
-alter table public.tw_period drop constraint if exists tw_period_pkey;
-alter table public.tw_period add constraint tw_period_pkey primary key (org_id, start);
-alter table public.tw_fixed drop constraint if exists tw_fixed_pkey;
-alter table public.tw_fixed add constraint tw_fixed_pkey primary key (org_id, dow, shift);
-alter table public.tw_settings drop constraint if exists tw_settings_pkey;
-alter table public.tw_settings add constraint tw_settings_pkey primary key (org_id, key);
-alter table public.tw_mail_log drop constraint if exists tw_mail_log_pkey;
-alter table public.tw_mail_log add constraint tw_mail_log_pkey primary key (org_id, period, kind, mark);
-alter table public.staff_private drop constraint if exists staff_private_auth_user_id_key;          -- (one sign-in, many organisations)
-alter table public.staff_private drop constraint if exists staff_private_org_user_key;
-alter table public.staff_private add constraint staff_private_org_user_key unique (org_id, auth_user_id);
-alter table public.staff drop constraint if exists staff_org_id_key;
-alter table public.staff add constraint staff_org_id_key unique (org_id, id);
-alter table public.tw_people drop constraint if exists tw_people_org_id_key;
-alter table public.tw_people add constraint tw_people_org_id_key unique (org_id, id);
-alter table public.tw_assignment drop constraint if exists tw_assignment_org_id_key;
-alter table public.tw_assignment add constraint tw_assignment_org_id_key unique (org_id, id);
-
-do $$
-declare t text;
-begin
+  execute 'alter table public.tw_period drop constraint if exists tw_period_pkey';
+  execute 'alter table public.tw_period add constraint tw_period_pkey primary key (org_id, start)';
+  execute 'alter table public.tw_fixed drop constraint if exists tw_fixed_pkey';
+  execute 'alter table public.tw_fixed add constraint tw_fixed_pkey primary key (org_id, dow, shift)';
+  execute 'alter table public.tw_settings drop constraint if exists tw_settings_pkey';
+  execute 'alter table public.tw_settings add constraint tw_settings_pkey primary key (org_id, key)';
+  execute 'alter table public.tw_mail_log drop constraint if exists tw_mail_log_pkey';
+  execute 'alter table public.tw_mail_log add constraint tw_mail_log_pkey primary key (org_id, period, kind, mark)';
+  execute 'alter table public.staff_private drop constraint if exists staff_private_auth_user_id_key';
+  execute 'alter table public.staff_private drop constraint if exists staff_private_org_user_key';
+  execute 'alter table public.staff_private add constraint staff_private_org_user_key unique (org_id, auth_user_id)';
+  execute 'alter table public.staff drop constraint if exists staff_org_id_key';
+  execute 'alter table public.staff add constraint staff_org_id_key unique (org_id, id)';
+  execute 'alter table public.tw_people drop constraint if exists tw_people_org_id_key';
+  execute 'alter table public.tw_people add constraint tw_people_org_id_key unique (org_id, id)';
+  execute 'alter table public.tw_assignment drop constraint if exists tw_assignment_org_id_key';
+  execute 'alter table public.tw_assignment add constraint tw_assignment_org_id_key unique (org_id, id)';
   foreach t in array array['staff', 'staff_private', 'tw_people', 'tw_period', 'tw_option', 'tw_submission', 'tw_assignment', 'tw_fixed',
                            'tw_settings', 'tw_other', 'tw_swap', 'tw_message', 'tw_build_log', 'tw_mail_log'] loop
     execute format('alter table public.%I add constraint %I foreign key (org_id) references public.org(id) on delete cascade', t, t || '_org_fk');
   end loop;
-end $$;
-alter table public.staff_private add constraint staff_private_staff_fk foreign key (org_id, staff_id) references public.staff(org_id, id) on delete cascade;
-alter table public.tw_people     add constraint tw_people_staff_fk foreign key (org_id, staff_id) references public.staff(org_id, id) on delete set null (staff_id);
-alter table public.tw_period     add constraint tw_period_builder_fk foreign key (org_id, builder) references public.tw_people(org_id, id) on delete set null (builder);
-alter table public.tw_option     add constraint tw_option_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade;
-alter table public.tw_option     add constraint tw_option_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade;
-alter table public.tw_submission add constraint tw_submission_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade;
-alter table public.tw_submission add constraint tw_submission_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade;
-alter table public.tw_assignment add constraint tw_assignment_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade;
-alter table public.tw_assignment add constraint tw_assignment_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade;
-alter table public.tw_fixed      add constraint tw_fixed_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade;
-alter table public.tw_other      add constraint tw_other_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade;
-alter table public.tw_other      add constraint tw_other_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade;
-alter table public.tw_swap       add constraint tw_swap_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade;
-alter table public.tw_swap       add constraint tw_swap_assignment_fk foreign key (org_id, assignment) references public.tw_assignment(org_id, id) on delete set null (assignment);
-alter table public.tw_swap       add constraint tw_swap_from_fk foreign key (org_id, from_person) references public.tw_people(org_id, id) on delete cascade;
-alter table public.tw_swap       add constraint tw_swap_taker_fk foreign key (org_id, taker) references public.tw_people(org_id, id) on delete set null (taker);
-alter table public.tw_build_log  add constraint tw_build_log_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade;
-alter table public.tw_mail_log   add constraint tw_mail_log_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade;
+  execute 'alter table public.staff_private add constraint staff_private_staff_fk foreign key (org_id, staff_id) references public.staff(org_id, id) on delete cascade';
+  execute 'alter table public.tw_people     add constraint tw_people_staff_fk foreign key (org_id, staff_id) references public.staff(org_id, id) on delete set null (staff_id)';
+  execute 'alter table public.tw_period     add constraint tw_period_builder_fk foreign key (org_id, builder) references public.tw_people(org_id, id) on delete set null (builder)';
+  execute 'alter table public.tw_option     add constraint tw_option_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade';
+  execute 'alter table public.tw_option     add constraint tw_option_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade';
+  execute 'alter table public.tw_submission add constraint tw_submission_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade';
+  execute 'alter table public.tw_submission add constraint tw_submission_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade';
+  execute 'alter table public.tw_assignment add constraint tw_assignment_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade';
+  execute 'alter table public.tw_assignment add constraint tw_assignment_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade';
+  execute 'alter table public.tw_fixed      add constraint tw_fixed_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade';
+  execute 'alter table public.tw_other      add constraint tw_other_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade';
+  execute 'alter table public.tw_other      add constraint tw_other_person_fk foreign key (org_id, person) references public.tw_people(org_id, id) on delete cascade';
+  execute 'alter table public.tw_swap       add constraint tw_swap_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade';
+  execute 'alter table public.tw_swap       add constraint tw_swap_assignment_fk foreign key (org_id, assignment) references public.tw_assignment(org_id, id) on delete set null (assignment)';
+  execute 'alter table public.tw_swap       add constraint tw_swap_from_fk foreign key (org_id, from_person) references public.tw_people(org_id, id) on delete cascade';
+  execute 'alter table public.tw_swap       add constraint tw_swap_taker_fk foreign key (org_id, taker) references public.tw_people(org_id, id) on delete set null (taker)';
+  execute 'alter table public.tw_build_log  add constraint tw_build_log_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade';
+  execute 'alter table public.tw_mail_log   add constraint tw_mail_log_period_fk foreign key (org_id, period) references public.tw_period(org_id, start) on delete cascade';
+end $v81keys$;
 
 -- 3. the organisation of this call ------------------------------------
 create or replace function public.current_org() returns uuid language plpgsql stable security definer set search_path = public as $$
