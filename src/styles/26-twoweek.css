@@ -187,3 +187,7 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw .tw-add label{ display:grid; gap:4px; font-weight:700; }
 #view-tw .tw-add input{ min-height:44px; padding:6px 10px; border-radius:10px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel2, var(--panel-2)); color:var(--p-text, var(--text)); font:inherit; width:100%; box-sizing:border-box; }
 #view-tw .tw-add .btn{ min-height:48px; }
+/* the day's name: whole, or a letter in the calendar view with big text on a phone */
+#view-tw .tw-dl, #view-tw .tw-ds{ font-style:normal; }
+#view-tw .tw-ds{ display:none; }
+@media (max-width:560px){ body.portal-big #view-tw .tw-cal .tw-dl{ display:none; } body.portal-big #view-tw .tw-cal .tw-ds{ display:inline; } }

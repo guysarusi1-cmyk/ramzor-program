@@ -180,8 +180,9 @@ function twMineHtml(){
     return `<button type="button" class="tw-pref" data-lv="${lv}" data-tw-pref="${twKey(day, s.shift)}"${span ? ' style="grid-column:span 2"' : ''}${can ? '' : ' disabled'} aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}, ${TW_SHIFT[s.shift]}: ${TW_LV_WORD[lv]}">
       <small>${TW_SHIFT[s.shift]}</small><b>${TW_LV_WORD[lv]}</b><small>${s.hours}</small></button>`;
   };
-  const dayBtn = (day, cls) => can ? `<button type="button" class="${cls} tw-day-btn" data-tw-day="${day}" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}: כל המשמרות של היום">${DOW_NAMES[dowOf(day)]} <span>${twShort(day)}</span></button>`
-    : `<div class="${cls}">${DOW_NAMES[dowOf(day)]} <span>${twShort(day)}</span></div>`;
+  const dayWord = day => `<i class="tw-dl">${DOW_NAMES[dowOf(day)]}</i><i class="tw-ds" aria-hidden="true">${'אבגדהוש'[dowOf(day)]}׳</i>`;          // (the short name: the calendar view with big text on a phone)
+  const dayBtn = (day, cls) => can ? `<button type="button" class="${cls} tw-day-btn" data-tw-day="${day}" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}: כל המשמרות של היום">${dayWord(day)} <span>${twShort(day)}</span></button>`
+    : `<div class="${cls}" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}">${dayWord(day)} <span>${twShort(day)}</span></div>`;
   // the calendar view: the two weeks one under the other, the days side by side (Sunday on the right), a row per kind of shift
   const mini = (day, s, rows) => {
     const st = rows ? ` style="grid-row:span ${rows}"` : '';

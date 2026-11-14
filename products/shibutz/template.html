@@ -6,6 +6,11 @@
 <title>@config(orgName)</title>
 <meta name="theme-color" content="#1C1A17">
 <meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{{CSS}}</style>
@@ -33,6 +38,13 @@
   .sb-org{ font-size:13px; letter-spacing:.04em; opacity:.75; margin:6px 0 0; }
   .sb-login .sb-or{ margin:18px 0 0; text-align:center; opacity:.75; }
   .sb-login .sb-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .sb-set{ display:grid; gap:14px; }
+  .sb-set .sb-set-row{ display:grid; gap:6px; }
+  .sb-set .sb-set-row > b{ font-size:15px; }
+  .sb-set .mx-seg{ display:grid; grid-auto-flow:column; gap:6px; }
+  .sb-set .mx-seg button{ min-height:48px; border-radius:10px; border:1px solid var(--color-border, #777); background:transparent; color:inherit; font:inherit; font-weight:700; cursor:pointer; }
+  .sb-set .mx-seg button[aria-pressed=true]{ background:var(--gold); border-color:var(--gold); color:#1C1A17; }
+  .sb-set .sb-help{ font-size:14px; opacity:.8; line-height:1.6; }
   .sb-login #sb-code{ direction:ltr; text-align:center; font-size:22px; letter-spacing:.2em; }
 </style>
 </head>

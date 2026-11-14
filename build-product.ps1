@@ -33,4 +33,12 @@ $html = [regex]::Replace($html, '@asset\(([^)]+)\)', 'data:,')
 if(-not $Out){ $Out = Join-Path $root "dist\product-$Product-$Org\index.html" }
 New-Item -ItemType Directory -Force (Split-Path $Out -Parent) | Out-Null
 [System.IO.File]::WriteAllText($Out, $html, $utf8)
+# the files next to the page: the icons and the service worker (products\<product>\static), and the app's manifest with the organisation's name
+$outDir = Split-Path $Out -Parent
+$static = Join-Path $dir 'static'
+if(Test-Path $static){ Get-ChildItem $static -File | ForEach-Object { Copy-Item $_.FullName (Join-Path $outDir $_.Name) -Force } }
+$manifest = [ordered]@{ name = [string]$cfg.orgName; short_name = [string]$cfg.orgName; lang = 'he'; dir = 'rtl'; start_url = './'; scope = './'; display = 'standalone';
+  background_color = '#1C1A17'; theme_color = '#1C1A17';
+  icons = @(@{ src = 'icon-192.png'; sizes = '192x192'; type = 'image/png' }, @{ src = 'icon-512.png'; sizes = '512x512'; type = 'image/png' }, @{ src = 'icon-maskable-512.png'; sizes = '512x512'; type = 'image/png'; purpose = 'maskable' }) }
+[System.IO.File]::WriteAllText((Join-Path $outDir 'manifest.webmanifest'), ($manifest | ConvertTo-Json -Depth 4), $utf8)
 Write-Output "built product [$Product] for [$Org] -> $Out ($($html.Length) chars)"

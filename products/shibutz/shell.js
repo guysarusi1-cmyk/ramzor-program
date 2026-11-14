@@ -31,15 +31,49 @@ function sbDecorate(){
   if(act && !act.querySelector('#sb-out')){
     act.classList.add('sb-bar');
     act.innerHTML = `<span class="sb-who">${pEsc((srv.profile && srv.profile.name) || '')}</span>
-      <button type="button" class="btn ghost small" id="sb-theme">${sbTheme() === 'light' ? 'מראה כהה' : 'מראה בהיר'}</button>
+      <button type="button" class="btn ghost small" id="sb-theme">הגדרות</button>
       <button type="button" class="btn ghost small" id="sb-out">יציאה</button>`;
-    act.querySelector('#sb-theme').addEventListener('click', () => { try { localStorage.setItem('mercury-shibutz-theme', sbTheme() === 'light' ? 'dark' : 'light'); } catch(e){} sbOpen(); });
+    act.querySelector('#sb-theme').addEventListener('click', sbSettings);
     act.querySelector('#sb-out').addEventListener('click', async () => { try { await sbPersonal.auth.signOut(); } catch(e){} srv.me = null; srv.profile = null; portalServerOn = false; sbShowLogin(); });
   }
   const title = shell.querySelector('.portal-title');
   if(title && !shell.querySelector('.sb-org')) title.insertAdjacentHTML('beforebegin', `<p class="sb-org">${pEsc((srv.profile && srv.profile.org && srv.profile.org.name) || ORG_NAME)}</p>`);
 }
-function sbOpen(){ const p = showTwoWeek(); sbDecorate(); return p; }
+function sbOpen(){ sbApplyLook(); const p = showTwoWeek(); sbDecorate(); return p; }
+
+// ---- the settings of this device: the look, big text, high contrast, installing as an app (Guy 2026-11-14)
+const sbGet = (k, d) => { try { const v = localStorage.getItem('mercury-shibutz-' + k); return v === null ? d : v; } catch(e){ return d; } };
+const sbSet = (k, v) => { try { localStorage.setItem('mercury-shibutz-' + k, v); } catch(e){} };
+function sbApplyLook(){
+  document.body.classList.toggle('portal-big', sbGet('big', '') === '1');
+  if(sbGet('contrast', '') === 'high') document.documentElement.dataset.contrast = 'high'; else delete document.documentElement.dataset.contrast;
+}
+let sbInstallEvent = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); sbInstallEvent = e; });
+const sbInstalled = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const sbIsIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function sbSettings(){
+  const wrap = document.createElement('div'); wrap.className = 'sheet confirm-sheet mx-sheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.dataset.ptheme = sbTheme();
+  const seg = (k, opts, cur) => `<div class="mx-seg" role="group">${opts.map(([v, w]) => `<button type="button" data-k="${k}" data-v="${v}" aria-pressed="${cur === v}">${w}</button>`).join('')}</div>`;
+  const install = sbInstalled() ? '<div class="sb-help">האתר כבר מותקן במכשיר הזה כאפליקציה.</div>'
+    : sbInstallEvent ? '<button type="button" class="btn" id="sb-install">התקנה כאפליקציה</button><div class="sb-help">יופיע סמל על מסך הבית, והאתר ייפתח כמו אפליקציה.</div>'
+    : sbIsIos() ? '<div class="sb-help">באייפון: בספארי לוחצים על כפתור השיתוף (ריבוע עם חץ למעלה), ואז "הוספה למסך הבית".</div>'
+    : '<div class="sb-help">בכרום: בתפריט (שלוש הנקודות למעלה) בוחרים "התקנת אפליקציה" או "הוספה למסך הבית".</div>';
+  wrap.innerHTML = `<div class="sheet-card tw-sheet"><h2>הגדרות</h2><div class="sb-set">
+    <div class="sb-set-row"><b>מראה</b>${seg('theme', [['dark', 'כהה'], ['light', 'בהיר']], sbTheme())}</div>
+    <div class="sb-set-row"><b>גודל הטקסט</b>${seg('big', [['', 'רגיל'], ['1', 'גדול']], sbGet('big', ''))}</div>
+    <div class="sb-set-row"><b>ניגודיות</b>${seg('contrast', [['', 'רגילה'], ['high', 'גבוהה']], sbGet('contrast', ''))}</div>
+    <div class="sb-set-row"><b>אפליקציה</b>${install}</div></div>
+    <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div></div>`;
+  wrap.addEventListener('click', async e => {
+    if(e.target === wrap || e.target.closest('[data-close]')){ wrap.remove(); return; }
+    const b = e.target.closest('[data-k]');
+    if(b){ sbSet(b.dataset.k, b.dataset.v); wrap.remove(); await sbOpen(); sbSettings(); return; }
+    if(e.target.closest('#sb-install') && sbInstallEvent){ sbInstallEvent.prompt(); try { await sbInstallEvent.userChoice; } catch(err){} sbInstallEvent = null; wrap.remove(); }
+  });
+  document.body.appendChild(wrap);
+}
+if('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 
 // the sign-in: e-mail and password; the first time (or a forgotten password) a code by e-mail, then a password of one's own
 function sbShowLogin(msg, step, email, again){
@@ -123,6 +157,7 @@ async function sbEnter(){
   return true;
 }
 async function sbStart(){
+  sbApplyLook();
   let session = null;
   try { const r = await sbPersonal.auth.getSession(); session = r.data && r.data.session; } catch(e){}
   if(session){ if(await sbEnter()) return; } else sbShowLogin();
