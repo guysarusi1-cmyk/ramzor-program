@@ -5,6 +5,7 @@
 // calling, and a few small helpers that the big site has elsewhere. Nothing of the Ramzor or of the therapy portal is in this site.
 const ORG_NAME = '@config(orgName)';
 const DEMO_TOOLS = '@config(demoTools)' === 'True';          // (the "sample options" button: a demo database only)
+const SB_VERSION = '1.0';          // (the product's version, under the logo: raise it with every release of this site)
 const ORG_SLUG = '@config(orgSlug)';          // (one database, many organisations: every call says which one; the database checks the caller works there)
 const sbPersonal = supabase.createClient('@config(supabaseUrl)', '@config(anonKey)', { auth:{ storageKey:'mercury-shibutz-auth', persistSession:true, autoRefreshToken:true }, global:{ headers:{ 'x-org':ORG_SLUG } } });
 const srv = { me:null, profile:null, meRow:null, portalTheme:null };
@@ -39,6 +40,26 @@ function sbDecorate(){
   }
   const title = shell.querySelector('.portal-title');
   if(title && !shell.querySelector('.sb-org')) title.insertAdjacentHTML('beforebegin', `<p class="sb-org">${pEsc((srv.profile && srv.profile.org && srv.profile.org.name) || ORG_NAME)}</p>`);
+  if(!shell.querySelector('.mx-brand-wrap')) shell.insertAdjacentHTML('afterbegin', sbBrandHtml(true));
+  if(!shell.querySelector('#sb-install-link')) shell.insertAdjacentHTML('beforeend', sbInstallLinkHtml());
+}
+// the logo of Mercury with the version under it (as in the big site), and "install as an app" at the bottom (phones, before it is installed)
+function sbBrandHtml(small){ return `<div class="mx-brand-wrap${small ? ' mx-brand-small' : ''}"><div class="mx-brand-logo" role="img" aria-label="Mercury"></div><div class="eyebrow-gold mx-brand" dir="ltr">Mercury ${SB_VERSION}</div></div>`; }
+const sbInstallWanted = () => !sbInstalled() && (/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 700);
+function sbInstallLinkHtml(){ return sbInstallWanted() ? '<button type="button" class="home-link install-link" id="sb-install-link">📲 התקנה כאפליקציה על מסך הבית</button>' : ''; }
+document.addEventListener('click', e => { if(e.target.closest('#sb-install-link')) sbInstallSheet(); });
+window.addEventListener('appinstalled', () => { sbInstallEvent = null; document.querySelectorAll('#sb-install-link').forEach(b => b.remove()); });
+function sbInstallSheet(){
+  const wrap = document.createElement('div'); wrap.className = 'sheet confirm-sheet mx-sheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.dataset.ptheme = sbTheme();
+  const body = sbInstallEvent ? '<p>אפשר להתקין את הסידור על מסך הבית, והוא ייפתח כמו אפליקציה רגילה.</p><button type="button" class="btn" id="sb-install-now" style="width:100%">התקנה עכשיו</button>'
+    : sbIsIos() ? '<p>באייפון ההתקנה נעשית דרך ספארי (לא דרך דפדפן אחר):</p><ol><li>לוחצים על כפתור השיתוף בתחתית המסך (ריבוע עם חץ כלפי מעלה).</li><li>גוללים ובוחרים <b>"הוספה למסך הבית"</b>.</li><li>לוחצים <b>"הוספה"</b>. הסמל יופיע על מסך הבית.</li></ol>'
+    : '<p>באנדרואיד, בדפדפן כרום:</p><ol><li>לוחצים על שלוש הנקודות בפינה העליונה.</li><li>בוחרים <b>"התקנת אפליקציה"</b> (או "הוספה למסך הבית").</li><li>מאשרים. הסמל יופיע על מסך הבית.</li></ol>';
+  wrap.innerHTML = `<div class="sheet-card tw-sheet"><h2>התקנה כאפליקציה</h2>${body}<div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div></div>`;
+  wrap.addEventListener('click', async e => {
+    if(e.target === wrap || e.target.closest('[data-close]')){ wrap.remove(); return; }
+    if(e.target.closest('#sb-install-now') && sbInstallEvent){ sbInstallEvent.prompt(); try { await sbInstallEvent.userChoice; } catch(err){} sbInstallEvent = null; wrap.remove(); }
+  });
+  document.body.appendChild(wrap);
 }
 function sbOpen(){ sbApplyLook(); const p = showTwoWeek(); sbDecorate(); return p; }
 
@@ -90,13 +111,13 @@ function sbShowLogin(msg, step, email, again){
     <label>סיסמה (לפחות 8 תווים)<input type="password" id="sb-new" autocomplete="new-password"></label>
     <label>שוב, לאימות<input type="password" id="sb-new2" autocomplete="new-password"></label>
     <button type="submit" class="btn" id="sb-go">שמירה וכניסה</button>${again ? '<button type="button" class="btn ghost" id="sb-skip">לא עכשיו</button>' : ''}`;
-  else inner = `<h1>${pEsc(ORG_NAME)}</h1><p class="sb-sub">כניסה אישית</p>
+  else inner = `<div class="sb-login-brand">${sbBrandHtml(false)}</div><h1>${pEsc(ORG_NAME)}</h1><p class="sb-sub">כניסה אישית</p>
     <label>כתובת המייל<input type="email" id="sb-mail" autocomplete="username" inputmode="email" value="${pEsc(email || '')}"></label>
     <label>סיסמה<input type="password" id="sb-pass" autocomplete="current-password"></label>
     <button type="submit" class="btn" id="sb-go">כניסה</button>
     <p class="sb-or">כניסה ראשונה, או ששכחתם את הסיסמה?</p>
     <button type="button" class="btn ghost" id="sb-send">שלחו לי קוד למייל</button>
-    <button type="button" class="sb-lang" id="sb-lang" lang="${sbGet('lang', 'he') === 'ar' ? 'he' : 'ar'}">${sbGet('lang', 'he') === 'ar' ? 'עברית' : 'العربية'}</button>`;
+    ${sbInstallLinkHtml()}<button type="button" class="sb-lang" id="sb-lang" lang="${sbGet('lang', 'he') === 'ar' ? 'he' : 'ar'}">${sbGet('lang', 'he') === 'ar' ? 'עברית' : 'العربية'}</button>`;
   document.getElementById('view-login').innerHTML = `<div class="portal-shell" data-ptheme="${sbTheme()}"><form class="sb-login" id="sb-form" novalidate>${inner}
     <div class="sb-err" id="sb-err" role="alert">${pEsc(msg || '')}</div></form></div>`;
   const $ = id => document.getElementById(id), err = m => { $('sb-err').textContent = m || ''; };
