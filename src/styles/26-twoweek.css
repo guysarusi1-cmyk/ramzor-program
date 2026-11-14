@@ -191,3 +191,5 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw .tw-dl, #view-tw .tw-ds{ font-style:normal; }
 #view-tw .tw-ds{ display:none; }
 @media (max-width:560px){ body.portal-big #view-tw .tw-cal .tw-dl{ display:none; } body.portal-big #view-tw .tw-cal .tw-ds{ display:inline; } }
+.tw-sheet .tw-chk{ margin:8px 0; padding-inline-start:20px; line-height:1.7; max-height:46vh; overflow:auto; }
+#view-tw .tw-privacy, .tw-sheet .tw-privacy{ margin-top:4px; font-size:13px; }

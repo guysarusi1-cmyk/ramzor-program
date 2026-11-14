@@ -2,13 +2,14 @@
 // Runs every hour (supabase/core/mail-v1.sql) and right after a schedule is published (the site calls it). Each time it sends only what is due:
 //   1. a reminder, about a day before the hand-in closes, to every person on the list who signs in and has not handed in yet;
 //   2. "the schedule is published", once per publishing, to every person on the list who signs in, with her own shifts.
-// What was sent is written in tw_mail_log, so calling it again sends nothing twice. So anybody may call it (no JWT check): it never
-// sends more than what is due. The body {"dry":true} only says what it would send.
-// Needs the secret RESEND_API_KEY (Edge Functions -> Secrets). Deploy: Edge Functions -> Deploy a new function -> name: tw-mail ->
-// paste this file -> turn OFF "Verify JWT".
+// What was sent is written in tw_mail_log, so calling it again sends nothing twice.
+// Only the database calls it (core/mail-v2.sql: the hourly job and tw_publish), with the shared secret in the header x-tw-secret;
+// a call without it gets 401 and nothing else (Yigal 2026-11-14). The answer says only "ok": no names, no counts.
+// Needs two secrets (Edge Functions, Secrets): RESEND_API_KEY and TW_MAIL_SECRET (the same value as tw_mail_secret in the Vault).
+// Deploy: Edge Functions, the function tw-mail, Code: paste this file, Deploy. "Verify JWT" stays OFF (the secret replaces it).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tw-secret' };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const DOW = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const SHIFT: Record<string, string> = { M: 'בוקר', A: 'צהריים', N: 'לילה', W: 'סוף שבוע' };
@@ -22,10 +23,11 @@ const page = (title: string, inner: string, site: string) => `<div dir="rtl" sty
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  const secret = Deno.env.get('TW_MAIL_SECRET') ?? '';
+  if (!secret || req.headers.get('x-tw-secret') !== secret) return new Response(null, { status: 401 });          // (no secret set: nothing gets in)
   try {
     const url = Deno.env.get('SUPABASE_URL')!, service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, resend = Deno.env.get('RESEND_API_KEY') ?? '';
-    const body = await req.json().catch(() => ({}));
-    const dry = !!body?.dry;
+    const dry = false;
     const db = createClient(url, service, { auth: { persistSession: false } });
     const [org, sets, people, priv] = await Promise.all([
       db.from('org_profile').select('name').limit(1).maybeSingle(),
@@ -81,8 +83,10 @@ Deno.serve(async (req) => {
       }
       await log(p.start, 'published', p.published_at, n);
     }
-    return reply({ ok: true, dry, sent, errors });
+    if (errors.length) console.error('tw-mail', JSON.stringify(errors));          // (the details stay in the function's own log)
+    return reply({ ok: true });
   } catch (e) {
-    return reply({ error: String(e) }, 500);
+    console.error('tw-mail', String(e));
+    return reply({ ok: false }, 500);
   }
 });

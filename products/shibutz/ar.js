@@ -8,6 +8,7 @@ const SB_AR_SHIFT = { 'בוקר':'صباحية', 'צהריים':'مسائية', 
 const SB_AR_SWAP = { 'מחפשים מי שיחליף':'نبحث عن بديل', 'ממתין לאישור של מי שבנה את הסידור':'بانتظار موافقة من أعدّ الجدول', 'אושר':'تمت الموافقة', 'לא אושר':'لم تتم الموافقة', 'בוטל':'أُلغي' };
 const SB_AR = Object.assign({}, SB_AR_DAYS, SB_AR_SHIFT, SB_AR_SWAP, {
   'א׳':'ح', 'ב׳':'ن', 'ג׳':'ث', 'ד׳':'ر', 'ה׳':'خ', 'ו׳':'ج', 'ש׳':'س',
+  'יחד עם:':'مع:', 'פנויים באותו זמן לפי הסידור:':'المتاحون في هذا الوقت حسب الجدول:',
   'כן':'نعم', 'יכולה':'ممكن', 'לא':'لا', 'קבועה':'ثابتة',
   'סידור דו-שבועי':'جدول الأسبوعين', 'הגדרות':'الإعدادات', 'יציאה':'خروج',
   'הסידור':'الجدول', 'העדפות':'التفضيلات', 'החלפות':'التبديلات', 'הודעות':'الرسائل', 'השבועיים:':'الأسبوعان:',
@@ -63,6 +64,8 @@ const SB_AR = Object.assign({}, SB_AR_DAYS, SB_AR_SHIFT, SB_AR_SWAP, {
 const sbArDay = s => s.replace(/(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/g, d => SB_AR_DAYS[d]);
 const sbArShift = s => s.replace(/(סוף שבוע|בוקר|צהריים|לילה)/g, d => SB_AR_SHIFT[d]);
 const SB_AR_RX = [
+  [/^· (מחפשים מי שיחליף|ממתין לאישור של מי שבנה את הסידור|אושר|לא אושר|בוטל)$/, m => `· ${SB_AR_SWAP[m[1]]}`],
+  [/^בקשת החלפה: (מחפשים מי שיחליף|ממתין לאישור של מי שבנה את הסידור|אושר|לא אושר|בוטל)( \()?$/, m => `طلب تبديل: ${SB_AR_SWAP[m[1]]}${m[2] || ''}`],
   [/^(\d+) מתוך (\d+)$/, m => `${m[1]} من ${m[2]}`],
   [/^שבוע (\d) מתוך 2$/, m => `الأسبوع ${m[1]} من 2`],
   [/^משמרות שנפתחו בשבועיים · חסרות (\d+)$/, m => `ورديات مفتوحة في الأسبوعين · ينقص ${m[1]}`],
@@ -93,7 +96,7 @@ function sbArText(t){
 function sbArRoot(root){
   if(!SB_AR_ON || !root) return;
   const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
-  let n; while((n = walk.nextNode())) if(/[֐-׿]/.test(n.nodeValue)) list.push(n);
+  let n; while((n = walk.nextNode())) if(/[֐-׿]/.test(n.nodeValue) && !(n.parentElement && n.parentElement.closest('[data-u], textarea, input'))) list.push(n);          // (never what people wrote: names, notes, messages)
   list.forEach(node => { const v = sbArText(node.nodeValue); if(v !== null){ const lead = node.nodeValue.match(/^\s*/)[0], tail = node.nodeValue.match(/\s*$/)[0]; node.nodeValue = lead + v + tail; } });
   if(root.querySelectorAll) [root, ...root.querySelectorAll('[aria-label]')].forEach(el => { const a = el.getAttribute && el.getAttribute('aria-label'); if(a && /[֐-׿]/.test(a)){ const v = sbArText(a) || sbArShift(sbArDay(a)).replace(/: כן$/, ': نعم').replace(/: יכולה$/, ': ممكن').replace(/: לא$/, ': لا'); if(v !== a) el.setAttribute('aria-label', v); } });
 }
