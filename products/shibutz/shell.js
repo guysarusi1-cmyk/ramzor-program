@@ -41,25 +41,70 @@ function sbDecorate(){
 }
 function sbOpen(){ const p = showTwoWeek(); sbDecorate(); return p; }
 
-function sbShowLogin(msg){
+// the sign-in: e-mail and password; the first time (or a forgotten password) a code by e-mail, then a password of one's own
+function sbShowLogin(msg, step, email, again){
+  step = step || 'email';
   portalActivateView('view-login');
-  document.getElementById('view-login').innerHTML = `<div class="portal-shell" data-ptheme="${sbTheme()}"><form class="sb-login" id="sb-form" novalidate>
-    <h1>${pEsc(ORG_NAME)}</h1><p class="sb-sub">כניסה אישית</p>
-    <label>כתובת המייל<input type="email" id="sb-mail" autocomplete="username" inputmode="email" required></label>
-    <label>סיסמה<input type="password" id="sb-pass" autocomplete="current-password" required></label>
+  let inner;
+  if(step === 'code') inner = `<h1>הקלידו את הקוד</h1><p class="sb-sub">שלחנו קוד אל <span dir="ltr">${pEsc(email)}</span>. הוא מגיע תוך דקה (כדאי לבדוק גם בספאם).</p>
+    <label>קוד<input type="text" id="sb-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10"></label>
     <button type="submit" class="btn" id="sb-go">כניסה</button>
+    <div class="sb-row"><button type="button" class="btn ghost" id="sb-resend">שליחת קוד חדש</button><button type="button" class="btn ghost" id="sb-back">חזרה</button></div>`;
+  else if(step === 'setpw') inner = `<h1>${again ? 'סיסמה חדשה?' : 'בחירת סיסמה אישית'}</h1><p class="sb-sub">${again ? 'נכנסתם עם קוד. אפשר לבחור עכשיו סיסמה חדשה.' : 'מהפעם הבאה נכנסים עם המייל והסיסמה הזו. אם שוכחים אותה, אפשר תמיד לקבל קוד למייל.'}</p>
+    <label>סיסמה (לפחות 8 תווים)<input type="password" id="sb-new" autocomplete="new-password"></label>
+    <label>שוב, לאימות<input type="password" id="sb-new2" autocomplete="new-password"></label>
+    <button type="submit" class="btn" id="sb-go">שמירה וכניסה</button>${again ? '<button type="button" class="btn ghost" id="sb-skip">לא עכשיו</button>' : ''}`;
+  else inner = `<h1>${pEsc(ORG_NAME)}</h1><p class="sb-sub">כניסה אישית</p>
+    <label>כתובת המייל<input type="email" id="sb-mail" autocomplete="username" inputmode="email" value="${pEsc(email || '')}"></label>
+    <label>סיסמה<input type="password" id="sb-pass" autocomplete="current-password"></label>
+    <button type="submit" class="btn" id="sb-go">כניסה</button>
+    <p class="sb-or">כניסה ראשונה, או ששכחתם את הסיסמה?</p>
+    <button type="button" class="btn ghost" id="sb-send">שלחו לי קוד למייל</button>`;
+  document.getElementById('view-login').innerHTML = `<div class="portal-shell" data-ptheme="${sbTheme()}"><form class="sb-login" id="sb-form" novalidate>${inner}
     <div class="sb-err" id="sb-err" role="alert">${pEsc(msg || '')}</div></form></div>`;
-  const form = document.getElementById('sb-form'), err = document.getElementById('sb-err'), go = document.getElementById('sb-go');
-  form.addEventListener('submit', async ev => {
-    ev.preventDefault();
-    const mail = document.getElementById('sb-mail').value.trim(), pass = document.getElementById('sb-pass').value;
-    if(!mail || !pass){ err.textContent = 'צריך מייל וסיסמה'; return; }
-    go.disabled = true; err.textContent = '';
-    let r; try { r = await sbPersonal.auth.signInWithPassword({ email:mail, password:pass }); } catch(e){ r = { error:e }; }
-    if(r.error){ go.disabled = false; err.textContent = /invalid login/i.test(r.error.message || '') ? 'המייל או הסיסמה לא נכונים' : 'הכניסה לא הצליחה. בדקו חיבור ונסו שוב'; return; }
-    if(!(await sbEnter())) go.disabled = false;
+  const $ = id => document.getElementById(id), err = m => { $('sb-err').textContent = m || ''; };
+  const guard = async (btn, work) => { btn.disabled = true; err(''); try { await work(); } catch(e){ console.error(e); err('משהו קטן השתבש. אפשר לנסות שוב בעוד רגע.'); } btn.disabled = false; };
+  const sendCode = async mail => {
+    const { error } = await sbPersonal.auth.signInWithOtp({ email:mail, options:{ shouldCreateUser:false } });
+    if(error){ err(/rate|seconds|limit/i.test(error.message || '') ? 'שלחנו קוד ממש עכשיו. אפשר לבקש קוד חדש בעוד דקה.' : 'לא הצלחנו לשלוח קוד לכתובת הזו. כדאי לבדוק שהיא נכונה, ואם זה ממשיך, מנהל/ת המערכת ישמחו לעזור.'); return false; }
+    return true;
+  };
+  $('sb-form').addEventListener('submit', ev => { ev.preventDefault(); const go = $('sb-go');
+    if(step === 'code') return guard(go, async () => {
+      const { error } = await sbPersonal.auth.verifyOtp({ email, token:$('sb-code').value.trim(), type:'email' });
+      if(error){ err('הקוד לא התאים, או שהוא כבר לא בתוקף. אפשר לבקש קוד חדש.'); return; }
+      const { data:{ user } } = await sbPersonal.auth.getUser();
+      sbShowLogin('', 'setpw', email, !!(user && user.user_metadata && user.user_metadata.has_password));
+    });
+    if(step === 'setpw') return guard(go, async () => {
+      const a = $('sb-new').value, b = $('sb-new2').value;
+      if(a.length < 8){ err('הסיסמה צריכה להיות באורך 8 תווים לפחות.'); return; }
+      if(a !== b){ err('שתי הסיסמאות לא זהות. אפשר להקליד שוב.'); return; }
+      const { error } = await sbPersonal.auth.updateUser({ password:a, data:{ has_password:true } });
+      if(error){ err('לא הצלחנו לשמור את הסיסמה. אפשר לנסות שוב.'); return; }
+      toast('הסיסמה נשמרה. מהפעם הבאה נכנסים איתה.'); await sbEnter();
+    });
+    return guard(go, async () => {
+      const mail = $('sb-mail').value.trim().toLowerCase(), pass = $('sb-pass').value;
+      if(!mail || !pass){ err('צריך מייל וסיסמה. בכניסה הראשונה, או אם שכחתם את הסיסמה, אפשר לקבל קוד למייל.'); return; }
+      let r; try { r = await sbPersonal.auth.signInWithPassword({ email:mail, password:pass }); } catch(e){ r = { error:e }; }
+      if(r.error){ err(/invalid login/i.test(r.error.message || '') ? 'המייל או הסיסמה לא נכונים. אם שכחתם את הסיסמה, אפשר לקבל קוד למייל.' : 'הכניסה לא הצליחה. בדקו חיבור ונסו שוב'); return; }
+      await sbEnter();
+    });
   });
-  setTimeout(() => { const m = document.getElementById('sb-mail'); if(m) m.focus(); }, 50);
+  if(step === 'code'){
+    $('sb-resend').addEventListener('click', ev => guard(ev.target, async () => { if(await sendCode(email)) toast('נשלח קוד חדש'); }));
+    $('sb-back').addEventListener('click', () => sbShowLogin('', 'email', email));
+  } else if(step === 'setpw'){
+    if($('sb-skip')) $('sb-skip').addEventListener('click', ev => guard(ev.target, sbEnter));
+  } else {
+    $('sb-send').addEventListener('click', ev => guard(ev.target, async () => {
+      const mail = $('sb-mail').value.trim().toLowerCase();
+      if(!mail){ err('הקלידו את כתובת המייל.'); return; }
+      if(await sendCode(mail)) sbShowLogin('', 'code', mail);
+    }));
+  }
+  setTimeout(() => { const f = $('sb-code') || $('sb-new') || $('sb-mail'); if(f) f.focus(); }, 50);
 }
 // after a sign-in: who is this? Somebody without an active row in the people list does not get in.
 async function sbEnter(){
