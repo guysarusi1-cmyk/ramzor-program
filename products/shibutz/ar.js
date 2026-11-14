@@ -9,7 +9,7 @@ const SB_AR_SWAP = { 'מחפשים מי שיחליף':'نبحث عن بديل', 
 const SB_AR = Object.assign({}, SB_AR_DAYS, SB_AR_SHIFT, SB_AR_SWAP, {
   'א׳':'ح', 'ב׳':'ن', 'ג׳':'ث', 'ד׳':'ر', 'ה׳':'خ', 'ו׳':'ج', 'ש׳':'س',
   'יחד עם:':'مع:', 'פנויים באותו זמן לפי הסידור:':'المتاحون في هذا الوقت حسب الجدول:',
-  'כן':'نعم', 'יכולה':'ممكن', 'לא':'لا', 'קבועה':'ثابتة',
+  'כן':'نعم', 'אפשרי':'ممكن', 'לא':'لا', 'קבועה':'ثابتة',
   'סידור דו-שבועי':'جدول الأسبوعين', 'הגדרות':'الإعدادات', 'יציאה':'خروج',
   'הסידור':'الجدول', 'העדפות':'التفضيلات', 'החלפות':'التبديلات', 'הודעות':'الرسائل', 'השבועיים:':'الأسبوعان:',
   'הסידור של השבועיים האלה עדיין לא פורסם.':'لم يُنشر جدول هذين الأسبوعين بعد.',
@@ -82,7 +82,7 @@ const SB_AR_RX = [
   [/^בקשת החלפה: ([^(]+?)( \(.+\))?$/, m => `طلب تبديل: ${SB_AR_SWAP[m[1]] || m[1]}${m[2] || ''}`],
   [/^פנויים באותו זמן לפי הסידור: (.+)\.$/, m => `المتاحون في هذا الوقت حسب الجدول: ${m[1]}.`],
   [/^(.+?)( ← .+?)? · (מחפשים מי שיחליף|ממתין לאישור של מי שבנה את הסידור|אושר|לא אושר|בוטל)$/, m => `${m[1]}${m[2] || ''} · ${SB_AR_SWAP[m[3]]}`],
-  [/^נפתחו (\d+) מתוך (\d+) משמרות בשבועיים(.*)\.$/, m => `فُتحت ${m[1]} من ${m[2]} ورديات في الأسبوعين${m[3].replace(/ \(מהן (\d+) "יכולה"\)/, ' (منها $1 "ممكن")').replace(/, כולל יום אחד של שעות אחרות/, '، منها يوم واحد بساعات أخرى').replace(/, כולל (\d+) ימים של שעות אחרות/, '، منها $1 أيام بساعات أخرى')}.`],
+  [/^נפתחו (\d+) מתוך (\d+) משמרות בשבועיים(.*)\.$/, m => `فُتحت ${m[1]} من ${m[2]} ورديات في الأسبوعين${m[3].replace(/ \(מהן (\d+) "אפשרי"\)/, ' (منها $1 "ممكن")').replace(/, כולל יום אחד של שעות אחרות/, '، منها يوم واحد بساعات أخرى').replace(/, כולל (\d+) ימים של שעות אחרות/, '، منها $1 أيام بساعات أخرى')}.`],
   [/^(חסרה משמרת אחת|חסרות (\d+) משמרות) למינימום של השבועיים\. אפשר להגיש בכל זאת, ומי שבונה את הסידור יראה שחסר\.$/, m => `${m[2] ? `ينقص ${m[2]} ورديات` : 'تنقص وردية واحدة'} للحد الأدنى في الأسبوعين. يمكن التقديم مع ذلك، ومن يُعدّ الجدول سيرى النقص.`],
   [/^שלחנו קוד אל$/, () => 'أرسلنا رمزًا إلى'],
   [/^\. הוא מגיע תוך דקה \(כדאי לבדוק גם בספאם\)\.$/, () => '. يصل خلال دقيقة (يُستحسن فحص البريد المزعج أيضًا).'],
@@ -98,7 +98,7 @@ function sbArRoot(root){
   const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
   let n; while((n = walk.nextNode())) if(/[֐-׿]/.test(n.nodeValue) && !(n.parentElement && n.parentElement.closest('[data-u], textarea, input'))) list.push(n);          // (never what people wrote: names, notes, messages)
   list.forEach(node => { const v = sbArText(node.nodeValue); if(v !== null){ const lead = node.nodeValue.match(/^\s*/)[0], tail = node.nodeValue.match(/\s*$/)[0]; node.nodeValue = lead + v + tail; } });
-  if(root.querySelectorAll) [root, ...root.querySelectorAll('[aria-label]')].forEach(el => { const a = el.getAttribute && el.getAttribute('aria-label'); if(a && /[֐-׿]/.test(a)){ const v = sbArText(a) || sbArShift(sbArDay(a)).replace(/: כן$/, ': نعم').replace(/: יכולה$/, ': ممكن').replace(/: לא$/, ': لا'); if(v !== a) el.setAttribute('aria-label', v); } });
+  if(root.querySelectorAll) [root, ...root.querySelectorAll('[aria-label]')].forEach(el => { const a = el.getAttribute && el.getAttribute('aria-label'); if(a && /[֐-׿]/.test(a)){ const v = sbArText(a) || sbArShift(sbArDay(a)).replace(/: כן$/, ': نعم').replace(/: אפשרי$/, ': ممكن').replace(/: לא$/, ': لا'); if(v !== a) el.setAttribute('aria-label', v); } });
 }
 if(SB_AR_ON){
   document.documentElement.lang = 'ar';
