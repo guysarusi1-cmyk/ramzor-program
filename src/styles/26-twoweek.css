@@ -135,3 +135,23 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw .tw-pref.mini.fixed b{ font-size:11px; }
 @media (min-width:700px){ #view-tw .tw-cal{ gap:8px; padding:12px; } #view-tw .tw-cal-day{ font-size:15px; } #view-tw .tw-pref.mini b{ font-size:17px; } #view-tw .tw-cal-kind{ font-size:14px; } }
 @media (max-width:899px){ #view-tw .tw-bar .btn{ font-size:14px; padding-inline:4px; } }
+
+/* ---- the instructor portal: my shifts, swaps, messages ---- */
+#view-tw .tw-shift{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 12px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); color:var(--p-text, var(--text)); }
+#view-tw .tw-shift > div{ display:grid; gap:2px; min-width:0; flex:1 1 200px; }
+#view-tw .tw-shift small{ color:var(--p-muted, var(--muted)); font-size:14px; }
+#view-tw .tw-shift .tw-swap-state{ color:var(--p-text, var(--text)); font-weight:700; }
+#view-tw .tw-shift.past{ opacity:.55; }
+#view-tw .tw-shift .btn{ min-height:44px; }
+#view-tw .tw-btns{ display:flex; gap:6px; flex-wrap:wrap; }
+#view-tw .tw-tab .ptab-count{ margin-inline-start:4px; }
+#view-tw .tw-compose{ display:grid; gap:8px; margin:10px 0 16px; }
+#view-tw .tw-compose textarea{ min-height:84px; padding:8px 10px; border-radius:10px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel2, var(--panel-2)); color:var(--p-text, var(--text)); font:inherit; width:100%; box-sizing:border-box; resize:vertical; }
+#view-tw .tw-compose .btn{ justify-self:start; min-height:48px; }
+#view-tw .tw-note-l{ display:grid; gap:6px; font-weight:700; color:var(--p-text, var(--text)); }
+#view-tw .tw-msg{ position:relative; padding:10px 12px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); color:var(--p-text, var(--text)); }
+#view-tw .tw-msg small{ color:var(--p-muted, var(--muted)); }
+#view-tw .tw-msg p{ margin:4px 0 0; white-space:pre-wrap; line-height:1.6; padding-inline-end:48px; }
+#view-tw .tw-msg .tw-x{ position:absolute; inset-inline-end:8px; top:8px; }
+.tw-sheet .tw-share{ padding:10px 12px; border-radius:10px; border:1px solid var(--p-line, var(--line, #777)); line-height:1.6; margin:8px 0; }
+.tw-sheet a.btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }

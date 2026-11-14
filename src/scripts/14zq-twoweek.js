@@ -4,7 +4,7 @@
 // work), one of the staff builds the schedule (a different one each time), fixes it by hand and publishes it.
 // The rules come from the institution's form: three shifts a day, two people a shift (three on Tuesday morning, and up to two more
 // "third" places a week), no back-to-back shifts, a long weekend shift that counts as two, one night a week each (two people get two).
-const TW = { people:[], periods:[], period:null, options:[], subs:[], asg:[], others:[], fixed:[], me:null, boss:false, tab:null, as:null, week:0, chain:null, allowed:null, probing:false, busy:false };
+const TW = { people:[], periods:[], period:null, options:[], subs:[], asg:[], others:[], swaps:[], msgs:[], myAsg:[], full:false, socialOff:false, fixed:[], me:null, boss:false, tab:null, as:null, week:0, chain:null, allowed:null, probing:false, busy:false };
 const TW_SHIFT = { M:'בוקר', A:'צהריים', N:'לילה', W:'סוף שבוע' };
 const TW_ROWS = ['M', 'A', 'N'];
 const TW_THIRDS_A_WEEK = 2;          // (besides Tuesday morning)
@@ -81,20 +81,20 @@ async function showTwoWeek(){
     <div class="portal-top"><button type="button" class="back-btn portal-back" id="tw-home-back">→ מסך ראשי</button><h1 class="portal-title">סידור דו-שבועי</h1><span class="portal-top-actions"></span></div>
     <div id="tw-screen"><div class="pnote">טוען...</div></div></div>`;
   document.getElementById('tw-home-back').addEventListener('click', () => showAppHome());
-  try { await twLoadBase(); await twLoadPeriod(); } catch(e){ console.error(e); }
+  try { await twLoadBase(); await twLoadPeriod(); await twLoadSocial(); } catch(e){ console.error(e); }
   if(!TW.allowed){ document.getElementById('tw-screen').innerHTML = '<div class="pnote">הסידור הדו-שבועי לא פתוח למשתמש הזה.</div>'; return; }
-  if(!TW.tab) TW.tab = TW.me ? 'mine' : 'build';
+  if(!TW.tab) TW.tab = TW.me ? ((twPeriodRow() || {}).status === 'published' ? 'sched' : 'mine') : 'build';
   TW.as = null; TW.week = 0;
   twRender();
 }
 function twTabs(){
-  const t = [];
+  const t = [['sched', 'הסידור']];
   if(TW.me || twIsBuilder()) t.push(['mine', 'העדפות']);
-  t.push(['sched', 'הסידור']);
+  if(TW.me || TW.boss) t.push(['swaps', 'החלפות'], ['inbox', 'הודעות']);
   if(twIsBuilder()) t.push(['build', 'בנייה']);
   if(TW.boss) t.push(['team', 'צוות ותקופות']);
   if(!t.some(x => x[0] === TW.tab)) TW.tab = t[0][0];
-  return `<div class="tw-tabs" role="tablist">${t.map(([k, l]) => `<button type="button" role="tab" class="tw-tab${TW.tab === k ? ' on' : ''}" data-tw-tab="${k}" aria-selected="${TW.tab === k}">${l}</button>`).join('')}</div>`;
+  return `<div class="tw-tabs" role="tablist">${t.map(([k, l]) => `<button type="button" role="tab" class="tw-tab${TW.tab === k ? ' on' : ''}" data-tw-tab="${k}" aria-selected="${TW.tab === k}">${l}${twTabCount(k)}</button>`).join('')}</div>`;
 }
 function twPeriodPicker(){
   if(!TW.periods.length) return '';
@@ -105,15 +105,18 @@ function twRender(){
   const box = document.getElementById('tw-screen'); if(!box) return;
   const tabs = twTabs();
   let inner = '';
-  if(!TW.period && TW.tab !== 'team') inner = `<div class="pnote">עדיין לא נפתחו שבועיים להגשה.${TW.boss ? ' אפשר לפתוח בלשונית "צוות ותקופות".' : ''}</div>`;
+  const allPeriods = TW.tab === 'team' || TW.tab === 'swaps' || TW.tab === 'inbox';
+  if(!TW.period && !allPeriods) inner = `<div class="pnote">עדיין לא נפתחו שבועיים להגשה.${TW.boss ? ' אפשר לפתוח בלשונית "צוות ותקופות".' : ''}</div>`;
   else if(TW.tab === 'mine') inner = twMineHtml();
   else if(TW.tab === 'sched') inner = twSchedHtml();
   else if(TW.tab === 'build') inner = twBuildHtml();
   else if(TW.tab === 'team') inner = twTeamHtml();
-  box.innerHTML = tabs + (TW.tab === 'team' ? '' : twPeriodPicker()) + inner;
-  box.querySelectorAll('[data-tw-tab]').forEach(b => b.addEventListener('click', () => { TW.tab = b.dataset.twTab; twRender(); }));
+  else if(TW.tab === 'swaps') inner = twSwapsHtml();
+  else if(TW.tab === 'inbox') inner = twInboxHtml();
+  box.innerHTML = tabs + (allPeriods ? '' : twPeriodPicker()) + inner;
+  box.querySelectorAll('[data-tw-tab]').forEach(b => b.addEventListener('click', () => { TW.tab = b.dataset.twTab; TW.full = false; twRender(); window.scrollTo(0, 0); }));
   const sel = box.querySelector('#tw-period-sel'); if(sel) sel.addEventListener('change', async () => { TW.period = sel.value; TW.week = 0; await twLoadPeriod(); twRender(); });
-  if(TW.tab === 'mine') twMineWire(box); else if(TW.tab === 'sched') twSchedWire(box); else if(TW.tab === 'build') twBuildWire(box); else if(TW.tab === 'team') twTeamWire(box);
+  if(TW.tab === 'mine') twMineWire(box); else if(TW.tab === 'sched') twSchedWire(box); else if(TW.tab === 'build') twBuildWire(box); else if(TW.tab === 'team') twTeamWire(box); else if(TW.tab === 'swaps') twSwapsWire(box); else if(TW.tab === 'inbox') twInboxWire(box);
 }
 
 // ---- 1. the preferences (Guy 2026-11-14: one way only, no colours)
@@ -332,12 +335,15 @@ function twSchedHtml(){
   const table = w => `<div class="tw-week"><h3>שבוע ${w + 1} <span class="tw-wk-range">${twShort(days[w * 7])}–${twShort(days[w * 7 + 6])}</span></h3>
     <div class="tw-scroll"><table class="tw-table"><thead><tr><th></th>${days.slice(w * 7, w * 7 + 7).map(day => `<th>${DOW_NAMES[dowOf(day)]}<small>${twShort(day)}</small></th>`).join('')}</tr></thead>
     <tbody>${TW_ROWS.map(sh => `<tr><th>${TW_SHIFT[sh]}</th>${days.slice(w * 7, w * 7 + 7).map(day => cell(day, sh)).join('')}</tr>`).join('')}</tbody></table></div></div>`;
-  const mine = TW.me ? TW.asg.filter(a => a.person === TW.me.id).sort((a, b) => a.day < b.day ? -1 : 1) : [];
   const head = p.status === 'published' ? '' : '<div class="pstatus bad">טיוטה: רק מי שבונה את הסידור רואה אותה. הצוות יראה אחרי הפרסום.</div>';
-  return `${head}${mine.length ? `<div class="tw-mine"><b>המשמרות שלי:</b> ${mine.map(a => `<span class="pchip me">${DOW_NAMES[dowOf(a.day)]} ${twShort(a.day)} · ${TW_SHIFT[a.shift]}</span>`).join('')}</div>` : ''}
-    ${builder ? '<div class="pnote">לחיצה על משבצת פותחת את רשימת הצוות, להוספה או להסרה ביד.</div>' : ''}${table(0)}${table(1)}`;
+  const whole = builder || TW.full || !TW.me;
+  return `${head}${twMyShiftsHtml()}
+    ${whole ? `${TW.me ? '<h3 class="tw-h">הסידור המלא</h3>' : ''}${builder ? '<div class="pnote">לחיצה על משבצת פותחת את רשימת הצוות, להוספה או להסרה ביד.</div>' : ''}${table(0)}${table(1)}`
+      : '<div class="tw-actions"><button type="button" class="btn ghost" id="tw-full">הסידור המלא של כל הצוות</button></div>'}`;
 }
 function twSchedWire(box){
+  box.querySelectorAll('[data-tw-ask]').forEach(b => b.addEventListener('click', () => twAskSheet(b.dataset.twAsk)));
+  const full = box.querySelector('#tw-full'); if(full) full.addEventListener('click', () => { TW.full = true; twRender(); });
   if(!twIsBuilder()) return;
   box.querySelectorAll('[data-tw-cell]').forEach(td => { const go = () => twCellSheet(td.dataset.twCell); td.addEventListener('click', go); td.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } }); });
 }
@@ -557,4 +563,127 @@ function twTeamWire(box){
   box.querySelectorAll('[data-tw-pw]').forEach(s => s.addEventListener('change', () => run(() => sbPersonal.from('tw_people').update({ per_week:Number(s.value) }).eq('id', s.dataset.twPw), 'נשמר')));
   box.querySelectorAll('[data-tw-act]').forEach(b => b.addEventListener('click', () => { const x = twPerson(b.dataset.twAct); run(() => sbPersonal.from('tw_people').update({ active:!x.active }).eq('id', x.id), x.active ? 'הוסר מהרשימה' : 'הוחזר לרשימה'); }));
   box.querySelector('#tw-add-person').addEventListener('click', () => { const name = box.querySelector('#tw-new-name').value.trim(); if(!name){ toast('צריך שם'); return; } run(() => sbPersonal.from('tw_people').insert({ name, sort:TW.people.length + 1 }), 'נוסף לצוות'); });
+}
+
+// ---- 5. swaps and messages (Guy 2026-11-14: the product's instructor portal; supabase/scheduling-v78.sql)
+// A person asks to give away one of her shifts of a published schedule; somebody else on the list takes it; the builder of those two
+// weeks approves, and only then the schedule changes. Messages about the schedule are written by whoever builds now and by the admin.
+const TW_SWAP_WORD = { open:'מחפשים מי שיחליף', taken:'ממתין לאישור של מי שבנה את הסידור', approved:'אושר', declined:'לא אושר', cancelled:'בוטל' };
+const twToday = () => isoDate(new Date());
+const twSlotHours = (day, shift) => ((twSlots(day).find(s => s.shift === shift) || {}).hours || '');
+const twShiftLine = (day, shift) => `יום ${DOW_NAMES[dowOf(day)]} ${twShort(day)} · ${TW_SHIFT[shift]}${shift === 'W' ? '' : ` ${twSlotHours(day, shift)}`}`;
+const twBuilderNow = () => TW.boss || (!!TW.me && TW.periods.some(p => p.builder === TW.me.id && addDays(p.start, 13) >= twToday()));
+const twBuilderOf = period => TW.boss || (!!TW.me && TW.periods.some(p => p.start === period && p.builder === TW.me.id));
+async function twLoadSocial(){
+  const from = addDays(twToday(), -14);
+  const [sw, ms, mine] = await Promise.all([
+    sbPersonal.from('tw_swap').select('*').gte('day', from).order('day'),
+    sbPersonal.from('tw_message').select('*').order('created_at', { ascending:false }).limit(40),
+    TW.me ? sbPersonal.from('tw_assignment').select('id,period,day,shift').eq('person', TW.me.id).gte('day', twToday()) : Promise.resolve({ data:[] })]);
+  TW.swaps = sw.error ? [] : (sw.data || []); TW.msgs = ms.error ? [] : (ms.data || []); TW.myAsg = mine.error ? [] : (mine.data || []);
+  TW.socialOff = !!sw.error;          // (a database before scheduling-v78.sql: the two tabs say so instead of failing)
+}
+const twSeenKey = () => 'mercury-tw-seen-' + (srv.me || '');
+function twUnread(){ let seen = ''; try { seen = localStorage.getItem(twSeenKey()) || ''; } catch(e){} return (TW.msgs || []).filter(m => m.created_at > seen && m.from_staff !== srv.me).length; }
+function twSwapTodo(){
+  const sw = TW.swaps || [], today = twToday();
+  const forMe = TW.me ? sw.filter(s => s.status === 'open' && s.from_person !== TW.me.id && s.day >= today).length : 0;
+  return forMe + sw.filter(s => s.status === 'taken' && twBuilderOf(s.period)).length;
+}
+function twTabCount(k){ const n = k === 'swaps' ? twSwapTodo() : k === 'inbox' ? twUnread() : 0; return n ? ` <span class="ptab-count">${n}</span>` : ''; }
+async function twRpc(name, args, okMsg){
+  if(TW.busy) return false; TW.busy = true;
+  let r; try { r = await sbPersonal.rpc(name, args); } catch(e){ r = { error:e }; }
+  TW.busy = false;
+  if(r.error){ console.error(r.error); toast('⚠ הפעולה לא נשמרה. ייתכן שהמצב השתנה בינתיים'); } else if(okMsg) toast(okMsg);
+  await twLoadPeriod(); await twLoadSocial(); twRender();
+  return !r.error;
+}
+
+// "המשמרות שלי": the person's shifts of these two weeks, who she works with, and asking for a swap
+function twMyShiftsHtml(){
+  if(!TW.me) return '';
+  const p = twPeriodRow(), today = twToday();
+  const mine = TW.asg.filter(a => a.person === TW.me.id).sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
+  if(!mine.length) return '<h3 class="tw-h">המשמרות שלי</h3><div class="pnote">אין משמרות בשבועיים האלה.</div>';
+  return `<h3 class="tw-h">המשמרות שלי</h3><div class="tw-list">${mine.map(a => {
+    const withMe = TW.asg.filter(x => x.day === a.day && x.shift === a.shift && x.person !== TW.me.id).map(x => twName(x.person));
+    const sw = (TW.swaps || []).find(s => s.assignment === a.id && (s.status === 'open' || s.status === 'taken'));
+    const canAsk = p.status === 'published' && a.day >= today && !sw && !TW.socialOff;
+    return `<div class="tw-shift${a.day < today ? ' past' : ''}"><div><b>${twShiftLine(a.day, a.shift)}</b>${a.shift === 'W' ? `<small>${twSlotHours(a.day, 'W')}</small>` : ''}
+      <small>${withMe.length ? 'יחד עם: ' + pEsc(withMe.join(', ')) : 'בלי שיבוץ נוסף במשמרת'}</small>${sw ? `<small class="tw-swap-state">בקשת החלפה: ${TW_SWAP_WORD[sw.status]}${sw.taker ? ` (${pEsc(twName(sw.taker))})` : ''}</small>` : ''}</div>
+      ${canAsk ? `<button type="button" class="btn ghost small" data-tw-ask="${a.id}">בקשת החלפה</button>` : ''}</div>`;
+  }).join('')}</div>`;
+}
+// who could take a shift: on the list, not working that day, no back-to-back shift
+function twCanTake(personId, day, shift, asg){ return !asg.some(a => a.person === personId && twClash(a.day, a.shift, day, shift)); }
+function twAskSheet(asgId){
+  const a = TW.asg.find(x => x.id === asgId); if(!a) return;
+  const free = TW.people.filter(p => p.active && p.id !== TW.me.id && twCanTake(p.id, a.day, a.shift, TW.asg)).map(p => p.name);
+  const sh = twSheet(`<h2>בקשת החלפה</h2><div class="pnote"><b>${twShiftLine(a.day, a.shift)}</b></div>
+    <div class="pnote">הבקשה תופיע לכל הצוות בלשונית "החלפות". כשמישהו מהצוות לוקח את המשמרת, מי שבנה את הסידור מאשר, ורק אז הסידור משתנה.</div>
+    <div class="pnote">${free.length ? 'פנויים באותו זמן לפי הסידור: ' + pEsc(free.join(', ')) + '.' : 'לפי הסידור אין מי שפנוי באותו זמן.'}</div>
+    <label class="tw-note-l">כמה מילים לצוות (לא חובה)<textarea id="tw-ask-note" rows="2" maxlength="200"></textarea></label>
+    <div class="confirm-actions"><button type="button" class="btn" id="tw-ask-go">שליחת הבקשה</button><button type="button" class="btn ghost" data-tw-close>חזרה</button></div>`);
+  sh.querySelector('#tw-ask-go').addEventListener('click', async () => {
+    const note = sh.querySelector('#tw-ask-note').value.trim();
+    sh.remove();
+    if(await twRpc('tw_swap_ask', { p_assignment:a.id, p_note:note || null }, 'הבקשה נשלחה לצוות')) twShareSheet(a);
+  });
+}
+// after asking: a ready WhatsApp message for the staff's group
+function twShareSheet(a){
+  const text = `מחפשים החלפה: ${twShiftLine(a.day, a.shift)}. מי שיכול/ה לקחת, מסמנים באתר בלשונית "החלפות": ${location.origin}${location.pathname}`;
+  twSheet(`<h2>הבקשה נשלחה</h2><div class="pnote">אפשר גם לשלוח הודעה מוכנה לקבוצת הצוות:</div><div class="tw-share">${pEsc(text)}</div>
+    <div class="confirm-actions"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}" data-tw-close>שליחה בוואטסאפ</a><button type="button" class="btn ghost" data-tw-close>סגירה</button></div>`);
+}
+function twSwapsHtml(){
+  if(TW.socialOff) return '<div class="pnote">ההחלפות עוד לא הופעלו במסד הזה.</div>';
+  const sw = TW.swaps || [], today = twToday(), me = TW.me ? TW.me.id : null;
+  const line = s => `<b>${twShiftLine(s.day, s.shift)}</b><small>${pEsc(twName(s.from_person))}${s.taker ? ` ← ${pEsc(twName(s.taker))}` : ''} · ${TW_SWAP_WORD[s.status]}</small>${s.note ? `<small>״${pEsc(s.note)}״</small>` : ''}`;
+  const decide = sw.filter(s => s.status === 'taken' && twBuilderOf(s.period));
+  const open = sw.filter(s => s.status === 'open' && s.from_person !== me && s.day >= today);
+  const mine = sw.filter(s => me && (s.from_person === me || s.taker === me) && (s.status === 'open' || s.status === 'taken' || s.day >= today));
+  const done = sw.filter(s => s.status === 'approved' && s.day >= today && !mine.includes(s));
+  const takeBtn = s => {
+    if(!me) return '';
+    if(!twCanTake(me, s.day, s.shift, TW.myAsg || [])) return '<small class="tw-swap-state">יש לך משמרת צמודה או באותו יום</small>';
+    return `<button type="button" class="btn small" data-tw-take="${s.id}">לקחת את המשמרת</button>`;
+  };
+  const sec = (title, list, extra) => list.length ? `<h3 class="tw-h">${title}</h3><div class="tw-list">${list.map(s => `<div class="tw-shift"><div>${line(s)}</div>${extra(s)}</div>`).join('')}</div>` : '';
+  const body = sec('ממתינות לאישור שלך', decide, s => `<span class="tw-btns"><button type="button" class="btn small" data-tw-decide="${s.id}" data-ok="1">אישור</button><button type="button" class="btn ghost small" data-tw-decide="${s.id}">לא לאשר</button></span>`)
+    + sec('מחפשים מי שיחליף', open, takeBtn)
+    + sec('הבקשות שלי', mine, s => (s.status === 'open' || s.status === 'taken') ? `<button type="button" class="btn ghost small" data-tw-cancel="${s.id}">${s.taker === me ? 'ויתור על המשמרת' : 'ביטול הבקשה'}</button>` : '')
+    + sec('החלפות שאושרו', done, () => '');
+  return (body || '<div class="pnote">אין כרגע בקשות החלפה.</div>') + `<div class="pnote">בקשה חדשה פותחים בלשונית "הסידור", ליד המשמרת.</div>`;
+}
+function twSwapsWire(box){
+  box.querySelectorAll('[data-tw-take]').forEach(b => b.addEventListener('click', () => twRpc('tw_swap_take', { p_swap:b.dataset.twTake }, 'נרשם. ממתין לאישור של מי שבנה את הסידור')));
+  box.querySelectorAll('[data-tw-cancel]').forEach(b => b.addEventListener('click', () => twRpc('tw_swap_cancel', { p_swap:b.dataset.twCancel }, 'בוטל')));
+  box.querySelectorAll('[data-tw-decide]').forEach(b => b.addEventListener('click', () => twRpc('tw_swap_decide', { p_swap:b.dataset.twDecide, p_approve:!!b.dataset.ok }, b.dataset.ok ? 'ההחלפה אושרה והסידור עודכן' : 'ההחלפה לא אושרה')));
+}
+function twInboxHtml(){
+  if(TW.socialOff) return '<div class="pnote">ההודעות עוד לא הופעלו במסד הזה.</div>';
+  const who = m => { const p = TW.people.find(x => x.staff_id && x.staff_id === m.from_staff); return p ? p.name : 'הנהלה'; };
+  const write = twBuilderNow() ? `<div class="tw-compose"><label class="tw-note-l">הודעה לכל הצוות<textarea id="tw-msg" rows="3" maxlength="1000"></textarea></label><button type="button" class="btn" id="tw-msg-send">שליחה</button></div>` : '';
+  const list = (TW.msgs || []).map(m => `<div class="tw-msg"><small>${pEsc(who(m))} · ${new Date(m.created_at).toLocaleString('he-IL', { day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit' })}</small><p>${pEsc(m.body)}</p>
+    ${TW.boss || m.from_staff === srv.me ? `<button type="button" class="tw-x" data-tw-msg-del="${m.id}" aria-label="מחיקת ההודעה">✕</button>` : ''}</div>`).join('');
+  return write + (list ? `<div class="tw-list">${list}</div>` : '<div class="pnote">אין הודעות.</div>');
+}
+function twInboxWire(box){
+  try { if((TW.msgs || []).length) localStorage.setItem(twSeenKey(), TW.msgs[0].created_at); } catch(e){}
+  const send = box.querySelector('#tw-msg-send');
+  if(send) send.addEventListener('click', async () => {
+    const body = box.querySelector('#tw-msg').value.trim(); if(!body){ toast('צריך לכתוב הודעה'); return; }
+    if(TW.busy) return; TW.busy = true; send.disabled = true;
+    const r = await sbPersonal.from('tw_message').insert({ body });
+    TW.busy = false;
+    if(r.error){ console.error(r.error); toast('⚠ ההודעה לא נשלחה'); send.disabled = false; return; }
+    toast('ההודעה נשלחה לצוות'); await twLoadSocial(); twRender();
+  });
+  box.querySelectorAll('[data-tw-msg-del]').forEach(b => b.addEventListener('click', async () => {
+    const r = await sbPersonal.from('tw_message').delete().eq('id', b.dataset.twMsgDel);
+    if(r.error){ console.error(r.error); toast('⚠ המחיקה נכשלה'); return; }
+    await twLoadSocial(); twRender();
+  }));
 }
