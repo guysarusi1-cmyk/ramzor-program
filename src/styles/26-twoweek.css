@@ -68,3 +68,51 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw .tw-fixed-grid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); margin:8px 0; }
 #view-tw .tw-fixed-day{ display:grid; gap:4px; padding:8px; border-radius:10px; border:1px solid var(--p-line, var(--line)); }
 #view-tw .tw-fixed-day label{ display:grid; gap:2px; font-size:13px; color:var(--p-muted, var(--muted)); }
+
+/* ---- the preferences (one way, no colours: the word and the shape tell the state) ---- */
+#view-tw .tw-phead{ display:flex; align-items:center; gap:14px; margin:10px 0; padding:12px 14px; border-radius:14px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); color:var(--p-text, var(--text)); }
+#view-tw .tw-phead .tw-pnum{ display:block; font-size:22px; line-height:1.2; }
+#view-tw .tw-phead span{ color:var(--p-muted, var(--muted)); font-size:14px; }
+#view-tw .tw-egg{ flex:0 0 auto; }
+#view-tw .tw-egg .pw-egg{ width:58px; height:58px; }
+#view-tw .tw-legend b{ color:var(--p-text, var(--text)); }
+#view-tw .tw-pweeks{ display:grid; gap:18px; }
+#view-tw .tw-pweek h3{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 8px; font-size:17px; color:var(--p-text, var(--text)); }
+#view-tw .tw-pday{ display:grid; grid-template-columns:76px 1fr; gap:8px; align-items:center; padding:8px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-pday-slots{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+#view-tw .tw-pref{ min-height:64px; padding:6px 2px; border-radius:12px; border:2px solid transparent; background:transparent; color:var(--p-text, var(--text)); font:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.25; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+#view-tw .tw-pref small{ font-size:11px; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-pref b{ font-size:18px; }
+#view-tw .tw-pref[data-lv=yes]{ background:var(--p-text, var(--text)); border-color:var(--p-text, var(--text)); color:var(--p-panel, var(--panel)); }
+#view-tw .tw-pref[data-lv=yes] b{ font-weight:800; }
+#view-tw .tw-pref[data-lv=yes] small{ color:inherit; opacity:.8; }
+#view-tw .tw-pref[data-lv=can]{ border-color:var(--p-text, var(--text)); }
+#view-tw .tw-pref[data-lv=can] b{ font-weight:600; }
+#view-tw .tw-pref[data-lv=no]{ border:1px dashed var(--p-line, var(--line)); }
+#view-tw .tw-pref[data-lv=no] b{ font-weight:400; opacity:.5; }
+#view-tw .tw-pref[data-lv=no] small{ opacity:.7; }
+#view-tw .tw-pref:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
+#view-tw .tw-pref:disabled{ cursor:default; }
+#view-tw .tw-pref.fixed{ border:2px dotted var(--p-text, var(--text)); cursor:default; }
+#view-tw .tw-pref-none{ display:block; }
+#view-tw .tw-pother{ grid-column:1 / -1; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:6px 8px; border-radius:10px; border:1px solid var(--p-line, var(--line)); color:var(--p-text, var(--text)); font-size:14px; }
+#view-tw .tw-pother small{ color:var(--p-muted, var(--muted)); }
+#view-tw .tw-x{ margin-inline-start:auto; min-width:44px; min-height:44px; border-radius:10px; border:1px solid var(--p-line, var(--line)); background:transparent; color:inherit; font:inherit; cursor:pointer; }
+#view-tw .tw-bar{ position:fixed; inset-inline:0; bottom:0; z-index:20; display:flex; gap:8px; justify-content:center; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:var(--p-panel, var(--panel)); border-top:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-bar .btn{ flex:1 1 0; min-height:50px; max-width:240px; margin:0; white-space:nowrap; padding-inline:8px; }
+#view-tw:has(.tw-bar) .portal-shell{ padding-bottom:96px; }
+#view-tw .tw-sub-note{ flex:0 0 100%; color:var(--p-text, var(--text)); font-size:14px; }
+.tw-sheet .tw-form-col{ display:grid; gap:10px; margin:10px 0; }
+.tw-sheet .tw-form-col label, .tw-sheet .tw-note-l{ display:grid; gap:6px; font-weight:700; }
+.tw-sheet select, .tw-sheet input[type=time], .tw-sheet textarea{ min-height:48px; padding:8px 10px; border-radius:10px; border:1px solid var(--p-line, var(--line, #777)); background:transparent; color:inherit; font:inherit; width:100%; box-sizing:border-box; }
+.tw-sheet textarea{ min-height:84px; resize:vertical; }
+@media (max-width:899px){
+  #view-tw .tw-pweek:not(.cur){ display:none; }
+  #view-tw .tw-bar #tw-submit:not(.tw-bar-wide){ flex-grow:1.2; }
+  #view-tw .tw-bar .tw-bar-wide{ display:none; }
+}
+@media (min-width:900px){
+  #view-tw .tw-pweeks{ grid-template-columns:1fr 1fr; align-items:start; }
+  #view-tw .tw-bar .tw-bar-week{ display:none; }
+}
+@media (max-width:380px){ #view-tw .tw-pday{ grid-template-columns:58px 1fr; padding:6px; gap:6px; } #view-tw .tw-pref b{ font-size:16px; } }
