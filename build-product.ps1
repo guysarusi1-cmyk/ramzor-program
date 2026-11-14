@@ -22,7 +22,7 @@ foreach($k in 'supabaseUrl', 'anonKey', 'orgName'){ if(-not $cfg.$k -or "$($cfg.
 
 $dir = Join-Path $root "products\$Product"
 $css = (Get-ChildItem (Join-Path $root 'src\styles') -Filter *.css | Sort-Object Name | ForEach-Object { Read-Text $_.FullName }) -join ''
-$js  = (Read-Text (Join-Path $dir 'shell.js')) + (($modules[$Product] | ForEach-Object { Read-Text (Join-Path $root "src\scripts\$_") }) -join '')
+$js  = (Read-Text (Join-Path $dir 'shell.js')) + $(if(Test-Path (Join-Path $dir 'ar.js')){ Read-Text (Join-Path $dir 'ar.js') } else { '' }) + (($modules[$Product] | ForEach-Object { Read-Text (Join-Path $root "src\scripts\$_") }) -join '')
 $html = Read-Text (Join-Path $dir 'template.html')
 $vendor = Read-Text (Join-Path $root 'src\vendor\supabase-js-2.117.2.js')
 $html = $html.Replace('{{CSS}}', $css).Replace('{{JS}}', $js).Replace('{{VENDOR_SUPABASE}}', $vendor)

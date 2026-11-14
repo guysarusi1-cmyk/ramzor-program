@@ -63,12 +63,13 @@ function sbSettings(){
     <div class="sb-set-row"><b>מראה</b>${seg('theme', [['dark', 'כהה'], ['light', 'בהיר']], sbTheme())}</div>
     <div class="sb-set-row"><b>גודל הטקסט</b>${seg('big', [['', 'רגיל'], ['1', 'גדול']], sbGet('big', ''))}</div>
     <div class="sb-set-row"><b>ניגודיות</b>${seg('contrast', [['', 'רגילה'], ['high', 'גבוהה']], sbGet('contrast', ''))}</div>
+    <div class="sb-set-row"><b>שפה</b>${seg('lang', [['he', 'עברית'], ['ar', 'العربية']], sbGet('lang', 'he'))}</div>
     <div class="sb-set-row"><b>אפליקציה</b>${install}</div></div>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div></div>`;
   wrap.addEventListener('click', async e => {
     if(e.target === wrap || e.target.closest('[data-close]')){ wrap.remove(); return; }
     const b = e.target.closest('[data-k]');
-    if(b){ sbSet(b.dataset.k, b.dataset.v); wrap.remove(); await sbOpen(); sbSettings(); return; }
+    if(b){ sbSet(b.dataset.k, b.dataset.v); if(b.dataset.k === 'lang'){ location.reload(); return; } wrap.remove(); await sbOpen(); sbSettings(); return; }
     if(e.target.closest('#sb-install') && sbInstallEvent){ sbInstallEvent.prompt(); try { await sbInstallEvent.userChoice; } catch(err){} sbInstallEvent = null; wrap.remove(); }
   });
   document.body.appendChild(wrap);
@@ -93,7 +94,8 @@ function sbShowLogin(msg, step, email, again){
     <label>סיסמה<input type="password" id="sb-pass" autocomplete="current-password"></label>
     <button type="submit" class="btn" id="sb-go">כניסה</button>
     <p class="sb-or">כניסה ראשונה, או ששכחתם את הסיסמה?</p>
-    <button type="button" class="btn ghost" id="sb-send">שלחו לי קוד למייל</button>`;
+    <button type="button" class="btn ghost" id="sb-send">שלחו לי קוד למייל</button>
+    <button type="button" class="sb-lang" id="sb-lang" lang="${sbGet('lang', 'he') === 'ar' ? 'he' : 'ar'}">${sbGet('lang', 'he') === 'ar' ? 'עברית' : 'العربية'}</button>`;
   document.getElementById('view-login').innerHTML = `<div class="portal-shell" data-ptheme="${sbTheme()}"><form class="sb-login" id="sb-form" novalidate>${inner}
     <div class="sb-err" id="sb-err" role="alert">${pEsc(msg || '')}</div></form></div>`;
   const $ = id => document.getElementById(id), err = m => { $('sb-err').textContent = m || ''; };
@@ -132,6 +134,7 @@ function sbShowLogin(msg, step, email, again){
   } else if(step === 'setpw'){
     if($('sb-skip')) $('sb-skip').addEventListener('click', ev => guard(ev.target, sbEnter));
   } else {
+    $('sb-lang').addEventListener('click', () => { sbSet('lang', sbGet('lang', 'he') === 'ar' ? 'he' : 'ar'); location.reload(); });
     $('sb-send').addEventListener('click', ev => guard(ev.target, async () => {
       const mail = $('sb-mail').value.trim().toLowerCase();
       if(!mail){ err('הקלידו את כתובת המייל.'); return; }
