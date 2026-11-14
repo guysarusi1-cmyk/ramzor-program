@@ -155,3 +155,18 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw .tw-msg .tw-x{ position:absolute; inset-inline-end:8px; top:8px; }
 .tw-sheet .tw-share{ padding:10px 12px; border-radius:10px; border:1px solid var(--p-line, var(--line, #777)); line-height:1.6; margin:8px 0; }
 .tw-sheet a.btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+
+/* ---- the builder: four numbered steps ---- */
+#view-tw .tw-steps{ list-style:none; display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin:12px 0; padding:0; }
+#view-tw .tw-step{ width:100%; min-height:56px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 2px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); color:var(--p-text, var(--text)); font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+#view-tw .tw-step-n{ display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; border:2px solid currentColor; font-size:14px; }
+#view-tw .tw-step.done .tw-step-n{ background:var(--p-text, var(--text)); color:var(--p-panel, var(--panel)); border-color:var(--p-text, var(--text)); }
+#view-tw .tw-step.on{ background:var(--gold); border-color:var(--gold); color:#1C1A17; }
+#view-tw .tw-step:disabled{ opacity:.45; cursor:default; }
+#view-tw .tw-step:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
+#view-tw .tw-step-say{ margin:10px 0; font-size:16px; line-height:1.6; color:var(--p-text, var(--text)); }
+#view-tw .tw-step-sum{ margin:8px 0; font-size:16px; color:var(--p-text, var(--text)); }
+#view-tw details.tw-report summary{ cursor:pointer; font-weight:700; min-height:32px; }
+#view-tw details.tw-report ul{ margin-top:6px; }
+/* (light look: the accent is a dark green there, so the active tab and step take white letters) */
+#view-tw .portal-shell[data-ptheme=light] .tw-tab.on, #view-tw .portal-shell[data-ptheme=light] .tw-step.on{ color:#fff; }
