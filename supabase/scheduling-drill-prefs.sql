@@ -14,7 +14,17 @@ begin
   select id into o from public.org where slug = 'demo';
   if o is null then raise exception 'עצירה: לא נמצא הארגון demo. לא שונה דבר.'; end if;
   select start, status into pr, st from public.tw_period where org_id = o and status = 'open' order by start desc limit 1;
-  if pr is null then raise exception 'עצירה: אין עכשיו שבועיים פתוחים להגשה. לא שונה דבר.'; end if;
+  if pr is null then          -- none open: the next two weeks are opened (by the queue when there is one, else right after the last ones, with no builder: the admin builds)
+    pr := public.tw_auto_open_org(o);
+    if pr is null then
+      select max(start) into pr from public.tw_period where org_id = o;
+      if pr is null then pr := current_date + ((7 - extract(dow from current_date)::int) % 7); else pr := pr + 14; end if;
+      while pr + 13 < current_date loop pr := pr + 14; end loop;
+      insert into public.tw_period(org_id, start, status) values (o, pr, 'open') on conflict do nothing;
+    end if;
+    select status into st from public.tw_period where org_id = o and start = pr;
+    if st is distinct from 'open' then raise exception 'עצירה: לא הצלחתי לפתוח שבועיים להגשה. לא שונה דבר.'; end if;
+  end if;
 
   for p in select id, per_week from public.tw_people t where t.org_id = o and t.active and t.per_week > 0 order by t.sort, t.name loop
     k := k + 1;
