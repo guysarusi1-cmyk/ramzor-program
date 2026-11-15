@@ -513,7 +513,8 @@ function srvCountFoldHtml(mk){
 const mcalKeyChips = () => '<span class="mcal-name wish-yes">כן</span><span class="mcal-name wish-can">יכול</span><span class="mcal-name wish-no">לא</span><span class="mcal-name wish-none">לא סומן</span>';
 function srvOpenSlot(mk, key, body){
   const st = portalLoad(), { date, shiftId } = splitKey(key), code = SRV_SHIFT_DB[shiftId], sh = st.shiftTypes.find(x => x.id === shiftId);
-  const rowsHere = () => portalLoad().rows.filter(r => r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')) && ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role === 'instructor'));
+  const inLong = r => r.shift === 'L' && ((r.day === date && shiftId === 'e') || (addDays(r.day, 1) === date && (shiftId === 'm' || shiftId === 'e')));          // (the long weekend is shown on Friday afternoon and Saturday morning and afternoon: it is listed there too, so it can be removed — Guy 2026-11-15)
+  const rowsHere = () => portalLoad().rows.filter(r => ((r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S'))) || inLong(r)) && ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role === 'instructor'));
   const others = () => portalLoad().rows.filter(r => r.day === date && (r.shift === code || (code === 'M' && r.shift === 'S')) && ((portalLoad().instructors.find(x => x.id === r.staff) || {}).role !== 'instructor'));
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
   const wrap = portalSheet('<div id="slot-body"></div>');
@@ -535,6 +536,7 @@ function srvOpenSlot(mk, key, body){
       ${warn.length ? `<div class="pwarn">${warn.map(w => `<div>⚠ ${pEsc(w)}</div>`).join('')}</div>` : ''}
       <div class="pedit-list">${rows.length ? rows.map(r => r.id === editing
         ? `<div class="pedit-row editing"><span>${pEsc(nm(r.staff))}</span><span class="phours-edit"><select data-hfrom aria-label="משעה">${timeOpts((r.from || sh.start).slice(0, 5))}</select><span>עד</span><select data-hto aria-label="עד שעה">${timeOpts((r.to || sh.end).slice(0, 5))}</select></span><span class="pedit-btns"><button type="button" class="btn small" data-hsave="${r.id}">שמירה</button><button type="button" class="btn ghost small" data-hcancel>ביטול</button></span></div><div id="hrs-warn" class="pwarn" aria-live="polite"></div>`
+        : r.shift === 'L' ? `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>סופ"ש ארוך (שישי ושבת)</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה מהסופ"ש הארוך</button></span></div>`
         : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns">${(r.flags || []).includes('ok') ? `<button type="button" class="btn ghost small" data-ok="${r.id}" title="ביטול האישור">ביטול ✓</button>` : ['no', 'none'].includes(levelFor(r.staff)) ? `<button type="button" class="btn ghost small pedit-ok" data-ok="${r.id}" title="אישר/ה (למשל בוואטסאפ): השם יהיה ירוק">✓ אישר/ה</button>` : ''}<button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-repl="${r.id}">החלפה</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>${replacing === r.id ? `<div class="cs-pick-list cs-repl-list" role="listbox"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff))}:</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-repl-to="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}${midTag(p.id)}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('') || '<div class="pnote">אין מדריך פנוי.</div>'}<button type="button" class="btn ghost small" data-repl-cancel>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
       ${others().length ? `<div class="pnote">בנות שירות ומורות במשמרת: ${others().map(r => pEsc(nm(r.staff)) + ' ' + (r.from || '') + '–' + (r.to || '')).join(', ')}</div>` : ''}
       <h3 class="psec">הוספת מדריך/ה</h3>
@@ -599,7 +601,8 @@ function srvOpenSlot(mk, key, body){
     wrap.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => {
       const r = portalLoad().rows.find(x => x.id === b.dataset.rm); if(!r) return;
       const after = portalLoad().rows.filter(x => x.id !== r.id);
-      const w = srvShiftWarnings(date, code, after);
+      if(r.shift === 'L' && !(await confirmSheet({ title:`להסיר את ${nm(r.staff)} מהסופ"ש הארוך?`, text:`ההסרה היא משישי ומשבת (${dayLabel(r.day)} ו${dayLabel(addDays(r.day, 1))}).`, okLabel:'כן, להסיר', cancelLabel:'חזרה', danger:true }))) return;
+      const w = r.shift === 'L' ? [] : srvShiftWarnings(date, code, after);
       if(w.length && !(await confirmSheet({ title:'להסיר למרות האזהרות?', text:w.join('. ') + '.', okLabel:'כן, להסיר', cancelLabel:'חזרה', danger:true }))) return;
       b.disabled = true;
       const d = await asgWrite(monthKeyOf(r.day), 'delete', r.id);
