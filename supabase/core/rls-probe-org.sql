@@ -8,7 +8,8 @@
 -- always ends with an error that rolls it all back, and only the answer is kept. It reads no real person's data (every try counts
 -- rows of the invented people only, or only asks whether a write is allowed). The answer is one cell: "pass" and the list of what
 -- failed. Copy it to Claude.
--- Needs: core-v1, core-v2, scheduling-v75 ... v81, core/mail-v1 (and v82: its personal notices are tried when the table is there).
+-- Needs: core-v1, core-v2, scheduling-v75 ... v81, core/mail-v1 (v82: its personal notices, and v83: the organisation's settings,
+-- are tried when their tables are there).
 -- ================================================================
 drop table if exists pg_temp.rls_probe_out;
 create temp table rls_probe_out (j jsonb);
@@ -62,6 +63,10 @@ begin
     -- personal notices (scheduling-v82.sql): one for the instructor and one for the builder of probe-a (probe-b got its own by the trigger)
     if to_regclass('public.tw_notice') is not null then
       execute 'insert into public.tw_notice(org_id, person, period, day, shift, kind) values ($1, $2, $3, $3 + 1, ''M'', ''added''), ($1, $4, $3, $3 + 2, ''M'', ''removed'')' using oa, (u->'ins'->>'person')::uuid, per, (u->'bld'->>'person')::uuid;
+    end if;
+    -- the organisation's settings (scheduling-v83.sql): probe-a gets the balancing-home template; probe-b has none yet
+    if to_regclass('public.tw_cfg') is not null then
+      execute 'select public.tw_cfg_from_template($1, ''balancing'', date ''2000-01-02'', true)' using oa;
     end if;
 
     -- the tries: who, what, what is expected (deny = refused; zero = nothing seen or touched; some = something seen or touched; ok = allowed)
@@ -157,9 +162,24 @@ begin
         ('ins', 'update public.tw_notice set kind = ''removed''', 'deny'),
         ('ins', 'insert into public.tw_notice(person, period, day, shift, kind) values ((select id from public.tw_people where name = ''probe-ins''), ' || quote_literal(per) || ', ' || quote_literal(per) || ', ''M'', ''added'')', 'deny'),
         ('adm', 'select count(*) from public.tw_notice', 'zero'), ('anon', 'select count(*) from public.tw_notice', 'deny_or_zero'),
-        ('bins', 'select count(*) from public.tw_notice', 'some'), ('spoof', 'select count(*) from public.tw_notice', 'zero')
+        ('bins', 'select count(*) from public.tw_notice', 'some'), ('spoof', 'select count(*) from public.tw_notice', 'zero'),
+        -- the organisation's settings (scheduling-v83.sql): members read their own organisation's; only an admin writes; never across
+        ('ins', 'select count(*) from public.tw_cfg_shift', 'some'), ('ins', 'select count(*) from public.tw_holiday', 'some'),
+        ('ins', 'select count(*) from public.tw_house_member where person = (select id from public.tw_people where name = ''probe-ins'')', 'some'),
+        ('ins', 'update public.tw_cfg_need set min_people = 9', 'zero'), ('ins', 'update public.tw_cfg set close_days = 1', 'zero'),
+        ('ins', 'insert into public.tw_special_day(day, note) values (current_date, ''probe'')', 'deny'),
+        ('ins', 'insert into public.tw_holiday(day, kind, name) values (''2030-01-01'', ''holiday'', ''probe'')', 'deny'),
+        ('ins', 'select public.tw_cfg_new_version(current_date)', 'deny'),
+        ('adm', 'select count(*) from public.tw_cfg_rule', 'some'), ('adm', 'insert into public.tw_special_day(day, note) values (current_date, ''probe'')', 'some'),
+        ('adm', 'select public.tw_cfg_new_version(current_date + 7)', 'ok'), ('adm', 'select public.tw_cfg_start(''emergency'')', 'deny'),
+        ('bins', 'select count(*) from public.tw_cfg_shift', 'zero'), ('badm', 'select count(*) from public.tw_cfg', 'zero'),
+        ('badm', 'update public.tw_cfg_need set min_people = 9', 'zero'), ('badm', 'select public.tw_cfg_start(''emergency'')', 'deny'),
+        ('spoof', 'select count(*) from public.tw_cfg_shift', 'zero'), ('stranger', 'select count(*) from public.tw_cfg_shift', 'zero'),
+        ('gone', 'select count(*) from public.tw_cfg_shift', 'zero'), ('anon', 'select count(*) from public.tw_cfg_shift', 'deny_or_zero'),
+        ('anon', 'select count(*) from public.tw_holiday', 'deny_or_zero')
       ) v(who, q, expect)
       where not (v.q like '%tw_notice%' and to_regclass('public.tw_notice') is null)
+        and not (v.q ~ 'tw_(cfg|house|special|holiday)' and to_regclass('public.tw_cfg') is null)
     loop
       total := total + 1;
       -- who the try runs as, and the header of the site it comes from

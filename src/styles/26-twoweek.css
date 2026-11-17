@@ -233,3 +233,14 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw .tw-chk-l input{ width:22px; height:22px; }
 /* the light look: the chosen option in the settings, white on green (as the tabs) */
 .mx-sheet[data-ptheme=light] .sb-set .mx-seg button[aria-pressed=true]{ color:#fff; }
+/* the organisation's settings, read only (stage 1, Guy 2026-11-17) */
+#view-tw .tw-cfg-list{ margin:6px 0 10px; padding-inline-start:20px; line-height:1.7; }
+#view-tw .tw-cfg-day{ margin:12px 0 4px; font-weight:700; color:var(--p-muted, var(--muted)); font-size:14px; }
+#view-tw .tw-cfg-table{ width:100%; border-collapse:collapse; font-size:14px; }
+#view-tw .tw-cfg-table th, #view-tw .tw-cfg-table td{ padding:6px 8px; border-bottom:1px solid var(--p-line, var(--line)); text-align:start; vertical-align:top; }
+#view-tw .tw-cfg-table th{ font-weight:700; color:var(--p-muted, var(--muted)); white-space:nowrap; }
+#view-tw .tw-cfg-rules{ list-style:none; margin:4px 0 10px; padding:0; line-height:1.6; }
+#view-tw .tw-cfg-rules li{ padding:3px 0; }
+#view-tw .tw-cfg-rules li.off{ opacity:.7; }
+#view-tw .tw-cfg-rules li > span{ display:inline-block; width:1.2em; font-weight:700; }
+#view-tw .tw-cfg-table td bdi{ white-space:nowrap; }

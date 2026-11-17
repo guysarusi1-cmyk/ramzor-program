@@ -768,7 +768,53 @@ function twTeamHtml(){
 
     ${fold('admins', `מנהלי מערכת${admins.length ? ` (${admins.length})` : ''}`, `
     <div class="pnote">מנהלי מערכת מוסיפים צוות, קובעים מכסות ואת תור הבנייה, ולא משובצים לסידור. מוסיפים אותם בטופס ההוספה למעלה.</div>
-    ${admins.length ? `<div class="tw-list">${admins.map(s => `<div class="tw-row"><b>${pEsc(s.display_name)}</b><span class="tw-row-sub">${(TW.priv[s.id] || {}).auth_user_id ? '<span class="tw-ok">יש כניסה אישית</span>' : (TW.priv[s.id] || {}).email ? `<span dir="ltr">${pEsc(TW.priv[s.id].email)}</span> <button type="button" class="btn small" data-tw-login="${s.id}">יצירת כניסה</button>` : ''}</span></div>`).join('')}</div>` : ''}`)}`;
+    ${admins.length ? `<div class="tw-list">${admins.map(s => `<div class="tw-row"><b>${pEsc(s.display_name)}</b><span class="tw-row-sub">${(TW.priv[s.id] || {}).auth_user_id ? '<span class="tw-ok">יש כניסה אישית</span>' : (TW.priv[s.id] || {}).email ? `<span dir="ltr">${pEsc(TW.priv[s.id].email)}</span> <button type="button" class="btn small" data-tw-login="${s.id}">יצירת כניסה</button>` : ''}</span></div>`).join('')}</div>` : ''}`)}
+    ${twIsAdmin() ? fold('cfg', 'הגדרות המוסד (צפייה)', twCfgHtml()) : ''}`;
+}
+// ---- 8. the organisation's settings, read only (stage 1, scheduling-v83.sql; editing comes with the setup flow, stage 3 — Guy 2026-11-17)
+const twIsAdmin = () => !!(srv.profile && srv.profile.admin);
+const TW_DAY_TYPE = { weekday:'ימי חול', fri:'שישי', sat:'שבת', eve:'ערב חג', holiday:'חג' };
+const TW_CYCLE = { week:'כל שבוע', '2weeks':'כל שבועיים', month:'כל חודש' };
+const TW_RULE_KIND = { hard:'כללים קשיחים (אסור לעבור)', soft:'כללים רכים (עם משקל)', warn:'בהגשה (אזהרה בלבד)' };
+const TW_PARAM = { hours:n => `${n} שעות`, long_from:n => `משמרת ארוכה: מעל ${n} שעות`, days:n => `${n} ימים`, shifts:n => `${n} משמרות`, nights:n => `${n} לילות`,
+  people:n => `${n} עובדים`, over:n => `עד ${n} מעל המכסה`, midweek:n => `${n} באמצע השבוע`, weekends:n => `${n} סופי שבוע`, gap:n => `פער של ${n} לכל היותר`,
+  periods:n => `לפי ${n} תקופות אחורה`, factor:n => `פי ${n}` };
+function twCfgHtml(){
+  const v = TW.cfgView;
+  if(v === undefined) return '<div class="pnote">טוען...</div>';
+  if(v === null) return '<div class="pnote">ההגדרות עוד לא נשמרו במסד הזה.</div>';
+  if(!v.cfg) return '<div class="pnote">למוסד עוד אין הגדרות.</div>';
+  const c = v.cfg, dd = iso => { const t = parseIso(iso); return `${t.getDate()}/${t.getMonth() + 1}/${t.getFullYear()}`; };
+  const head = `<div class="pnote">${c.valid_from > '2001-01-01' ? `חלות מהתקופה שמתחילה ב-${twL(dd(c.valid_from))}` : 'חלות מההתחלה'}${c.draft ? ' · <b>טיוטה</b>: המספרים יתעדכנו אחרי הפגישה עם המוסד' : ''}</div>
+    <ul class="tw-cfg-list"><li>מחזור: <b>${TW_CYCLE[c.cycle] || c.cycle}</b></li>
+      <li>ההגשה נפתחת ${twL(c.open_days)} ימים לפני התקופה, ונסגרת ${twL(c.close_days)} ימים לפני</li>
+      <li>תזכורת ${twL(c.remind_hours)} שעות לפני שההגשה נסגרת</li>
+      <li>לפרסם לפחות ${twL(c.publish_days)} ימים לפני שהתקופה מתחילה</li></ul>`;
+  const needWord = n => `${twL(n.min)}${n.extra ? ` (ועוד ${twL(n.extra)} אם יש ידיים פנויות)` : ''}`;
+  const shiftRow = s => {
+    const all = (s.needs || []).find(n => n.dow === -1), own = (s.needs || []).filter(n => n.dow >= 0);
+    return `<tr><td><b>${pEsc(s.name)}</b></td><td>${twL(s.starts + '–' + s.ends)}${s.end_day ? ` <small>(${s.end_day === 1 ? 'עד היום שאחרי' : `עד ${s.end_day} ימים אחרי`})</small>` : ''}</td>
+      <td>${all ? needWord(all) : '–'}${own.map(n => `<br><small>ב${DOW_NAMES[n.dow]}: ${needWord(n)}</small>`).join('')}</td>
+      <td>${Number(s.weight) === 1 ? '1' : twL(Number(s.weight))}</td></tr>`;
+  };
+  const houses = (v.houses || []).map(h => {
+    const mine = (v.shifts || []).filter(s => s.house === h.id);
+    const groups = Object.keys(TW_DAY_TYPE).map(dt => [dt, mine.filter(s => s.day_type === dt)]).filter(([, l]) => l.length);
+    return `<h4 class="tw-h">${pEsc(h.name)} <small>(${twL(h.people)} אנשי צוות${h.extra_week_cap != null ? ` · עד ${twL(h.extra_week_cap)} מקומות נוספים בשבוע` : ''})</small></h4>
+      ${groups.map(([dt, l]) => `<div class="tw-cfg-day">${TW_DAY_TYPE[dt]}</div><div class="tw-scroll"><table class="tw-cfg-table"><thead><tr><th>משמרת</th><th>שעות</th><th>כמה צריך</th><th>נספרת במכסה</th></tr></thead><tbody>${l.map(shiftRow).join('')}</tbody></table></div>`).join('')}`;
+  }).join('');
+  const rules = Object.keys(TW_RULE_KIND).map(k => [k, (v.rules || []).filter(r => r.kind === k)]).filter(([, l]) => l.length).map(([k, l]) =>
+    `<div class="tw-cfg-day">${TW_RULE_KIND[k]}</div><ul class="tw-cfg-rules">${l.map(r => `<li class="${r.on ? 'on' : 'off'}"><span aria-hidden="true">${r.on ? '✓' : '–'}</span> ${pEsc(r.label)}${Object.entries(r.params || {}).map(([p, n]) => ` <small>· ${TW_PARAM[p] ? TW_PARAM[p](twL(n)) : twL(n)}</small>`).join('')}${r.on ? '' : ' <small>(כבוי)</small>'}</li>`).join('')}</ul>`).join('');
+  const hol = (v.holidays || []).filter(h => h.day >= isoDate(new Date())).slice(0, 6);
+  return `${head}${houses}<h4 class="tw-h">כללים</h4>${rules}
+    ${hol.length ? `<h4 class="tw-h">החגים הקרובים</h4><ul class="tw-cfg-list">${hol.map(h => `<li>${pEsc(h.name)}: ${twL(dd(h.day))}</li>`).join('')}</ul><div class="pnote">חג נספר כמו שבת, וערב חג כמו שישי.</div>` : ''}
+    <div class="pnote">לצפייה בלבד. השינויים ייעשו באשף ההגדרה, בשלב הבא.</div>`;
+}
+async function twCfgLoad(){
+  let r; try { r = await sbPersonal.rpc('tw_cfg_view', { p_day:isoDate(new Date()) }); } catch(e){ r = { error:e }; }
+  TW.cfgView = r.error ? null : (r.data || { cfg:null });
+  if(r.error) console.warn('tw_cfg_view', r.error);
+  twKeepScroll();
 }const twErrWord = e => { const m = String((e && e.message) || e || ''); return /already on the list/.test(m) ? 'הכתובת הזו כבר ברשימה' : /not valid/.test(m) ? 'כתובת המייל לא תקינה' : /already signs in/.test(m) ? 'לאיש הצוות הזה כבר יש כניסה' : /PGRST202|Could not find the function|core_add_staff|core_set_email/.test(m) ? 'במסד הזה מוסיפים מייל דרך האתר הראשי' : ''; };
 function twTeamWire(box){
   const run = async (fn, okMsg) => { if(TW.busy) return; TW.busy = true; let r; try { r = await fn(); } catch(e){ r = { error:e }; } TW.busy = false; if(r && r.error){ console.error(r.error); toast('⚠ ' + (twErrWord(r.error) || 'השינוי לא נשמר')); } else if(okMsg) toast(okMsg); await twLoadBase(); await twLoadPeriod(); twRender(); };
@@ -776,7 +822,8 @@ function twTeamWire(box){
   const makeLogin = async staffId => { const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:staffId } }); if(r.error || (r.data && r.data.error)) return { error:r.error || r.data.error }; return {}; };
   const saveQueue = q => run(() => sbPersonal.from('tw_settings').upsert({ key:'queue', value:q }), 'התור נשמר');
   const queue = () => (twSetting('queue', []) || []).filter(id => TW.people.some(p => p.id === id && p.active));
-  box.querySelectorAll('[data-tw-fold]').forEach(d => d.addEventListener('toggle', () => { TW.folds = TW.folds || {}; TW.folds[d.dataset.twFold] = d.open; }));
+  box.querySelectorAll('[data-tw-fold]').forEach(d => d.addEventListener('toggle', () => { TW.folds = TW.folds || {}; TW.folds[d.dataset.twFold] = d.open; if(d.dataset.twFold === 'cfg' && d.open && TW.cfgView === undefined) twCfgLoad(); }));
+  if((TW.folds || {}).cfg && TW.cfgView === undefined && twIsAdmin()) twCfgLoad();
   const q = box.querySelector('#tw-team-q');
   if(q) q.addEventListener('input', () => { const v = q.value.trim(); box.querySelectorAll('#tw-team-list .tw-row').forEach(r => { r.hidden = !!v && !r.dataset.name.includes(v); }); });
   box.querySelectorAll('[data-tw-q-up]').forEach(b => b.addEventListener('click', () => { const q2 = queue(), i = Number(b.dataset.twQUp); [q2[i - 1], q2[i]] = [q2[i], q2[i - 1]]; saveQueue(q2); }));
