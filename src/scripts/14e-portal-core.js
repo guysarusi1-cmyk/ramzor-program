@@ -42,6 +42,7 @@ function showAppHome(){
       <h1 class="apphome-title">מה תרצו לפתוח?</h1>
       <div class="apphome-cards">
         ${portalServerOn ? `<div class="apphome-hello">שלום ${pEsc((portalMe() || {}).first || '')}</div>` : ''}
+        ${typeof vtCardHtml === 'function' ? vtCardHtml() : ''}
         <button type="button" class="home-card" id="apphome-ramzor">
           <span class="apphome-emoji apphome-ico">${psIco('light')}</span>
           <span class="home-card-title">הרמזור</span>
@@ -91,6 +92,7 @@ function showAppHome(){
   });
   document.getElementById('apphome-ramzor').addEventListener('click', showHub);
   { const oc1 = document.getElementById('apphome-oncall'); if(oc1) oc1.addEventListener('click', () => showOncallScreen()); }
+  { const vt1 = document.getElementById('apphome-vt'); if(vt1) vt1.addEventListener('click', () => showVaryingScreen()); }          // ("משימות משתנות": 14zr-varying-tasks.js)
   { const tw1 = document.getElementById('apphome-tw'); if(tw1) tw1.addEventListener('click', () => showTwoWeek()); }          // (the two-week schedule of the second pilot, 14zq-twoweek.js)
   { const ch = document.getElementById('apphome-chats'); if(ch) ch.addEventListener('click', () => showChatsScreen()); }
   { const th = document.getElementById('apphome-therapy'); if(th) th.addEventListener('click', () => showTherapyPortal()); }          // (Mercury: the therapy portal, 14w-therapy-portal.js)

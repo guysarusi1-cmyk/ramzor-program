@@ -377,6 +377,7 @@ function srvRenderCoordSettings(body){
       ${GROUPS.map(([key, title, test]) => { const list = rows.filter(test); return `<details class="pfold pfold-in" data-lgroup="${key}"><summary><span>${title}</span><span class="pcount">${list.length}</span></summary><div class="pfold-body">${list.slice(0, 60).map(line).join('') || '<div class="pnote">אין.</div>'}${list.length > 60 ? `<div class="pnote">ועוד ${list.length - 60} שינויים ישנים יותר.</div>` : ''}</div></details>`; }).join('')}`;
       return { html, wire:() => {} };
     }],
+    shifttasks: [() => 'משימות סוף משמרת', () => vtCoordSection()],          // (14zr-varying-tasks.js, scheduling-v84.sql)
     screens: [() => 'מסכי הילדים בחדר', () => tvScreensSection(again)]
   };
   const fill = async id => {
