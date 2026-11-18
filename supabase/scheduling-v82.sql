@@ -35,7 +35,7 @@ end $$;
 create index if not exists tw_notice_person_idx on public.tw_notice (org_id, person, seen_at);
 
 alter table public.tw_notice enable row level security;
-revoke all on public.tw_notice from anon, public;
+revoke all on public.tw_notice from anon, authenticated, public;          -- (also the automatic rights of a new project: scheduling-v85.sql)
 grant select on public.tw_notice to authenticated;
 grant update (seen_at) on public.tw_notice to authenticated;
 drop policy if exists "org only" on public.tw_notice;
