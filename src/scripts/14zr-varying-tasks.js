@@ -64,7 +64,7 @@ function vtTasksHtml(n){
     const done = list.filter(t => marks[t.id] && marks[t.id].done).length;
     return `<h3 class="psec">${pEsc(a.name)} <small>(${done} מתוך ${list.length})</small></h3><div class="pedit-list">${list.map(row).join('')}</div>`; }).join('');
   return `<section class="vt-part"><h2 class="vt-h">משימות סוף משמרת</h2>
-    <div class="pnote">${night ? 'מה שנשאר פתוח ממשמרת הצהריים. מסמנים עד 09:00 בבוקר. מה שלא יסומן נשאר "לא בוצע", ולא עובר לבוקר.' : 'רשימה אחת לכל משמרת הצהריים. מסמנים עד 23:30. מ-21:30 גם משמרת הלילה רואה את מה שנשאר.'}</div>
+    ${night ? '<div class="pnote">מה שנשאר פתוח ממשמרת הצהריים. מסמנים עד 09:00 בבוקר. מה שלא יסומן נשאר "לא בוצע", ולא עובר לבוקר.</div>' : ''}
     ${areas || '<div class="pnote">הכול בוצע. תודה!</div>'}
     <div class="pnote">בהערות: בלי שמות של ילדים.</div></section>`;
 }
