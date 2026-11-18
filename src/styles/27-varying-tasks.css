@@ -34,3 +34,5 @@ body:has(#view-vt.active [data-ptheme=light]) .toast{ background:#2D2A24; border
 [data-sbody="shifttasks"] .mx-seg button{ min-height:40px; padding:0 16px; border:0; border-radius:999px; background:transparent; color:inherit; font-size:15px; font-weight:600; cursor:pointer; opacity:.75; }
 [data-sbody="shifttasks"] .mx-seg button[aria-pressed=true]{ background:var(--color-surface, #fff); color:var(--color-text, #2D2A24); opacity:1; box-shadow:0 1px 4px rgba(0,0,0,.15); }
 #view-vt .vt-fields[hidden]{ display:none; }
+.pmine-row small.vt-not{ color:#e07a6a !important; font-weight:700; }
+.pmine-row small.vt-who{ color:#6fbf73 !important; font-weight:700; }
