@@ -33,12 +33,17 @@ function twAttention(){
 }
 function twAttentionHtml(){
   const list = twAttention(); if(!list.length) return '<div class="pstatus ok">אין דברים שדורשים תשומת לב.</div>';
+  // the empty places together, one short line with a button per place; then the rest, six at first
+  const miss = list.filter(x => x.cls === 'bad' && x.go && /^חס/.test(x.x)), rest = list.filter(x => !miss.includes(x)), MAX = 6;
+  const row = x => x.go ? `<button type="button" class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>`
+    : `<div class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`;
+  const shown = TW.attnAll ? rest : rest.slice(0, MAX);
   return `<details class="tw-fixed-box tw-attn"${TW.attnClosed ? '' : ' open'}><summary>דורש תשומת לב (${list.length})</summary>
-    ${list.slice(0, 60).map(x => x.go ? `<button type="button" class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>`
-      : `<div class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`).join('')}
-    ${list.length > 60 ? `<div class="pnote">ועוד ${list.length - 60}.</div>` : ''}<div class="pnote">לחיצה על שורה עם משבצת פותחת אותה.</div></details>`;
+    ${miss.length ? `<div class="pstatus bad tw-attn-row"><b>משבצות חסרות (${miss.length})</b><span class="tw-attn-chips">${miss.map(x => `<button type="button" class="btn ghost small" data-tw-goto="${x.go}">${pEsc(x.t)}${/^חסרים/.test(x.x) ? ' ×' + x.x.replace(/\D/g, '') : ''}</button>`).join('')}</span></div>` : ''}
+    ${shown.map(row).join('')}
+    ${!TW.attnAll && rest.length > MAX ? `<div class="tw-actions"><button type="button" class="btn ghost small" id="tw-attn-all">עוד ${rest.length - MAX}</button></div>` : ''}
+    <div class="pnote">לחיצה על משבצת פותחת אותה.</div></details>`;
 }
-
 // ---- 2. "כמה משמרות לכל אחת": the weeks, the two weeks against the least, nights (and who had two), mornings / afternoons / nights
 function twCountsHtml(){
   if(!TW.asg.length) return '';
@@ -150,6 +155,7 @@ function twDragWire(box){
 function twPilotWire(box){
   box.querySelectorAll('[data-tw-goto]').forEach(b => b.addEventListener('click', () => twCellSheet(b.dataset.twGoto)));
   const at = box.querySelector('.tw-attn'); if(at) at.addEventListener('toggle', () => { TW.attnClosed = !at.open; });
+  const aa = box.querySelector('#tw-attn-all'); if(aa) aa.addEventListener('click', () => { TW.attnAll = true; twKeepScroll(); });
   const cn = box.querySelector('[data-tw-counts]'); if(cn) cn.addEventListener('toggle', () => { TW.countsOpen = cn.open; });
   const sh = box.querySelector('#tw-share'); if(sh) sh.addEventListener('click', () => twShareAsk());
   twPendingWire(box);

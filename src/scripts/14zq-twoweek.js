@@ -1027,8 +1027,13 @@ function twTeamHtml(){
       <button type="button" class="btn" id="tw-new-period" data-start="${next}">פתיחה להגשה</button></div>`)}
 
     ${fold('admins', `מנהלי מערכת${admins.length ? ` (${admins.length})` : ''}`, `
-    <div class="pnote">מנהלי מערכת מוסיפים צוות, קובעים מכסות ואת התור של מי בונה את הסידור, ולא משובצים לסידור. מוסיפים אותם בטופס ההוספה למעלה.</div>
+    <div class="pnote">מנהלי מערכת מוסיפים צוות, קובעים מכסות ואת התור של מי בונה את הסידור. כאן מופיעים מי שלא משובצים לסידור. מוסיפים אותם בטופס ההוספה למעלה.</div>
     ${admins.length ? `<div class="tw-list">${admins.map(s => `<div class="tw-row"><b>${pEsc(s.display_name)}</b><span class="tw-row-sub">${(TW.priv[s.id] || {}).auth_user_id ? '<span class="tw-ok">יש כניסה אישית</span>' : (TW.priv[s.id] || {}).email ? `<span dir="ltr">${pEsc(TW.priv[s.id].email)}</span> <button type="button" class="btn small" data-tw-login="${s.id}">יצירת כניסה</button>` : ''}</span></div>`).join('')}</div>` : ''}`)}
+    ${fold('weekend', 'שעות סוף השבוע', (() => { const wh = twSetting('weekend_hours', null) || {}, g = (k, part, d) => ((wh[k] || {})[part]) || d;
+      return `<p class="tw-step-say">משמרת סוף השבוע מתחילה בשישי (או בערב חג) ומסתיימת במוצאי שבת (או חג). השעות שונות בחורף ובקיץ.</p>
+      ${[['winter', 'חורף'], ['summer', 'קיץ']].map(([k, w]) => `<div class="tw-form"><b>${w}</b><label>מתחילה <input type="time" data-tw-wh="${k}|start" value="${g(k, 'start', '14:00')}"></label><label>מסתיימת <input type="time" data-tw-wh="${k}|end" value="${g(k, 'end', '20:30')}"></label></div>`).join('')}
+      <div class="tw-actions"><button type="button" class="btn" id="tw-wh-save">שמירת השעות</button></div>
+      <div class="pnote">הקיץ והחורף לפי שעון הקיץ בישראל. השינוי חל על סידורים שנבנים מעכשיו.</div>`; })())}
     ${twIsAdmin() ? fold('cfg', 'הגדרות המוסד (צפייה)', twCfgHtml()) : ''}`;
 }
 // ---- 8. the organisation's settings, read only (stage 1, scheduling-v83.sql; editing comes with the setup flow, stage 3 — Guy 2026-11-17)
@@ -1096,6 +1101,11 @@ function twTeamWire(box){
   const qa = box.querySelector('#tw-q-add'); if(qa) qa.addEventListener('change', () => { if(qa.value) saveQueue(queue().concat(qa.value)); });
   [['#tw-open-days', 'open_days'], ['#tw-close-days', 'close_days']].forEach(([id, k]) => { const s = box.querySelector(id); if(s) s.addEventListener('change', () => run(() => sbPersonal.from('tw_settings').upsert({ key:k, value:Number(s.value) }), 'נשמר')); });
   box.querySelectorAll('[data-tw-pb]').forEach(s => s.addEventListener('change', () => run(() => sbPersonal.from('tw_period').update({ builder:s.value || null }).eq('start', s.dataset.twPb), 'נשמר')));
+  const whs = box.querySelector('#tw-wh-save');
+  if(whs) whs.addEventListener('click', () => {
+    const v = {}; box.querySelectorAll('[data-tw-wh]').forEach(i => { const [k, part] = i.dataset.twWh.split('|'); (v[k] = v[k] || {})[part] = i.value || (part === 'start' ? '14:00' : '20:30'); });
+    run(() => sbPersonal.from('tw_settings').upsert({ key:'weekend_hours', value:v }), 'השעות נשמרו');
+  });
   const np = box.querySelector('#tw-new-period');
   if(np) np.addEventListener('click', () => { const b = box.querySelector('#tw-new-builder').value || null; TW.period = np.dataset.start; run(() => sbPersonal.from('tw_period').insert({ start:np.dataset.start, builder:b }), 'השבועיים נפתחו להגשה'); });
   box.querySelectorAll('[data-tw-pw]').forEach(s => s.addEventListener('change', () => run(() => sbPersonal.from('tw_people').update({ per_week:Number(s.value) }).eq('id', s.dataset.twPw), 'נשמר')));

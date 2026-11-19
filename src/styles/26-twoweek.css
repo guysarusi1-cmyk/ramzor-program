@@ -327,3 +327,6 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 .sb-set .tw-form{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .sb-set .tw-form input{ min-width:0; flex:1 1 140px; }
 #view-tw .tw-pending{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
+#view-tw .tw-attn-row{ border:0; }
+#view-tw .tw-attn-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+#view-tw .tw-attn-chips .btn{ min-height:36px; }
