@@ -246,3 +246,25 @@ body:has(#view-tw.active .portal-shell[data-ptheme=light]){ background:#FAF7F2; 
 #view-tw .tw-cfg-table td bdi{ white-space:nowrap; }
 #view-tw .tw-add .tw-chk-l{ display:flex; align-items:center; gap:10px; grid-column:1 / -1; font-weight:600; }
 #view-tw .tw-add .tw-chk-l input{ width:24px; height:24px; min-height:0; flex:none; margin:0; }
+
+/* ---- the UX review of the phone (2026-11-19) ---- */
+/* the five tabs fit a phone's width (the fifth, "ניהול", was off the screen): they share the line; very big text still scrolls */
+#view-tw .tw-tabs{ gap:4px; }
+#view-tw .tw-tab{ flex:1 1 auto; min-width:0; padding:8px 6px; font-size:15px; }
+#view-tw .tw-tab .ptab-count{ margin-inline-start:3px; }
+body.portal-big #view-tw .tw-tab{ flex:none; padding:8px 10px; }
+/* a table wider than the phone: a fade at the hidden edge (left, in Hebrew) and "עוד ימים" */
+#view-tw .tw-more-hint{ display:none; font-size:13px; font-weight:600; color:var(--gold); margin-inline-start:auto; }
+#view-tw .tw-week.tw-more .tw-more-hint{ display:inline; }
+#view-tw .tw-week.tw-more .tw-scroll{ -webkit-mask-image:linear-gradient(to right, transparent 0, #000 44px); mask-image:linear-gradient(to right, transparent 0, #000 44px); }
+/* past shifts: faded, but still readable */
+#view-tw .tw-shift.past{ opacity:.78; }
+/* the sheet of one place: "סגירה" at the top too, and who is not a good choice is greyed */
+.tw-sheet-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.tw-sheet-head h2{ margin:0; }
+.tw-pick-row.weak{ opacity:.6; }
+.tw-pick-row.weak b{ font-weight:600; }
+/* removing a person: far from the shifts' choice, lighter */
+#view-tw .tw-btns .tw-rm{ margin-inline-start:auto; border-color:transparent; text-decoration:underline; color:var(--p-muted, var(--muted)); }
+/* "install as an app": only under "הסידור" (it was at the bottom of every screen) */
+#view-tw .portal-shell:not([data-tw-tab=sched]) #sb-install-link{ display:none; }
