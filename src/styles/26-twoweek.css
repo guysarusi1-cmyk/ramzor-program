@@ -330,3 +330,17 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 #view-tw .tw-attn-row{ border:0; }
 #view-tw .tw-attn-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 #view-tw .tw-attn-chips .btn{ min-height:36px; }
+/* the UX review 19.11 night: advice (not an error) in a calm colour; a heading in the place sheet; the danger buttons apart */
+#view-tw .pstatus.tw-soft, .sheet .pstatus.tw-soft{ background:color-mix(in srgb, var(--gold) 16%, transparent); color:var(--p-text, var(--text)); }
+.tw-pick-h{ font-weight:700; font-size:14px; opacity:.8; margin:8px 2px 0; }
+#view-tw .tw-danger-zone, .sheet .tw-danger-zone{ margin-top:18px; padding-top:12px; border-top:1px dashed var(--p-line, var(--line)); }
+#view-tw .btn.tw-danger, .sheet .btn.tw-danger{ color:var(--p-no, #e07a6f); border-color:var(--p-no, #e07a6f); }
+#view-tw .tw-cnt{ padding:8px 4px; border-bottom:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-cnt small{ display:block; opacity:.8; font-weight:400; }
+#view-tw .tw-cnt.low b{ color:var(--p-no, #e07a6f); }
+#view-tw .tw-cnt-ok{ margin-top:8px; }
+#view-tw .tw-cnt-ok summary{ cursor:pointer; font-weight:700; min-height:36px; }
+#view-tw .tw-drag-chip.over{ outline:2px solid var(--gold); }
+#view-tw .tw-drag-chip small{ font-size:13px; opacity:.9; }
+.sb-set .tw-chk-l input{ width:24px; height:24px; }
+#view-tw .tw-add-fold > summary{ font-weight:700; }

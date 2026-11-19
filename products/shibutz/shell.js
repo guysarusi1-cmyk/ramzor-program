@@ -81,7 +81,7 @@ function sbSettings(){
     : sbInstallEvent ? '<button type="button" class="btn" id="sb-install">התקנה כאפליקציה</button><div class="sb-help">יופיע סמל על מסך הבית, והאתר ייפתח כמו אפליקציה.</div>'
     : sbIsIos() ? '<div class="sb-help">באייפון: בספארי לוחצים על כפתור השיתוף (ריבוע עם חץ למעלה), ואז "הוספה למסך הבית".</div>'
     : '<div class="sb-help">בכרום: בתפריט (שלוש הנקודות למעלה) בוחרים "התקנת אפליקציה" או "הוספה למסך הבית".</div>';
-  wrap.innerHTML = `<div class="sheet-card tw-sheet"><h2>הגדרות</h2><div class="sb-set">
+  wrap.innerHTML = `<div class="sheet-card tw-sheet"><div class="tw-sheet-head"><h2>הגדרות</h2><button type="button" class="btn ghost small" data-close aria-label="סגירה">✕ סגירה</button></div><div class="sb-set">
     <div class="sb-set-row"><b>מראה</b>${seg('theme', [['dark', 'כהה'], ['light', 'בהיר']], sbTheme())}</div>
     <div class="sb-set-row"><b>גודל הטקסט</b>${seg('big', [['', 'רגיל'], ['1', 'גדול']], sbGet('big', ''))}</div>
     <div class="sb-set-row"><b>ניגודיות</b>${seg('contrast', [['', 'רגילה'], ['high', 'גבוהה']], sbGet('contrast', ''))}</div>

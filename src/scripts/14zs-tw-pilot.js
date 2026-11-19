@@ -27,37 +27,41 @@ function twAttention(){
     const n = TW.asg.filter(a => a.person === p.id).length, q = p.per_week * 2;
     if(TW.asg.length && n > q) out.push({ cls:'info', t:`${twDisp(p)} · מעל המינימום`, x:`${n} משמרות בשבועיים (המינימום ${q}), כי חסרו מי שסימנו.` });
     const c = twCount(p), sub = TW.subs.some(s => s.person === p.id);
-    c.weeks.forEach((w, i) => { if(sub && w && w.need && w.eff < w.need && w.eff < w.have) out.push({ cls:'warn', t:`${twDisp(p)} · הגשה`, x:`בשבוע ${i + 1} פתח/ה ${w.have}, אבל בגלל משמרות צמודות אפשר לשבץ בפועל רק ${w.eff}. הוגש בכל זאת.` }); });
+    const short = c.weeks.map((w, i) => (sub && w && w.need && w.eff < w.need && w.eff < w.have) ? `בשבוע ${i + 1} פתח/ה ${w.have} ואפשר לשבץ בפועל ${w.eff}` : '').filter(Boolean);
+    if(short.length) out.push({ cls:'note', t:`${twDisp(p)} · הגשה עם משמרות צמודות`, x:`${short.join('; ')}. הוגש בכל זאת.` });
   });
   return out;
 }
 function twAttentionHtml(){
-  const list = twAttention(); if(!list.length) return '<div class="pstatus ok">אין דברים שדורשים תשומת לב.</div>';
+  const list = twAttention();
   // the empty places together, one short line with a button per place; then the rest, six at first
-  const miss = list.filter(x => x.cls === 'bad' && x.go && /^חס/.test(x.x)), rest = list.filter(x => !miss.includes(x)), MAX = 6;
+  const miss = list.filter(x => x.cls === 'bad' && x.go && /^חס/.test(x.x)), info = list.filter(x => x.cls === 'info' || x.cls === 'note'), rest = list.filter(x => !miss.includes(x) && !info.includes(x)), MAX = 6;
   const row = x => x.go ? `<button type="button" class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>`
     : `<div class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`;
   const shown = TW.attnAll ? rest : rest.slice(0, MAX);
-  return `<details class="tw-fixed-box tw-attn"${TW.attnClosed ? '' : ' open'}><summary>דורש תשומת לב (${list.length})</summary>
-    ${miss.length ? `<div class="pstatus bad tw-attn-row"><b>משבצות חסרות (${miss.length})</b><span class="tw-attn-chips">${miss.map(x => `<button type="button" class="btn ghost small" data-tw-goto="${x.go}">${pEsc(x.t)}${/^חסרים/.test(x.x) ? ' ×' + x.x.replace(/\D/g, '') : ''}</button>`).join('')}</span></div>` : ''}
+  const act = miss.length + rest.length;
+  const infoBox = info.length ? `<details class="tw-fixed-box tw-info"><summary>לידיעה (${info.length})</summary>${info.map(x => `<div class="pstatus tw-soft tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`).join('')}</details>` : '';
+  if(!act) return '<div class="pstatus ok">אין דברים שדורשים תשומת לב.</div>' + infoBox;
+  return `<details class="tw-fixed-box tw-attn"${TW.attnClosed ? '' : ' open'}><summary>דורש תשומת לב (${act})</summary>
+    ${miss.length ? `<div class="pstatus bad tw-attn-row"><b>משבצות חסרות (${miss.length})</b><span class="tw-attn-chips">${miss.map(x => `<button type="button" class="btn ghost small" data-tw-goto="${x.go}">${pEsc(x.t)}${/^חסרים/.test(x.x) ? ' (' + x.x.replace(/\D/g, '') + ')' : ''}</button>`).join('')}</span></div>` : ''}
     ${shown.map(row).join('')}
     ${!TW.attnAll && rest.length > MAX ? `<div class="tw-actions"><button type="button" class="btn ghost small" id="tw-attn-all">עוד ${rest.length - MAX}</button></div>` : ''}
-    <div class="pnote">לחיצה על משבצת פותחת אותה.</div></details>`;
+    <div class="pnote">לחיצה על משבצת פותחת אותה.</div></details>${infoBox}`;
 }
 // ---- 2. "כמה משמרות לכל אחת": the weeks, the two weeks against the least, nights (and who had two), mornings / afternoons / nights
 function twCountsHtml(){
   if(!TW.asg.length) return '';
-  const act = TW.people.filter(p => p.active), wk = (p, w) => TW.asg.filter(a => a.person === p.id && twWeekOf(TW.period, a.day) === w);
-  const row = p => {
-    const all = TW.asg.filter(a => a.person === p.id), q = p.per_week * 2, n = all.length, k = s => all.filter(a => a.shift === s).length;
-    const nw = [0, 1].map(w => wk(p, w).filter(a => a.shift === 'N').length), two = nw.some(x => x >= 2);
-    const tot = n === q ? `${n} ✓` : n > q ? `${n} · מעל המינימום (+${n - q})` : `${n} · חסרות ${q - n}`;
-    return `<tr><td><b>${pEsc(twDisp(p))}</b></td><td data-l="מינימום לשבוע">${p.per_week}</td><td data-l="שבוע 1">${wk(p, 0).length}</td><td data-l="שבוע 2">${wk(p, 1).length}</td>
-      <td data-l="סך הכול">${tot}</td><td data-l="לילות">${nw[0] + nw[1]}${two ? ' · שני לילות בשבוע (בתור)' : ''}</td><td data-l="בוקר / צהריים / לילה / סוף שבוע">${twL(`${k('M')} / ${k('A')} / ${k('N')} / ${k('W')}`)}</td></tr>`;
-  };
-  return `<details class="tw-fixed-box"${TW.countsOpen === false ? '' : ' open'} data-tw-counts><summary>כמה משמרות לכל אחת</summary>
-    <table class="tw-cfg-table tw-counts"><thead><tr><th>שם</th><th>מינימום לשבוע</th><th>שבוע 1</th><th>שבוע 2</th><th>סך הכול</th><th>לילות</th><th>בוקר / צהריים / לילה / סוף שבוע</th></tr></thead>
-    <tbody>${act.map(row).join('')}</tbody></table></details>`;
+  const act = TW.people.filter(p => p.active), wk = (p, w) => TW.asg.filter(a => a.person === p.id && twWeekOf(TW.period, a.day) === w).length;
+  const rows = act.map(p => {
+    const all = TW.asg.filter(a => a.person === p.id), q = p.per_week * 2, n = all.length, k = sh => all.filter(a => a.shift === sh).length;
+    const nw = [0, 1].map(w => all.filter(a => a.shift === 'N' && twWeekOf(TW.period, a.day) === w).length);
+    const st = n === q ? 'ok' : n > q ? 'over' : 'low';
+    return { st, html:`<div class="tw-cnt ${st}"><b>${pEsc(twDisp(p))}</b> · ${n} מתוך ${q}${st === 'ok' ? ' ✓' : st === 'over' ? ` · מעל המינימום (+${n - q})` : ` · חסרות ${q - n}`}
+      <small>שבוע 1: ${wk(p, 0)} · שבוע 2: ${wk(p, 1)} · לילות ${nw[0] + nw[1]}${nw.some(x => x >= 2) ? ' (שני לילות בשבוע אחד)' : ''} · בוקר ${k('M')}, צהריים ${k('A')}, לילה ${k('N')}, סוף שבוע ${k('W')}</small></div>` };
+  });
+  const off = rows.filter(r => r.st !== 'ok'), ok = rows.filter(r => r.st === 'ok');
+  return `<details class="tw-fixed-box"${TW.countsOpen === false ? '' : ' open'} data-tw-counts><summary>כמה משמרות לכל אחת${off.length ? ` (${off.length} לא במספר)` : ''}</summary>
+    ${off.map(r => r.html).join('')}${ok.length ? `<details class="tw-cnt-ok"><summary>במספר המדויק (${ok.length})</summary>${ok.map(r => r.html).join('')}</details>` : ''}</details>`;
 }
 
 // ---- 3. "שליחת עדכונים" (the first site): changes after publishing reach the staff's e-mail together, when the builder presses
@@ -131,7 +135,7 @@ async function twShareImage(w){
 function twDragHtml(){
   return `<aside class="tw-drag" aria-label="גרירת שמות לטבלה"><b>גרירה לטבלה</b><small>גוררים שם למשבצת כדי לשבץ.</small>
     ${TW.people.filter(p => p.active).map(p => { const n = TW.asg.filter(a => a.person === p.id).length, q = p.per_week * 2;
-      return `<span class="pchip tw-drag-chip${n >= q ? ' full' : ''}" draggable="true" data-tw-drag="${p.id}">${twU(twDisp(p))} <small>${n}/${q}</small></span>`; }).join('')}</aside>`;
+      return `<span class="pchip tw-drag-chip${n === q ? ' full' : n > q ? ' over' : ''}" draggable="true" data-tw-drag="${p.id}">${twU(twDisp(p))} <small>${n} מתוך ${q}${n > q ? ` (+${n - q})` : ''}</small></span>`; }).join('')}</aside>`;
 }
 function twDragWire(box){
   box.querySelectorAll('[data-tw-drag]').forEach(ch => ch.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', ch.dataset.twDrag); e.dataTransfer.effectAllowed = 'copy'; }));
@@ -176,7 +180,7 @@ function twMySettingsHtml(){
     <div class="sb-set-row"><b>הגשה חדשה מתחילה</b><div class="mx-seg" role="group"><button type="button" data-tw-copy="" aria-pressed="${!pf.copy_last}">ריקה</button><button type="button" data-tw-copy="1" aria-pressed="${!!pf.copy_last}">מההגשה הקודמת שלי</button></div></div>
     <div class="sb-set-row"><b>התראות במייל</b><div class="sb-help">הכול דלוק מההתחלה. אפשר לכבות.</div></div>
     ${TW_NOTIFY.map(([k, w]) => `<div class="sb-set-row"><span>${w}</span>${seg(k, nt[k])}</div>`).join('')}
-    <div class="sb-set-row"><b>הטלפון שלי</b><div class="tw-form"><input type="tel" id="tw-my-phone" dir="ltr" maxlength="20" autocomplete="tel" value="${pEsc(TW.phones[TW.me.id] || '')}" aria-label="הטלפון שלי"><button type="button" class="btn ghost small" id="tw-my-phone-save">שמירה</button></div>
+    <div class="sb-set-row"><b>הטלפון שלי</b><div class="tw-form"><input type="tel" id="tw-my-phone" dir="ltr" maxlength="20" autocomplete="tel" value="${pEsc(TW.phones[TW.me.id] || '')}" aria-label="הטלפון שלי"></div>
       <div class="sb-help">רק מי שבונה את הסידור והנהלה רואים אותו, כדי לשאול בוואטסאפ.</div></div>
     <div class="sb-set-row"><b>משהו לא עובד?</b><button type="button" class="btn ghost" id="tw-problem">דיווח על תקלה</button></div>`;
 }
@@ -204,8 +208,8 @@ function twMySettingsWire(wrap){
     const nt = Object.assign({ reminder:true, published:true, changed:true, swap:true }, (twPrefOf(TW.me.id) || {}).notify || {}); nt[b.dataset.twNt] = !!b.dataset.v;
     if(await twSavePref({ notify:nt })) redraw();
   }));
-  const ps = wrap.querySelector('#tw-my-phone-save');
-  if(ps) ps.addEventListener('click', async () => {
+  const ps = wrap.querySelector('#tw-my-phone');
+  if(ps) ps.addEventListener('change', async () => {
     const v = wrap.querySelector('#tw-my-phone').value.trim();
     if(v && !/^[0-9+\- ]{7,20}$/.test(v)){ toast('מספר טלפון לא תקין'); return; }
     const r = v ? await sbPersonal.from('tw_phone').upsert({ person:TW.me.id, phone:v }) : await sbPersonal.from('tw_phone').delete().eq('person', TW.me.id);
@@ -264,7 +268,7 @@ function twViewAsApply(){
 }
 function twViewAsBar(){
   if(!TW.viewAs) return '';
-  return `<div class="pstatus bad tw-viewas" role="status">אתר הבדיקות · רואים את המסך כמו <b>${pEsc(twDisp(TW.me))}</b> (${TW.viewAs.admin ? 'אדמינית מקומית שהיא גם בצוות' : 'איש צוות'}). <button type="button" class="btn small" id="tw-viewas-off">חזרה למסך שלי</button></div>`;
+  return `<div class="pstatus tw-soft tw-viewas" role="status">אתר הבדיקות · רואים את המסך כמו <b>${pEsc(twDisp(TW.me))}</b> (${TW.viewAs.admin ? 'אדמינית מקומית שהיא גם בצוות' : 'איש צוות'}). <button type="button" class="btn small" id="tw-viewas-off">חזרה למסך שלי</button></div>`;
 }
 function twViewAsPickHtml(fold){
   if(!twViewAsOn() || !TW.realBoss || TW.viewAs) return '';
