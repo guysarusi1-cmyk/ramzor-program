@@ -268,3 +268,35 @@ body.portal-big #view-tw .tw-tab{ flex:none; padding:8px 10px; }
 #view-tw .tw-btns .tw-rm{ margin-inline-start:auto; border-color:transparent; text-decoration:underline; color:var(--p-muted, var(--muted)); }
 /* "install as an app": only under "הסידור" (it was at the bottom of every screen) */
 #view-tw .portal-shell:not([data-tw-tab=sched]) #sb-install-link{ display:none; }
+/* ---- never scrolling sideways on a phone (Guy 2026-11-19) ---- */
+/* the schedule: day after day on a phone, the table only on wider screens */
+#view-tw .tw-days{ display:none; }
+@media (max-width:700px){
+  #view-tw .tw-week .tw-scroll{ display:none; }
+  #view-tw .tw-days{ display:grid; gap:8px; }
+  #view-tw .tw-more-hint{ display:none !important; }
+}
+#view-tw .tw-dcard{ border:1px solid var(--p-line, var(--line)); border-radius:12px; background:var(--p-panel, var(--panel)); padding:8px 10px; }
+#view-tw .tw-dcard.today{ border-color:var(--gold); }
+#view-tw .tw-dcard-h{ display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+#view-tw .tw-dcard-h span{ color:var(--p-muted, var(--muted)); font-size:14px; }
+#view-tw .tw-dcard-h .tw-today{ color:#1C1A17; background:var(--gold); border-radius:10px; padding:1px 8px; font-size:12px; font-weight:700; }
+#view-tw .tw-drow{ display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-top:1px solid var(--p-line, var(--line)); min-height:44px; }
+#view-tw .tw-drow-k{ flex:0 0 76px; display:flex; flex-direction:column; font-weight:700; font-size:14px; }
+#view-tw .tw-drow-k small{ font-weight:400; font-size:12px; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-drow-p{ flex:1 1 auto; min-width:0; display:flex; flex-wrap:wrap; gap:4px; }
+#view-tw .tw-drow.edit{ cursor:pointer; }
+/* the tabs: when they do not fit (big text), a second line, never sideways */
+#view-tw .tw-tabs{ flex-wrap:wrap; overflow:visible; }
+body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
+#view-tw .tw-drow .pchip{ display:inline-block; margin:0; }
+#view-tw .tw-drow.tw-cell{ min-width:0; background:transparent; }
+/* the institution's settings on a phone: each shift is a small block, not a wide table */
+@media (max-width:700px){
+  #view-tw .tw-scroll{ overflow-x:visible; }
+  #view-tw .tw-cfg-table thead{ display:none; }
+  #view-tw .tw-cfg-table, #view-tw .tw-cfg-table tbody, #view-tw .tw-cfg-table tr, #view-tw .tw-cfg-table td{ display:block; width:auto; }
+  #view-tw .tw-cfg-table tr{ padding:6px 0; border-bottom:1px solid var(--p-line, var(--line)); }
+  #view-tw .tw-cfg-table td{ border:none; padding:2px 0; }
+  #view-tw .tw-cfg-table td[data-l]::before{ content:attr(data-l) ": "; color:var(--p-muted, var(--muted)); }
+}

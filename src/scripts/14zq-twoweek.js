@@ -416,7 +416,19 @@ function twGridHtml(builder){
       ${list.map(a => `<span class="pchip${TW.me && a.person === TW.me.id ? ' me' : ''}${a.by_hand ? ' tw-hand' : ''}${a.fixed ? ' tw-fix' : ''}">${twU(twName(a.person))}${a.note ? ` <small>(${pEsc(a.note)})</small>` : ''}</span>`).join('')}
       ${Array.from({ length:missing }, () => '<span class="pchip missing">חסר שיבוץ</span>').join('')}</td>`;
   };
+  // on a phone: day after day, one under the other (Guy 2026-11-19: never a day off the screen, never scrolling sideways on a phone);
+  // the table is for wider screens. Both are drawn, the width chooses (26-twoweek.css), so nothing changes when the phone turns.
+  const today = twToday();
+  const dayCard = day => `<div class="tw-dcard${day === today ? ' today' : ''}"><div class="tw-dcard-h"><b>${DOW_NAMES[dowOf(day)]}</b> <span>${twShort(day)}</span>${day === today ? ' <span class="tw-today">היום</span>' : ''}</div>
+    ${twSlots(day).map(slot => {
+      const list = (by[twKey(day, slot.shift)] || []).slice().sort((a, b) => twName(a.person).localeCompare(twName(b.person), 'he'));
+      const missing = Math.max(0, slot.need - list.length);
+      return `<div class="tw-drow tw-cell${builder ? ' edit' : ''}" data-tw-cell="${twKey(day, slot.shift)}"${builder ? ` tabindex="0" role="button" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}, ${TW_SHIFT[slot.shift]}${missing ? `, חסר שיבוץ` : ''}: בחירת אנשים"` : ''}>
+        <span class="tw-drow-k">${TW_SHIFT[slot.shift]}<small>${twNoBreak(twL(slot.hours))}</small></span>
+        <span class="tw-drow-p">${list.map(a => `<span class="pchip${TW.me && a.person === TW.me.id ? ' me' : ''}${a.by_hand ? ' tw-hand' : ''}${a.fixed ? ' tw-fix' : ''}">${twU(twName(a.person))}${a.note ? ` <small>(${pEsc(a.note)})</small>` : ''}</span>`).join('')}${Array.from({ length:missing }, () => '<span class="pchip missing">חסר שיבוץ</span>').join('')}</span></div>`;
+    }).join('')}</div>`;
   const table = w => `<div class="tw-week"><h3>שבוע ${w + 1} <span class="tw-wk-range">${twL(twShort(days[w * 7]) + '–' + twShort(days[w * 7 + 6]))}</span><span class="tw-more-hint" aria-hidden="true">עוד ימים: גוללים הצידה ←</span></h3>
+    <div class="tw-days">${days.slice(w * 7, w * 7 + 7).map(dayCard).join('')}</div>
     <div class="tw-scroll"><table class="tw-table"><thead><tr><th></th>${days.slice(w * 7, w * 7 + 7).map(day => `<th>${DOW_NAMES[dowOf(day)]}<small>${twShort(day)}</small></th>`).join('')}</tr></thead>
     <tbody>${TW_ROWS.map(sh => `<tr><th>${TW_SHIFT[sh]}</th>${days.slice(w * 7, w * 7 + 7).map(day => cell(day, sh)).join('')}</tr>`).join('')}</tbody></table></div></div>`;
   return table(0) + table(1);
@@ -848,9 +860,9 @@ function twCfgHtml(){
   const needWord = n => `${twL(n.min)}${n.extra ? ` (ועוד ${twL(n.extra)} אם יש ידיים פנויות)` : ''}`;
   const shiftRow = s => {
     const all = (s.needs || []).find(n => n.dow === -1), own = (s.needs || []).filter(n => n.dow >= 0);
-    return `<tr><td><b>${pEsc(s.name)}</b></td><td>${twL(s.starts + '–' + s.ends)}${s.end_day ? ` <small>(${s.end_day === 1 ? 'עד היום שאחרי' : `עד ${s.end_day} ימים אחרי`})</small>` : ''}</td>
-      <td>${all ? needWord(all) : '–'}${own.map(n => `<br><small>ב${DOW_NAMES[n.dow]}: ${needWord(n)}</small>`).join('')}</td>
-      <td>${Number(s.weight) === 1 ? '1' : twL(Number(s.weight))}</td></tr>`;
+    return `<tr><td><b>${pEsc(s.name)}</b></td><td data-l="שעות">${twL(s.starts + '–' + s.ends)}${s.end_day ? ` <small>(${s.end_day === 1 ? 'עד היום שאחרי' : `עד ${s.end_day} ימים אחרי`})</small>` : ''}</td>
+      <td data-l="כמה צריך">${all ? needWord(all) : '–'}${own.map(n => `<br><small>ב${DOW_NAMES[n.dow]}: ${needWord(n)}</small>`).join('')}</td>
+      <td data-l="נספרת במכסה">${Number(s.weight) === 1 ? '1' : twL(Number(s.weight))}</td></tr>`;
   };
   const houses = (v.houses || []).map(h => {
     const mine = (v.shifts || []).filter(s => s.house === h.id);
