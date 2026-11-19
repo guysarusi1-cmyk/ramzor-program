@@ -705,7 +705,7 @@ function twBuildHtml(){
   const p = twPeriodRow(), step = twStepNow(), built = TW.asg.length > 0;
   const head = `<ol class="tw-steps">${TW_STEPS.map((w, i) => { const n = i + 1, off = n > 2 && !built;
     return `<li><button type="button" class="tw-step${n === step ? ' on' : ''}${n < step ? ' done' : ''}" data-tw-step="${n}"${off ? ' disabled' : ''}${n === step ? ' aria-current="step"' : ''}><span class="tw-step-n">${n}</span><span>${w}</span></button></li>`; }).join('')}</ol>`;
-  const who = `<div class="pnote">השבועיים ${twPeriodLabel(p.start)} · בונה את הסידור: <b>${p.builder ? pEsc(twName(p.builder)) : 'לא נקבע'}</b></div>`;
+  const who = `<div class="pnote">השבועיים ${twPeriodLabel(p.start)} · בונה את הסידור: <b>${p.builder ? pEsc(twName(p.builder)) : 'מנהלי המערכת'}</b></div>`;
   const act = TW.people.filter(x => x.active);
   let body = '';
   if(step === 1){
@@ -1052,20 +1052,20 @@ function twTeamHtml(){
       <span class="tw-btns"><label class="tw-inline">משמרות בשבוע <select data-tw-pw="${x.id}">${[1, 2, 3, 4, 5].map(n => `<option${n === x.per_week ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
       ${TW.prefsOn && x.active ? `<button type="button" class="btn ghost small" data-tw-det="${x.id}">פרטים</button>` : `<button type="button" class="btn ghost small tw-rm" data-tw-act="${x.id}">${x.active ? 'הסרה מהצוות' : 'החזרה'}</button>`}</span></div>`).join('')}</div>
 
-    ${fold('queue', `התור של מי בונה את הסידור${queue.length ? ` (${queue.length})` : ''}`, `
-    <p class="tw-step-say">כל שבועיים נפתחים לבד, ומי שבא בתור בונה את הסידור. הוא רואה את הכרטיס "בניית הסידור" עד היום האחרון של אותו סידור.</p>
+    ${fold('queue', `מי בונה את הסידור${queue.length ? ` (תור של ${queue.length})` : ' (מנהלי המערכת)'}`, `
+    <p class="tw-step-say">כל שבועיים נפתחים לבד. בלי תור, מנהלי המערכת בונים את הסידור. עם תור, מי שבא בתור בונה, ורואה את הכרטיס "בניית הסידור" עד היום האחרון של אותו סידור.</p>
     ${queue.length ? `<ol class="tw-queue">${queue.map((id, i) => `<li><b>${i + 1}. ${pEsc(twName(id))}</b><span class="tw-btns">
       <button type="button" class="btn ghost small" data-tw-q-up="${i}"${i ? '' : ' disabled'} aria-label="להקדים את ${pEsc(twName(id))}">↑</button>
       <button type="button" class="btn ghost small" data-tw-q-down="${i}"${i < queue.length - 1 ? '' : ' disabled'} aria-label="לאחר את ${pEsc(twName(id))}">↓</button>
       <button type="button" class="btn ghost small" data-tw-q-del="${i}" aria-label="להוציא את ${pEsc(twName(id))} מהתור">✕</button></span></li>`).join('')}</ol>`
-      : '<div class="pstatus bad">התור ריק, ולכן שבועיים לא נפתחים לבד. מוסיפים אנשי צוות לתור לפי הסדר.</div>'}
+      : '<div class="pstatus ok">אין תור: מנהלי המערכת בונים כל סידור. אפשר להוסיף אנשי צוות לתור, ואז כל שבועיים בונה הבא בתור.</div>'}
     ${act.some(p => !queue.includes(p.id)) ? `<div class="tw-form"><label>הוספה לתור <select id="tw-q-add"><option value="">(לבחור)</option>${act.filter(p => !queue.includes(p.id)).map(p => `<option value="${p.id}">${pEsc(p.name)}</option>`).join('')}</select></label></div>` : ''}
     <div class="tw-form tw-days">ההגשה נפתחת ${sel('tw-open-days', [5, 7, 10, 14, 17, 21, 28], od)} ימים לפני שהשבועיים מתחילים, ונסגרת ${sel('tw-close-days', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14], cd)} ימים לפני.</div>`)}
 
     ${fold('periods', 'השבועיים', `
     ${TW.periods.length ? `<div class="tw-list">${TW.periods.map(x => `<div class="tw-row"><b>${twPeriodLabel(x.start)}</b><span>${st[x.status] || ''}${x.deadline && x.status === 'open' ? ` · ההגשה עד ${new Date(x.deadline).toLocaleDateString('he-IL', { day:'numeric', month:'numeric' })}` : ''}</span>
-      <label class="tw-inline">בונה: <select data-tw-pb="${x.start}"><option value="">(לא נקבע)</option>${act.map(p => `<option value="${p.id}"${x.builder === p.id ? ' selected' : ''}>${pEsc(p.name)}</option>`).join('')}</select></label></div>`).join('')}</div>` : '<div class="pnote">עדיין לא נפתחו שבועיים.</div>'}
-    <div class="tw-form"><label>פתיחה ידנית: שבועיים מיום ראשון <b>${twShort(next)}</b>, בונה: <select id="tw-new-builder"><option value="">(לבחור)</option>${act.map(x => `<option value="${x.id}">${pEsc(x.name)}</option>`).join('')}</select></label>
+      <label class="tw-inline">בונה: <select data-tw-pb="${x.start}"><option value="">מנהלי המערכת</option>${act.map(p => `<option value="${p.id}"${x.builder === p.id ? ' selected' : ''}>${pEsc(p.name)}</option>`).join('')}</select></label></div>`).join('')}</div>` : '<div class="pnote">עדיין לא נפתחו שבועיים.</div>'}
+    <div class="tw-form"><label>פתיחה ידנית: שבועיים מיום ראשון <b>${twShort(next)}</b>, בונה: <select id="tw-new-builder"><option value="">מנהלי המערכת</option>${act.map(x => `<option value="${x.id}">${pEsc(x.name)}</option>`).join('')}</select></label>
       <button type="button" class="btn" id="tw-new-period" data-start="${next}">פתיחה להגשה</button></div>`)}
 
     ${fold('admins', `מנהלי מערכת${admins.length ? ` (${admins.length})` : ''}`, `
@@ -1150,7 +1150,11 @@ function twTeamWire(box){
     run(() => sbPersonal.from('tw_settings').upsert({ key:'weekend_hours', value:v }), 'השעות נשמרו');
   });
   const np = box.querySelector('#tw-new-period');
-  if(np) np.addEventListener('click', () => { const b = box.querySelector('#tw-new-builder').value || null; TW.period = np.dataset.start; run(() => sbPersonal.from('tw_period').insert({ start:np.dataset.start, builder:b }), 'השבועיים נפתחו להגשה'); });
+  if(np) np.addEventListener('click', () => {
+    const b = box.querySelector('#tw-new-builder').value || null, st = np.dataset.start, cd = Number(twSetting('close_days', 5)), [y, m, d] = addDays(st, -cd).split('-').map(Number);
+    const dl = new Date(y, m - 1, d, 23, 59) > new Date() ? new Date(y, m - 1, d, 23, 59).toISOString() : null;          // (the hand-in closes close_days before, at 23:59)
+    TW.period = st; run(() => sbPersonal.from('tw_period').insert(Object.assign({ start:st, builder:b }, dl ? { deadline:dl } : {})), 'השבועיים נפתחו להגשה');
+  });
   box.querySelectorAll('[data-tw-pw]').forEach(s => s.addEventListener('change', () => run(() => sbPersonal.from('tw_people').update({ per_week:Number(s.value) }).eq('id', s.dataset.twPw), 'נשמר')));
   box.querySelectorAll('[data-tw-act]').forEach(b => b.addEventListener('click', async () => {
     const x = twPerson(b.dataset.twAct);
