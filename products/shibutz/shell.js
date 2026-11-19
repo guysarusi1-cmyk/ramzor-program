@@ -89,6 +89,7 @@ function sbSettings(){
     <div class="sb-set-row"><b>אפליקציה</b>${install}</div>
     <div class="sb-set-row"><b>חשבון</b><button type="button" class="btn ghost" id="sb-out">יציאה מהחשבון</button></div></div>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div></div>`;
+  if(typeof twMySettingsInto === 'function') twMySettingsInto(wrap);          // (my own settings of the schedule: the pilot, 14zs-tw-pilot.js)
   wrap.addEventListener('click', async e => {
     if(e.target === wrap || e.target.closest('[data-close]')){ wrap.remove(); return; }
     const b = e.target.closest('[data-k]');

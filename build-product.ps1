@@ -13,7 +13,7 @@ $root = $PSScriptRoot
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 function Read-Text($p){ [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8) }
 
-$modules = @{ shibutz = @('14zj-simple-prefs.js', '14zq-twoweek.js') }          # which screens each product has
+$modules = @{ shibutz = @('14zj-simple-prefs.js', '14zq-twoweek.js', '14zs-tw-pilot.js') }          # which screens each product has
 
 $cfgPath = Join-Path $root "config\org-$Org.json"
 if(-not (Test-Path $cfgPath)){ throw "missing $cfgPath" }

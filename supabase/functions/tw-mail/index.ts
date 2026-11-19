@@ -1,7 +1,10 @@
 // Supabase Edge Function: tw-mail (the two-week schedule's e-mails; Guy 2026-11-14)
 // Runs every hour (supabase/core/mail-v1.sql) and right after a schedule is published (the site calls it). Each time it sends only what is due:
 //   1. a reminder, about a day before the hand-in closes, to every person on the list who signs in and has not handed in yet;
-//   2. "the schedule is published", once per publishing, to every person on the list who signs in, with her own shifts.
+//   2. "the schedule is published", once per publishing, to every person on the list who signs in, with her own shifts;
+//   3. (scheduling-v86.sql, the pilot 19.11) the changes after publishing, together, when the builder pressed "שליחת עדכונים";
+//   4. (v86) a new swap request, once, to whoever could take it (not working that day);
+//   each person chooses which of these she gets (tw_pref.notify; all on at the start); before v86 everybody gets 1 and 2 as before.
 // What was sent is written in tw_mail_log, so calling it again sends nothing twice.
 // Only the database calls it (core/mail-v2.sql: the hourly job and tw_publish), with the shared secret in the header x-tw-secret;
 // a call without it gets 401 and nothing else (Yigal 2026-11-14). The answer says only "ok": no names, no counts.
@@ -35,11 +38,14 @@ Deno.serve(async (req) => {
     // one database, many organisations (scheduling-v81.sql): every organisation on its own, every query inside it
     for (const org of orgs) {
     const O = org.id;
-    const [sets, people, priv] = await Promise.all([
+    const [sets, people, priv, prefs] = await Promise.all([
       db.from('tw_settings').select('key,value').eq('org_id', O),
       db.from('tw_people').select('id,name,staff_id,active').eq('org_id', O),
       db.from('staff_private').select('staff_id,email,auth_user_id').eq('org_id', O),
+      db.from('tw_pref').select('person,notify').eq('org_id', O),
     ]);
+    const v86 = !prefs.error;
+    const wants = (pid: string, kind: string) => { const p = (prefs.data || []).find((x) => x.person === pid); return !p || !p.notify || p.notify[kind] !== false; };
     const orgName = org.name || 'סידור העבודה';
     const site = String((sets.data || []).find((s) => s.key === 'site_url')?.value || '');
     const from = `${orgName} <no-reply@mercuryteam.app>`;
@@ -62,7 +68,7 @@ Deno.serve(async (req) => {
     for (const p of open) {
       if (await logged(p.start, 'reminder', '')) continue;
       const subs = new Set(((await db.from('tw_submission').select('person').eq('org_id', O).eq('period', p.start)).data || []).map((s) => s.person));
-      const who = reachable.filter((x) => !subs.has(x.id));
+      const who = reachable.filter((x) => !subs.has(x.id) && wants(x.id, 'reminder'));
       const until = new Date(p.deadline).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', weekday: 'long', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
       let n = 0;
       for (const x of who) {
@@ -80,12 +86,44 @@ Deno.serve(async (req) => {
       const asg = (await db.from('tw_assignment').select('day,shift,person').eq('org_id', O).eq('period', p.start).order('day')).data || [];
       let n = 0;
       for (const x of reachable) {
+        if (!wants(x.id, 'published')) continue;
         const mine = asg.filter((a) => a.person === x.id);
         const list = mine.length ? `<ul>${mine.map((a) => `<li>יום ${dow(a.day)} ${dm(a.day)} · ${SHIFT[a.shift] || a.shift}</li>`).join('')}</ul>` : '<p>אין לך משמרות בשבועיים האלה.</p>';
         const html = page('הסידור פורסם', `<p>שלום ${esc(x.name)},</p><p>הסידור לשבועיים ${dm(p.start)}–${dm(addDays(p.start, 13))} פורסם. המשמרות שלך:</p>${list}`, site);
         if (await send(mailOf[x.staff_id], `הסידור לשבועיים ${dm(p.start)}–${dm(addDays(p.start, 13))} פורסם`, html)) n++;
       }
       await log(p.start, 'published', p.published_at, n);
+    }
+
+    if (v86) {
+      // 3. the changes after publishing, when the builder pressed "שליחת עדכונים": one mail per person, the changes that are still changes
+      const due = (await db.from('tw_notice').select('id,person,period,day,shift,kind,created_at').eq('org_id', O).eq('mail_due', true).is('mailed_at', null).order('created_at')).data || [];
+      const byPerson: Record<string, typeof due> = {};
+      due.forEach((n) => { (byPerson[n.person] = byPerson[n.person] || []).push(n); });
+      for (const [pid, list] of Object.entries(byPerson)) {
+        const x = reachable.find((r) => r.id === pid);
+        const net: Record<string, { day: string; shift: string; first: string; last: string }> = {};
+        list.forEach((n) => { const k = n.day + '|' + n.shift; if (!net[k]) net[k] = { day: n.day, shift: n.shift, first: n.kind, last: n.kind }; else net[k].last = n.kind; });
+        const real = Object.values(net).filter((v) => v.first === v.last).sort((a, b) => a.day < b.day ? -1 : 1);          // (added and then removed again: no change)
+        let ok = true;
+        if (x && real.length && wants(pid, 'changed')) {
+          const html = page('שינוי במשמרות שלך', `<p>שלום ${esc(x.name)},</p><p>היו שינויים במשמרות שלך בסידור שפורסם:</p><ul>${real.map((v) => `<li>${v.last === 'added' ? 'נוספה' : 'בוטלה'}: יום ${dow(v.day)} ${dm(v.day)} · ${SHIFT[v.shift] || v.shift}</li>`).join('')}</ul>`, site);
+          ok = await send(mailOf[x.staff_id], 'שינוי במשמרות שלך', html);
+        }
+        if (ok && !dry) await db.from('tw_notice').update({ mailed_at: new Date().toISOString() }).eq('org_id', O).in('id', list.map((n) => n.id));
+      }
+      // 4. a new swap request: once, to whoever does not work that day (the site shows the exact ones; the mail only calls to look)
+      const today = new Date().toISOString().slice(0, 10);
+      const swaps = (await db.from('tw_swap').select('id,period,day,shift,from_person').eq('org_id', O).eq('status', 'open').is('mailed_at', null).gte('day', today)).data || [];
+      for (const sw of swaps) {
+        const busy = new Set(((await db.from('tw_assignment').select('person').eq('org_id', O).eq('day', sw.day)).data || []).map((a) => a.person));
+        for (const x of reachable) {
+          if (x.id === sw.from_person || busy.has(x.id) || !wants(x.id, 'swap')) continue;
+          const html = page('מחפשים החלפה', `<p>שלום ${esc(x.name)},</p><p>מחפשים מישהו/י למשמרת: יום ${dow(sw.day)} ${dm(sw.day)} · ${SHIFT[sw.shift] || sw.shift}.</p><p>אם זה מתאים לך, לוקחים אותה באתר, בלשונית "החלפות".</p>`, site);
+          await send(mailOf[x.staff_id], `מחפשים החלפה: ${SHIFT[sw.shift] || sw.shift} ${dm(sw.day)}`, html);
+        }
+        if (!dry) await db.from('tw_swap').update({ mailed_at: new Date().toISOString() }).eq('org_id', O).eq('id', sw.id);
+      }
     }
     }          // (the next organisation)
     if (errors.length) console.error('tw-mail', JSON.stringify(errors));          // (the details stay in the function's own log)

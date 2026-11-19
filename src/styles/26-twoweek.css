@@ -300,3 +300,30 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
   #view-tw .tw-cfg-table td{ border:none; padding:2px 0; }
   #view-tw .tw-cfg-table td[data-l]::before{ content:attr(data-l) ": "; color:var(--p-muted, var(--muted)); }
 }
+/* the pilot (Guy 19.11): a row of the place sheet = the name (a button) and small buttons beside it (hours, ✓, WhatsApp) */
+.tw-pick-row{ flex-direction:row; align-items:center; gap:8px; padding:0; cursor:default; }
+.tw-pick-main{ flex:1; min-width:0; min-height:52px; display:flex; flex-direction:column; align-items:flex-start; text-align:start; padding:8px 12px; background:transparent; border:0; color:inherit; font:inherit; cursor:pointer; }
+.tw-pick-main[aria-disabled=true]{ cursor:not-allowed; }
+.tw-pick-side{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding-inline-end:10px; }
+.tw-pick-row.on .btn.ghost{ color:#1C1A17; border-color:#1C1A17; }
+.wa-btn{ flex:none; display:inline-grid; place-items:center; width:40px; height:40px; border-radius:50%; background:#25d366; color:#fff; text-decoration:none; }
+.wa-btn:focus-visible{ outline:2px solid currentColor; outline-offset:2px; }
+.tw-wline{ margin:6px 0; }
+/* the pilot, step 3 on a computer: the table and the names to drag beside it; on a phone (and a narrow screen) only the table */
+#view-tw .tw-drag{ display:none; }
+@media (min-width:1100px){
+  #view-tw .tw-build-grid{ display:grid; grid-template-columns:minmax(0, 1fr) 190px; gap:14px; align-items:start; }
+  #view-tw .tw-drag{ display:flex; flex-direction:column; gap:6px; position:sticky; top:10px; padding:10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); }
+  #view-tw .tw-drag small{ opacity:.75; }
+  #view-tw .tw-drag-chip{ cursor:grab; display:flex; justify-content:space-between; gap:6px; margin:0; }
+  #view-tw .tw-drag-chip.full{ opacity:.6; }
+  #view-tw td.tw-drop{ outline:3px dashed var(--gold); outline-offset:-3px; }
+}
+#view-tw .tw-attn-row{ display:block; width:100%; text-align:start; font:inherit; margin:6px 0; cursor:default; }
+#view-tw button.tw-attn-row{ cursor:pointer; }
+#view-tw .tw-days-off{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0; }
+#view-tw .tw-days-off [aria-pressed=true], .sb-set .tw-days-off [aria-pressed=true]{ background:var(--gold); color:#1C1A17; border-color:var(--gold); }
+.sb-set .tw-days-off{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0; }
+.sb-set .tw-form{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.sb-set .tw-form input{ min-width:0; flex:1 1 140px; }
+#view-tw .tw-pending{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
