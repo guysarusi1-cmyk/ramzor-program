@@ -191,3 +191,16 @@ async function sbStart(){
   if(session){ if(await sbEnter()) return; } else sbShowLogin();
 }
 setTimeout(sbStart, 0);          // (after the whole script was read: the two-week module comes after this file)
+
+// the TEST site (shibutz-test.mercuryteam.app, Guy 19.11): a bar at the top on every screen, so it is never mistaken for the real site
+(function(){
+  if(!/^shibutz-test\./.test(location.hostname)) return;
+  const put = () => {
+    if(document.getElementById('sb-test-bar')) return;
+    const b = document.createElement('div'); b.id = 'sb-test-bar'; b.setAttribute('role', 'note');
+    b.textContent = 'אתר בדיקות · לא האתר האמיתי. מה שעושים כאן לא מגיע לצוות.';
+    b.style.cssText = 'position:sticky;top:0;z-index:9999;background:repeating-linear-gradient(135deg,#F2C94C 0 14px,#E8B931 14px 28px);color:#1C1A17;font:700 15px/1.4 Assistant,Arial,sans-serif;text-align:center;padding:6px 10px;';
+    document.body.prepend(b);
+  };
+  if(document.body) put(); else document.addEventListener('DOMContentLoaded', put);
+})();

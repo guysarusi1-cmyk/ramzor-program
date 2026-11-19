@@ -250,3 +250,38 @@ async function twCopyLast(person){
   const ins = await sbPersonal.from('tw_option').insert(rows); if(ins.error){ console.error(ins.error); return false; }
   TW.options = TW.options.concat(rows); toast('ההגשה התחילה מהסימונים של הפעם הקודמת. אפשר לשנות הכול.', 5000); return true;
 }
+
+// ---- 8. the test site only (Guy 19.11: "אני רוצה לראות את חוויית המשתמש של מיכל ושל המדריכות"): an admin chooses one of the staff and
+// sees the screens exactly as that person does — as a staff member, or as a local admin who is also on the staff and builds. The database
+// still knows the real admin (every right check is the admin's), so what goes through the person's own server functions (taking a swap,
+// asking for one, her own notices) does not work in this mode; marks, hand-ins, building and settings do. Never on the real sites.
+const twViewAsOn = () => /^(shibutz-test\.|localhost|127\.0\.0\.1)/.test(location.hostname);
+function twViewAsApply(){
+  if(!twViewAsOn() || !TW.realBoss) return;
+  let v = null; try { v = JSON.parse(sessionStorage.getItem('mercury-tw-viewas') || 'null'); } catch(e){}
+  const p = v && TW.people.find(x => x.id === v.person && x.active); if(!p) return;
+  TW.viewAs = { person:p.id, admin:!!v.admin }; TW.me = p; TW.boss = !!v.admin;
+}
+function twViewAsBar(){
+  if(!TW.viewAs) return '';
+  return `<div class="pstatus bad tw-viewas" role="status">אתר הבדיקות · רואים את המסך כמו <b>${pEsc(twDisp(TW.me))}</b> (${TW.viewAs.admin ? 'אדמינית מקומית שהיא גם בצוות' : 'איש צוות'}). <button type="button" class="btn small" id="tw-viewas-off">חזרה למסך שלי</button></div>`;
+}
+function twViewAsPickHtml(fold){
+  if(!twViewAsOn() || !TW.realBoss || TW.viewAs) return '';
+  return fold('viewas', 'צפייה כמו איש צוות (רק באתר הבדיקות)', `<p class="tw-step-say">בוחרים איש צוות ורואים את האתר בדיוק כמו שהוא רואה אותו. אפשר לסמן העדפות, להגיש, לבנות ולשנות הגדרות. החלפות לא עובדות במצב הזה.</p>
+    <div class="tw-form"><label>איש צוות <select id="tw-viewas-who">${TW.people.filter(p => p.active).map(p => `<option value="${p.id}">${pEsc(twDisp(p))}</option>`).join('')}</select></label></div>
+    <div class="tw-actions"><button type="button" class="btn" data-tw-viewas="">כמו מדריכה</button><button type="button" class="btn ghost" data-tw-viewas="1">כמו אדמינית מקומית שהיא גם בצוות</button></div>
+    <div class="pnote">כדי לראות את מי שבונה את הסידור: בפסקה "השבועיים" קובעים אותה כבונה של השבועיים הפתוחים.</div>`);
+}
+function twViewAsWire(box){
+  box.querySelectorAll('[data-tw-viewas]').forEach(b => b.addEventListener('click', async () => {
+    const who = box.querySelector('#tw-viewas-who').value;
+    try { sessionStorage.setItem('mercury-tw-viewas', JSON.stringify({ person:who, admin:!!b.dataset.twViewas })); } catch(e){}
+    TW.tab = null; TW.as = null; TW.step = null; await twLoadBase(); await twLoadPeriod(); TW.tab = TW.me ? 'mine' : 'sched'; twRender(); window.scrollTo(0, 0);
+  }));
+  const off = box.querySelector('#tw-viewas-off');
+  if(off) off.addEventListener('click', async () => {
+    try { sessionStorage.removeItem('mercury-tw-viewas'); } catch(e){}
+    TW.tab = 'team'; TW.as = null; TW.step = null; await twLoadBase(); await twLoadPeriod(); twRender(); window.scrollTo(0, 0);
+  });
+}

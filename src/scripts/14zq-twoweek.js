@@ -142,6 +142,8 @@ async function twLoadBase(){
   TW.me = TW.people.find(p => p.active && p.staff_id && p.staff_id === srv.me) || null;
   TW.boss = !!((srv.profile && srv.profile.admin) || (srv.meRow && (srv.meRow.role === 'coordinator' || srv.meRow.admin)));
   TW.allowed = TW.boss || !!TW.me;
+  TW.realBoss = TW.boss; TW.viewAs = null;
+  if(typeof twViewAsApply === 'function') twViewAsApply();          // (the test site only: an admin sees the screens as one of the staff)
   if(TW.allowed && !TW.autoDone){          // (the next two weeks open by themselves when they are due: scheduling-v79.sql)
     TW.autoDone = true;
     try { const r = await sbPersonal.rpc('tw_auto_open'); if(!r.error && r.data && !TW.periods.some(p => p.start === r.data)){ const pr2 = await sbPersonal.from('tw_period').select('*').order('start', { ascending:false }).limit(8); if(!pr2.error) TW.periods = pr2.data || []; } } catch(e){}
@@ -218,10 +220,11 @@ function twRender(){
   else if(TW.tab === 'team') inner = twTeamHtml();
   else if(TW.tab === 'swaps') inner = twSwapsHtml();
   else if(TW.tab === 'inbox') inner = twInboxHtml();
-  box.innerHTML = tabs + (allPeriods ? '' : twPeriodPicker()) + inner;
+  box.innerHTML = (typeof twViewAsBar === 'function' ? twViewAsBar() : '') + tabs + (allPeriods ? '' : twPeriodPicker()) + inner;
   box.querySelectorAll('[data-tw-tab]').forEach(b => b.addEventListener('click', () => { if(b.dataset.twTab === TW.tab) return; twGo(() => { TW.tab = b.dataset.twTab; TW.full = false; TW.step = null; }); }));
   box.querySelectorAll('[data-tw-open-build]').forEach(b => b.addEventListener('click', () => twGo(() => { TW.tab = 'build'; TW.step = null; })));
   box.querySelectorAll('[data-tw-back-sched]').forEach(b => b.addEventListener('click', () => twGo(() => { TW.tab = 'sched'; TW.step = null; })));
+  if(typeof twViewAsWire === 'function') twViewAsWire(box);
   const sel = box.querySelector('#tw-period-sel'); if(sel) sel.addEventListener('change', async () => { TW.period = sel.value; TW.week = 0; TW.step = null; await twLoadPeriod(); twRender(); });
   twScrollHints(box);
   const shell = box.closest('.portal-shell'); if(shell) shell.dataset.twTab = TW.tab || '';          // (the install link: only under "הסידור")
@@ -1029,6 +1032,7 @@ function twTeamHtml(){
     ${fold('admins', `מנהלי מערכת${admins.length ? ` (${admins.length})` : ''}`, `
     <div class="pnote">מנהלי מערכת מוסיפים צוות, קובעים מכסות ואת התור של מי בונה את הסידור. כאן מופיעים מי שלא משובצים לסידור. מוסיפים אותם בטופס ההוספה למעלה.</div>
     ${admins.length ? `<div class="tw-list">${admins.map(s => `<div class="tw-row"><b>${pEsc(s.display_name)}</b><span class="tw-row-sub">${(TW.priv[s.id] || {}).auth_user_id ? '<span class="tw-ok">יש כניסה אישית</span>' : (TW.priv[s.id] || {}).email ? `<span dir="ltr">${pEsc(TW.priv[s.id].email)}</span> <button type="button" class="btn small" data-tw-login="${s.id}">יצירת כניסה</button>` : ''}</span></div>`).join('')}</div>` : ''}`)}
+    ${typeof twViewAsPickHtml === 'function' ? twViewAsPickHtml(fold) : ''}
     ${fold('weekend', 'שעות סוף השבוע', (() => { const wh = twSetting('weekend_hours', null) || {}, g = (k, part, d) => ((wh[k] || {})[part]) || d;
       return `<p class="tw-step-say">משמרת סוף השבוע מתחילה בשישי (או בערב חג) ומסתיימת במוצאי שבת (או חג). השעות שונות בחורף ובקיץ.</p>
       ${[['winter', 'חורף'], ['summer', 'קיץ']].map(([k, w]) => `<div class="tw-form"><b>${w}</b><label>מתחילה <input type="time" data-tw-wh="${k}|start" value="${g(k, 'start', '14:00')}"></label><label>מסתיימת <input type="time" data-tw-wh="${k}|end" value="${g(k, 'end', '20:30')}"></label></div>`).join('')}
