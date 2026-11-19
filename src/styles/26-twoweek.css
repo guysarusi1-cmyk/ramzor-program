@@ -344,3 +344,8 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 #view-tw .tw-drag-chip small{ font-size:13px; opacity:.9; }
 .sb-set .tw-chk-l input{ width:24px; height:24px; }
 #view-tw .tw-add-fold > summary{ font-weight:700; }
+/* Rita's check 19.11: no white scroll bar in a dark window; the page behind an open window does not scroll; the ✓ button readable */
+.sheet .sheet-card{ scrollbar-color:color-mix(in srgb, var(--p-text, #ddd) 35%, transparent) transparent; scrollbar-width:thin; }
+body:has(> .sheet){ overflow:hidden; }
+.tw-pick-row.on .btn.ghost{ background:#1C1A17; color:#F3EEE4; border-color:#1C1A17; }
+#view-tw .tw-pday.tw-off .tw-day-name{ opacity:.6; }

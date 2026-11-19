@@ -60,7 +60,7 @@ function twCountsHtml(){
       <small>שבוע 1: ${wk(p, 0)} · שבוע 2: ${wk(p, 1)} · לילות ${nw[0] + nw[1]}${nw.some(x => x >= 2) ? ' (שני לילות בשבוע אחד)' : ''} · בוקר ${k('M')}, צהריים ${k('A')}, לילה ${k('N')}, סוף שבוע ${k('W')}</small></div>` };
   });
   const off = rows.filter(r => r.st !== 'ok'), ok = rows.filter(r => r.st === 'ok');
-  return `<details class="tw-fixed-box"${TW.countsOpen === false ? '' : ' open'} data-tw-counts><summary>כמה משמרות לכל אחת${off.length ? ` (${off.length} לא במספר)` : ''}</summary>
+  return `<details class="tw-fixed-box"${TW.countsOpen === false ? '' : ' open'} data-tw-counts><summary>כמה משמרות לכל אחת${off.length ? ` (${off.length === 1 ? 'אחת לא במספר המדויק' : `${off.length} לא במספר המדויק`})` : ''}</summary>
     ${off.map(r => r.html).join('')}${ok.length ? `<details class="tw-cnt-ok"><summary>במספר המדויק (${ok.length})</summary>${ok.map(r => r.html).join('')}</details>` : ''}</details>`;
 }
 
@@ -92,7 +92,7 @@ function twShareAsk(){
   const p = twPeriodRow(); if(!p || p.status !== 'published'){ toast('אפשר לשתף רק סידור שפורסם'); return; }
   if(TW.pending){ toast('יש שינויים שעוד לא נשלחו. קודם "שליחת עדכונים", ואז שיתוף.', 5000); return; }
   const days = twDays(TW.period);
-  const sh = twSheet(`<h2>שיתוף תמונת הסידור</h2><div class="pnote">התמונה נפתחת לשיתוף. בוחרים את הנמען בוואטסאפ.</div>
+  const sh = twSheet(`<h2>שיתוף תמונת הסידור</h2><div class="pnote">בטלפון התמונה נפתחת לשיתוף, ובוחרים למי לשלוח. במחשב היא נשמרת כקובץ, ומצרפים אותה בוואטסאפ.</div>
     <div class="tw-actions">${[0, 1].map(w => `<button type="button" class="btn" data-tw-img="${w}">שבוע ${w + 1} <small>${twL(twShort(days[w * 7]) + '–' + twShort(days[w * 7 + 6]))}</small></button>`).join('')}</div>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-tw-close>סגירה</button></div>`);
   sh.querySelectorAll('[data-tw-img]').forEach(b => b.addEventListener('click', async () => { sh.remove(); await twShareImage(Number(b.dataset.twImg)); }));
@@ -110,7 +110,7 @@ async function twShareImage(w){
     list.forEach(n => { const t = cur ? cur + ', ' + n : n; if(cur && g.measureText(t).width > colW - 16){ out.push(cur + ','); cur = n; } else cur = t; });
     if(cur) out.push(cur); return out; };
   const rows = days.map(d => { const cs = cols.map(([code]) => { const l = names(d, code); return l === null ? null : wrapN(l); });
-    return { d, cs, h:Math.max(74, pad * 2 + Math.max(1, ...cs.map(x => x ? x.length : 1)) * lineH - 6) }; });
+    return { d, cs, h:Math.max(74, pad * 2 + (Math.max(1, ...cs.map(x => x ? x.length : 1)) + 1) * lineH - 6) }; });
   const H = headH + rows.reduce((t, r) => t + r.h, 0) + 40; c.width = W; c.height = H;
   g.direction = 'rtl'; g.textAlign = 'right'; g.fillStyle = '#FAF7F2'; g.fillRect(0, 0, W, H);
   g.fillStyle = '#2D2A24'; g.font = '600 44px Rubik, Assistant, Arial'; g.fillText(`סידור העבודה · שבוע ${w + 1}`, W - 40, 64);
@@ -122,7 +122,9 @@ async function twShareImage(w){
     g.fillStyle = '#2D2A24'; g.font = '700 28px Assistant, Arial'; g.fillText(`${DOW_NAMES[dowOf(r.d)]} ${twShort(r.d)}`, W - 44, y + pad + 24);
     r.cs.forEach((x, ci) => { const xr = W - 40 - 170 - ci * colW; let ly = y + pad + 24; g.font = F; g.fillStyle = '#2D2A24';
       if(!x || !x.length){ g.fillStyle = '#9A9286'; g.fillText(x ? 'חסר שיבוץ' : '—', xr, ly); return; }
-      x.forEach(t => { g.fillText(t, xr, ly); ly += lineH; }); });
+      x.forEach(t => { g.fillText(t, xr, ly); ly += lineH; });
+      const sh = cols[ci][0] === 'A' && twKind(r.d) === 'fri' ? 'W' : cols[ci][0], sl = twSlots(r.d).find(s => s.shift === sh), n = sl ? sl.need - TW.asg.filter(a => a.day === r.d && a.shift === sh).length : 0;
+      if(n > 0){ g.fillStyle = '#B5502F'; g.fillText(`חסר ${n}`, xr, ly); } });
     y += r.h;
   });
   const blob = await new Promise(res => c.toBlob(res, 'image/png'));
@@ -145,7 +147,7 @@ function twDragWire(box){
     td.addEventListener('drop', async e => {
       e.preventDefault(); td.classList.remove('tw-drop');
       const pid = e.dataTransfer.getData('text/plain'), [day, shift] = td.dataset.twCell.split('|'); if(!pid || !twPerson(pid)) return;
-      if(TW.asg.some(a => a.person === pid && a.day === day && a.shift === shift)){ toast(`${twName(pid)} כבר במשמרת הזו`); return; }
+      if(TW.asg.some(a => a.person === pid && a.day === day && a.shift === shift)){ toast(`${twName(pid)} כבר במשמרת הזו`, 4000); return; }
       if(TW.asg.some(a => a.person === pid && twPair(pid, a.day, a.shift, day, shift, a) === 'block')){ toast(`אי אפשר: ${twName(pid)} במשמרת חופפת או צמודה, או בצירוף שלא הסכים/ה לו`); return; }
       const r = await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:pid, by_hand:true }).select();
       if(r.error){ console.error(r.error); toast('⚠ השיבוץ לא נשמר'); return; }
@@ -230,7 +232,8 @@ function twMySettingsInto(wrap){
 function twProblemSheet(){
   const sh = twSheet(`<h2>דיווח על תקלה</h2><div class="pnote">מה קרה? כמה מילים מספיקות. הדיווח מגיע להנהלה ולתמיכה.</div>
     <label class="tw-note-l">מה לא עבד<textarea id="tw-prob" rows="4" maxlength="1000"></textarea></label><div class="pnote tw-privacy">${twT('privacy')}</div>
-    <div class="confirm-actions"><button type="button" class="btn" id="tw-prob-go">שליחה</button><button type="button" class="btn ghost" data-tw-close>ביטול</button></div>`);
+    <div class="confirm-actions"><button type="button" class="btn" id="tw-prob-go">שליחה</button><button type="button" class="btn ghost" id="tw-prob-back">חזרה להגדרות</button></div>`);
+  sh.querySelector('#tw-prob-back').addEventListener('click', () => { sh.remove(); if(typeof sbSettings === 'function') sbSettings(); });
   sh.querySelector('#tw-prob-go').addEventListener('click', async () => {
     const text = sh.querySelector('#tw-prob').value.trim(); if(!text){ toast('צריך לכתוב מה קרה'); return; }
     const info = { tab:TW.tab || '', step:TW.step || null, period:TW.period || null, width:window.innerWidth, ua:navigator.userAgent.slice(0, 160), at:new Date().toISOString() };
