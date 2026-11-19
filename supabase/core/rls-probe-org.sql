@@ -9,7 +9,7 @@
 -- rows of the invented people only, or only asks whether a write is allowed). The answer is one cell: "pass" and the list of what
 -- failed. Copy it to Claude.
 -- Needs: core-v1, core-v2, scheduling-v75 ... v81, core/mail-v1 (v82: its personal notices, and v83: the organisation's settings,
--- are tried when their tables are there).
+-- are tried when their tables are there; so are v86's settings, phones and problem reports).
 -- ================================================================
 drop table if exists pg_temp.rls_probe_out;
 create temp table rls_probe_out (j jsonb);
@@ -67,6 +67,13 @@ begin
     -- the organisation's settings (scheduling-v83.sql): probe-a gets the balancing-home template; probe-b has none yet
     if to_regclass('public.tw_cfg') is not null then
       execute 'select public.tw_cfg_from_template($1, ''balancing'', date ''2000-01-02'', true)' using oa;
+    end if;
+
+    -- the pilot (scheduling-v86.sql): settings, phones and a problem report of the instructor of probe-a; a phone in probe-b
+    if to_regclass('public.tw_pref') is not null then
+      execute 'insert into public.tw_pref(org_id, person, combos) values ($1, $2, ''{MN}''), ($1, $3, ''{}'')' using oa, (u->'ins'->>'person')::uuid, (u->'bld'->>'person')::uuid;
+      execute 'insert into public.tw_phone(org_id, person, phone) values ($1, $2, ''050-0000000''), ($3, $4, ''050-1111111'')' using oa, (u->'ins'->>'person')::uuid, ob, bperson;
+      execute 'insert into public.tw_problem(org_id, by_staff, text) values ($1, $2, ''probe'')' using oa, (u->'ins'->>'staff')::uuid;
     end if;
 
     -- the tries: who, what, what is expected (deny = refused; zero = nothing seen or touched; some = something seen or touched; ok = allowed)
@@ -176,10 +183,25 @@ begin
         ('badm', 'update public.tw_cfg_need set min_people = 9', 'zero'), ('badm', 'select public.tw_cfg_start(''emergency'')', 'deny'),
         ('spoof', 'select count(*) from public.tw_cfg_shift', 'zero'), ('stranger', 'select count(*) from public.tw_cfg_shift', 'zero'),
         ('gone', 'select count(*) from public.tw_cfg_shift', 'zero'), ('anon', 'select count(*) from public.tw_cfg_shift', 'deny_or_zero'),
-        ('anon', 'select count(*) from public.tw_holiday', 'deny_or_zero')
+        ('anon', 'select count(*) from public.tw_holiday', 'deny_or_zero'),
+        -- the pilot (scheduling-v86.sql): her own settings; phones only for her, the admin and whoever builds now; problem reports for the admin
+        ('ins', 'select count(*) from public.tw_pref', 'some'), ('ins', 'update public.tw_pref set combos = ''{NA}'' where person = (select id from public.tw_people where name = ''probe-ins'')', 'some'),
+        ('ins', 'update public.tw_pref set combos = ''{NA}'' where person = (select id from public.tw_people where name = ''probe-bld'')', 'zero'),
+        ('ins', 'insert into public.tw_pref(person) values ((select id from public.tw_people where name = ''probe-oldbld''))', 'deny'),
+        ('ins', 'select count(*) from public.tw_phone where person = (select id from public.tw_people where name = ''probe-ins'')', 'some'),
+        ('ins', 'insert into public.tw_phone(person, phone) values ((select id from public.tw_people where name = ''probe-bld''), ''050-2222222'')', 'deny'),
+        ('bld', 'select count(*) from public.tw_phone where person = (select id from public.tw_people where name = ''probe-ins'')', 'some'),
+        ('oldbld', 'select count(*) from public.tw_phone', 'zero'), ('adm', 'select count(*) from public.tw_phone', 'some'),
+        ('bins', 'select count(*) from public.tw_phone where person <> ' || quote_literal(bperson), 'zero'), ('badm', 'select count(*) from public.tw_pref', 'zero'),
+        ('ins', 'insert into public.tw_problem(text) values (''probe'')', 'some'), ('ins', 'select count(*) from public.tw_problem', 'zero'),
+        ('adm', 'select count(*) from public.tw_problem', 'some'), ('badm', 'select count(*) from public.tw_problem', 'zero'),
+        ('ins', 'select public.tw_send_updates(' || quote_literal(per) || ')', 'deny'), ('bld', 'select public.tw_send_updates(' || quote_literal(per) || ')', 'ok'),
+        ('anon', 'select count(*) from public.tw_pref', 'deny_or_zero'), ('anon', 'select count(*) from public.tw_phone', 'deny_or_zero'),
+        ('spoof', 'select count(*) from public.tw_phone', 'zero'), ('stranger', 'select count(*) from public.tw_pref', 'zero')
       ) v(who, q, expect)
       where not (v.q like '%tw_notice%' and to_regclass('public.tw_notice') is null)
         and not (v.q ~ 'tw_(cfg|house|special|holiday)' and to_regclass('public.tw_cfg') is null)
+        and not (v.q ~ 'tw_(pref|phone|problem|send_updates)' and to_regclass('public.tw_pref') is null)
     loop
       total := total + 1;
       -- who the try runs as, and the header of the site it comes from

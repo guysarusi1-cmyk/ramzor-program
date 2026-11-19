@@ -915,7 +915,8 @@ function twSolve({ start, people, options, fixed, hand, seed, hist }){
       return free(p, pl) && nightOk(p, pl);
     };
     // above her number, only when the place has nobody else: somebody who opened it, at most two more in the two weeks
-    const canOver = (p, pl) => !!(offer[p.id] && offer[p.id].has(pl.k)) && load[p.id] + pl.w <= quota(p) + 2 && wload[p.id][pl.week] + pl.w <= p.per_week + 2 && free(p, pl) && nightOk(p, pl);
+    // (also a second night beyond the two people of the turn: an empty night is worse; the builder sees it in the report)
+    const canOver = (p, pl) => !!(offer[p.id] && offer[p.id].has(pl.k)) && load[p.id] + pl.w <= quota(p) + 2 && wload[p.id][pl.week] + pl.w <= p.per_week + 2 && free(p, pl) && (pl.shift !== 'N' || nights[p.id][pl.week] < 2);
     const closeOf = (p, pl) => got[p.id].some(g => pairOf(p.id, g, pl) === 'close');
     const score = (p, pl) => {
       let s = rnd() * 3;
@@ -940,6 +941,27 @@ function twSolve({ start, people, options, fixed, hand, seed, hist }){
       }
       const who = firstYes(bc, pl).map(p => [score(p, pl), p]).sort((a, b) => b[0] - a[0])[0][1];
       put(who.id, pl); filled.push({ pl, pid:who.id });
+    }
+    // repair: a place that nobody could take — somebody who opened it gives one of her shifts to another person who can take that one,
+    // and takes the empty place instead (one move deep; the builder's own and the fixed placements never move)
+    const unput = (pid, pl) => { const i = got[pid].indexOf(pl); if(i < 0) return; got[pid].splice(i, 1); load[pid] -= pl.w; wload[pid][pl.week] -= pl.w; kinds[pid][pl.shift]--; if(pl.shift === 'N'){ nights[pid][pl.week]--; if(!nights[pid].some(n => n >= 2)) doubles.delete(pid); } };
+    for(let mi = missing.length - 1; mi >= 0; mi--){
+      const pl = missing[mi]; let done = false;
+      for(const p of firstYes(people.filter(x => offer[x.id] && offer[x.id].has(pl.k)), pl)){
+        if(done) break;
+        for(const f of filled.filter(x => x.pid === p.id && !x.over)){
+          unput(p.id, f.pl);
+          if(can(p, pl)){
+            const r = firstYes(people.filter(x => x.id !== p.id && can(x, f.pl)), f.pl).map(x => [score(x, f.pl), x]).sort((a, b) => b[0] - a[0])[0];
+            if(r){
+              put(r[1].id, f.pl);
+              if(can(p, pl)){ f.pid = r[1].id; put(p.id, pl); filled.push({ pl, pid:p.id }); missing.splice(mi, 1); done = true; break; }
+              unput(r[1].id, f.pl);          // (her move made the other one's place impossible, for example a third person with two nights)
+            }
+          }
+          put(p.id, f.pl);
+        }
+      }
     }
     let cost = missing.reduce((n, pl) => n + (pl.shift === 'N' ? 1200 : 1000), 0) + filled.filter(f => isCan(f.pid, f.pl)).length * 3 + filled.filter(f => f.over).length * 60;
     filled.forEach(f => { if(got[f.pid].some(g => g !== f.pl && pairOf(f.pid, g, f.pl) === 'close')) cost += 10; });
