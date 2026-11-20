@@ -114,8 +114,9 @@ function twPair(pid, d1, s1, d2, s2, a1, a2){
   return gap < twRest() * 60 ? 'close' : '';
 }
 function twClash(d1, s1, d2, s2, pid){ return twPair(pid, d1, s1, d2, s2) === 'block'; }
-// a placement BY HAND (Guy 19.11, ג1: "הכול מותר חוץ מחפיפה בשעות"): only two shifts at the same hours are refused; a double in a row,
-// a close pair she did not agree to and short rest are allowed, with a warning in "דורש תשומת לב". (The engine keeps twPair.)
+// a placement BY HAND (Guy 20.11, ג1, correcting 19.11: "חפיפה בשעות מותרת, עם אזהרה ורק ידנית" — morning and afternoon overlap by
+// half an hour, and a builder must be able to put one person in both): EVERYTHING is allowed by hand, with a warning in "דורש תשומת לב":
+// overlapping hours, a double in a row, a close pair she did not agree to, short rest. (The engine keeps twPair and never does these.)
 // -> 'overlap' | 'row' | 'combo' | 'short' | ''
 function twHandPair(pid, d1, s1, d2, s2, a1, a2){
   if(d1 === d2 && s1 === s2) return 'overlap';
@@ -623,10 +624,10 @@ function twCellSheet(key){
   const draw = () => {
     const rows = TW.people.filter(p => p.active).map(p => {
       const cur = there().find(a => a.person === p.id) || null, on = !!cur, lv = twLvl(p.id, day, shift), opt = lv === 'yes' ? 2 : lv === 'can' ? 1 : 0, other = twOtherOf(p.id, day);
-      const pair = pairOf(p, cur), clash = !on && pair === 'overlap', close = !!pair && pair !== 'overlap';
+      const pair = pairOf(p, cur), clash = false, close = !!pair;          // (by hand nothing is refused: Guy 20.11)
       const load = TW.asg.filter(a => a.person === p.id).length, off = ((twPrefOf(p.id) || {}).days_off || []).includes(dowOf(day));
       return { p, cur, on, opt, clash, close, load, other, off };
-    }).sort((a, b) => (b.on - a.on) || (a.clash - b.clash) || (b.opt - a.opt) || ((a.load >= a.p.per_week * 2) - (b.load >= b.p.per_week * 2)) || twDisp(a.p).localeCompare(twDisp(b.p), 'he'));
+    }).sort((a, b) => (b.on - a.on) || ((!a.on && a.close) - (!b.on && b.close)) || (b.opt - a.opt) || ((a.load >= a.p.per_week * 2) - (b.load >= b.p.per_week * 2)) || twDisp(a.p).localeCompare(twDisp(b.p), 'he'));
     // (the UX review 2026-11-19: words of the builder instead of short codes; who cannot is greyed; "סגירה" also at the top)
     const say = r => {
       const full = r.load >= r.p.per_week * 2;
@@ -645,14 +646,13 @@ function twCellSheet(key){
       !r.on && !r.opt && !r.clash ? `<a class="wa-btn" target="_blank" rel="noopener" href="${pEsc(twWaLink(r.p.id, day, shift))}" aria-label="שאלה בוואטסאפ ל${pEsc(twDisp(r.p))}" title="שאלה בוואטסאפ">${TW_WA_SVG}</a>` : ''].join('');
     wrap.innerHTML = `<div class="sheet-card tw-sheet"><div class="tw-sheet-head"><h2>${DOW_NAMES[dowOf(day)]} ${twShort(day)} · ${TW_SHIFT[shift]}</h2><button type="button" class="btn ghost small" data-tw-x aria-label="סגירה">✕ סגירה</button></div>
       <div class="pnote">לחיצה על שם מוסיפה למשמרת, או מסירה ממנה.${TW.asg.length ? ' ליד מי שלא סימן/ה: וואטסאפ עם הודעה מוכנה.' : ''}</div>
-      <div class="tw-pick">${rows.map((r, i) => `${i === 0 && r.on ? '<div class="tw-pick-h">במשמרת</div>' : ''}${!r.on && !r.clash && (i === 0 || rows[i - 1].on) ? '<div class="tw-pick-h">אפשר להוסיף</div>' : ''}${r.clash && (i === 0 || !rows[i - 1].clash) ? '<div class="tw-pick-h">לא פנויים</div>' : ''}<div class="tw-pick-row${r.on ? ' on' : ''}${!r.on && (r.clash || !r.opt) ? ' weak' : ''}"><button type="button" class="tw-pick-main" data-tw-p="${r.p.id}"${r.clash ? ' aria-disabled="true"' : ''}><b>${pEsc(twDisp(r.p))}</b>
+      <div class="tw-pick">${rows.map((r, i) => `${i === 0 && r.on ? '<div class="tw-pick-h">במשמרת</div>' : ''}${!r.on && !r.close && (i === 0 || rows[i - 1].on) ? '<div class="tw-pick-h">אפשר להוסיף</div>' : ''}${!r.on && r.close && (i === 0 || rows[i - 1].on || !rows[i - 1].close) ? '<div class="tw-pick-h">אפשר להוסיף, עם אזהרה</div>' : ''}<div class="tw-pick-row${r.on ? ' on' : ''}${!r.on && (r.clash || !r.opt) ? ' weak' : ''}"><button type="button" class="tw-pick-main" data-tw-p="${r.p.id}"${r.clash ? ' aria-disabled="true"' : ''}><b>${pEsc(twDisp(r.p))}</b>
         <small>${say(r)}</small></button>${side(r) ? `<span class="tw-pick-side">${side(r)}</span>` : ''}</div>`).join('')}</div>
       <div class="confirm-actions"><button type="button" class="btn" id="tw-sheet-close">סגירה</button></div></div>`;
     wrap.querySelector('#tw-sheet-close').addEventListener('click', () => wrap.remove());
     wrap.querySelector('[data-tw-x]').addEventListener('click', () => wrap.remove());
     wrap.querySelectorAll('[data-tw-p]').forEach(b => b.addEventListener('click', async () => {
       const id = b.dataset.twP, cur = there().find(a => a.person === id);
-      if(!cur && b.getAttribute('aria-disabled') === 'true'){ toast(`אי אפשר: ${twName(id)} כבר במשמרת שחופפת לשעות האלה`, 4000); return; }
       const warnK = !cur ? pairOf(twPerson(id), null) : '';
       const r = cur ? await sbPersonal.from('tw_assignment').delete().eq('id', cur.id) : await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:id, by_hand:true }).select();
       if(r.error){ console.error(r.error); toast('⚠ השינוי לא נשמר'); return; }
