@@ -89,7 +89,7 @@ function twPendingHtml(){
 function twPendingWire(box){
   const b = box.querySelector('#tw-send-updates'); if(!b) return;
   b.addEventListener('click', async () => {
-    if(!(await twConfirm({ title:'לשלוח את העדכונים?', text:'כל מי שהמשמרות שלו השתנו מאז הפרסום יקבל מייל אחד עם השינויים (מי שבחר לקבל).', ok:'כן, לשלוח' }))) return;
+    if(!(await twConfirm({ title:'לשלוח את העדכונים?', text:'כל מי שהמשמרות שלה השתנו מאז הפרסום תקבל מייל אחד עם השינויים (מי שבחרה לקבל).', ok:'כן, לשלוח' }))) return;
     b.disabled = true;
     let r; try { r = await sbPersonal.rpc('tw_send_updates', { p_period:TW.period, p_send:true }); } catch(e){ r = { error:e }; }
     if(r.error){ console.error(r.error); toast('⚠ השליחה נכשלה'); b.disabled = false; return; }
@@ -163,8 +163,7 @@ function twDragWire(box){
       const r = await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:pid, by_hand:true }).select();
       if(r.error){ console.error(r.error); toast('⚠ השיבוץ לא נשמר'); return; }
       TW.asg.push(r.data[0]); twKeepScroll();
-      if(ks) toast(`${twName(pid)} שובצה. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב".`, 5000);
-      twUndo(`${twName(pid)} נוספה ל${TW_SHIFT[shift]} ${twShort(day)}`, async () => { const u = await sbPersonal.from('tw_assignment').delete().eq('id', r.data[0].id); if(u.error) return false; TW.asg = TW.asg.filter(a => a.id !== r.data[0].id); twKeepScroll(); return true; });
+      twUndo(`${twName(pid)} נוספה ל${TW_SHIFT[shift]} ${twShort(day)}` + (ks ? `. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב"` : ''), async () => { const u = await sbPersonal.from('tw_assignment').delete().eq('id', r.data[0].id); if(u.error) return false; TW.asg = TW.asg.filter(a => a.id !== r.data[0].id); twKeepScroll(); return true; });
     });
   });
 }
@@ -187,7 +186,7 @@ function twMySettingsHtml(){
   if(!TW.me || !TW.prefsOn) return '';
   const pf = twPrefOf(TW.me.id) || {}, combos = pf.combos || [], off = pf.days_off || [], nt = Object.assign({ reminder:true, published:true, changed:true, swap:true }, pf.notify || {});
   const seg = (k, on) => `<div class="mx-seg" role="group"><button type="button" data-tw-nt="${k}" data-v="1" aria-pressed="${!!on}">דלוק</button><button type="button" data-tw-nt="${k}" data-v="" aria-pressed="${!on}">כבוי</button></div>`;
-  return `<div class="sb-set-row"><b>משמרות צמודות שאני מוכנה לעבוד</b><div class="sb-help">צירוף שלא סימנת לא ישובץ לך.</div>
+  return `<div class="sb-set-row"><b>משמרות צמודות שאני מוכנה לעבוד</b><div class="sb-help">צירוף שלא סימנת לא ישובץ לך אוטומטית.</div>
       ${Object.entries(TW_COMBO).map(([k, w]) => `<label class="tw-chk-l"><input type="checkbox" data-tw-combo="${k}"${combos.includes(k) ? ' checked' : ''}> ${w}</label>`).join('')}</div>
     <div class="sb-set-row"><b>ימים שאני לא באה בהם</b><div class="tw-days-off">${DOW_NAMES.map((d, i) => `<button type="button" class="btn ghost small" data-tw-off="${i}" aria-pressed="${off.includes(i)}">${d}</button>`).join('')}</div>
       <div class="sb-help">מי שבונה את הסידור רואה את זה ליד השם.</div></div>

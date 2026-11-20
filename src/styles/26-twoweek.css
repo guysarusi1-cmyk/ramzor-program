@@ -349,3 +349,16 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 body:has(> .sheet){ overflow:hidden; }
 .tw-pick-row.on .btn.ghost{ background:#1C1A17; color:#F3EEE4; border-color:#1C1A17; }
 #view-tw .tw-pday.tw-off .tw-day-name{ opacity:.6; }
+
+/* ---- the check of 2026-11-20: big text on a phone ---- */
+/* the tabs in even rows (one tab was alone on a second line, the whole width) */
+@media (max-width:560px){
+  body.portal-big #view-tw .tw-tabs{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:4px; }
+  body.portal-big #view-tw .tw-tab{ min-width:0; white-space:normal; }
+}
+/* the week line of the hand-in: what is missing as short points under the main line */
+#view-tw .tw-wmiss{ margin:4px 0 0; padding-inline-start:20px; font-size:14px; }
+#view-tw .tw-wmiss li{ margin:2px 0; }
+/* a long undo message (a warning inside it): wide, not a narrow tall column (the check of 2026-11-20) */
+.toast-undo.toast-long{ width:min(92vw, 520px); max-width:92vw; box-sizing:border-box; }
+.toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; }

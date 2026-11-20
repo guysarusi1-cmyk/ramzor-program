@@ -54,6 +54,8 @@
   body.product-shibutz #view-tw .sb-top{ display:flex; align-items:center; gap:10px; margin:0 0 4px; }
   body.product-shibutz #view-tw .sb-top .mx-brand-small{ margin:0; flex:none; }
   body.product-shibutz #view-tw .sb-top-org{ flex:1; min-width:0; font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* big text on a phone: the organisation's name on a line of its own, whole (the check of 2026-11-20: it was cut to "מר...") */
+  @media (max-width:560px){ body.product-shibutz.portal-big #view-tw .sb-top{ flex-wrap:wrap; } body.product-shibutz.portal-big #view-tw .sb-top-org{ order:3; flex:1 1 100%; white-space:normal; } body.product-shibutz.portal-big #view-tw .sb-top #sb-theme{ margin-inline-start:auto; } }
   body.product-shibutz #view-tw .sb-hide-top{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   body.product-shibutz #view-tw .sb-org{ display:none; }
   .sb-login #sb-code{ direction:ltr; text-align:center; font-size:22px; letter-spacing:.2em; }
