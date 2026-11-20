@@ -18,9 +18,10 @@ function twAttention(){
     if(a.by_hand && twLvl(a.person, a.day, a.shift) === 'no' && !a.ok) out.push({ cls:'bad', t:word(a.day, a.shift), x:`${twDisp(p)} שובץ/ה ביד בלי שסימן/ה את המשמרת, ועוד לא סומן "אישר/ה".`, go:twKey(a.day, a.shift) });
     TW.asg.filter(b => b.person === a.person && b !== a && b.day >= a.day).forEach(b => {
       if(b.day === a.day && twSpan(b.day, b.shift, b)[0] < twSpan(a.day, a.shift, a)[0]) return;          // (each pair once, the earlier first)
-      const k = twPair(a.person, a.day, a.shift, b.day, b.shift, a, b);
-      if(k === 'close') out.push({ cls:'warn', t:`${twDisp(p)} · מנוחה קצרה`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: פחות מ-${twRest()} שעות. הסכים/ה לצירוף, ההחלטה שלך.`, go:twKey(b.day, b.shift) });
-      else if(k === 'block') out.push({ cls:'bad', t:`${twDisp(p)} · משמרות חופפות`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: חופפות או צמודות בלי הפסקה.`, go:twKey(b.day, b.shift) });
+      const k = twHandPair(a.person, a.day, a.shift, b.day, b.shift, a, b);
+      if(k === 'overlap') out.push({ cls:'bad', t:`${twDisp(p)} · משמרות חופפות`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: באותן שעות. צריך להוציא אותה מאחת מהן.`, go:twKey(b.day, b.shift) });
+      else if(k === 'short') out.push({ cls:'warn', t:`${twDisp(p)} · מנוחה קצרה`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: פחות מ-${twRest()} שעות. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
+      else if(k) out.push({ cls:'warn', t:`${twDisp(p)} · ${k === 'row' ? 'כפולה ברצף' : 'צירוף שלא סומן'}`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: ${twHandWord(k)}. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
     });
   });
   act.forEach(p => {
@@ -148,10 +149,12 @@ function twDragWire(box){
       e.preventDefault(); td.classList.remove('tw-drop');
       const pid = e.dataTransfer.getData('text/plain'), [day, shift] = td.dataset.twCell.split('|'); if(!pid || !twPerson(pid)) return;
       if(TW.asg.some(a => a.person === pid && a.day === day && a.shift === shift)){ toast(`${twName(pid)} כבר במשמרת הזו`, 4000); return; }
-      if(TW.asg.some(a => a.person === pid && twPair(pid, a.day, a.shift, day, shift, a) === 'block')){ toast(`אי אפשר: ${twName(pid)} במשמרת חופפת או צמודה, או בצירוף שלא הסכים/ה לו`); return; }
+      const ks = TW.asg.filter(a => a.person === pid).map(a => twHandPair(pid, a.day, a.shift, day, shift, a)).reduce((w, x) => TW_HAND_RANK[x] > TW_HAND_RANK[w] ? x : w, '');
+      if(ks === 'overlap'){ toast(`אי אפשר: ${twName(pid)} כבר במשמרת שחופפת לשעות האלה`, 4000); return; }
       const r = await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:pid, by_hand:true }).select();
       if(r.error){ console.error(r.error); toast('⚠ השיבוץ לא נשמר'); return; }
       TW.asg.push(r.data[0]); twKeepScroll();
+      if(ks) toast(`${twName(pid)} שובץ/ה. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב".`, 5000);
       twUndo(`${twName(pid)} נוסף/ה ל${TW_SHIFT[shift]} ${twShort(day)}`, async () => { const u = await sbPersonal.from('tw_assignment').delete().eq('id', r.data[0].id); if(u.error) return false; TW.asg = TW.asg.filter(a => a.id !== r.data[0].id); twKeepScroll(); return true; });
     });
   });

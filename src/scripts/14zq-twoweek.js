@@ -114,6 +114,20 @@ function twPair(pid, d1, s1, d2, s2, a1, a2){
   return gap < twRest() * 60 ? 'close' : '';
 }
 function twClash(d1, s1, d2, s2, pid){ return twPair(pid, d1, s1, d2, s2) === 'block'; }
+// a placement BY HAND (Guy 19.11, ג1: "הכול מותר חוץ מחפיפה בשעות"): only two shifts at the same hours are refused; a double in a row,
+// a close pair she did not agree to and short rest are allowed, with a warning in "דורש תשומת לב". (The engine keeps twPair.)
+// -> 'overlap' | 'row' | 'combo' | 'short' | ''
+function twHandPair(pid, d1, s1, d2, s2, a1, a2){
+  if(d1 === d2 && s1 === s2) return 'overlap';
+  const x = twSpan(d1, s1, a1), y = twSpan(d2, s2, a2), gap = x[0] <= y[0] ? y[0] - x[1] : x[0] - y[1];
+  if(gap < 0) return 'overlap';
+  if(gap === 0) return 'row';
+  const combo = twCombo(d1, s1, d2, s2);
+  if(combo && !twAgrees(pid, combo)) return 'combo';
+  return gap < twRest() * 60 ? 'short' : '';
+}
+const TW_HAND_RANK = { overlap:4, row:3, combo:2, short:1, '':0 };
+const twHandWord = k => ({ overlap:'חופפת בשעות למשמרת אחרת שלו/ה', row:'כפולה ברצף, בלי הפסקה', combo:'צירוף שלא סומן בהגדרות שלו/ה', short:`פחות מ-${twRest()} שעות מנוחה` })[k] || '';
 
 // ---- may this person see the module at all? (asked once after the sign-in; the home card appears when the answer is yes)
 function twCardHtml(){
@@ -604,12 +618,12 @@ function twCellSheet(key){
   const [day, shift] = key.split('|'), there = () => TW.asg.filter(a => a.day === day && a.shift === shift);
   const wrap = document.createElement('div'); wrap.className = 'sheet confirm-sheet mx-sheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
   wrap.dataset.ptheme = (document.querySelector('#view-tw .portal-shell[data-ptheme]') || { dataset:{} }).dataset.ptheme || 'dark';
-  const pairOf = (p, cur) => TW.asg.filter(a => a.person === p.id && a !== cur).map(a => twPair(p.id, a.day, a.shift, day, shift, a, cur))
-    .reduce((w, x) => (w === 'block' || x === 'block') ? 'block' : (w || x), '');
+  const pairOf = (p, cur) => TW.asg.filter(a => a.person === p.id && a !== cur).map(a => twHandPair(p.id, a.day, a.shift, day, shift, a, cur))
+    .reduce((w, x) => TW_HAND_RANK[x] > TW_HAND_RANK[w] ? x : w, '');
   const draw = () => {
     const rows = TW.people.filter(p => p.active).map(p => {
       const cur = there().find(a => a.person === p.id) || null, on = !!cur, lv = twLvl(p.id, day, shift), opt = lv === 'yes' ? 2 : lv === 'can' ? 1 : 0, other = twOtherOf(p.id, day);
-      const pair = pairOf(p, cur), clash = !on && pair === 'block', close = pair === 'close';
+      const pair = pairOf(p, cur), clash = !on && pair === 'overlap', close = !!pair && pair !== 'overlap';
       const load = TW.asg.filter(a => a.person === p.id).length, off = ((twPrefOf(p.id) || {}).days_off || []).includes(dowOf(day));
       return { p, cur, on, opt, clash, close, load, other, off };
     }).sort((a, b) => (b.on - a.on) || (a.clash - b.clash) || (b.opt - a.opt) || ((a.load >= a.p.per_week * 2) - (b.load >= b.p.per_week * 2)) || twDisp(a.p).localeCompare(twDisp(b.p), 'he'));
@@ -617,12 +631,12 @@ function twCellSheet(key){
     const say = r => {
       const full = r.load >= r.p.per_week * 2;
       if(r.on) return ['בסידור כאן · לחיצה מסירה', r.cur.from_time && r.cur.to_time ? `שעות ${twL(twHm(r.cur.from_time) + '–' + twHm(r.cur.to_time))}` : '',
-        !r.opt ? (r.cur.ok ? 'אישר/ה ✓' : 'לא סימן/ה את המשמרת') : '', r.close ? 'מנוחה קצרה: הסכים/ה לצירוף הזה' : '',
+        !r.opt ? (r.cur.ok ? 'אישר/ה ✓' : 'לא סימן/ה את המשמרת') : '', r.close ? `שימו לב: ${twHandWord(pairOf(r.p, r.cur))}` : '',
         r.load > r.p.per_week * 2 ? `מעל המינימום: ${r.load} מתוך ${r.p.per_week * 2}` : ''].filter(Boolean).join(' · ');
       return [r.opt === 2 ? 'סימן/ה: כן' : r.opt === 1 ? 'סימן/ה: אפשרי' : 'לא סימן/ה את המשמרת',
         r.off ? `לא בא/ה בימי ${DOW_NAMES[dowOf(day)]}` : '',
         r.other ? `שעות אחרות ${twL(twHm(r.other.from_time) + '–' + twHm(r.other.to_time))}` : '',
-        r.clash ? 'אי אפשר: חופפת או צמודה למשמרת אחרת שלו/ה' : r.close ? 'צמודה למשמרת אחרת: הסכים/ה לצירוף, המנוחה קצרה' : '',
+        r.clash ? 'אי אפשר: חופפת בשעות למשמרת אחרת שלו/ה' : r.close ? `אפשר, עם אזהרה: ${twHandWord(pairOf(r.p, null))}` : '',
         `משמרות בשבועיים: ${r.load} מתוך ${r.p.per_week * 2}${full ? ' (מלא)' : ''}`].filter(Boolean).join(' · ');
     };
     const side = r => [
@@ -638,11 +652,13 @@ function twCellSheet(key){
     wrap.querySelector('[data-tw-x]').addEventListener('click', () => wrap.remove());
     wrap.querySelectorAll('[data-tw-p]').forEach(b => b.addEventListener('click', async () => {
       const id = b.dataset.twP, cur = there().find(a => a.person === id);
-      if(!cur && b.getAttribute('aria-disabled') === 'true'){ toast(`אי אפשר: ${twName(id)} במשמרת חופפת או צמודה, או בצירוף שלא הסכים/ה לו`); return; }
+      if(!cur && b.getAttribute('aria-disabled') === 'true'){ toast(`אי אפשר: ${twName(id)} כבר במשמרת שחופפת לשעות האלה`, 4000); return; }
+      const warnK = !cur ? pairOf(twPerson(id), null) : '';
       const r = cur ? await sbPersonal.from('tw_assignment').delete().eq('id', cur.id) : await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:id, by_hand:true }).select();
       if(r.error){ console.error(r.error); toast('⚠ השינוי לא נשמר'); return; }
       if(cur) TW.asg = TW.asg.filter(a => a.id !== cur.id); else TW.asg.push(r.data[0]);
       draw();
+      if(warnK) toast(`${twName(id)} שובץ/ה. שימו לב: ${twHandWord(warnK)}. זה יופיע ב"דורש תשומת לב".`, 5000);
       // "ביטול" for a few seconds: every tap here is saved at once (the review agents 2026-11-14)
       const back = cur ? { period:cur.period, day:cur.day, shift:cur.shift, person:cur.person, third:cur.third, fixed:cur.fixed, by_hand:cur.by_hand, from_time:cur.from_time, to_time:cur.to_time, note:cur.note, ok:!!cur.ok } : null, added = cur ? null : r.data[0];
       twUndo(cur ? `${twName(id)} הוסר/ה מהמשמרת` : `${twName(id)} נוסף/ה למשמרת`, async () => {
