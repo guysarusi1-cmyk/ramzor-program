@@ -489,7 +489,7 @@ function twBeforeSubmit(person){
     ${weeks.map(o => `<p class="confirm-text">פתחת ${o.x.have} משמרות בשבוע ${o.w + 1}, אבל <b>בפועל אפשר לשבץ אותך רק ב-${o.x.eff}</b>:</p>
       <ul class="tw-pairs">${o.x.pairs.map(pr => `<li><b>${pairW(pr)}</b>: ${why(pr)}</li>`).join('')}</ul>`).join('')}
     ${low.map(o => `<p class="confirm-text">בשבוע ${o.w + 1} פתחת ${o.x.have} מתוך ${o.x.need} שכדאי לפתוח.</p>`).join('')}
-    <div class="pnote">${weeks.length ? 'מכל זוג כזה אפשר לשבץ רק אחת. ' : ''}כדי להגיע למספר, פותחים עוד משמרות. אפשר גם להגיש כך, ומי שבונה את הסידור יראה את זה.</div>
+    <div class="pnote">${weeks.length ? 'מכל זוג כזה אפשר לשבץ רק אחת. ' : ''}כדי להגיע למספר, פותחים עוד משמרות. אפשר גם להגיש כך.</div>
     <div class="confirm-actions"><button type="button" class="btn" data-tw-close>לשנות</button><button type="button" class="btn ghost" id="tw-submit-anyway">להגיש בכל זאת</button></div>`);
   sh.querySelector('#tw-submit-anyway').addEventListener('click', () => { sh.remove(); TW.skipLeft = true; twSubmitSheet(person); TW.skipLeft = false; });
 }
