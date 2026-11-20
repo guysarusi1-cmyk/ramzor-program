@@ -127,7 +127,7 @@ function sbShowLogin(msg, step, email, again){
   const guard = async (btn, work) => { btn.disabled = true; err(''); try { await work(); } catch(e){ console.error(e); err('משהו קטן השתבש. אפשר לנסות שוב בעוד רגע.'); } btn.disabled = false; };
   const sendCode = async mail => {
     const { error } = await sbPersonal.auth.signInWithOtp({ email:mail, options:{ shouldCreateUser:false } });
-    if(error){ err(/rate|seconds|limit/i.test(error.message || '') ? 'שלחנו קוד ממש עכשיו. אפשר לבקש קוד חדש בעוד דקה.' : 'לא הצלחנו לשלוח קוד לכתובת הזו. כדאי לבדוק שהיא נכונה, ואם זה ממשיך, מנהל/ת המערכת ישמחו לעזור.'); return false; }
+    if(error){ err(/rate|seconds|limit/i.test(error.message || '') ? 'שלחנו קוד ממש עכשיו. אפשר לבקש קוד חדש בעוד דקה.' : 'לא הצלחנו לשלוח קוד לכתובת הזו. כדאי לבדוק שהיא נכונה, ואם זה ממשיך, מנהלת המערכת ישמחו לעזור.'); return false; }
     return true;
   };
   $('sb-form').addEventListener('submit', ev => { ev.preventDefault(); const go = $('sb-go');

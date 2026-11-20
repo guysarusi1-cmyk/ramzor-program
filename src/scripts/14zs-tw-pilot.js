@@ -15,7 +15,7 @@ function twAttention(){
   }));
   TW.asg.forEach(a => {
     const p = twPerson(a.person); if(!p) return;
-    if(a.by_hand && twLvl(a.person, a.day, a.shift) === 'no' && !a.ok) out.push({ cls:'bad', t:word(a.day, a.shift), x:`${twDisp(p)} שובץ/ה ביד בלי שסימן/ה את המשמרת, ועוד לא סומן "אישר/ה".`, go:twKey(a.day, a.shift) });
+    if(a.by_hand && twLvl(a.person, a.day, a.shift) === 'no' && !a.ok) out.push({ cls:'bad', t:word(a.day, a.shift), x:`${twDisp(p)} שובצה ביד בלי שסימנה את המשמרת, ועוד לא סומן "אישרה".`, go:twKey(a.day, a.shift) });
     TW.asg.filter(b => b.person === a.person && b !== a && b.day >= a.day).forEach(b => {
       if(b.day === a.day && twSpan(b.day, b.shift, b)[0] < twSpan(a.day, a.shift, a)[0]) return;          // (each pair once, the earlier first)
       const k = twHandPair(a.person, a.day, a.shift, b.day, b.shift, a, b);
@@ -24,11 +24,21 @@ function twAttention(){
       else if(k) out.push({ cls:'warn', t:`${twDisp(p)} · ${k === 'row' ? 'כפולה ברצף' : 'צירוף שלא סומן'}`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: ${twHandWord(k)}. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
     });
   });
+  // a night beyond the turn (Guy 20.11: "כן, עם הערה בדברים שדורשים תשומת לב"): the turn gives two nights in a week to two people in the
+  // two weeks; when there were not enough people the engine may give more, and the builder sees it here
+  const nightsOf = p => [0, 1].map(w => TW.asg.filter(a => a.person === p.id && a.shift === 'N' && twWeekOf(TW.period, a.day) === w).length);
+  const dbl = act.filter(p => nightsOf(p).some(n => n >= 2));
+  act.forEach(p => {
+    const nw = nightsOf(p);
+    if(nw.some(n => n >= 3)) out.push({ cls:'warn', t:`${twDisp(p)} · לילה נוסף מעבר לתור`, x:`${Math.max(...nw)} לילות בשבוע אחד. ההחלטה שלך.` });
+    else if(nw[0] >= 2 && nw[1] >= 2) out.push({ cls:'warn', t:`${twDisp(p)} · לילה נוסף מעבר לתור`, x:'שני לילות בכל אחד מהשבועות. ההחלטה שלך.' });
+  });
+  if(dbl.length > 2) out.push({ cls:'warn', t:'לילה נוסף מעבר לתור', x:`${dbl.length} עובדות עם שני לילות בשבוע (${dbl.map(twDisp).join(', ')}). בתור יש שתיים בשבועיים. ההחלטה שלך.` });
   act.forEach(p => {
     const n = TW.asg.filter(a => a.person === p.id).length, q = p.per_week * 2;
-    if(TW.asg.length && n > q) out.push({ cls:'info', t:`${twDisp(p)} · מעל המינימום`, x:`${n} משמרות בשבועיים (המינימום ${q}), כי חסרו מי שסימנו.` });
+    if(TW.asg.length && n > q) out.push({ cls:'info', t:`${twDisp(p)} · מעל המינימום`, x:`${n} משמרות בשבועיים (המינימום ${q}), כי חסרו עובדות שסימנו.` });
     const c = twCount(p), sub = TW.subs.some(s => s.person === p.id);
-    const short = c.weeks.map((w, i) => (sub && w && w.need && w.eff < w.need && w.eff < w.have) ? `בשבוע ${i + 1} פתח/ה ${w.have} ואפשר לשבץ בפועל ${w.eff}` : '').filter(Boolean);
+    const short = c.weeks.map((w, i) => (sub && w && w.need && w.eff < w.need && w.eff < w.have) ? `בשבוע ${i + 1} פתחה ${w.have} ואפשר לשבץ בפועל ${w.eff}` : '').filter(Boolean);
     if(short.length) out.push({ cls:'note', t:`${twDisp(p)} · הגשה עם משמרות צמודות`, x:`${short.join('; ')}. הוגש בכל זאת.` });
   });
   return out;
@@ -74,7 +84,7 @@ async function twPendingLoad(){
 }
 function twPendingHtml(){
   if(!TW.pending) return '';
-  return `<div class="pstatus bad tw-pending">${TW.pending === 1 ? 'לאיש צוות אחד יש שינויים' : `ל-${TW.pending} אנשי צוות יש שינויים`} שעוד לא נשלחו במייל. <button type="button" class="btn small" id="tw-send-updates">שליחת עדכונים</button></div>`;
+  return `<div class="pstatus bad tw-pending">${TW.pending === 1 ? 'לעובדת אחת יש שינויים' : `ל-${TW.pending} עובדות יש שינויים`} שעוד לא נשלחו במייל. <button type="button" class="btn small" id="tw-send-updates">שליחת עדכונים</button></div>`;
 }
 function twPendingWire(box){
   const b = box.querySelector('#tw-send-updates'); if(!b) return;
@@ -153,8 +163,8 @@ function twDragWire(box){
       const r = await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:pid, by_hand:true }).select();
       if(r.error){ console.error(r.error); toast('⚠ השיבוץ לא נשמר'); return; }
       TW.asg.push(r.data[0]); twKeepScroll();
-      if(ks) toast(`${twName(pid)} שובץ/ה. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב".`, 5000);
-      twUndo(`${twName(pid)} נוסף/ה ל${TW_SHIFT[shift]} ${twShort(day)}`, async () => { const u = await sbPersonal.from('tw_assignment').delete().eq('id', r.data[0].id); if(u.error) return false; TW.asg = TW.asg.filter(a => a.id !== r.data[0].id); twKeepScroll(); return true; });
+      if(ks) toast(`${twName(pid)} שובצה. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב".`, 5000);
+      twUndo(`${twName(pid)} נוספה ל${TW_SHIFT[shift]} ${twShort(day)}`, async () => { const u = await sbPersonal.from('tw_assignment').delete().eq('id', r.data[0].id); if(u.error) return false; TW.asg = TW.asg.filter(a => a.id !== r.data[0].id); twKeepScroll(); return true; });
     });
   });
 }
@@ -177,9 +187,9 @@ function twMySettingsHtml(){
   if(!TW.me || !TW.prefsOn) return '';
   const pf = twPrefOf(TW.me.id) || {}, combos = pf.combos || [], off = pf.days_off || [], nt = Object.assign({ reminder:true, published:true, changed:true, swap:true }, pf.notify || {});
   const seg = (k, on) => `<div class="mx-seg" role="group"><button type="button" data-tw-nt="${k}" data-v="1" aria-pressed="${!!on}">דלוק</button><button type="button" data-tw-nt="${k}" data-v="" aria-pressed="${!on}">כבוי</button></div>`;
-  return `<div class="sb-set-row"><b>משמרות צמודות שאני מוכנ/ה לעבוד</b><div class="sb-help">צירוף שלא סימנת לא ישובץ לך.</div>
+  return `<div class="sb-set-row"><b>משמרות צמודות שאני מוכנה לעבוד</b><div class="sb-help">צירוף שלא סימנת לא ישובץ לך.</div>
       ${Object.entries(TW_COMBO).map(([k, w]) => `<label class="tw-chk-l"><input type="checkbox" data-tw-combo="${k}"${combos.includes(k) ? ' checked' : ''}> ${w}</label>`).join('')}</div>
-    <div class="sb-set-row"><b>ימים שאני לא בא/ה בהם</b><div class="tw-days-off">${DOW_NAMES.map((d, i) => `<button type="button" class="btn ghost small" data-tw-off="${i}" aria-pressed="${off.includes(i)}">${d}</button>`).join('')}</div>
+    <div class="sb-set-row"><b>ימים שאני לא באה בהם</b><div class="tw-days-off">${DOW_NAMES.map((d, i) => `<button type="button" class="btn ghost small" data-tw-off="${i}" aria-pressed="${off.includes(i)}">${d}</button>`).join('')}</div>
       <div class="sb-help">מי שבונה את הסידור רואה את זה ליד השם.</div></div>
     <div class="sb-set-row"><b>הגשה חדשה מתחילה</b><div class="mx-seg" role="group"><button type="button" data-tw-copy="" aria-pressed="${!pf.copy_last}">ריקה</button><button type="button" data-tw-copy="1" aria-pressed="${!!pf.copy_last}">מההגשה הקודמת שלי</button></div></div>
     <div class="sb-set-row"><b>התראות במייל</b><div class="sb-help">הכול דלוק מההתחלה. אפשר לכבות.</div></div>
@@ -273,12 +283,12 @@ function twViewAsApply(){
 }
 function twViewAsBar(){
   if(!TW.viewAs) return '';
-  return `<div class="pstatus tw-soft tw-viewas" role="status">אתר הבדיקות · רואים את המסך כמו <b>${pEsc(twDisp(TW.me))}</b> (${TW.viewAs.admin ? 'אדמינית מקומית שהיא גם בצוות' : 'איש צוות'}). <button type="button" class="btn small" id="tw-viewas-off">חזרה למסך שלי</button></div>`;
+  return `<div class="pstatus tw-soft tw-viewas" role="status">אתר הבדיקות · רואים את המסך כמו <b>${pEsc(twDisp(TW.me))}</b> (${TW.viewAs.admin ? 'אדמינית מקומית שהיא גם בצוות' : 'עובדת'}). <button type="button" class="btn small" id="tw-viewas-off">חזרה למסך שלי</button></div>`;
 }
 function twViewAsPickHtml(fold){
   if(!twViewAsOn() || !TW.realBoss || TW.viewAs) return '';
-  return fold('viewas', 'צפייה כמו איש צוות (רק באתר הבדיקות)', `<p class="tw-step-say">בוחרים איש צוות ורואים את האתר בדיוק כמו שהוא רואה אותו. אפשר לסמן העדפות, להגיש, לבנות ולשנות הגדרות. החלפות לא עובדות במצב הזה.</p>
-    <div class="tw-form"><label>איש צוות <select id="tw-viewas-who">${TW.people.filter(p => p.active).map(p => `<option value="${p.id}">${pEsc(twDisp(p))}</option>`).join('')}</select></label></div>
+  return fold('viewas', 'צפייה כמו עובדת (רק באתר הבדיקות)', `<p class="tw-step-say">בוחרים עובדת ורואים את האתר בדיוק כמו שהיא רואה אותו. אפשר לסמן העדפות, להגיש, לבנות ולשנות הגדרות. החלפות לא עובדות במצב הזה.</p>
+    <div class="tw-form"><label>עובדת <select id="tw-viewas-who">${TW.people.filter(p => p.active).map(p => `<option value="${p.id}">${pEsc(twDisp(p))}</option>`).join('')}</select></label></div>
     <div class="tw-actions"><button type="button" class="btn" data-tw-viewas="">כמו מדריכה</button><button type="button" class="btn ghost" data-tw-viewas="1">כמו אדמינית מקומית שהיא גם בצוות</button></div>
     <div class="pnote">כדי לראות את מי שבונה את הסידור: בפסקה "השבועיים" קובעים אותה כבונה של השבועיים הפתוחים.</div>`);
 }
