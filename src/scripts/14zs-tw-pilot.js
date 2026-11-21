@@ -128,10 +128,17 @@ async function twShareImage(w){
   g.font = '400 30px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(`${twShort(days[0])} עד ${twShort(days[6])}`, W - 40, 108);
   g.font = '700 26px Assistant, Arial'; g.fillStyle = '#5C6F52'; cols.forEach(([, t], i) => g.fillText(t, W - 40 - 170 - i * colW, headH - 8));
   let y = headH;
+  const cR = ci => W - 40 - 170 - ci * colW + 10, cL = ci => cR(ci) - colW + 4;
+  const isW = d => twSlots(d).some(s => s.shift === 'W'), goesOn = (d, i) => i > 0 && isW(rows[i - 1].d) && !twSlots(d).some(s => s.shift === 'M' || s.shift === 'A');
   rows.forEach((r, i) => {
     g.fillStyle = i % 2 ? '#FFFFFF' : '#F4EFE7'; g.fillRect(30, y + 4, W - 60, r.h - 6);
+    // (Guy 21.11: one block for the long weekend shift)
+    if(isW(r.d)){ g.fillStyle = '#E3ECDB'; g.fillRect(cL(2), y + 4, cR(1) - cL(2), r.h - 4); r.cs[2] = []; r.cs[2].wSkip = true; }
+    if(goesOn(r.d, i)){ g.fillStyle = '#E3ECDB'; g.fillRect(cL(1), y, cR(0) - cL(1), r.h - 2); r.cs[0] = ['סוף שבוע, נמשך משישי']; r.cs[0].cont = true; r.cs[1] = []; r.cs[1].wSkip = true; }
     g.fillStyle = '#2D2A24'; g.font = '700 28px Assistant, Arial'; g.fillText(`${DOW_NAMES[dowOf(r.d)]} ${twShort(r.d)}`, W - 44, y + pad + 24);
     r.cs.forEach((x, ci) => { const xr = W - 40 - 170 - ci * colW; let ly = y + pad + 24; g.font = F; g.fillStyle = '#2D2A24';
+      if(x && x.wSkip) return;
+      if(x && x.cont){ g.fillStyle = '#5C6F52'; g.fillText(x[0], xr, ly); return; }
       if(!x || !x.length){ g.fillStyle = '#9A9286'; g.fillText(x ? 'חסר שיבוץ' : '—', xr, ly); return; }
       x.forEach(t => { g.fillText(t, xr, ly); ly += lineH; });
       const sh = cols[ci][0] === 'A' && twKind(r.d) === 'fri' ? 'W' : cols[ci][0], sl = twSlots(r.d).find(s => s.shift === sh), n = sl ? sl.need - TW.asg.filter(a => a.day === r.d && a.shift === sh).length : 0;
@@ -151,7 +158,8 @@ function twDragHtml(){
       return `<span class="pchip tw-drag-chip${n === q ? ' full' : n > q ? ' over' : ''}" draggable="true" data-tw-drag="${p.id}">${twU(twDisp(p))} <small>${n} מתוך ${q}${n > q ? ` (+${n - q})` : ''}</small></span>`; }).join('')}</aside>`;
 }
 function twDragWire(box){
-  box.querySelectorAll('[data-tw-drag]').forEach(ch => ch.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', ch.dataset.twDrag); e.dataTransfer.effectAllowed = 'copy'; }));
+  const paint = pid => box.querySelectorAll('td[data-tw-cell]').forEach(td => { if(!pid){ delete td.dataset.dragLv; return; } const [d, s] = td.dataset.twCell.split('|'); td.dataset.dragLv = twLvl(pid, d, s); });
+  box.querySelectorAll('[data-tw-drag]').forEach(ch => { ch.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', ch.dataset.twDrag); e.dataTransfer.effectAllowed = 'copy'; paint(ch.dataset.twDrag); }); ch.addEventListener('dragend', () => paint(null)); });
   box.querySelectorAll('td[data-tw-cell]').forEach(td => {
     td.addEventListener('dragover', e => { e.preventDefault(); td.classList.add('tw-drop'); });
     td.addEventListener('dragleave', () => td.classList.remove('tw-drop'));
@@ -186,16 +194,18 @@ function twMySettingsHtml(){
   if(!TW.me || !TW.prefsOn) return '';
   const pf = twPrefOf(TW.me.id) || {}, combos = pf.combos || [], off = pf.days_off || [], nt = Object.assign({ reminder:true, published:true, changed:true, swap:true }, pf.notify || {});
   const seg = (k, on) => `<div class="mx-seg" role="group"><button type="button" data-tw-nt="${k}" data-v="1" aria-pressed="${!!on}">דלוק</button><button type="button" data-tw-nt="${k}" data-v="" aria-pressed="${!on}">כבוי</button></div>`;
-  return `<div class="sb-set-row"><b>משמרות צמודות שאני מוכנה לעבוד</b><div class="sb-help">צירוף שלא סימנת לא ישובץ לך אוטומטית.</div>
+  const fold = (k, t, b) => typeof sbFold === 'function' ? sbFold(k, t, b) : b;          // (folded under headings: Guy 21.11)
+  return `${fold('shifts', 'ההעדפות שלי בסידור', `<div class="sb-set-row"><b>משמרות צמודות שאני מוכנה לעבוד</b><div class="sb-help">צירוף שלא סימנת לא ישובץ לך אוטומטית.</div>
       ${Object.entries(TW_COMBO).map(([k, w]) => `<label class="tw-chk-l"><input type="checkbox" data-tw-combo="${k}"${combos.includes(k) ? ' checked' : ''}> ${w}</label>`).join('')}</div>
     <div class="sb-set-row"><b>ימים שאני לא באה בהם</b><div class="tw-days-off">${DOW_NAMES.map((d, i) => `<button type="button" class="btn ghost small" data-tw-off="${i}" aria-pressed="${off.includes(i)}">${d}</button>`).join('')}</div>
       <div class="sb-help">מי שבונה את הסידור רואה את זה ליד השם.</div></div>
     <div class="sb-set-row"><b>הגשה חדשה מתחילה</b><div class="mx-seg" role="group"><button type="button" data-tw-copy="" aria-pressed="${!pf.copy_last}">ריקה</button><button type="button" data-tw-copy="1" aria-pressed="${!!pf.copy_last}">מההגשה הקודמת שלי</button></div></div>
-    <div class="sb-set-row"><b>התראות במייל</b><div class="sb-help">הכול דלוק מההתחלה. אפשר לכבות.</div></div>
-    ${TW_NOTIFY.map(([k, w]) => `<div class="sb-set-row"><span>${w}</span>${seg(k, nt[k])}</div>`).join('')}
-    <div class="sb-set-row"><b>הטלפון שלי</b><div class="tw-form"><input type="tel" id="tw-my-phone" dir="ltr" maxlength="20" autocomplete="tel" value="${pEsc(TW.phones[TW.me.id] || '')}" aria-label="הטלפון שלי"></div>
+`)}
+    ${fold('mail', 'התראות במייל', `<div class="sb-help">הכול דלוק מההתחלה. אפשר לכבות.</div>
+    ${TW_NOTIFY.map(([k, w]) => `<div class="sb-set-row"><span>${w}</span>${seg(k, nt[k])}</div>`).join('')}`)}
+    ${fold('me', 'הפרטים שלי ותקלות', `<div class="sb-set-row"><b>הטלפון שלי</b><div class="tw-form"><input type="tel" id="tw-my-phone" dir="ltr" maxlength="20" autocomplete="tel" value="${pEsc(TW.phones[TW.me.id] || '')}" aria-label="הטלפון שלי"></div>
       <div class="sb-help">רק מי שבונה את הסידור והנהלה רואים אותו, כדי לשאול בוואטסאפ.</div></div>
-    <div class="sb-set-row"><b>משהו לא עובד?</b><button type="button" class="btn ghost" id="tw-problem">דיווח על תקלה</button></div>`;
+    <div class="sb-set-row"><b>משהו לא עובד?</b><button type="button" class="btn ghost" id="tw-problem">דיווח על תקלה</button></div>`)}`;
 }
 async function twSavePref(patch){
   const cur = twPrefOf(TW.me.id) || { person:TW.me.id, combos:[], days_off:[], copy_last:false, notify:{ reminder:true, published:true, changed:true, swap:true } };

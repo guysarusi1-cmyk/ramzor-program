@@ -33,8 +33,10 @@ function sbDecorate(){
   const top = shell.querySelector('.portal-top'); if(top) top.classList.add('sb-hide-top');
   if(!shell.querySelector('.sb-top')){
     shell.insertAdjacentHTML('afterbegin', `<div class="sb-top">${sbBrandHtml(true)}<span class="sb-top-org">${pEsc((srv.profile && srv.profile.org && srv.profile.org.name) || ORG_NAME)}</span>
+      <button type="button" class="portal-theme sb-look" id="sb-look" aria-label="החלפה בין מצב כהה לבהיר">${sbTheme() === 'dark' ? '☀️' : '🌙'}</button>
       <button type="button" class="btn ghost small" id="sb-theme" aria-label="הגדרות">⚙ הגדרות</button></div>`);
     shell.querySelector('#sb-theme').addEventListener('click', sbSettings);
+    shell.querySelector('#sb-look').addEventListener('click', () => sbSetTheme(sbTheme() === 'dark' ? 'light' : 'dark'));
   }
   if(!shell.querySelector('#sb-install-link')) shell.insertAdjacentHTML('beforeend', sbInstallLinkHtml());
 }
@@ -62,6 +64,16 @@ function sbInstallSheet(){
   document.body.appendChild(wrap);
 }
 function sbOpen(){ sbApplyLook(); const p = showTwoWeek(); sbDecorate(); return p; }
+// the look changes in place, without loading the screen again (Guy 21.11: a switch in the top line, as in the first site)
+function sbSetTheme(t){
+  sbSet('theme', t);
+  document.querySelectorAll('[data-ptheme]').forEach(el => { el.dataset.ptheme = t; });
+  const b = document.getElementById('sb-look'); if(b) b.textContent = t === 'dark' ? '☀️' : '🌙';
+  document.querySelectorAll('[data-k="theme"]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === t)));
+}
+// the settings folded under headings, closed at first, as in the first site (Guy 21.11); what was opened stays open while the window is redrawn
+const SB_FOLDS = new Set();
+const sbFold = (k, title, body) => `<details class="sb-fold" data-fold="${k}"${SB_FOLDS.has(k) ? ' open' : ''}><summary><span>${title}</span></summary><div class="sb-fold-body">${body}</div></details>`;
 
 // ---- the settings of this device: the look, big text, high contrast, installing as an app (Guy 2026-11-14)
 const sbGet = (k, d) => { try { const v = localStorage.getItem('mercury-shibutz-' + k); return v === null ? d : v; } catch(e){ return d; } };
@@ -82,17 +94,19 @@ function sbSettings(){
     : sbIsIos() ? '<div class="sb-help">באייפון: בספארי לוחצים על כפתור השיתוף (ריבוע עם חץ למעלה), ואז "הוספה למסך הבית".</div>'
     : '<div class="sb-help">באנדרואיד, בכרום: בתפריט (שלוש הנקודות למעלה) בוחרים "התקנת אפליקציה" או "הוספה למסך הבית".</div><div class="sb-help">באייפון, בספארי: לוחצים על כפתור השיתוף (ריבוע עם חץ למעלה), ואז "הוספה למסך הבית".</div>';
   wrap.innerHTML = `<div class="sheet-card tw-sheet"><div class="tw-sheet-head"><h2>הגדרות</h2><button type="button" class="btn ghost small" data-close aria-label="סגירה">✕ סגירה</button></div><div class="sb-set">
-    <div class="sb-set-row"><b>מראה</b>${seg('theme', [['dark', 'כהה'], ['light', 'בהיר']], sbTheme())}</div>
+    ${sbFold('look', 'מראה ונגישות', `<div class="sb-set-row"><b>מראה</b>${seg('theme', [['dark', 'כהה'], ['light', 'בהיר']], sbTheme())}</div>
     <div class="sb-set-row"><b>גודל הטקסט</b>${seg('big', [['', 'רגיל'], ['1', 'גדול']], sbGet('big', ''))}</div>
     <div class="sb-set-row"><b>ניגודיות</b>${seg('contrast', [['', 'רגילה'], ['high', 'גבוהה']], sbGet('contrast', ''))}</div>
-    <div class="sb-set-row"><b>שפה</b>${seg('lang', [['he', 'עברית'], ['ar', 'العربية']], sbGet('lang', 'he'))}</div>
-    <div class="sb-set-row"><b>אפליקציה</b>${install}</div>
-    <div class="sb-set-row"><b>חשבון</b><button type="button" class="btn ghost" id="sb-out">יציאה מהחשבון</button></div></div>
+    <div class="sb-set-row"><b>שפה</b>${seg('lang', [['he', 'עברית'], ['ar', 'العربية']], sbGet('lang', 'he'))}</div>`)}
+    ${sbFold('app', 'אפליקציה וחשבון', `<div class="sb-set-row"><b>אפליקציה</b>${install}</div>
+    <div class="sb-set-row"><b>חשבון</b><button type="button" class="btn ghost" id="sb-out">יציאה מהחשבון</button></div>`)}</div>
     <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>סגירה</button></div></div>`;
   if(typeof twMySettingsInto === 'function') twMySettingsInto(wrap);          // (my own settings of the schedule: the pilot, 14zs-tw-pilot.js)
+  wrap.addEventListener('toggle', e => { const d = e.target; if(d && d.matches && d.matches('.sb-fold')){ if(d.open) SB_FOLDS.add(d.dataset.fold); else SB_FOLDS.delete(d.dataset.fold); } }, true);
   wrap.addEventListener('click', async e => {
     if(e.target === wrap || e.target.closest('[data-close]')){ wrap.remove(); return; }
     const b = e.target.closest('[data-k]');
+    if(b && b.dataset.k === 'theme'){ sbSetTheme(b.dataset.v); return; }
     if(b){ sbSet(b.dataset.k, b.dataset.v); if(b.dataset.k === 'lang'){ location.reload(); return; } wrap.remove(); await sbOpen(); sbSettings(); return; }
     if(e.target.closest('#sb-install') && sbInstallEvent){ sbInstallEvent.prompt(); try { await sbInstallEvent.userChoice; } catch(err){} sbInstallEvent = null; wrap.remove(); }
     if(e.target.closest('#sb-out')){ wrap.remove(); sbSignOut(); }

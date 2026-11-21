@@ -56,6 +56,18 @@
   body.product-shibutz #view-tw .sb-top-org{ flex:1; min-width:0; font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   /* big text on a phone: the organisation's name on a line of its own, whole (the check of 2026-11-20: it was cut to "מר...") */
   @media (max-width:560px){ body.product-shibutz.portal-big #view-tw .sb-top{ flex-wrap:wrap; } body.product-shibutz.portal-big #view-tw .sb-top-org{ order:3; flex:1 1 100%; white-space:normal; } body.product-shibutz.portal-big #view-tw .sb-top #sb-theme{ margin-inline-start:auto; } }
+  /* the settings folded under headings (Guy 21.11, as in the first site) */
+  .sb-fold{ border:1px solid var(--p-line, rgba(127,127,127,.35)); border-radius:14px; overflow:hidden; }
+  .sb-fold > summary{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:52px; padding:10px 14px; cursor:pointer; font-weight:800; font-size:16px; list-style:none; }
+  .sb-fold > summary::-webkit-details-marker{ display:none; }
+  .sb-fold > summary::after{ content:'▾'; opacity:.7; transition:transform .2s; }
+  .sb-fold[open] > summary::after{ transform:rotate(180deg); }
+  .sb-fold-body{ display:grid; gap:14px; padding:4px 14px 14px; }
+  /* the light / dark switch in the top line (as the first site's) */
+  body.product-shibutz #view-tw .sb-top .sb-look{ flex:none; width:44px; height:44px; border-radius:12px; border:1px solid var(--p-line, rgba(127,127,127,.35)); background:transparent; font-size:19px; cursor:pointer; line-height:1; padding:0; }
+  /* the messages at the bottom: always light letters on a dark ground, in both looks (Guy 21.11: dark letters on dark blue in the light look) */
+  body.product-shibutz .toast{ background:#24211d; color:#F7F2E8; border:1px solid rgba(247,242,232,.25); }
+  body.product-shibutz .toast-undo-btn{ background:#F7F2E8; color:#1C1A17; }
   body.product-shibutz #view-tw .sb-hide-top{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   body.product-shibutz #view-tw .sb-org{ display:none; }
   .sb-login #sb-code{ direction:ltr; text-align:center; font-size:22px; letter-spacing:.2em; }
