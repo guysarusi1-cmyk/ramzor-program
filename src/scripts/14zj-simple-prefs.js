@@ -83,7 +83,7 @@ function prefWirePlain(root, prefs, redraw){
     b.addEventListener('contextmenu', e => e.preventDefault());
     b.addEventListener('click', e => {
       e.stopImmediatePropagation(); if(long){ long = false; return; }
-      const k = key(); if(prefInsideLong(prefs, k)){ toast(tx('long_inside')); return; }
+      const k = key(); if(prefInsideLong(prefs, k)){ toast(prefLongNight(prefs, k) ? tx('long_night') : tx('long_inside')); return; }
       prefPlainTap(prefs, k); prefPlainHelp(false);
       if(b.dataset.plong && ['yes', 'avoid'].includes(prefs.slots[k])){ const fri = b.dataset.plong, sat = addDays(fri, 1); [`${fri}|e`, `${fri}|n`, `${sat}|m`, `${sat}|e`].forEach(x => delete prefs.slots[x]); portalSave(); }
       redraw();
@@ -202,12 +202,12 @@ function renderWeekPrefs(body, mk, m, prefs){
   }
   // one week
   const wk = weeks[pos], dots = prefDotsOf(mk, prefs, wk).length, fixedOn = d => (prefs.fixed || []).find(f => f.day === d);
-  const lvOf = key => prefInsideLong(prefs, key) ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
+  const lvOf = key => prefLongNight(prefs, key) ? 'no' : prefInsideLong(prefs, key) ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);          // (the Friday night of a long weekend: a plain "לא", Guy 21.11)
   const rows = wk.map(date => {
     const out = !inMonth.has(date), fx = !out && fixedOn(date), away = !out && (fx || prefs.absent.includes(date)), hrs = !out && prefs.hours[date];
     return `<div class="pwday${out ? ' out' : ''}${away ? ' away' : ''}">${out || away ? '<div class="pwday-name">' : `<button type="button" class="pwday-name pwday-all" data-pwday="${date}" aria-label="כל ${pEsc(dayLabel(date))}">`}<b>${pEsc(DOW_NAMES[dowOf(date)])}</b> <small>${parseIso(date).getDate()}/${parseIso(date).getMonth() + 1}</small>${hrs ? ` <small class="pday-hrs"><bdi dir="ltr">${hrs.map(([a, b]) => hoursRangeTxt(a, b)).join(', ')}</bdi></small>` : ''}${out || away ? '</div>' : '</button>'}
-      ${out ? '' : away ? `<span class="pwday-away">${pEsc(fx ? FIXED_REASON[fx.reason] || 'היעדרות' : 'לא באה')}</span>` : `<div class="pwday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = prefInsideLong(prefs, key);
-        return `<button type="button" class="pshift pwshift lv-${lvOf(key) || 'neutral'}${inLong ? ' in-long' : ''}" data-pslot="${key}">${inLong ? '🕯️ ' : ''}${pEsc(s.label)}</button>`; }).join('')}</div>`}</div>`;
+      ${out ? '' : away ? `<span class="pwday-away">${pEsc(fx ? FIXED_REASON[fx.reason] || 'היעדרות' : 'לא באה')}</span>` : `<div class="pwday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = prefInsideLong(prefs, key), lnN = inLong && prefLongNight(prefs, key);
+        return `<button type="button" class="pshift pwshift lv-${lvOf(key) || 'neutral'}${inLong ? ' in-long' : ''}${lnN ? ' long-n' : ''}" data-pslot="${key}">${inLong && !lnN ? '🕯️ ' : ''}${pEsc(s.label)}</button>`; }).join('')}</div>`}</div>`;
   }).join('');
   // a shift she marked and hours of her own the same day: what will happen, said plainly (Guy 21.11; as the month, 14f)
   const hrsLines = typeof hoursEffects === 'function' ? wk.filter(d => inMonth.has(d) && !fixedOn(d) && !prefs.absent.includes(d)).flatMap(d => hoursEffects(d, prefs)) : [];
@@ -230,7 +230,7 @@ function renderWeekPrefs(body, mk, m, prefs){
     if(!portalUi.level || portalUi.level === 'hours') portalUi.level = 'yes';
     body.querySelectorAll('[data-plevel]').forEach(b => b.addEventListener('click', () => { portalUi.level = b.dataset.plevel; redraw(); }));
     body.querySelectorAll('[data-pslot]').forEach(b => b.addEventListener('click', () => {
-      const key = b.dataset.pslot, lv = portalUi.level; if(prefInsideLong(prefs, key)){ toast(tx('long_inside')); return; }
+      const key = b.dataset.pslot, lv = portalUi.level; if(prefInsideLong(prefs, key)){ toast(prefLongNight(prefs, key) ? tx('long_night') : tx('long_inside')); return; }
       if(prefs.slots[key] === lv) delete prefs.slots[key]; else prefs.slots[key] = lv; portalSave(); redraw();
     }));
   }

@@ -87,6 +87,9 @@ const prefNoNight = prefFixedNo;
 // inside it and are not chosen one by one (the engine places them only as the whole weekend); Friday morning and Saturday night stay free
 const LONG_INSIDE = { 5:['e', 'n'], 6:['m', 'e'] };
 const prefLongFri = key => { const [d, s] = key.split('|'), w = dowOf(d); return (LONG_INSIDE[w] || []).includes(s) ? (w === 5 ? d : addDays(d, -1)) : null; };
+// the Friday night of a chosen long weekend (Guy 21.11): not part of the package on the screen (the package is Friday afternoon, Saturday morning
+// and afternoon), but a "no" by itself: shown as a plain "לא", locked, and the engine keeps it "no" (problem.py inside_long)
+const prefLongNight = (prefs, key) => /\|n$/.test(key) && dowOf(key.split('|')[0]) === 5 && prefInsideLong(prefs, key);
 const prefInsideLong = (prefs, key) => { const fri = portalServerOn && prefLongFri(key); return !!fri && ['yes', 'can', 'avoid'].includes(prefs.slots[`${fri}|l`]); };
 const prefLevelOf = (prefs, key) => prefs.slots[key] || (portalServerOn ? (prefNoNight(key) ? 'no' : 'neutral') : 'yes');          // (on the server a shift nobody marked is "neutral": the person did not say)
 const DEFAULT_SHIFT_LEGEND = types => types.map(s => (s.letter || s.label.charAt(0)) + ' = ' + s.label);
@@ -173,9 +176,9 @@ function renderInstructorPrefs(body){
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${fx ? `<span class="pday-fixed">${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}</span>` : ''}
       ${hrs ? `<span class="pday-hrs" title="שעות אחרות"><bdi dir="ltr">${hrs.map(([a, b]) => hoursRangeTxt(a, b)).join(', ')}</bdi></span>` : ''}
-      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = !absent && prefInsideLong(prefs, key), lv = absent ? 'no' : inLong ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
+      <div class="pday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = !absent && prefInsideLong(prefs, key), lnN = inLong && prefLongNight(prefs, key), lv = absent || lnN ? 'no' : inLong ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
         const cut = portalServerOn && !absent && !inLong && hrsCut[key];          // (a shift she marked, and hours of her own that day that do not cover all of it: Guy 21.11)
-        return `<button type="button" class="pshift lv-${lv}${inLong ? ' in-long' : ''}${cut ? ' ps-cut' : ''}" data-pslot="${key}" aria-label="${pEsc(s.label)}${inLong ? ' (בתוך הסופ&quot;ש הארוך)' : ''}${cut ? ` (${pEsc(cut.short)})` : ''}">${inLong ? '🕯️' : `<span class="ps-l">${pEsc(s.letter || s.label.charAt(0))}</span><span class="ps-w">${pEsc(s.label)}</span>`}</button>`; }).join('')}</div>
+        return `<button type="button" class="pshift lv-${lv}${inLong ? ' in-long' : ''}${lnN ? ' long-n' : ''}${cut ? ' ps-cut' : ''}" data-pslot="${key}" aria-label="${pEsc(s.label)}${lnN ? ' (לא, בגלל הסופ&quot;ש הארוך)' : inLong ? ' (בתוך הסופ&quot;ש הארוך)' : ''}${cut ? ` (${pEsc(cut.short)})` : ''}">${inLong && !lnN ? '🕯️' : `<span class="ps-l">${pEsc(s.letter || s.label.charAt(0))}</span><span class="ps-w">${pEsc(s.label)}</span>`}</button>`; }).join('')}</div>
     </div>`;
     if(portalServerOn && dowOf(date) === 6 && days.includes(addDays(date, -1))) cells += longBar(addDays(date, -1));
     else if(portalServerOn && dowOf(date) === 5 && date === days[days.length - 1]) cells += longBar(date);
@@ -240,7 +243,7 @@ function renderInstructorPrefs(body){
     if(locked || prefPlainOn()) return;          // (without colours the taps are 14zj's)
     const shown = b.dataset.pslot.split('|')[0], key = prefKeyOf(b.dataset.pslot), date = key.split('|')[0], lv = portalUi.level;
     if(fixedOn(date) || fixedOn(shown)) return;
-    if(prefInsideLong(prefs, key) && lv !== 'absent'){ toast(tx('long_inside')); return; }
+    if(prefInsideLong(prefs, key) && lv !== 'absent'){ toast(prefLongNight(prefs, key) ? tx('long_night') : tx('long_inside')); return; }
     if(lv === 'hours'){ openHoursSheet(shown, prefs, () => renderInstructorPrefs(body)); return; }
     if(lv === 'absent'){ toggleAbsent(prefs, date); }
     else if(lv === 'yes' && !portalServerOn){ delete prefs.slots[key]; }                      // (the demo: "כן" is the default, so nothing needs to be stored; on the server "כן" is a mark like the others)

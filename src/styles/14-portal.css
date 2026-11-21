@@ -571,3 +571,5 @@
 .phours-effects li{ margin:3px 0; }
 /* a part of a night (Guy 21.11): marked on the coordinator's board only, an amber line under the name */
 .mcal-name.part-night{ box-shadow:inset 0 -3px 0 #C98A1B; }          /* (not the dashed edge: that one is "waits for שליחת עדכונים") */
+/* the Friday night of a chosen long weekend (Guy 21.11): a plain "no" with its letter, not the dashed look of the package */
+.pshift.in-long.long-n{ opacity:1; border-style:solid; font-size:inherit; }
