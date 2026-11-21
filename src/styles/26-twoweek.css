@@ -306,8 +306,8 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 .tw-pick-main[aria-disabled=true]{ cursor:not-allowed; }
 .tw-pick-side{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding-inline-end:10px; }
 .tw-pick-row.on .btn.ghost{ color:#1C1A17; border-color:#1C1A17; }
-.wa-btn{ flex:none; display:inline-grid; place-items:center; width:40px; height:40px; border-radius:50%; background:#25d366; color:#fff; text-decoration:none; }
-.wa-btn:focus-visible{ outline:2px solid currentColor; outline-offset:2px; }
+body.product-shibutz .wa-btn{ flex:none; display:inline-grid; place-items:center; width:40px; height:40px; border-radius:50%; background:#25d366; color:#fff; text-decoration:none; }
+body.product-shibutz .wa-btn:focus-visible{ outline:2px solid currentColor; outline-offset:2px; }
 .tw-wline{ margin:6px 0; }
 /* the pilot, step 3 on a computer: the table and the names to drag beside it; on a phone (and a narrow screen) only the table */
 #view-tw .tw-drag{ display:none; }
@@ -345,7 +345,7 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 .sb-set .tw-chk-l input{ width:24px; height:24px; }
 #view-tw .tw-add-fold > summary{ font-weight:700; }
 /* Rita's check 19.11: no white scroll bar in a dark window; the page behind an open window does not scroll; the ✓ button readable */
-.sheet .sheet-card{ scrollbar-color:color-mix(in srgb, var(--p-text, #ddd) 35%, transparent) transparent; scrollbar-width:thin; }
+body.product-shibutz .sheet .sheet-card{ scrollbar-color:color-mix(in srgb, var(--p-text, #ddd) 35%, transparent) transparent; scrollbar-width:thin; }
 body.product-shibutz:has(> .sheet){ overflow:hidden; }          /* (only the scheduling product, whose windows are added and removed: the first site keeps its windows hidden in the page, and the rule locked its scrolling — Guy 21.11) */
 .tw-pick-row.on .btn.ghost{ background:#1C1A17; color:#F3EEE4; border-color:#1C1A17; }
 #view-tw .tw-pday.tw-off .tw-day-name{ opacity:.6; }
@@ -360,8 +360,8 @@ body.product-shibutz:has(> .sheet){ overflow:hidden; }          /* (only the sch
 #view-tw .tw-wmiss{ margin:4px 0 0; padding-inline-start:20px; font-size:14px; }
 #view-tw .tw-wmiss li{ margin:2px 0; }
 /* a long undo message (a warning inside it): wide, not a narrow tall column (the check of 2026-11-20) */
-.toast-undo.toast-long{ width:min(92vw, 520px); max-width:92vw; box-sizing:border-box; }
-.toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; }
+body.product-shibutz .toast-undo.toast-long{ width:min(92vw, 520px); max-width:92vw; box-sizing:border-box; }
+body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; }
 
 /* ---- Guy's walkthrough 2026-11-21: the preferences ---- */
 /* the view (rows / calendar) and the week, above the table, always */

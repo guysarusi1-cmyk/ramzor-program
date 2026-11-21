@@ -219,7 +219,7 @@ function renderInstructorPrefs(body){
       <div class="pconsent"><span>אם נצטרך, האם יהיה לך נוח להישאר עד 16:00 במשמרת בוקר?</span>${choice('extend')}<small>עד 4 הארכות בחודש</small></div>
       <div class="pconsent"><span>אם נצטרך, האם יהיה לך נוח להמשיך משבת בלילה עד יום ראשון ב-11:00?</span>${choice('pull')}</div>
     </div>
-    <label class="pfield">יש משהו שחשוב לך שנדע? (לא חובה)<textarea id="prefs-note" rows="2" maxlength="400"${locked ? ' disabled' : ''}>${pEsc(m.notes && m.notes[me.id] || '')}</textarea></label>` : ''}
+    <label class="pfield">יש משהו שחשוב לך שנדע? (לא חובה)<textarea id="prefs-note" rows="2" maxlength="400"${locked ? ' disabled' : ''}>${pEsc(prefNoteGet(mk, me.id) ?? (m.notes && m.notes[me.id]) ?? '')}</textarea></label>` : ''}
     ${locked ? '' : `<div class="pprefs-actions"><button type="button" class="btn" id="prefs-submit">${submitted ? 'עדכון והגשה מחדש' : 'הגשת ההעדפות'}</button><span class="pnote">${portalServerOn ? (neutral > 0 ? 'עוד ' + neutral + ' משמרות לסימון' : 'כל המשמרות מסומנות') : (marked ? marked + ' סימונים שאינם "כן"' : 'הכל "כן"')}</span></div>
     <div class="plevelbar" role="group" aria-label="בחירת רמה">${levels.map(b => `<button type="button" class="lvbtn lv-${b[0]}${portalUi.level === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}<button type="button" class="lvbtn lv-clear" id="prefs-clear-all">נקה הכל</button></div>`}`;
   wireMonthNav(body, 'pmonth'); wireFolds(body);
@@ -292,13 +292,16 @@ function renderInstructorPrefs(body){
         if(how === 'back'){ const first = body.querySelector('.pshift.lv-neutral'); if(first) first.scrollIntoView({ block:'center' }); return; }
         um.forEach(k => { prefs.slots[k] = how === 'can' ? 'avoid' : 'no'; }); portalSave(); renderInstructorPrefs(body);          // ("avoid" is the "יכול" of the screen)
       }
-      try { await srvSubmit(mk, (document.getElementById('prefs-note').value || '').trim(), m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
+      const noteNow = prefNoteGet(mk, me.id) ?? ((document.getElementById('prefs-note') || {}).value || (m.notes && m.notes[me.id]) || '');          // (the draft: the screen may have been drawn again since she wrote it)
+      try { await srvSubmit(mk, String(noteNow).trim(), m.goals[me.id] || null); } catch(e){ toast(tx('submit_fail')); return; }
+      prefNoteSet(mk, me.id, null);
       const left = prefUnmarkedKeys(mk, prefs).length;          // (counted again: the shifts just filled by "יכול"/"לא" are no longer left, Guy 2026-11-09)
       if(left > 0) toast(tx('submit_neutral', left), 8000); else toast(tx('submit_ok'));          // (the "not complete yet" message stays long enough to be read)
       renderInstructorPrefs(body); return;
     }
     m.submitted[me.id] = true; portalSave(); toast(tx('submit_ok')); renderInstructorPrefs(body);
   });
+  { const nt = body.querySelector('#prefs-note'); if(nt) nt.addEventListener('input', () => prefNoteSet(mk, me.id, nt.value)); }          // (kept as she writes: Guy 21.11, the note vanished when the screen was drawn again)
   prefMonthExtras(body, mk, prefs, locked, submitted);
 }
 // an hour range as people read it: 23–7 and not 23–31 (an hour after 24 is the next morning: Guy 21.11)
@@ -323,6 +326,12 @@ function hoursEffects(date, prefs){
   });
   return out;
 }
+// the note in "יש משהו שחשוב לך שנדע?" as she writes it, until it is handed in (Guy 21.11: it vanished when she tapped elsewhere and the
+// screen was drawn again). In memory and on this device; null = no draft (the saved note is shown)
+const PREF_NOTE_DRAFT = {};
+const prefNoteKey = (mk, id) => `ramzor-prefs-note-${mk}-${id}`;
+function prefNoteGet(mk, id){ const k = prefNoteKey(mk, id); if(k in PREF_NOTE_DRAFT) return PREF_NOTE_DRAFT[k]; try { const v = localStorage.getItem(k); return v === null ? null : v; } catch(e){ return null; } }
+function prefNoteSet(mk, id, v){ const k = prefNoteKey(mk, id); if(v === null){ delete PREF_NOTE_DRAFT[k]; try { localStorage.removeItem(k); } catch(e){} } else { PREF_NOTE_DRAFT[k] = v; try { localStorage.setItem(k, v); } catch(e){} } }
 // custom hours for one day: up to two ranges (whole hours). (Guy 21.11: the words "used only when they complete a full shift" were removed from the window, they confused)
 function openHoursSheet(date, prefs, done){
   const cur = (prefs.hours[date] || []).slice(0, 2);

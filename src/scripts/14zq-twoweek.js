@@ -1523,6 +1523,7 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape' && twOwnSite()
 new MutationObserver(ms => ms.forEach(m => {
   m.addedNodes.forEach(n => {
     if(n.nodeType !== 1 || !n.classList.contains('sheet')) return;
+    if(!twOwnSite() && !document.querySelector('#view-tw.active')) return;          // (in the big site only the two-week screen's own windows: the rest of the first site keeps its own focus, check 21.11)
     if(twOwnSite()){ try { history.pushState({ tw:'sheet' }, ''); } catch(e){} }
     setTimeout(() => { if(!n.isConnected || n.contains(document.activeElement)) return; const h = n.querySelector('h2'); if(h){ h.tabIndex = -1; h.focus(); } }, 0);
   });
