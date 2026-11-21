@@ -109,13 +109,14 @@ function prefHoursGuided(dates, prefs, done){
   let date = dates.length === 1 ? dates[0] : null, from = null;
   const fin = () => { portalSave(); sh.close(); done(); };
   const draw = step => {
-    if(step === 'day') box.innerHTML = `<h2>באיזה יום?</h2><div class="phg-days">${dates.map(d => `<button type="button" class="btn ghost" data-hgday="${d}">${pEsc(dayName(d))} <small>${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}</small>${prefs.hours[d] ? ` <small class="phg-now"><bdi dir="ltr">${prefs.hours[d].map(([a, b]) => a + '–' + b).join(', ')}</bdi></small>` : ''}</button>`).join('')}</div>
+    if(step === 'day') box.innerHTML = `<h2>באיזה יום?</h2><div class="phg-days">${dates.map(d => `<button type="button" class="btn ghost" data-hgday="${d}">${pEsc(dayName(d))} <small>${parseIso(d).getDate()}/${parseIso(d).getMonth() + 1}</small>${prefs.hours[d] ? ` <small class="phg-now"><bdi dir="ltr">${prefs.hours[d].map(([a, b]) => hoursRangeTxt(a, b)).join(', ')}</bdi></small>` : ''}</button>`).join('')}</div>
       <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-close>ביטול</button></div>`;
-    else if(step === 'how') box.innerHTML = `<h2>שעות אחרות ב${pEsc(dayName(date))}</h2>${prefs.hours[date] ? `<div class="pnote">כרגע: <bdi dir="ltr">${prefs.hours[date].map(([a, b]) => a + ':00–' + b + ':00').join(', ')}</bdi></div>` : ''}
+    else if(step === 'how') box.innerHTML = `<h2>שעות אחרות ב${pEsc(dayName(date))}</h2>${prefs.hours[date] ? `<div class="pnote">כרגע: <bdi dir="ltr">${prefs.hours[date].map(([a, b]) => a + ':00–' + (b > 24 ? b - 24 : b) + ':00').join(', ')}</bdi></div>` : ''}
       <button type="button" class="btn hours-mid phg-mid" data-hg="mid"><span>משמרת אמצע</span> <bdi dir="ltr">12:00–20:00</bdi></button>
       <button type="button" class="btn ghost phg-other" data-hg="other">שעות אחרות</button>
       <div class="confirm-actions">${prefs.hours[date] ? '<button type="button" class="btn ghost" data-hg="clear">מחיקה</button>' : ''}<button type="button" class="btn ghost" data-close>ביטול</button></div>`;
     else box.innerHTML = `<h2>${step === 'from' ? `מתי ${prefG('תוכלי', 'תוכל')} להתחיל ב${pEsc(dayName(date))}?` : `מתי ${prefG('תרצי', 'תרצה')} לסיים ב${pEsc(dayName(date))}?`}</h2>
+      ${step === 'to' ? `<div class="pnote">אפשר גם אחרי חצות, עד 08:00 בבוקר שלמחרת.</div>` : ''}
       <input type="time" class="phg-time" id="phg-t" step="3600" value="${step === 'from' ? '08:00' : String(Math.min((from || 8) + 8, 23)).padStart(2, '0') + ':00'}">
       <div id="phg-err" class="pwarn" aria-live="polite"></div>
       <div class="confirm-actions"><button type="button" class="btn ghost" data-hg="back">חזרה</button><button type="button" class="btn" data-hg="${step === 'from' ? 'next' : 'save'}">${step === 'from' ? 'המשך' : 'שמירה'}</button></div>`;
@@ -128,7 +129,8 @@ function prefHoursGuided(dates, prefs, done){
       else if(a === 'other') draw('from');
       else if(a === 'back') draw(step === 'to' ? 'from' : 'how');
       else if(a === 'next'){ const h = toH(box.querySelector('#phg-t').value); if(h === null || h < 6 || h > 23){ err('אפשר להתחיל בין 06:00 ל-23:00'); return; } from = h; draw('to'); }
-      else if(a === 'save'){ const h = toH(box.querySelector('#phg-t').value); if(h === null || h <= from){ err('השעה צריכה להיות אחרי ' + String(from).padStart(2, '0') + ':00'); return; } prefs.hours[date] = [[from, h]]; fin(); }
+      else if(a === 'save'){ let h = toH(box.querySelector('#phg-t').value); if(h !== null && h <= from) h += 24;          // (an end before the start is the next morning, until 08:00: a part of a night, Guy 21.11)
+        if(h === null || h > 32){ err('אפשר לסיים עד 08:00 בבוקר שלמחרת'); return; } prefs.hours[date] = [[from, h]]; fin(); }
     }));
     const t = box.querySelector('#phg-t'); if(t) setTimeout(() => { try { t.focus(); } catch(e){} }, 50);
   };
@@ -203,15 +205,19 @@ function renderWeekPrefs(body, mk, m, prefs){
   const lvOf = key => prefInsideLong(prefs, key) ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
   const rows = wk.map(date => {
     const out = !inMonth.has(date), fx = !out && fixedOn(date), away = !out && (fx || prefs.absent.includes(date)), hrs = !out && prefs.hours[date];
-    return `<div class="pwday${out ? ' out' : ''}${away ? ' away' : ''}">${out || away ? '<div class="pwday-name">' : `<button type="button" class="pwday-name pwday-all" data-pwday="${date}" aria-label="כל ${pEsc(dayLabel(date))}">`}<b>${pEsc(DOW_NAMES[dowOf(date)])}</b> <small>${parseIso(date).getDate()}/${parseIso(date).getMonth() + 1}</small>${hrs ? ` <small class="pday-hrs"><bdi dir="ltr">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</bdi></small>` : ''}${out || away ? '</div>' : '</button>'}
+    return `<div class="pwday${out ? ' out' : ''}${away ? ' away' : ''}">${out || away ? '<div class="pwday-name">' : `<button type="button" class="pwday-name pwday-all" data-pwday="${date}" aria-label="כל ${pEsc(dayLabel(date))}">`}<b>${pEsc(DOW_NAMES[dowOf(date)])}</b> <small>${parseIso(date).getDate()}/${parseIso(date).getMonth() + 1}</small>${hrs ? ` <small class="pday-hrs"><bdi dir="ltr">${hrs.map(([a, b]) => hoursRangeTxt(a, b)).join(', ')}</bdi></small>` : ''}${out || away ? '</div>' : '</button>'}
       ${out ? '' : away ? `<span class="pwday-away">${pEsc(fx ? FIXED_REASON[fx.reason] || 'היעדרות' : 'לא באה')}</span>` : `<div class="pwday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = prefInsideLong(prefs, key);
         return `<button type="button" class="pshift pwshift lv-${lvOf(key) || 'neutral'}${inLong ? ' in-long' : ''}" data-pslot="${key}">${inLong ? '🕯️ ' : ''}${pEsc(s.label)}</button>`; }).join('')}</div>`}</div>`;
   }).join('');
+  // a shift she marked and hours of her own the same day: what will happen, said plainly (Guy 21.11; as the month, 14f)
+  const hrsLines = typeof hoursEffects === 'function' ? wk.filter(d => inMonth.has(d) && !fixedOn(d) && !prefs.absent.includes(d)).flatMap(d => hoursEffects(d, prefs)) : [];
+  const hrsBox = hrsLines.length ? `<div class="phours-effects" id="hours-effects"><b>שעות אחרות וגם משמרת באותו יום:</b><ul>${hrsLines.map(x => `<li>${pEsc(x.text)}</li>`).join('')}</ul></div>` : '';
   const last = pos === weeks.length - 1, blocked = plain && dots > 0;
   const range = `${parseIso(wk[0]).getDate()}/${parseIso(wk[0]).getMonth() + 1}–${parseIso(wk[6]).getDate()}/${parseIso(wk[6]).getMonth() + 1}`;
   body.innerHTML = `${head}<div class="pweek${plain ? ' plain' : ''}"><h2 class="pweek-title">שבוע ${pos + 1} מתוך ${weeks.length} <small><bdi dir="ltr">${range}</bdi></small></h2>
     ${plain ? '' : `<div class="plevelbar pweek-levels">${SRV_LEVEL_BUTTONS.filter(b => b[0] !== 'hours').map(b => `<button type="button" class="lvbtn lv-${b[0]}${(portalUi.level || 'yes') === b[0] ? ' active' : ''}" data-plevel="${b[0]}">${b[1]}</button>`).join('')}</div>`}
     <div class="pwdays">${rows}</div>
+    ${hrsBox}
     ${prefWeekendBarHtml(wk, inMonth, prefs)}
     ${plain ? '' : '<div class="pweek-bottom"><div class="plevelbar pplain-bar"><button type="button" class="lvbtn" id="pplain-hours">שעות אחרות</button></div></div>'}
     ${dots ? `<div class="pweek-left">עוד ${dots} ${dots === 1 ? 'נקודה' : 'נקודות'}</div>` : ''}

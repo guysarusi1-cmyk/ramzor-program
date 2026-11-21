@@ -407,7 +407,8 @@ function monthCalHtml(ctx, assignments, opts){
     const name = (p, isLead) => {
       const mine = opts.me && p.iid === opts.me, ann = ctx.annot && ctx.annot[c.slot.key + '|' + p.iid];
       const pend = opts.pend && opts.pend[c.slot.key + '|' + p.iid];          // (a change that waits for "שליחת עדכונים": the staff do not see it yet)
-      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}${pend ? ' pend' : ''}"${pend ? ' title="שינוי שעוד לא נשלח למדריכים"' : ''}${opts.drag ? ` data-iid="${p.iid}"` : ''}>${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small><bdi>${pEsc(ann)}</bdi></small>` : ''}</span>`;
+      const part = opts.drag && typeof csPartNightOf === 'function' && csPartNightOf(c.slot.key, p.iid);          // (a part of a night: marked on the coordinator's board only, Guy 21.11)
+      return `<span class="mcal-name${mine ? ' me' : ''}${isLead ? ' ahm' : ''}${wish(p)}${opts.sel && opts.sel === p.iid ? ' sel' : ''}${pend ? ' pend' : ''}${part ? ' part-night' : ''}"${pend ? ' title="שינוי שעוד לא נשלח למדריכים"' : part ? ' title="לילה חלקי"' : ''}${opts.drag ? ` data-iid="${p.iid}"` : ''}>${pEsc(p.name)}${isLead ? '<small class="ahm-tag">אחמ"ש</small>' : ''}${ann ? `<small><bdi>${pEsc(ann)}</bdi></small>` : ''}</span>`;
     };
     return `<div class="${cls}" data-day="${r.date}" data-shift="${s.id}"${edit}>${teachers}${lead.map(p => name(p, true)).join('')}${rest.map(p => name(p, false)).join('')}${extra}${service}${(liveMiss ? liveMiss[c.slot.key] || 0 : c.missing) ? `<span class="mcal-missing">חסר ${liveMiss ? liveMiss[c.slot.key] : c.missing}</span>` : ''}</div>`;
   };

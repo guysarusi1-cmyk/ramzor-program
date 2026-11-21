@@ -101,7 +101,7 @@ async function srvLoad(){
     srvPrefsOf(m, r.staff_id).slots[`${r.day}|${id}`] = r.level === 'can' ? 'avoid' : r.level;       // the screen's "avoid" = the database's "can" (יכול); a shift with no row is neutral (the person did not say)
   });
   abs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); if(r.reason === 'self') pr.absent.push(r.day); else pr.fixed.push({ day:r.day, reason:r.reason, note:r.note }); });      // (a vacation, sick leave... that the coordinator entered cannot be changed here)
-  hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); (pr.hours[r.day] = pr.hours[r.day] || []).push([parseInt(r.from_time, 10), parseInt(r.to_time, 10) || 24]); });
+  hrs.forEach(r => { const m = st.months[monthOf(r.day)]; if(!m) return; const pr = srvPrefsOf(m, r.staff_id); const a = parseInt(r.from_time, 10), b0 = String(r.to_time).startsWith('23:59') ? 24 : (parseInt(r.to_time, 10) || 24); (pr.hours[r.day] = pr.hours[r.day] || []).push([a, b0 <= a ? b0 + 24 : b0]); });          // (an end before the start is the next morning: a part of a night, Guy 21.11; 23:59 is 24:00)
   cons.forEach(r => { const m = st.months[monthOf(r.month)]; if(m) srvPrefsOf(m, r.staff_id).consent = { extend:r.extend_na ? 'na' : r.extend_ask ? 'ask' : r.extend_morning, pull:r.pull_na ? 'na' : r.pull_ask ? 'ask' : r.pull_to_sunday }; });
   subs.forEach(r => { const m = st.months[monthOf(r.month)]; if(m){ m.submitted[r.staff_id] = true; if(r.note) m.notes[r.staff_id] = r.note; } });
   let goalRows = []; try { goalRows = await srvAll(() => sbPersonal.from('prefs_submission').select('staff_id,month,goal').gte('month', from).lte('month', to)); } catch(e){ goalRows = []; }          // (the goal column comes with scheduling-v5.sql; until then there is none)
@@ -200,7 +200,7 @@ async function srvSyncPrefs(mk){
   if(p.absent.length){ r = await sbPersonal.from('prefs_absence').insert(p.absent.map(d => ({ staff_id:srvWho(), day:d, reason:'self' }))); if(r.error) throw r.error; }
   r = await sbPersonal.from('prefs_hours').delete().eq('staff_id', srvWho()).gte('day', first).lte('day', last);
   if(r.error) throw r.error;
-  const hourRows = []; Object.keys(p.hours).forEach(d => p.hours[d].forEach(([a, b]) => hourRows.push({ staff_id:srvWho(), day:d, from_time:String(a).padStart(2, '0') + ':00', to_time:b >= 24 ? '23:59' : String(b).padStart(2, '0') + ':00' })));
+  const hourRows = []; Object.keys(p.hours).forEach(d => p.hours[d].forEach(([a, b]) => hourRows.push({ staff_id:srvWho(), day:d, from_time:String(a).padStart(2, '0') + ':00', to_time:b === 24 ? '23:59' : String(b > 24 ? b - 24 : b).padStart(2, '0') + ':00' })));          // (after 24: the next morning, kept as 07:00 after 23:00)
   if(hourRows.length){ r = await sbPersonal.from('prefs_hours').insert(hourRows); if(r.error) throw r.error; }
   if(srv.pickOk !== false){                                          // ("only one of these weekends"; before scheduling-v8.sql the table does not exist, and nothing is lost)
     r = await sbPersonal.from('prefs_pickone').delete().eq('staff_id', srvWho()).gte('friday', first).lte('friday', last);

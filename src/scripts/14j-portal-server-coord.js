@@ -798,7 +798,7 @@ function srvPersonRequestsHtml(p, mk){
     <details class="cs-req cs-opened"><summary><b>פתח/ה ${openedAll} משמרות</b> <small>(כן ויכול)</small></summary><span>בוקר ${opened.M} · צהריים ${opened.A} · לילה ${opened.N} · סופ"ש ${opened.W} · סופ"ש ארוך ${opened.L}</span></details>
     ${line('yes', 'כן', by.yes)}${line('can', 'יכול', by.avoid)}${line('no', 'לא', by.no)}
     ${fixed.length ? `<div class="cs-req"><b>היעדרות</b><span>${[...new Set(fixed.map(f => FIXED_REASON[f.reason] || 'היעדרות'))].join(', ') + ': ' + dayRanges(fixed.map(f => f.day))}</span></div>` : ''}
-    ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => a + '–' + b).join(', ')}`).join(' · ')}</span></div>` : ''}
+    ${Object.keys(pr.hours || {}).length ? `<div class="cs-req"><b>שעות אחרות</b><span>${Object.keys(pr.hours).sort().map(d => `${shortDate(d)} ${pr.hours[d].map(([a, b]) => hoursRangeTxt(a, b)).join(', ')}`).join(' · ')}</span></div>` : ''}
     ${longs.length ? `<div class="cs-req cs-long"><b>סופ"ש ארוך</b><div class="cs-req-days">${longs.map(([d, lv]) => `<div class="cs-req-day"><span class="cs-req-date">${pEsc(dayLabel(d))}</span><span class="mcal-name wish-${lv === 'avoid' ? 'can' : lv}">${lv === 'yes' ? 'כן' : lv === 'avoid' ? 'יכול' : 'לא'}</span></div>`).join('')}</div></div>` : ''}
     ${(pr.pick || []).length ? `<div class="cs-req cs-long"><b>רק אחד מסופי השבוע</b><span>${pr.pick.slice().sort().map(f => pEsc(dayLabel(f))).join(' · ')}</span></div>` : ''}
     <div class="cs-req"><b>הארכה עד 16:00</b><span>${cons.extend === true ? 'מסכים/ה' : cons.extend === 'ask' ? '<b class="cs-ask">תבדקו איתי</b>' : cons.extend === 'na' ? 'לא רלוונטי' : cons.extend === false ? 'לא' : 'לא ענה/תה'}</span></div>
@@ -833,9 +833,14 @@ let srvDragWho = null, srvDragRow = null, srvRenderAfterDrag = null;          //
 // her own hours that day ("שעות אחרות", all of them: Guy 2026-10-28), for a morning or an afternoon: where she would be placed and the tag with
 // her hours, or null. 12–20 is the middle shift (one afternoon row 12–20); other hours: her hours inside the shift (two hours at least)
 function srvHoursPlace(staffId, key){
-  const { date, shiftId } = splitKey(key); if(!['m', 'e'].includes(shiftId)) return null;
+  const { date, shiftId } = splitKey(key); if(!['m', 'e', 'n'].includes(shiftId)) return null;
   const pr = (portalMonth(monthKeyOf(date)).prefs || {})[staffId], ws = pr && (pr.hours || {})[date]; if(!ws || !ws.length) return null;
-  const tag = ws.map(([a, b]) => a + '–' + b).join(', '), hh = h => String(h).padStart(2, '0') + ':00';
+  const tag = ws.map(([a, b]) => hoursRangeTxt(a, b)).join(', '), hh = h => String(h % 24).padStart(2, '0') + ':00';
+  if(shiftId === 'n'){          // a part of a night (Guy 21.11): only hours that pass midnight; covered whole = the night as it is
+    const nw = ws.filter(([a, b]) => b > 24); if(!nw.length || nw.some(([a, b]) => a <= 22 && b >= 32)) return null;
+    const w = nw.map(([a, b]) => [Math.max(a, 22), Math.min(b, 32)]).filter(([a, b]) => b - a >= 3).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
+    return w ? { from:hh(w[0]), to:hh(w[1]), code:'N', mid:false, tag } : null;
+  }
   if(ws.some(([a, b]) => a === 12 && b === 20)) return { from:'12:00', to:'20:00', code:'A', mid:true, tag };
   const [s, e] = shiftId === 'm' ? [7, 15] : [14, 22], w = ws.map(([a, b]) => [Math.max(a, s), Math.min(b, e)]).filter(([a, b]) => b - a >= 2).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
   return w ? { from:hh(w[0]), to:hh(w[1]), code:shiftId === 'm' ? 'M' : 'A', mid:false, tag } : null;

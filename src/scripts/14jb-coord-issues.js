@@ -103,6 +103,14 @@ function csShiftMissing(mk){
   Object.entries(s).forEach(([k, v]) => { out[k] = Array.isArray(v) ? v.reduce((m, x) => Math.max(m, x.miss), 0) : v; });
   return out;
 }
+// a part of a night (Guy 21.11, e.g. 23:00 to 07:00): a night row with hours of its own (not the Saturday "pull" until 11:00)
+const csIsPartNight = r => !!r && r.shift === 'N' && !(r.flags || []).includes('pull') && ((r.from && r.from !== '22:00') || (r.to && r.to !== '08:00'));
+// the row of this person on this night (key = 'date|n'), when it is a part of a night: for the coordinator's mark on the board only
+function csPartNightOf(key, pid){
+  if(!/\|n$/.test(key) || typeof portalLoad !== 'function') return null;
+  const day = key.split('|')[0], r = (portalLoad().rows || []).find(x => x.staff === pid && x.day === day && x.shift === 'N');
+  return csIsPartNight(r) ? r : null;
+}
 // -> [{ day, kind, text, goto:'date|m/e/n', id }] for the month (in the current month: from today on)
 function csLiveIssues(mk){
   const st = portalLoad(), today = srvToday(), rows = (st.rows || []).filter(r => monthKeyOf(r.day) === mk || monthKeyOf(addDays(r.day, 1)) === mk);
@@ -125,6 +133,10 @@ function csLiveIssues(mk){
     if(ns.length < need) add(date, 'night', `בלילה ${ns.length ? `יש רק ${ns.length === 1 ? 'מדריך אחד' : ns.length + ' מדריכים'}` : 'אין מדריכים'} (צריך ${need})`, 'n');
     if(ns.length && !ns.some(r => priv(r.staff).female !== false)) add(date, 'night', 'בלילה אין אישה', 'n');
     if(ns.filter(r => priv(r.staff).female === false).length >= 2) add(date, 'night', 'בלילה שני גברים', 'n');
+    ns.filter(csIsPartNight).forEach(r => {          // a part of a night counts as one of the night, and the hours outside it have one less (Guy 21.11)
+      const f = (r.from || '22:00').slice(0, 5), t = (r.to || '08:00').slice(0, 5), gaps = [f !== '22:00' ? `22:00–${f}` : '', t !== '08:00' ? `${t}–08:00` : ''].filter(Boolean);
+      add(date, 'night', `לילה חלקי: ${nm(r.staff)} ${csLtr(f + '–' + t)}${gaps.length ? `. בשעות ${gaps.map(csLtr).join(' ו-')} יש מדריך אחד פחות` : ''}`, 'n');
+    });
     // an ahmash on every afternoon, and on Friday and Saturday mornings (the long weekend of Friday counts for Saturday morning)
     const ahm = r => (priv(r.staff).ahmash_rank || 0) > 0;
     if(!instr.some(r => r.day === date && r.shift === 'A' && ahm(r))) add(date, 'ahmash', 'אין אחמ"ש במשמרת הצהריים', 'e');

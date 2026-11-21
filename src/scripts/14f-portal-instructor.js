@@ -163,6 +163,8 @@ function renderInstructorPrefs(body){
   const wholeOfWeeks = portalServerOn && !srv.prefWeekly && me.role === 'instructor' && !prefOther() && !locked && !portalUi.prefsPast && !!portalUi.prefsWholeMonth;          // ("שבוע-שבוע" seen as the whole month: Guy 2026-11-09)
   const allWeeks = oneWeek ? prefWeeksOf(mk) : null, wkIdx = oneWeek ? Math.max(0, Math.min(portalUi.prefWk || 0, allWeeks.length - 1)) : 0, wkShown = oneWeek ? allWeeks[wkIdx] : null;
   for(let i = 0; i < (oneWeek ? wkShown.filter(d => d < days[0]).length : lead); i++) cells += '<div class="pday blank"></div>';
+  const hrsCut = {}, hrsLines = [];          // (Guy 21.11: a shift she marked and hours of her own the same day: what will happen, said plainly)
+  if(portalServerOn) days.forEach(date => { if(fixedOn(date) || prefs.absent.includes(date)) return; hoursEffects(date, prefs).forEach(x => { hrsCut[x.key] = x; if(!oneWeek || wkShown.includes(date)) hrsLines.push(x); }); });
   days.forEach(date => {
     const fx = fixedOn(date), absent = !!fx || prefs.absent.includes(date), hrs = portalServerOn && prefs.hours[date];
     if(portalServerOn && !absent) neutral += prefShiftsFor(date).filter(s => !prefs.slots[`${date}|${s.id}`] && !prefNoNight(`${date}|${s.id}`) && !prefInsideLong(prefs, `${date}|${s.id}`)).length;
@@ -170,9 +172,10 @@ function renderInstructorPrefs(body){
     cells += `<div class="pday${absent ? ' absent' : ''}${fx ? ' fixed' : ''}${hrs ? ' has-hours' : ''}${[5, 6].includes(dowOf(date)) ? ' weekend' : ''}${barOn && [5, 6].includes(dowOf(date)) && days.includes(dowOf(date) === 5 ? date : addDays(date, -1)) ? ' linked' : ''}"${fx ? ` title="${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}"` : ''}>
       <button type="button" class="pday-num" data-pday="${date}" aria-label="${dayLabel(date)}">${parseIso(date).getDate()}</button>
       ${fx ? `<span class="pday-fixed">${pEsc(FIXED_REASON[fx.reason] || 'היעדרות')}</span>` : ''}
-      ${hrs ? `<span class="pday-hrs" title="שעות אחרות"><bdi dir="ltr">${hrs.map(([a, b]) => a + '–' + b).join(', ')}</bdi></span>` : ''}
+      ${hrs ? `<span class="pday-hrs" title="שעות אחרות"><bdi dir="ltr">${hrs.map(([a, b]) => hoursRangeTxt(a, b)).join(', ')}</bdi></span>` : ''}
       <div class="pday-shifts">${prefShiftsFor(date).map(s => { const key = `${date}|${s.id}`, inLong = !absent && prefInsideLong(prefs, key), lv = absent ? 'no' : inLong ? prefs.slots[`${prefLongFri(key)}|l`] : prefLevelOf(prefs, key);
-        return `<button type="button" class="pshift lv-${lv}${inLong ? ' in-long' : ''}" data-pslot="${key}" aria-label="${pEsc(s.label)}${inLong ? ' (בתוך הסופ&quot;ש הארוך)' : ''}">${inLong ? '🕯️' : `<span class="ps-l">${pEsc(s.letter || s.label.charAt(0))}</span><span class="ps-w">${pEsc(s.label)}</span>`}</button>`; }).join('')}</div>
+        const cut = portalServerOn && !absent && !inLong && hrsCut[key];          // (a shift she marked, and hours of her own that day that do not cover all of it: Guy 21.11)
+        return `<button type="button" class="pshift lv-${lv}${inLong ? ' in-long' : ''}${cut ? ' ps-cut' : ''}" data-pslot="${key}" aria-label="${pEsc(s.label)}${inLong ? ' (בתוך הסופ&quot;ש הארוך)' : ''}${cut ? ` (${pEsc(cut.short)})` : ''}">${inLong ? '🕯️' : `<span class="ps-l">${pEsc(s.letter || s.label.charAt(0))}</span><span class="ps-w">${pEsc(s.label)}</span>`}</button>`; }).join('')}</div>
     </div>`;
     if(portalServerOn && dowOf(date) === 6 && days.includes(addDays(date, -1))) cells += longBar(addDays(date, -1));
     else if(portalServerOn && dowOf(date) === 5 && date === days[days.length - 1]) cells += longBar(date);
@@ -195,6 +198,7 @@ function renderInstructorPrefs(body){
     <div class="pshift-key" aria-label="שעות המשמרות">${portalLoad().shiftTypes.map(s => `<span><b>${pEsc(s.label)}</b> <bdi dir="ltr">${pEsc(s.start)}–${pEsc(s.end)}</bdi></span>`).join('')}</div>          
     ${oneWeek ? `<div class="pweek-weeknav">${mcalWeekNavHtml(mk, wkIdx)}</div><div class="pweek-tools"><button type="button" class="btn ghost small" id="pw-month-wk">לראות את כל החודש</button></div>` : wholeOfWeeks ? '<div class="pweek-tools"><button type="button" class="btn ghost small" id="pw-month-wk-back">חזרה לשבוע-שבוע</button></div>' : ''}
     <div class="pcal">${DOW_SHORT.map(d => `<div class="pcal-head">${d}</div>`).join('')}${cells}</div>
+    ${hrsLines.length ? `<div class="phours-effects" id="hours-effects"><b>שעות אחרות וגם משמרת באותו יום:</b><ul>${hrsLines.map(x => `<li>${pEsc(x.text)}</li>`).join('')}</ul></div>` : ''}
     ${portalServerOn ? `
     <div class="pgoal">
       <h2 class="psec">כמה משמרות ירגישו לך נכון החודש?</h2>
@@ -294,12 +298,35 @@ function renderInstructorPrefs(body){
   });
   prefMonthExtras(body, mk, prefs, locked, submitted);
 }
-// custom hours for one day: up to two ranges (whole hours); used only when they complete a full shift
+// an hour range as people read it: 23–7 and not 23–31 (an hour after 24 is the next morning: Guy 21.11)
+const hoursRangeTxt = (a, b) => a + '–' + (b > 24 ? b - 24 : b);
+// what her own hours do to the shifts she marked herself that day (as the engine, model.py: a shift her hours cover whole stays whole,
+// otherwise only the part inside her hours, two hours at least (a night: three), and nothing when they do not reach it).
+// The night counts only hours that pass midnight. -> [{ key, short, text }]
+function hoursEffects(date, prefs){
+  const ws = (prefs.hours || {})[date]; if(!ws || !ws.length) return [];
+  const hh = h => (h >= 24 ? String(h - 24) : String(h)).padStart(2, '0') + ':00', out = [];
+  portalLoad().shiftTypes.forEach(s => {
+    const key = `${date}|${s.id}`, lv = (prefs.slots || {})[key]; if(lv !== 'yes' && lv !== 'avoid') return;
+    if(ws.length === 1 && ws[0][0] === 12 && ws[0][1] === 20 && s.id !== 'n') return;          // (the middle shift: its own line in the window)
+    const a0 = parseInt(s.start, 10), b00 = parseInt(s.end, 10) || 24, b0 = b00 <= a0 ? b00 + 24 : b00, night = b0 > 24;
+    const mine = night ? ws.filter(([a, b]) => b > 24) : ws;          // (hours that do not pass midnight leave the night as it is)
+    if(!mine.length) return;
+    if(mine.some(([a, b]) => a <= a0 && b >= b0)) return;          // (covered whole)
+    const part = mine.map(([a, b]) => [Math.max(a, a0), Math.min(b, b0)]).filter(([a, b]) => b - a >= (night ? 3 : 2)).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
+    const day = `${DOW_NAMES[dowOf(date)]} ${parseIso(date).getDate()}/${parseIso(date).getMonth() + 1}`, word = s.label;
+    out.push(part ? { key, short:`רק ${hh(part[0])}–${hh(part[1])}`, text:`${day}: ב${word} ישבצו אותך רק ${hh(part[0])}–${hh(part[1])}, לפי השעות שכתבת.` }
+      : { key, short:'השעות שכתבת לא מגיעות למשמרת', text:`${day}: ב${word} לא ישבצו אותך, כי השעות שכתבת לא מגיעות למשמרת הזו.` });
+  });
+  return out;
+}
+// custom hours for one day: up to two ranges (whole hours). (Guy 21.11: the words "used only when they complete a full shift" were removed from the window, they confused)
 function openHoursSheet(date, prefs, done){
   const cur = (prefs.hours[date] || []).slice(0, 2);
-  const opts = (from, to, sel) => { let o = '<option value="">—</option>'; for(let h = from; h <= to; h++) o += `<option value="${h}"${sel === h ? ' selected' : ''}>${String(h % 24).padStart(2, '0')}:00</option>`; return o; };
-  const row = i => `<div class="phours-row"><select data-hfrom="${i}" aria-label="משעה">${opts(6, 23, cur[i] && cur[i][0])}</select><span>עד</span><select data-hto="${i}" aria-label="עד שעה">${opts(7, 24, cur[i] && cur[i][1])}</select></div>`;
-  const sh = portalSheet(`<h2>שעות אחרות ב${dayLabel(date)}</h2><button type="button" class="btn ghost hours-mid" id="hours-mid"><span>משמרת אמצע</span> <bdi dir="ltr">12:00–20:00</bdi></button><div class="pnote">אפשר לציין עד שני טווחים שבהם אתם זמינים. המערכת תשתמש בהם רק כשהם משלימים משמרת שלמה.</div>${row(0)}${row(1)}<div id="hours-err" class="pwarn" aria-live="polite"></div>
+  // ("עד" goes on after midnight until 08:00 the next morning, for a part of a night such as 23:00 to 07:00: Guy 21.11)
+  const opts = (from, to, sel) => { let o = '<option value="">—</option>'; for(let h = from; h <= to; h++) o += `<option value="${h}"${sel === h ? ' selected' : ''}>${h === 24 ? '24:00' : String(h % 24).padStart(2, '0') + ':00' + (h > 24 ? ' (למחרת)' : '')}</option>`; return o; };
+  const row = i => `<div class="phours-row"><select data-hfrom="${i}" aria-label="משעה">${opts(6, 23, cur[i] && cur[i][0])}</select><span>עד</span><select data-hto="${i}" aria-label="עד שעה">${opts(7, 32, cur[i] && cur[i][1])}</select></div>`;
+  const sh = portalSheet(`<h2>שעות אחרות ב${dayLabel(date)}</h2><button type="button" class="btn ghost hours-mid" id="hours-mid"><span>משמרת אמצע</span> <bdi dir="ltr">12:00–20:00</bdi></button><div class="pnote">אפשר לציין עד שני טווחים שבהם אתם זמינים.</div><div class="pnote">אם סימנת גם משמרת ביום הזה, ישבצו אותך בה רק בשעות שכתבת.</div>${row(0)}${row(1)}<div id="hours-err" class="pwarn" aria-live="polite"></div>
     <div class="confirm-actions"><button type="button" class="btn ghost" id="hours-clear">מחיקה</button><button type="button" class="btn" id="hours-save">שמירה</button></div>`);
   sh.querySelector('#hours-clear').addEventListener('click', () => { delete prefs.hours[date]; portalSave(); sh.close(); done(); });
   sh.querySelector('#hours-mid').addEventListener('click', () => { prefs.hours[date] = [[12, 20]]; portalSave(); sh.close(); done(); });          // (the middle shift, one tap: Guy 2026-10-28)
