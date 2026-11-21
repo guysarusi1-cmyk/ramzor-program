@@ -64,6 +64,8 @@
   .sb-fold[open] > summary::after{ transform:rotate(180deg); }
   .sb-fold-body{ display:grid; gap:14px; padding:4px 14px 14px; }
   /* the light / dark switch in the top line (as the first site's) */
+  /* check of 21.11: on a narrow phone the settings button is only ⚙, so the name of the organisation is not cut */
+  @media (max-width:420px){ body.product-shibutz #view-tw .sb-top .sb-set-w{ display:none; } }
   body.product-shibutz #view-tw .sb-top .sb-look{ flex:none; width:44px; height:44px; border-radius:12px; border:1px solid var(--p-line, rgba(127,127,127,.35)); background:transparent; font-size:19px; cursor:pointer; line-height:1; padding:0; }
   /* the messages at the bottom: always light letters on a dark ground, in both looks (Guy 21.11: dark letters on dark blue in the light look) */
   body.product-shibutz .toast{ background:#24211d; color:#F7F2E8; border:1px solid rgba(247,242,232,.25); }

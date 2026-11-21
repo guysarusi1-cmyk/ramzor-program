@@ -590,12 +590,14 @@ function twGridHtml(builder){
   const chips = list => list.map(a => `<span class="pchip${TW.me && a.person === TW.me.id ? ' me' : ''}${a.by_hand ? ' tw-hand' : ''}${a.fixed ? ' tw-fix' : ''}">${twU(twName(a.person))}${a.ok ? ' ✓' : ''}${a.from_time && a.to_time ? ` <small>${twL(twHm(a.from_time) + '–' + twHm(a.to_time))}</small>` : ''}${a.note ? ` <small>(${pEsc(a.note)})</small>` : ''}</span>`).join('');
   const offered = (day, sh, list) => !builder ? '' : TW.people.filter(p => p.active && !list.some(a => a.person === p.id)).map(p => ({ p, lv:twLvl(p.id, day, sh) })).filter(x => x.lv !== 'no')
     .sort((a, b) => (a.lv === 'yes' ? 0 : 1) - (b.lv === 'yes' ? 0 : 1) || twDisp(a.p).localeCompare(twDisp(b.p), 'he')).map(x => `<span class="tw-off-name" data-lv="${x.lv}">${twU(twDisp(x.p))}</span>`).join('');
+  // (check of 21.11: the names offered looked as if they were placed; now only where somebody is missing, on a line of their own, small)
+  const twOffLine = html => html ? `<div class="tw-dbox-off"><small>יכולות גם:</small>${html}</div>` : '';
   const dbox = (day, slot, pos) => {
     const list = (by[twKey(day, slot.shift)] || []).slice().sort((a, b) => twName(a.person).localeCompare(twName(b.person), 'he'));
     const missing = Math.max(0, slot.need - list.length);
     return `<div class="tw-dbox tw-cell${builder ? ' edit' : ''}${slot.shift === 'W' ? ' tw-wblock' : ''}" style="${pos}" data-tw-cell="${twKey(day, slot.shift)}"${builder ? ` tabindex="0" role="button" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}, ${TW_SHIFT[slot.shift]}${missing ? `, חסר שיבוץ` : ''}: בחירת אנשים"` : ''}>
       <div class="tw-dbox-h"><b>${TW_SHIFT[slot.shift]}</b><small>${slot.shift === 'W' ? 'שישי 14:00 עד שבת 20:30' : twNoBreak(twL(slot.hours))}</small></div>
-      <div class="tw-dbox-p">${chips(list)}${Array.from({ length:missing }, () => '<span class="pchip missing">חסר שיבוץ</span>').join('')}${offered(day, slot.shift, list)}</div></div>`;
+      <div class="tw-dbox-p">${chips(list)}${Array.from({ length:missing }, () => '<span class="pchip missing">חסר שיבוץ</span>').join('')}</div>${missing ? twOffLine(offered(day, slot.shift, list)) : ''}</div>`;
   };
   const wOf = day => twSlots(day).find(s => s.shift === 'W');
   const contOf = day => { const pv = addDays(day, -1), sl = twSlots(day); return wOf(pv) && !sl.some(s => s.shift === 'M' || s.shift === 'A') ? pv : null; };

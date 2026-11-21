@@ -434,3 +434,11 @@ body:has(> .sheet){ overflow:hidden; }
 #view-tw .tw-sfold-n{ display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:24px; padding:0 6px; border-radius:12px; background:var(--gold); color:#1C1A17; font-size:13px; }
 #view-tw .tw-sfold-s{ flex-basis:100%; font-weight:400; font-size:14px; color:var(--p-muted, var(--muted)); }
 #view-tw .tw-sfold[open] > summary{ margin-bottom:8px; }
+
+/* check of 21.11: the names offered on a line of their own under the placed ones, smaller and lighter, only where somebody is missing */
+#view-tw .tw-dbox-off{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:6px; padding-top:6px; border-top:1px dashed var(--p-border, rgba(128,128,128,.4)); }
+#view-tw .tw-dbox-off > small{ color:var(--p-muted, var(--muted)); font-size:12px; margin-inline-end:2px; }
+#view-tw .tw-dbox-off .tw-off-name{ font-size:12px; padding:1px 7px; }
+/* check of 21.11: in a window (outside the screen) the buttons in a row had no space between them, as in the share picture window */
+.sheet .tw-actions{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+.sheet .tw-actions .btn{ min-height:48px; }

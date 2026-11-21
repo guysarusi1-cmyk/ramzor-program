@@ -34,7 +34,7 @@ function sbDecorate(){
   if(!shell.querySelector('.sb-top')){
     shell.insertAdjacentHTML('afterbegin', `<div class="sb-top">${sbBrandHtml(true)}<span class="sb-top-org">${pEsc((srv.profile && srv.profile.org && srv.profile.org.name) || ORG_NAME)}</span>
       <button type="button" class="portal-theme sb-look" id="sb-look" aria-label="החלפה בין מצב כהה לבהיר">${sbTheme() === 'dark' ? '☀️' : '🌙'}</button>
-      <button type="button" class="btn ghost small" id="sb-theme" aria-label="הגדרות">⚙ הגדרות</button></div>`);
+      <button type="button" class="btn ghost small" id="sb-theme" aria-label="הגדרות">⚙<span class="sb-set-w"> הגדרות</span></button></div>`);
     shell.querySelector('#sb-theme').addEventListener('click', sbSettings);
     shell.querySelector('#sb-look').addEventListener('click', () => sbSetTheme(sbTheme() === 'dark' ? 'light' : 'dark'));
   }
