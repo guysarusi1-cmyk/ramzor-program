@@ -135,6 +135,7 @@ const twHandWord = k => ({ overlap:'חופפת בשעות למשמרת אחרת 
 // ---- may this person see the module at all? (asked once after the sign-in; the home card appears when the answer is yes)
 function twCardHtml(){
   if(typeof liveCut === 'function' && liveCut()) return '';          // (the test site only, until the pilot's own site is up)
+  if(!document.body.classList.contains('product-shibutz')) return '';          // (the pilot has its own site now: no card in the first site, its test copy too — Guy 22.11)
   if(typeof portalServerOn === 'undefined' || !portalServerOn || !sbPersonal) return '';
   if(TW.allowed === null && !TW.probing){
     TW.probing = true;
