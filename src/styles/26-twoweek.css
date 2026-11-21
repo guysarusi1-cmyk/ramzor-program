@@ -346,7 +346,7 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 #view-tw .tw-add-fold > summary{ font-weight:700; }
 /* Rita's check 19.11: no white scroll bar in a dark window; the page behind an open window does not scroll; the ✓ button readable */
 .sheet .sheet-card{ scrollbar-color:color-mix(in srgb, var(--p-text, #ddd) 35%, transparent) transparent; scrollbar-width:thin; }
-body:has(> .sheet){ overflow:hidden; }
+body.product-shibutz:has(> .sheet){ overflow:hidden; }          /* (only the scheduling product, whose windows are added and removed: the first site keeps its windows hidden in the page, and the rule locked its scrolling — Guy 21.11) */
 .tw-pick-row.on .btn.ghost{ background:#1C1A17; color:#F3EEE4; border-color:#1C1A17; }
 #view-tw .tw-pday.tw-off .tw-day-name{ opacity:.6; }
 
