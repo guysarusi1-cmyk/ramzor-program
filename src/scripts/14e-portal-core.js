@@ -28,14 +28,17 @@ function queueEmail(to, subject, body){
   portalSave();
 }
 
-// ---- iPhone: bars fixed to the bottom of the screen hung in the middle after the keyboard closed (Guy 22.11, a friend's video): Safari
-// keeps a shorter layout screen than the one seen. The difference goes to --vv-down, and the bars move down by it (14-portal.css).
-// Only down, only at normal zoom: everywhere else the difference is 0 and nothing moves.
+// ---- iPhone (Guy 22.11, a friend's video, the app from the home screen): the bar at the bottom went up with the scrolling, stopped in
+// the middle, and came back down when scrolling back: the screen seen (the visual viewport) moved inside the screen the bar is fixed to
+// (the layout viewport). The bars follow the bottom of the screen seen: the difference goes to --vv-down (14-portal.css). Where the two
+// screens are the same (Android, a computer, most of the time on an iPhone) it is 0 and nothing moves. While a text field is in use the
+// bars only go down, never up over the keyboard and the field.
 (function(){
   const vv = window.visualViewport; if(!vv) return;
-  const upd = () => { const d = Math.abs(vv.scale - 1) < 0.01 ? Math.round(vv.offsetTop + vv.height - window.innerHeight) : 0; document.documentElement.style.setProperty('--vv-down', (d > 1 ? d : 0) + 'px'); };
+  const typing = () => { const a = document.activeElement; return !!a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !['button', 'checkbox', 'radio', 'submit'].includes(a.type)) || a.isContentEditable); };
+  const upd = () => { let d = Math.round(vv.offsetTop + vv.height - window.innerHeight); if(Math.abs(d) <= 1 || (d < 0 && typing())) d = 0; document.documentElement.style.setProperty('--vv-down', d + 'px'); };
   const q = upd;          // (cheap: one number; no requestAnimationFrame, which waits while the page is in the background)
-  vv.addEventListener('resize', q); vv.addEventListener('scroll', q); window.addEventListener('scroll', q, { passive:true }); window.addEventListener('resize', q); q();
+  vv.addEventListener('resize', q); vv.addEventListener('scroll', q); window.addEventListener('scroll', q, { passive:true }); window.addEventListener('resize', q); document.addEventListener('focusin', q); document.addEventListener('focusout', () => setTimeout(q, 50)); q();
 })();
 // ---- the first screen after login: two cards
 function showAppHome(){
