@@ -1,7 +1,7 @@
 /* ---- recreated star board (kraft board, columns of kids w/ star slots) ---- */
   .board-star{
     position:relative; border-radius:14px; overflow:hidden; min-height:280px; padding:14px;
-    background-image:url(@asset(boards/star-board.jpg));
+    background-image:url(boards/star-board.jpg);
     background-size:cover; background-position:center;
   }
   .star-cards-grid{ position:relative; z-index:2; display:grid; grid-template-columns:repeat(auto-fit, minmax(96px, 1fr)); gap:10px; }
@@ -24,13 +24,13 @@
   /* ---- recreated moon board (night mountain w/ 7 numbered steps) ---- */
   .board-moon{
     position:relative; border-radius:14px; overflow:hidden; min-height:280px;
-    background-image:url(@asset(boards/moon-board.jpg));
+    background-image:url(boards/moon-board.jpg);
     background-size:cover; background-position:center;
     aspect-ratio: 1920 / 882;
   }
   .board-mercury{
     position:relative; border-radius:14px; overflow:hidden; min-height:280px;
-    background-image:url(@asset(boards/mercury-board.webp));
+    background-image:url(boards/mercury-board.webp);
     background-size:cover; background-position:center;
     aspect-ratio: 2000 / 1414;
   }
