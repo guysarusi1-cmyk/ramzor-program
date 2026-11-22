@@ -28,6 +28,15 @@ function queueEmail(to, subject, body){
   portalSave();
 }
 
+// ---- iPhone: bars fixed to the bottom of the screen hung in the middle after the keyboard closed (Guy 22.11, a friend's video): Safari
+// keeps a shorter layout screen than the one seen. The difference goes to --vv-down, and the bars move down by it (14-portal.css).
+// Only down, only at normal zoom: everywhere else the difference is 0 and nothing moves.
+(function(){
+  const vv = window.visualViewport; if(!vv) return;
+  const upd = () => { const d = Math.abs(vv.scale - 1) < 0.01 ? Math.round(vv.offsetTop + vv.height - window.innerHeight) : 0; document.documentElement.style.setProperty('--vv-down', (d > 1 ? d : 0) + 'px'); };
+  const q = upd;          // (cheap: one number; no requestAnimationFrame, which waits while the page is in the background)
+  vv.addEventListener('resize', q); vv.addEventListener('scroll', q); window.addEventListener('scroll', q, { passive:true }); window.addEventListener('resize', q); q();
+})();
 // ---- the first screen after login: two cards
 function showAppHome(){
   stopCarousel(); document.body.classList.remove('leopard-bg');
