@@ -309,16 +309,6 @@ body.portal-big #view-tw .tw-tab{ flex:1 1 auto; }
 body.product-shibutz .wa-btn{ flex:none; display:inline-grid; place-items:center; width:40px; height:40px; border-radius:50%; background:#25d366; color:#fff; text-decoration:none; }
 body.product-shibutz .wa-btn:focus-visible{ outline:2px solid currentColor; outline-offset:2px; }
 .tw-wline{ margin:6px 0; }
-/* the pilot, step 3 on a computer: the table and the names to drag beside it; on a phone (and a narrow screen) only the table */
-#view-tw .tw-drag{ display:none; }
-@media (min-width:1100px){
-  #view-tw .tw-build-grid{ display:grid; grid-template-columns:minmax(0, 1fr) 190px; gap:14px; align-items:start; }
-  #view-tw .tw-drag{ display:flex; flex-direction:column; gap:6px; position:sticky; top:10px; padding:10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); }
-  #view-tw .tw-drag small{ opacity:.75; }
-  #view-tw .tw-drag-chip{ cursor:grab; display:flex; justify-content:space-between; gap:6px; margin:0; }
-  #view-tw .tw-drag-chip.full{ opacity:.6; }
-  #view-tw td.tw-drop{ outline:3px dashed var(--gold); outline-offset:-3px; }
-}
 #view-tw .tw-attn-row{ display:block; width:100%; text-align:start; font:inherit; margin:6px 0; cursor:default; }
 #view-tw button.tw-attn-row{ cursor:pointer; }
 #view-tw .tw-days-off{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0; }
@@ -335,13 +325,6 @@ body.product-shibutz .wa-btn:focus-visible{ outline:2px solid currentColor; outl
 .tw-pick-h{ font-weight:700; font-size:14px; opacity:.8; margin:8px 2px 0; }
 #view-tw .tw-danger-zone, .sheet .tw-danger-zone{ margin-top:18px; padding-top:12px; border-top:1px dashed var(--p-line, var(--line)); }
 #view-tw .btn.tw-danger, .sheet .btn.tw-danger{ color:var(--p-no, #e07a6f); border-color:var(--p-no, #e07a6f); }
-#view-tw .tw-cnt{ padding:8px 4px; border-bottom:1px solid var(--p-line, var(--line)); }
-#view-tw .tw-cnt small{ display:block; opacity:.8; font-weight:400; }
-#view-tw .tw-cnt.low b{ color:var(--p-no, #e07a6f); }
-#view-tw .tw-cnt-ok{ margin-top:8px; }
-#view-tw .tw-cnt-ok summary{ cursor:pointer; font-weight:700; min-height:36px; }
-#view-tw .tw-drag-chip.over{ outline:2px solid var(--gold); }
-#view-tw .tw-drag-chip small{ font-size:13px; opacity:.9; }
 .sb-set .tw-chk-l input{ width:24px; height:24px; }
 #view-tw .tw-add-fold > summary{ font-weight:700; }
 /* Rita's check 19.11: no white scroll bar in a dark window; the page behind an open window does not scroll; the ✓ button readable */
@@ -487,3 +470,66 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 #view-tw .tw-ro .tw-pref b{ font-weight:600; opacity:1; }
 #view-tw .tw-ro .tw-pref small.tw-plv{ font-size:11px; font-weight:700; opacity:1; color:var(--p-text, var(--text)); }
 #view-tw .tw-ro .tw-pref[data-lv=no] small.tw-plv, #view-tw .tw-ro .tw-pref[data-lv=no] b{ opacity:.45; font-weight:400; }
+
+/* ---- the coordinator (Guy 23.11): the button "רכזת", her view, and the board of both weeks with the folded list of the staff at its left,
+   as the coordinator of the first site (the colours of what each one marked: yes green, can blue, no red, nothing marked orange) */
+#view-tw .tw-coord-row{ margin:6px 0 10px; }
+#view-tw .tw-coord-btn{ min-width:140px; }
+#view-tw .tw-open-sum{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+#view-tw .tw-board-pers{ margin-top:6px; }
+#view-tw .tw-board{ display:flex; gap:12px; align-items:flex-start; margin-top:8px; }
+#view-tw .tw-board-main{ flex:1 1 auto; min-width:0; }
+#view-tw .tw-board-week h3{ margin:10px 0 6px; }
+#view-tw .tw-tc-cell.edit{ cursor:pointer; }
+#view-tw .tw-tc-cell.edit:hover{ box-shadow:inset 0 0 0 1px var(--gold); }
+#view-tw .tw-tc-cell.edit:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+#view-tw .tw-tc-edit .tw-tc-name{ border-radius:6px; padding:1px 4px; cursor:grab; }
+#view-tw .tw-tc-edit .tw-tc-name small{ color:inherit; opacity:.8; }
+#view-tw .tw-tc-name[data-lv=yes], #view-tw .tw-lv4-w[data-lv=yes]{ background:var(--p-yes-bg, #123322); color:var(--p-yes, #7be0a0); box-shadow:inset 0 0 0 1px var(--p-yes, #7be0a0); }
+#view-tw .tw-tc-name[data-lv=can], #view-tw .tw-lv4-w[data-lv=can]{ background:var(--p-can-bg, #14263f); color:var(--p-can, #8ec0ff); box-shadow:inset 0 0 0 1px var(--p-can, #8ec0ff); }
+#view-tw .tw-tc-name[data-lv=no], #view-tw .tw-lv4-w[data-lv=no]{ background:var(--p-no-bg, #3a1a18); color:var(--p-no, #ff8a80); box-shadow:inset 0 0 0 1px var(--p-no, #ff8a80); }
+#view-tw .tw-tc-name[data-lv=none], #view-tw .tw-lv4-w[data-lv=none]{ background:var(--p-none-bg, #3d2a0e); color:var(--p-none, #ffb347); box-shadow:inset 0 0 0 1px var(--p-none, #ffb347); }
+#view-tw .portal-shell[data-ptheme=light] .tw-tc-name[data-lv=yes], #view-tw .portal-shell[data-ptheme=light] .tw-lv4-w[data-lv=yes]{ background:#e3f4e8; color:#1d6b38; box-shadow:inset 0 0 0 1px #1d6b38; }
+#view-tw .portal-shell[data-ptheme=light] .tw-tc-name[data-lv=can], #view-tw .portal-shell[data-ptheme=light] .tw-lv4-w[data-lv=can]{ background:#e4eefc; color:#1f4f99; box-shadow:inset 0 0 0 1px #1f4f99; }
+#view-tw .portal-shell[data-ptheme=light] .tw-tc-name[data-lv=no], #view-tw .portal-shell[data-ptheme=light] .tw-lv4-w[data-lv=no]{ background:#fbe6e3; color:#a3322a; box-shadow:inset 0 0 0 1px #a3322a; }
+#view-tw .portal-shell[data-ptheme=light] .tw-tc-name[data-lv=none], #view-tw .portal-shell[data-ptheme=light] .tw-lv4-w[data-lv=none]{ background:#fdf0dc; color:#8a5300; box-shadow:inset 0 0 0 1px #8a5300; }
+#view-tw .tw-tc-name.sel{ outline:2px solid var(--gold); outline-offset:1px; font-weight:800; }
+#view-tw .tw-tc-cell[data-drag-lv=yes]{ background:rgba(92, 170, 110, .30); }
+#view-tw .tw-tc-cell[data-drag-lv=can]{ background:rgba(110, 160, 230, .30); }
+#view-tw .tw-tc-cell[data-drag-lv=no]{ background:rgba(196, 84, 64, .30); }
+#view-tw .tw-tc-cell[data-drag-lv=none]{ background:rgba(230, 150, 50, .28); }
+#view-tw .tw-tc-cell.tw-drop{ outline:3px dashed var(--gold); outline-offset:-3px; }
+#view-tw .tw-lv4{ display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+#view-tw .tw-lv4-w{ font-size:13px; font-weight:700; border-radius:6px; padding:1px 6px; }
+/* the folded list: a slim tab at the left of the board, its title and the key standing up (as the first site) */
+#view-tw .tw-side-tab{ flex:0 0 54px; align-self:stretch; min-height:160px; max-height:calc(100vh - 20px); position:sticky; top:10px; display:flex; flex-direction:column; align-items:center; gap:12px; padding:18vh 4px 8px; border:1px solid var(--p-line, var(--line)); border-radius:12px; background:var(--p-panel, var(--panel)); color:var(--p-text, var(--text)); font:inherit; font-weight:700; cursor:pointer; }
+#view-tw .tw-side-tab:hover{ background:color-mix(in srgb, var(--gold) 18%, transparent); }
+#view-tw .tw-side-tab-t, #view-tw .tw-lv4-tab .tw-lv4-w{ writing-mode:vertical-rl; transform:rotate(180deg); width:1.5em; line-height:1.5em; text-align:center; padding:4px 0; }
+#view-tw .tw-lv4-tab{ flex-direction:column; align-items:center; margin:0; }
+#view-tw .tw-side{ flex:0 0 210px; position:sticky; top:10px; max-height:calc(100vh - 20px); overflow:auto; padding:10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); }
+#view-tw .tw-side-top{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+#view-tw .tw-side-x{ min-width:40px; min-height:40px; border:0; background:transparent; color:inherit; font:inherit; font-size:18px; cursor:pointer; border-radius:8px; }
+#view-tw .tw-side-say{ display:block; color:var(--p-muted, var(--muted)); font-size:12px; line-height:1.35; }
+#view-tw .tw-side-names{ display:flex; flex-direction:column; gap:5px; margin:8px 0; }
+#view-tw .tw-side-name{ display:flex; justify-content:space-between; align-items:center; gap:6px; min-height:40px; padding:4px 10px; border-radius:10px; border:1px solid var(--p-line, var(--line)); background:transparent; color:var(--p-text, var(--text)); font:inherit; cursor:grab; text-align:start; }
+#view-tw .tw-side-name.on{ border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); }
+#view-tw .tw-side-name.missing span{ opacity:.7; }
+#view-tw .tw-side-name small{ font-size:13px; direction:ltr; }
+#view-tw .tw-side-name small.ok{ color:var(--p-yes, #7be0a0); }
+#view-tw .tw-side-name small.low{ color:var(--p-muted, var(--muted)); }
+#view-tw .tw-side-name small.over{ color:var(--gold); font-weight:700; }
+@media (max-width:760px){
+  #view-tw .tw-board{ flex-direction:column; }
+  #view-tw .tw-side-tab, #view-tw .tw-side{ display:none; }          /* (a phone: a tap on a box does it; dragging is for a computer) */
+}
+/* the fixed shifts: two choices in a shift */
+#view-tw .tw-fix-row{ display:grid; grid-template-columns:1fr; gap:3px; font-size:13px; color:var(--p-muted, var(--muted)); padding:4px 0; border-top:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-fix-row select{ min-height:36px; max-width:100%; }
+/* preferences: filling in for another one */
+#view-tw .tw-for{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.tw-pick-list{ display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:6px; margin:10px 0; max-height:55vh; overflow:auto; }
+.tw-pick-list .btn{ min-height:44px; }
+#view-tw .tw-send-row{ margin-top:6px; }
+#view-tw .tw-q-dates{ display:block; color:var(--p-muted, var(--muted)); font-size:13px; font-weight:400; }
+#view-tw .tw-dst small{ color:var(--p-muted, var(--muted)); }
+#view-tw .tw-dst input[type=date]{ min-height:40px; }

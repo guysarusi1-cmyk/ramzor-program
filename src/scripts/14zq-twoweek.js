@@ -23,10 +23,21 @@ function twKind(iso){
   const h = (TW.holidays || {})[iso]; if(h) return h === 'eve' ? 'fri' : 'sat';
   const d = dowOf(iso); return d === 5 ? 'fri' : d === 6 ? 'sat' : 'weekday';
 }
-// summer time in Israel on that day (the weekend hours may differ)
-function twSummer(iso){
+// summer time in Israel on that day (the weekend hours differ). The clock's own dates, unless the admin set other dates for that year in
+// "שעות סוף השבוע" (Guy 23.11: the hours of the shifts may change on another day than the clock; tw_settings 'summer_dates')
+function twSummerClock(iso){
   try { const [y, m, d] = iso.split('-').map(Number); return /GMT\+3/.test(new Date(Date.UTC(y, m - 1, d, 12)).toLocaleString('en-US', { timeZone:'Asia/Jerusalem', timeZoneName:'short' })); } catch(e){ return false; }
 }
+const twSummerAutoMemo = {};
+function twSummerAuto(y){
+  if(twSummerAutoMemo[y]) return twSummerAutoMemo[y];
+  let start = `${y}-03-27`, end = `${y}-10-25`;
+  for(let d = `${y}-03-15`; d <= `${y}-04-15`; d = addDays(d, 1)) if(twSummerClock(d)){ start = d; break; }
+  for(let d = `${y}-10-15`; d <= `${y}-11-15`; d = addDays(d, 1)) if(!twSummerClock(d)){ end = d; break; }
+  return (twSummerAutoMemo[y] = { start, end });
+}
+const twSummerDates = y => { const own = ((TW.settings || []).find(x => x.key === 'summer_dates') || {}).value || {}, a = twSummerAuto(y), o = own[y] || {}; return { start:o.start || a.start, end:o.end || a.end }; };
+function twSummer(iso){ const d = twSummerDates(Number(iso.slice(0, 4))); return iso >= d.start && iso < d.end; }
 function twWeekend(iso, part){
   const v = (TW.settings || []).find(x => x.key === 'weekend_hours'), s = v && v.value && v.value[twSummer(iso) ? 'summer' : 'winter'];
   return (s && s[part]) || (part === 'start' ? '14:00' : '20:30');
@@ -59,9 +70,9 @@ function twDisp(p){ if(!p) return '?'; const same = TW.people.some(x => x.id !==
 const twName = id => twDisp(twPerson(id));
 const twPeriodRow = () => TW.periods.find(p => p.start === TW.period) || null;
 const twIsBuilder = () => TW.boss || (!!TW.me && !!twPeriodRow() && twPeriodRow().builder === TW.me.id && addDays(twPeriodRow().start, 13) >= isoDate(new Date()));
-// the fixed shifts: one fixed person for a shift of the week (the pilot's trial: one fixed and one that changes)
-const twFixedOf = (dow, shift) => { const f = TW.fixed.find(x => x.dow === dow && x.shift === shift); return f ? f.person : null; };
-const twIsFixed = (personId, day, shift) => twFixedOf(dowOf(day), shift) === personId;
+// the fixed shifts: up to two fixed people in a shift of the week (Guy 23.11; before: one), kept from schedule to schedule
+const twFixedOf = (dow, shift) => TW.fixed.filter(x => x.dow === dow && x.shift === shift).map(x => x.person);
+const twIsFixed = (personId, day, shift) => twFixedOf(dowOf(day), shift).includes(personId);
 const twCanFix = () => TW.boss || (!!TW.me && TW.periods.some(p => p.builder === TW.me.id && p.status !== 'published'));
 const twOpenNow = () => { const p = twPeriodRow(); return !!p && p.status === 'open' && (!p.deadline || new Date(p.deadline) > new Date()); };
 const twPeriodLabel = start => `${twShort(start)} – ${twShort(addDays(start, 13))}`;
@@ -222,11 +233,6 @@ function twScrollHints(box){
     sc.addEventListener('scroll', upd, { passive:true }); requestAnimationFrame(upd);
   });
 }
-function twPeriodPicker(){
-  if(!TW.periods.length) return '';
-  const st = { open:'פתוח להגשה', built:'בבנייה', published:'פורסם' };
-  return `<label class="tw-period"><span>השבועיים:</span><select id="tw-period-sel">${TW.periods.map(p => `<option value="${p.start}"${p.start === TW.period ? ' selected' : ''}>${twPeriodLabel(p.start)} · ${st[p.status] || ''}</option>`).join('')}</select></label>`;
-}
 function twRender(){
   const box = document.getElementById('tw-screen'); if(!box) return;
   const tabs = twTabs();
@@ -239,18 +245,18 @@ function twRender(){
   else if(TW.tab === 'team') inner = twTeamHtml();
   else if(TW.tab === 'swaps') inner = twSwapsHtml();
   else if(TW.tab === 'inbox') inner = twInboxHtml();
-  // (Guy 21.11: in "העדפות" one of the staff sees only the two weeks open for hand-in, no choice of two weeks)
-  // (Guy 22.11: in "הסידור" one of the staff has no choice of two weeks either: "הצוות כולו" goes week by week over what was published)
-  const staffOnly = TW.me && !twIsBuilder() && (TW.tab === 'mine' || TW.tab === 'sched');
+  // (Guy 21–23.11: no choice of two weeks at the top, for anybody: "העדפות" shows the two weeks open for hand-in, "הסידור" goes week by week
+  // over what was published, "רכזת" shows the latest schedule built, and the card "בניית הסידור" opens the two weeks in building)
   // (Guy 22.11: "דיווח על תקלה" small at the bottom of every screen of the staff, as in the first site, instead of a part of the settings)
-  const problem = TW.me && typeof twProblemSheet === 'function' ? '<button type="button" class="portal-problem" id="tw-problem-link">משהו לא עובד? דיווח על תקלה</button>' : '';
-  box.innerHTML = (typeof twViewAsBar === 'function' ? twViewAsBar() : '') + tabs + (allPeriods || staffOnly ? '' : twPeriodPicker()) + inner + problem;
+  const problem = (TW.me || TW.boss) && typeof twProblemSheet === 'function' ? '<button type="button" class="portal-problem" id="tw-problem-link">משהו לא עובד? דיווח על תקלה</button>' : '';
+  box.innerHTML = (typeof twViewAsBar === 'function' ? twViewAsBar() : '') + tabs + inner + problem;
+  TW.cameFromBoard = TW.tab === 'build' ? TW.cameFromBoard : !!TW.board;
   const pl = box.querySelector('#tw-problem-link'); if(pl) pl.addEventListener('click', () => twProblemSheet());
-  box.querySelectorAll('[data-tw-tab]').forEach(b => b.addEventListener('click', async () => { if(b.dataset.twTab === TW.tab) return; if(b.dataset.twTab === 'mine') await twToOpenPeriod(); else if(b.dataset.twTab === 'sched') await twToSchedPeriod(); twGo(() => { TW.tab = b.dataset.twTab; TW.full = false; TW.step = null; }); }));
-  box.querySelectorAll('[data-tw-open-build]').forEach(b => b.addEventListener('click', () => twGo(() => { TW.tab = 'build'; TW.step = null; })));
-  box.querySelectorAll('[data-tw-back-sched]').forEach(b => b.addEventListener('click', () => twGo(() => { TW.tab = 'sched'; TW.step = null; })));
+  box.querySelectorAll('[data-tw-tab]').forEach(b => b.addEventListener('click', async () => { if(b.dataset.twTab === TW.tab && !TW.board) return; TW.board = false; if(b.dataset.twTab === 'mine'){ TW.as = null; await twToOpenPeriod(); } else if(b.dataset.twTab === 'sched') await twToSchedPeriod(); twGo(() => { TW.tab = b.dataset.twTab; TW.full = false; TW.step = null; }); }));
+  // the card "בניית הסידור" and "מי הגישה" in "רכזת" open the building of their own two weeks
+  box.querySelectorAll('[data-tw-open-build]').forEach(b => b.addEventListener('click', async () => { const st = b.dataset.twOpenBuild; if(st && st !== TW.period){ b.disabled = true; TW.period = st; TW.week = 0; await twLoadPeriod(); } twGo(() => { TW.tab = 'build'; TW.board = false; TW.step = null; }); }));
+  box.querySelectorAll('[data-tw-back-sched]').forEach(b => b.addEventListener('click', async () => { const back = TW.tab === 'build' && TW.cameFromBoard; b.disabled = true; if(back) await twEnterBoard(); else await twToSchedPeriod(); twGo(() => { TW.tab = 'sched'; TW.board = !!back; TW.step = null; }); }));
   if(typeof twViewAsWire === 'function') twViewAsWire(box);
-  const sel = box.querySelector('#tw-period-sel'); if(sel) sel.addEventListener('change', async () => { TW.period = sel.value; TW.week = 0; TW.step = null; await twLoadPeriod(); twRender(); });
   twScrollHints(box);
   const shell = box.closest('.portal-shell'); if(shell) shell.dataset.twTab = TW.tab || '';          // (the install link: only under "הסידור")
   if(TW.tab === 'mine') twMineWire(box); else if(TW.tab === 'sched') twSchedWire(box); else if(TW.tab === 'build') twBuildWire(box); else if(TW.tab === 'team') twTeamWire(box); else if(TW.tab === 'swaps') twSwapsWire(box); else if(TW.tab === 'inbox') twInboxWire(box);
@@ -264,7 +270,9 @@ function twRender(){
 // only from six hours. Below it a note appears; handing in is still allowed.
 const TW_LV_WORD = { yes:'כן', can:'אפשרי', no:'לא' };
 const TW_OTHER_MIN = 6;
-function twWhose(){ return twPerson(TW.as) || TW.me || (twIsBuilder() ? TW.people.filter(p => p.active)[0] : null) || null; }
+// filling in for another one (Guy 23.11): whoever builds these two weeks and the system admins, until the schedule is published
+const twFillOk = () => { const p = twPeriodRow(); return !!p && p.status !== 'published' && twIsBuilder(); };
+function twWhose(){ return (twFillOk() && twPerson(TW.as)) || TW.me || (twFillOk() ? TW.people.filter(p => p.active)[0] : null) || null; }
 const twLvl = (personId, day, shift) => { const o = TW.options.find(x => x.person === personId && x.day === day && x.shift === shift); return o ? (o.level || 'yes') : 'no'; };
 const twOtherOf = (personId, day) => (TW.others || []).find(x => x.person === personId && x.day === day) || null;
 const twHm = t => String(t || '').slice(0, 5);
@@ -324,10 +332,11 @@ function twEggHtml(person, c, submitted){
 }
 // "העדפות" is about the two weeks that are open for hand-in (Rita 19.11: it opened on the published ones, with "open 8 more")
 async function twToOpenPeriod(){
-  const cur = twPeriodRow(), open = TW.periods.filter(p => p.status === 'open').sort((a, b) => a.start < b.start ? -1 : 1)[0];
-  if(cur && cur.status === 'open') return;
-  // (Guy 22.11) nothing open: one of the staff sees her preferences of the last hand-in, the latest two weeks, for reading
-  const last = !open && TW.me && !twIsBuilder() ? TW.periods.slice().sort((a, b) => a.start < b.start ? 1 : -1)[0] : null;
+  const cur = twPeriodRow(), open = TW.periods.filter(p => p.status === 'open' && (!p.deadline || new Date(p.deadline) > new Date())).sort((a, b) => a.start < b.start ? -1 : 1)[0];
+  if(cur && open && cur.start === open.start) return;
+  // (Guy 22.11) nothing open: her preferences of the last hand-in, the latest two weeks, for reading; (23.11) the builder too, and while
+  // those two weeks are not published she may still fill in for another one
+  const last = !open && TW.me ? TW.periods.slice().sort((a, b) => a.start < b.start ? 1 : -1)[0] : !open && TW.boss ? TW.periods.slice().sort((a, b) => a.start < b.start ? 1 : -1)[0] : null;
   const to = open || last;
   if(!to || (cur && cur.start === to.start)) return;
   TW.period = to.start; TW.week = 0; await twLoadPeriod();
@@ -335,13 +344,13 @@ async function twToOpenPeriod(){
 // "הסידור" for one of the staff is about the published two weeks of today, not the open ones she just marked (check 2026-11-20:
 // after "העדפות" she came back to an empty "not published yet" screen)
 async function twToSchedPeriod(){
-  const cur = twPeriodRow(); if(!cur || cur.status === 'published' || twIsBuilder()) return;
+  const cur = twPeriodRow(); if(cur && cur.status === 'published' && cur.start <= twToday() && twEnd(cur) >= twToday()) return;
   const today = twToday(), pub = TW.periods.filter(p => p.status === 'published').sort((a, b) => a.start < b.start ? 1 : -1);
   const now = pub.find(p => p.start <= today && addDays(p.start, 13) >= today) || pub[0];
   if(!now) return;
   TW.period = now.start; TW.week = 0; await twLoadPeriod();
 }
-function twCanMark(person){ return twIsBuilder() || (!!TW.me && person.id === TW.me.id && twOpenNow()); }
+function twCanMark(person){ return twFillOk() || (!!TW.me && person.id === TW.me.id && twOpenNow()); }
 // until when the hand-in is open (the review agents: the staff did not see it anywhere); stronger in the last two days
 function twDeadlineHtml(){
   const p = twPeriodRow(); if(!p || p.status !== 'open' || !p.deadline) return '';
@@ -364,8 +373,11 @@ function twMineHtml(){
   const c = twCount(person), can = twCanMark(person), sub = TW.subs.find(s => s.person === person.id), days = twDays(TW.period);
   if(TW.week !== 0 && TW.week !== 1) TW.week = 0;
   if(TW.cal === undefined){ try { TW.cal = !!localStorage.getItem('mercury-tw-cal'); } catch(e){ TW.cal = false; } }
-  const pick = twIsBuilder() ? `<label class="tw-period"><span>ההעדפות של:</span><select id="tw-as">${TW.people.filter(p => p.active).map(p => `<option value="${p.id}"${p.id === person.id ? ' selected' : ''}>${pEsc(twDisp(p))}${TW.subs.some(s => s.person === p.id) ? ' ✓' : ''}</option>`).join('')}</select></label>
-    ${!TW.me || person.id !== TW.me.id ? `<div class="pstatus bad tw-for">ממלאים בשם: <b>${twU(person.name)}</b>. כל הקשה נשמרת בהעדפות של ${twU(person.name)}.</div>` : ''}` : '';
+  // (Guy 23.11) her own preferences first; "מילוי בשביל מדריכה אחרת" opens the list of names, until the schedule is published
+  const other = !TW.me || person.id !== TW.me.id;
+  const pick = !twFillOk() ? '' : other
+    ? `<div class="pstatus bad tw-for"><span>ממלאים בשם: <b>${twU(person.name)}</b>. כל הקשה נשמרת בהעדפות של ${twU(person.name)}.</span><span class="tw-btns"><button type="button" class="btn small" id="tw-fill-other">מדריכה אחרת</button>${TW.me ? '<button type="button" class="btn ghost small" id="tw-fill-me">חזרה להעדפות שלי</button>' : ''}</span></div>`
+    : '<div class="tw-actions tw-fill-row"><button type="button" class="btn ghost" id="tw-fill-other">מילוי בשביל מדריכה אחרת</button></div>';
   // (Guy 21.11: less text in a cell: the kind of shift in the middle and the mark small under it; the hours once, above the kind,
   // and in a cell only where they differ from the usual ones of that kind, as on Friday)
   const usual = {}; days.forEach(d => { if(twKind(d) === 'weekday') twSlots(d).forEach(s => { if(!usual[s.shift]) usual[s.shift] = s.hours; }); });
@@ -413,7 +425,7 @@ function twMineHtml(){
     ${hoursHead}<div class="tw-grid">${days.slice(w * 7, w * 7 + 7).map(dayRow).join('')}</div></section>`;
   // (Guy 22.11) after the hand-in closed, one of the staff sees what she handed in, for reading only: the days side by side (the calendar
   // view), without colours (the mark in words); above it that the preferences are closed and the schedule sent, and when the next hand-in opens
-  if(TW.me && !twIsBuilder() && !can && person.id === TW.me.id){
+  if(TW.me && !can && person.id === TW.me.id){
     const p = twPeriodRow(), nextStart = addDays(p.start, 14), opens = addDays(nextStart, -Number(twSetting('open_days', 10))), today = twToday();
     const next = TW.periods.find(x => x.start === nextStart);
     const sub2 = next && next.status === 'open' ? '' : opens > today ? `ההגשה הבאה, לשבועיים ${twL(twPeriodLabel(nextStart))}, תיפתח ביום ${DOW_NAMES[dowOf(opens)]} ${twL(twShort(opens))}.` : 'ההגשה הבאה תיפתח בקרוב.';
@@ -476,7 +488,15 @@ function twKeepScroll(){ const y = window.scrollY; twRender(); window.scrollTo(0
 function twMineWire(box){
   const person = twWhose(); if(!person) return;
   if(typeof twCopyLast === 'function' && TW.me && person.id === TW.me.id) twCopyLast(person).then(ch => { if(ch) twKeepScroll(); }, () => {});
-  const as = box.querySelector('#tw-as'); if(as) as.addEventListener('change', () => { TW.as = as.value; TW.forOk = null; twRender(); });
+  const fo = box.querySelector('#tw-fill-other');
+  if(fo) fo.addEventListener('click', () => {
+    const list = TW.people.filter(p => p.active && (!TW.me || p.id !== TW.me.id));
+    const sh = twSheet(`<h2>מילוי בשביל מדריכה אחרת</h2><div class="pnote">בוחרים בשביל מי למלא. ✓ = כבר הגישה.</div>
+      <div class="tw-pick-list">${list.map(p => `<button type="button" class="btn ghost tw-pick-name" data-tw-for="${p.id}">${twU(twDisp(p))}${TW.subs.some(x => x.person === p.id) ? ' ✓' : ''}</button>`).join('')}</div>
+      <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-tw-close>ביטול</button></div>`);
+    sh.querySelectorAll('[data-tw-for]').forEach(b => b.addEventListener('click', () => { sh.remove(); TW.as = b.dataset.twFor; TW.forOk = null; TW.week = 0; twRender(); window.scrollTo(0, 0); }));
+  });
+  const fm = box.querySelector('#tw-fill-me'); if(fm) fm.addEventListener('click', () => { TW.as = null; TW.forOk = null; twRender(); window.scrollTo(0, 0); });
   const hp = box.querySelector('.tw-help'); if(hp) hp.addEventListener('toggle', () => { TW.helpOpen = hp.open; });
   // marking for somebody else who already handed in: asked once (the review agents 2026-11-14)
   const forOk = async () => {
@@ -589,74 +609,71 @@ async function twSaveOptions(person, rows){
 }
 
 // ---- 2. the schedule
-function twGridHtml(builder){
-  const days = twDays(TW.period), by = {};
-  TW.asg.forEach(a => { (by[twKey(a.day, a.shift)] = by[twKey(a.day, a.shift)] || []).push(a); });
-  const cell = (day, shift) => {
-    const slot = twSlots(day).find(s => s.shift === shift) || (shift === 'A' && dowOf(day) === 5 ? twSlots(day).find(s => s.shift === 'W') : null);
-    if(!slot) return '<td class="tw-none"></td>';
-    const list = (by[twKey(day, slot.shift)] || []).slice().sort((a, b) => twName(a.person).localeCompare(twName(b.person), 'he'));
-    const missing = Math.max(0, slot.need - list.length);
-    return `<td class="tw-cell${builder ? ' edit' : ''}" data-tw-cell="${twKey(day, slot.shift)}"${builder ? ' tabindex="0" role="button"' : ''}>${slot.shift === 'W' ? '<small class="tw-long">עד שבת 20:30</small>' : ''}
-      ${list.map(a => `<span class="pchip${TW.me && a.person === TW.me.id ? ' me' : ''}${a.by_hand ? ' tw-hand' : ''}${a.fixed ? ' tw-fix' : ''}">${twU(twName(a.person))}${a.ok ? ' ✓' : ''}${a.from_time && a.to_time ? ` <small>${twL(twHm(a.from_time) + '–' + twHm(a.to_time))}</small>` : ''}${a.note ? ` <small>(${pEsc(a.note)})</small>` : ''}</span>`).join('')}
-      ${Array.from({ length:missing }, () => '<span class="pchip missing">חסר שיבוץ</span>').join('')}</td>`;
-  };
-  // on a phone: day after day, one under the other (Guy 2026-11-19: never a day off the screen, never scrolling sideways on a phone);
-  // the table is for wider screens. Both are drawn, the width chooses (26-twoweek.css), so nothing changes when the phone turns.
-  const today = twToday();
-  // (Guy 21.11, on a phone as the coordinator's screen in the first site: a card for each day, morning and afternoon side by side and the
-  // night under them; the builder sees in each box also who offered it and was not placed, in the colours of כן / אפשרי. The long weekend
-  // shift is one block: on Friday it takes the afternoon and the night, on Saturday it goes on over the morning and the afternoon)
-  const chips = list => list.map(a => `<span class="pchip${TW.me && a.person === TW.me.id ? ' me' : ''}${a.by_hand ? ' tw-hand' : ''}${a.fixed ? ' tw-fix' : ''}">${twU(twName(a.person))}${a.ok ? ' ✓' : ''}${a.from_time && a.to_time ? ` <small>${twL(twHm(a.from_time) + '–' + twHm(a.to_time))}</small>` : ''}${a.note ? ` <small>(${pEsc(a.note)})</small>` : ''}</span>`).join('');
-  const offered = (day, sh, list) => !builder ? '' : TW.people.filter(p => p.active && !list.some(a => a.person === p.id)).map(p => ({ p, lv:twLvl(p.id, day, sh) })).filter(x => x.lv !== 'no')
-    .sort((a, b) => (a.lv === 'yes' ? 0 : 1) - (b.lv === 'yes' ? 0 : 1) || twDisp(a.p).localeCompare(twDisp(b.p), 'he')).map(x => `<span class="tw-off-name" data-lv="${x.lv}">${twU(twDisp(x.p))}</span>`).join('');
-  // (check of 21.11: the names offered looked as if they were placed; now only where somebody is missing, on a line of their own, small)
-  const twOffLine = html => html ? `<div class="tw-dbox-off"><small>יכולות גם:</small>${html}</div>` : '';
-  const dbox = (day, slot, pos) => {
-    const list = (by[twKey(day, slot.shift)] || []).slice().sort((a, b) => twName(a.person).localeCompare(twName(b.person), 'he'));
-    const missing = Math.max(0, slot.need - list.length);
-    return `<div class="tw-dbox tw-cell${builder ? ' edit' : ''}${slot.shift === 'W' ? ' tw-wblock' : ''}" style="${pos}" data-tw-cell="${twKey(day, slot.shift)}"${builder ? ` tabindex="0" role="button" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}, ${TW_SHIFT[slot.shift]}${missing ? `, חסר שיבוץ` : ''}: בחירת אנשים"` : ''}>
-      <div class="tw-dbox-h"><b>${TW_SHIFT[slot.shift]}</b><small>${slot.shift === 'W' ? 'שישי 14:00 עד שבת 20:30' : twNoBreak(twL(slot.hours))}</small></div>
-      <div class="tw-dbox-p">${chips(list)}${Array.from({ length:missing }, () => '<span class="pchip missing">חסר שיבוץ</span>').join('')}</div>${missing ? twOffLine(offered(day, slot.shift, list)) : ''}</div>`;
-  };
-  const wOf = day => twSlots(day).find(s => s.shift === 'W');
-  const contOf = day => { const pv = addDays(day, -1), sl = twSlots(day); return wOf(pv) && !sl.some(s => s.shift === 'M' || s.shift === 'A') ? pv : null; };
-  const contBox = (day, pv, pos) => { const list = (by[twKey(pv, 'W')] || []);
-    return `<div class="tw-dbox tw-wblock tw-wcont${builder ? ' edit tw-cell' : ''}" style="${pos}"${builder ? ` data-tw-cell="${twKey(pv, 'W')}" tabindex="0" role="button" aria-label="סוף שבוע, נמשך משישי: בחירת אנשים"` : ''}>
-      <div class="tw-dbox-h"><b>סוף שבוע</b><small>נמשך משישי, עד 20:30</small></div><div class="tw-dbox-p">${list.map(a => `<span class="tw-cont-name">${twU(twName(a.person))}</span>`).join('')}</div></div>`; };
-  const POS = { M:'grid-column:1;grid-row:1', A:'grid-column:2;grid-row:1', N:'grid-column:1 / span 2;grid-row:2', W:'grid-column:2;grid-row:1 / span 2', C:'grid-column:1 / span 2;grid-row:1' };
-  const dayCard = day => { const pv = contOf(day);
-    return `<div class="tw-dcard${day === today ? ' today' : ''}"><div class="tw-dcard-h"><b>${DOW_NAMES[dowOf(day)]}</b> <span>${twShort(day)}</span>${day === today ? ' <span class="tw-today">היום</span>' : ''}</div>
-    <div class="tw-dgrid">${pv ? contBox(day, pv, POS.C) : ''}${twSlots(day).map(slot => dbox(day, slot, POS[slot.shift] || '')).join('')}</div></div>`; };
-  const table = w => `<div class="tw-week"><h3>שבוע ${w + 1} <span class="tw-wk-range">${twL(twShort(days[w * 7]) + '–' + twShort(days[w * 7 + 6]))}</span><span class="tw-more-hint" aria-hidden="true">עוד ימים: גוללים הצידה ←</span></h3>
-    <div class="tw-days">${days.slice(w * 7, w * 7 + 7).map(dayCard).join('')}</div>
-    <div class="tw-scroll"><table class="tw-table"><thead><tr><th></th>${days.slice(w * 7, w * 7 + 7).map(day => `<th>${DOW_NAMES[dowOf(day)]}<small>${twShort(day)}</small></th>`).join('')}</tr></thead>
-    <tbody>${TW_ROWS.map(sh => `<tr><th>${TW_SHIFT[sh]}</th>${days.slice(w * 7, w * 7 + 7).map(day => {
-      const w8 = wOf(day), pv = contOf(day);
-      if(w8 && sh === 'N') return '';          // (covered by the long shift from the afternoon row)
-      if(w8 && sh === 'A') return cell(day, 'A').replace('<td class="tw-cell', '<td rowspan="2" class="tw-wblock tw-cell');
-      if(pv && sh === 'A') return '';
-      if(pv && sh === 'M') return `<td rowspan="2" class="tw-wblock tw-wcont${builder ? ' tw-cell edit' : ''}"${builder ? ` data-tw-cell="${twKey(pv, 'W')}" tabindex="0" role="button"` : ''}><small class="tw-long">סוף שבוע · נמשך משישי, עד 20:30</small>${(by[twKey(pv, 'W')] || []).map(a => `<span class="tw-cont-name">${twU(twName(a.person))}</span>`).join('')}</td>`;
-      return cell(day, sh); }).join('')}</tr>`).join('')}</tbody></table></div></div>`;
-  return table(0) + table(1);
-}
-// the builder's card at the top of "הסידור" (Guy 2026-11-14: instead of a fifth tab)
+// ---- the coordinator (Guy's walk through her screens, 22–23.11): "הסידור" is the same as for all the staff, with one more button,
+// "רכזת", for whoever builds now and the system admins. It opens her view: the latest schedule that was built, both weeks, the days side by
+// side as in "הצוות כולו", fixed by tapping a box or by dragging names from a folded list next to it (as the coordinator of the first site),
+// with "שיתוף תמונת הסידור" and "שליחת עדכונים". The card "בניית הסידור" shows only from the end of the hand-in until the schedule is published.
+const twEnd = p => addDays(p.start, 13);
+const twMayBuild = start => TW.boss || (!!TW.me && TW.periods.some(p => p.start === start && p.builder === TW.me.id));
+const twCoordOk = () => TW.boss || (!!TW.me && TW.periods.some(p => p.builder === TW.me.id && twEnd(p) >= twToday()));
+const twClosedNow = p => p.status === 'built' || (p.status === 'open' && !!p.deadline && new Date(p.deadline) <= new Date());
+// the two weeks in building: the hand-in closed and they are not published yet
+function twBuildPer(){ const today = twToday(); return TW.periods.filter(p => twClosedNow(p) && twEnd(p) >= today && twMayBuild(p.start)).sort((a, b) => a.start < b.start ? -1 : 1)[0] || null; }
+// what the coordinator's view shows: the schedules built or published that are not over, the latest first
+function twBoardPers(){ const today = twToday(); return TW.periods.filter(p => (p.status === 'built' || p.status === 'published') && twEnd(p) >= today && twMayBuild(p.start)).sort((a, b) => a.start < b.start ? 1 : -1); }
+function twOpenPer(){ return TW.periods.filter(p => p.status === 'open' && (!p.deadline || new Date(p.deadline) > new Date()) && twMayBuild(p.start)).sort((a, b) => a.start < b.start ? -1 : 1)[0] || null; }
 function twBuildCardHtml(){
-  if(!twIsBuilder()) return '';
-  const p = twPeriodRow(); if(!p) return '';
-  const step = p.status === 'open' ? 1 : p.status === 'built' ? 3 : 4;
-  const mine = TW.me && p.builder === TW.me.id;
-  return `<button type="button" class="tw-build-card" data-tw-open-build><span class="tw-build-card-t">${p.status === 'published' ? (mine ? 'הסידור שבנית · פורסם' : 'הסידור · פורסם') : mine ? 'הפעם הסידור אצלך' : 'בניית הסידור'}</span>
-    <span class="tw-build-card-s">צעד ${step} מתוך 4: ${TW_STEPS[step - 1]}${p.status === 'published' ? ' · פורסם' : ''}</span><span class="tw-build-card-go" aria-hidden="true">←</span></button>`;
+  const p = twBuildPer(); if(!p) return '';
+  const step = p.status === 'built' ? 3 : 1, mine = TW.me && p.builder === TW.me.id;
+  return `<button type="button" class="tw-build-card" data-tw-open-build="${p.start}"><span class="tw-build-card-t">${mine ? 'הפעם הסידור אצלך' : 'בניית הסידור'} · ${twL(twPeriodLabel(p.start))}</span>
+    <span class="tw-build-card-s">ההגשה נסגרה · צעד ${step} מתוך 4: ${TW_STEPS[step - 1]}</span><span class="tw-build-card-go" aria-hidden="true">←</span></button>`;
 }
-// the legend of כן / אפשרי / לא in step 3 (Guy 21.11): the names not placed in each box, and the colours while a name is dragged
-const twLvLegend = () => `<div class="tw-grid-legend tw-lv-legend"><span><span class="tw-lv-key" data-lv="yes"></span> כן</span><span><span class="tw-lv-key" data-lv="can"></span> אפשרי</span><span><span class="tw-lv-key" data-lv="no"></span> לא</span></div>`;
-// the legend of the marks in the whole schedule (the review agents: 📌 and the frames had no explanation)
-const twGridLegend = () => `<div class="tw-grid-legend"><span><span class="pchip tw-fix">📌</span> משמרת קבועה</span><span><span class="pchip tw-hand">&nbsp;</span> שובץ ביד</span>${TW.me ? '<span><span class="pchip me">&nbsp;</span> אני</span>' : ''}</div>`;
-// ---- "הצוות כולו" of one of the staff (Guy 22.11, as in the first site): "היום | חודש"; the month view is one week at a time, the days
-// side by side (Sunday on the right) and a row per kind of shift, with a choice of the weeks that were published from this week on:
-// "השבוע", "השבוע הבא", "בעוד שבועיים", each with its dates (three right after a new schedule is published, two the rest of the time).
-// The weeks come from all the published two weeks, not only the ones chosen at the top (there is no choice there any more).
+// what she marked for this shift, for the colours of the board (as the first site): yes, can, no, or nothing marked at all in these two weeks
+function twLvlOf(pid, day, sh){
+  if(twIsFixed(pid, day, sh)) return 'yes';
+  const o = TW.options.find(x => x.person === pid && x.day === day && x.shift === sh);
+  if(o) return o.level === 'can' ? 'can' : 'yes';
+  return TW.options.some(x => x.person === pid) || TW.subs.some(s => s.person === pid) ? 'no' : 'none';
+}
+const TW_LV4 = [['yes', 'כן'], ['can', 'יכול'], ['no', 'לא'], ['none', 'לא סומן']];
+const twLv4Key = cls => `<span class="tw-lv4 ${cls || ''}">${TW_LV4.map(([k, w]) => `<span class="tw-lv4-w" data-lv="${k}">${w}</span>`).join('')}</span>`;
+// one week, the days side by side (Sunday on the right) and a row per kind of shift; the long weekend shift is one block (on Friday over the
+// afternoon and the night, on Saturday it goes on over the morning and the afternoon). o.edit: the coordinator's board — every box opens its
+// window and takes a dragged name; the names are coloured by what each one marked and can be dragged to another box
+function twWeekGrid(wd, by, o){
+  o = o || {};
+  const today = twToday();
+  const usual = {}; wd.forEach(d => { if(twKind(d) === 'weekday') twSlots(d).forEach(s => { if(!usual[s.shift]) usual[s.shift] = s.hours; }); });
+  const nm = (a, day, sh) => { const lv = o.edit ? twLvlOf(a.person, day, sh) : '';
+    return `<span class="tw-tc-name${!o.edit && TW.me && a.person === TW.me.id ? ' me' : ''}${o.sel && o.sel === a.person ? ' sel' : ''}"${lv ? ` data-lv="${lv}"` : ''}${o.edit && a.id ? ` draggable="true" data-tw-row="${a.id}"` : ''}>${o.edit && a.fixed ? '📌 ' : ''}${twU(twName(a.person))}${o.edit && a.ok ? ' ✓' : ''}${a.from_time && a.to_time ? `<small>${twL(twHm(a.from_time) + '–' + twHm(a.to_time))}</small>` : ''}</span>`; };
+  const names = (day, sh, need) => { const list = (by[twKey(day, sh)] || []).slice().sort((a, b) => twName(a.person).localeCompare(twName(b.person), 'he')), miss = Math.max(0, (need || 0) - list.length);
+    return list.map(a => nm(a, day, sh)).join('') + (miss ? `<span class="tw-tc-miss">חסר ${miss}</span>` : ''); };
+  const box = (day, sh) => o.edit ? ` data-tw-cell="${twKey(day, sh)}" tabindex="0" role="button" aria-label="${DOW_NAMES[dowOf(day)]} ${twShort(day)}, ${TW_SHIFT[sh]}: עריכה"` : '';
+  let cells = `<div class="tw-tc-corner" style="grid-column:1;grid-row:1"></div>`;
+  wd.forEach((d, i) => { cells += `<div class="tw-tc-head${d === today ? ' today' : ''}${[5, 6].includes(dowOf(d)) ? ' weekend' : ''}" style="grid-column:${i + 2};grid-row:1"><b>${'אבגדהוש'[dowOf(d)]}׳</b><small>${twShort(d)}</small></div>`; });
+  TW_ROWS.forEach((k, r) => { cells += `<div class="tw-tc-lbl" style="grid-column:1;grid-row:${r + 2}"><b>${TW_SHIFT[k]}</b>${usual[k] ? `<small>${twL(usual[k])}</small>` : ''}</div>`; });
+  wd.forEach((d, i) => {
+    const col = i + 2, sl = {}; twSlots(d).forEach(s => { sl[s.shift] = s; });
+    const cls = `tw-tc-cell${o.edit ? ' edit' : ''}${d === today ? ' today' : ''}${[5, 6].includes(dowOf(d)) ? ' weekend' : ''}`;
+    const at = (row, span) => `grid-column:${col};grid-row:${row}${span ? ' / span ' + span : ''}`;
+    const odd = s => s.hours && s.hours !== usual[s.shift] && s.shift !== 'W' ? `<small class="tw-tc-h">${twL(s.hours)}</small>` : '';
+    if(sl.W){
+      cells += sl.M ? `<div class="${cls}" style="${at(2)}"${box(d, 'M')}>${odd(sl.M)}${names(d, 'M', sl.M.need)}</div>` : `<div class="tw-tc-cell none" style="${at(2)}"></div>`;
+      cells += `<div class="${cls} tw-tc-w" style="${at(3, 2)}"${box(d, 'W')}><small class="tw-tc-h">סוף שבוע · מ-${twNice(twWeekend(d, 'start'))}</small>${names(d, 'W', sl.W.need)}</div>`;
+      return;
+    }
+    const pv = addDays(d, -1);
+    if(!sl.M && !sl.A && twSlots(pv).some(s => s.shift === 'W')){
+      cells += `<div class="${cls} tw-tc-w tw-tc-cont" style="${at(2, 2)}"${box(pv, 'W')}><small class="tw-tc-h">נמשך, עד ${twNice(twWeekend(d, 'end'))}</small>${names(pv, 'W', 0)}</div>`;
+      cells += sl.N ? `<div class="${cls}" style="${at(4)}"${box(d, 'N')}>${odd(sl.N)}${names(d, 'N', sl.N.need)}</div>` : `<div class="tw-tc-cell none" style="${at(4)}"></div>`;
+      return;
+    }
+    TW_ROWS.forEach((k, r) => { cells += sl[k] ? `<div class="${cls}" style="${at(r + 2)}"${box(d, k)}>${odd(sl[k])}${names(d, k, sl[k].need)}</div>` : `<div class="tw-tc-cell none" style="${at(r + 2)}"></div>`; });
+  });
+  return `<div class="tw-tc${o.edit ? ' tw-tc-edit' : ''}">${cells}</div>`;
+}
+// ---- "הצוות כולו" of one of the staff (Guy 22.11, as in the first site): "היום | חודש"; the month view is one week at a time, with a choice
+// of the weeks that were published from this week on: "השבוע", "השבוע הבא", "בעוד שבועיים", each with its dates
 async function twLoadPub(){
   const today = twToday(), weekStart = addDays(today, -dowOf(today));
   const pub = TW.periods.filter(p => p.status === 'published' && addDays(p.start, 13) >= weekStart).sort((a, b) => a.start < b.start ? -1 : 1).slice(0, 3);
@@ -666,7 +683,7 @@ async function twLoadPub(){
   TW.pub = { weeks:weeks.slice(0, 3), asg:r.error ? [] : (r.data || []), at:Date.now() };
 }
 function twTeamCalHtml(){
-  if(!TW.pub){ if(!TW.pubLoading){ TW.pubLoading = true; twLoadPub().finally(() => { TW.pubLoading = false; if(TW.tab === 'sched') twRender(); }); } return '<div class="pnote">רק רגע...</div>'; }
+  if(!TW.pub){ if(!TW.pubLoading){ TW.pubLoading = true; twLoadPub().finally(() => { TW.pubLoading = false; if(TW.tab === 'sched' && !TW.board) twRender(); }); } return '<div class="pnote">רק רגע...</div>'; }
   const weeks = TW.pub.weeks, today = twToday();
   if(!weeks.length) return '<div class="pnote">עוד אין סידור שפורסם לשבוע הזה.</div>';
   const by = {}; TW.pub.asg.forEach(a => { (by[twKey(a.day, a.shift)] = by[twKey(a.day, a.shift)] || []).push(a); });
@@ -681,60 +698,115 @@ function twTeamCalHtml(){
       .concat(sl.map(s => `<div class="tw-tc-drow"><div class="tw-tc-dlbl"><b>${TW_SHIFT[s.shift]}</b><small>${twNoBreak(twL(s.hours))}</small></div><div class="tw-tc-dnames">${names(today, s.shift, s.need)}</div></div>`));
     return `${seg}<div class="tw-tc-day"><div class="tw-tc-dhead"><b>${DOW_NAMES[dowOf(today)]}</b> ${twShort(today)}</div>${known ? rows.join('') : '<div class="pnote">אין סידור שפורסם להיום.</div>'}</div>`;
   }
-  let wi = Math.min(Math.max(TW.teamWk || 0, 0), weeks.length - 1);
+  const wi = Math.min(Math.max(TW.teamWk || 0, 0), weeks.length - 1);
   const WORD = ['השבוע', 'השבוע הבא', 'בעוד שבועיים'];
   const nav = `<div class="tw-tc-weeks" role="group" aria-label="איזה שבוע">${weeks.map((w, i) => `<button type="button" data-tw-tcw="${i}" aria-pressed="${i === wi}"${i === wi ? ' class="on"' : ''}><b>${WORD[i]}</b><small>${twL(twShort(w) + '–' + twShort(addDays(w, 6)))}</small></button>`).join('')}</div>`;
-  const wd = Array.from({ length:7 }, (x, i) => addDays(weeks[wi], i));
-  // the hours of each kind once, in the column of the names of the shifts (as the first site: "the name of each shift and its hours at the start of the week")
-  const usual = {}; wd.forEach(d => { if(twKind(d) === 'weekday') twSlots(d).forEach(s => { if(!usual[s.shift]) usual[s.shift] = s.hours; }); });
-  let cells = `<div class="tw-tc-corner" style="grid-column:1;grid-row:1"></div>`;
-  wd.forEach((d, i) => { cells += `<div class="tw-tc-head${d === today ? ' today' : ''}${[5, 6].includes(dowOf(d)) ? ' weekend' : ''}" style="grid-column:${i + 2};grid-row:1"><b>${'אבגדהוש'[dowOf(d)]}׳</b><small>${twShort(d)}</small></div>`; });
-  TW_ROWS.forEach((k, r) => { cells += `<div class="tw-tc-lbl" style="grid-column:1;grid-row:${r + 2}"><b>${TW_SHIFT[k]}</b>${usual[k] ? `<small>${twL(usual[k])}</small>` : ''}</div>`; });
-  wd.forEach((d, i) => {
-    const col = i + 2, sl = {}; twSlots(d).forEach(s => { sl[s.shift] = s; });
-    const cls = `tw-tc-cell${d === today ? ' today' : ''}${[5, 6].includes(dowOf(d)) ? ' weekend' : ''}`;
-    const at = (row, span) => `grid-column:${col};grid-row:${row}${span ? ' / span ' + span : ''}`;
-    const odd = s => s.hours && s.hours !== usual[s.shift] && s.shift !== 'W' ? `<small class="tw-tc-h">${twL(s.hours)}</small>` : '';
-    if(sl.W){          // Friday: the morning, and the long weekend shift over the afternoon and the night
-      cells += `<div class="${cls}" style="${at(2)}">${odd(sl.M)}${names(d, 'M', sl.M.need)}</div>`;
-      cells += `<div class="${cls} tw-tc-w" style="${at(3, 2)}"><small class="tw-tc-h">סוף שבוע · מ-${twNice(twWeekend(d, 'start'))}</small>${names(d, 'W', sl.W.need)}</div>`;
-      return;
-    }
-    const pv = addDays(d, -1);
-    if(!sl.M && !sl.A && twSlots(pv).some(s => s.shift === 'W')){          // Saturday: the long shift goes on over the morning and the afternoon
-      cells += `<div class="${cls} tw-tc-w tw-tc-cont" style="${at(2, 2)}"><small class="tw-tc-h">נמשך, עד ${twNice(twWeekend(d, 'end'))}</small>${names(pv, 'W', 0)}</div>`;
-      cells += sl.N ? `<div class="${cls}" style="${at(4)}">${odd(sl.N)}${names(d, 'N', sl.N.need)}</div>` : `<div class="${cls} none" style="${at(4)}"></div>`;
-      return;
-    }
-    TW_ROWS.forEach((k, r) => { cells += sl[k] ? `<div class="${cls}" style="${at(r + 2)}">${odd(sl[k])}${names(d, k, sl[k].need)}</div>` : `<div class="${cls} none" style="${at(r + 2)}"></div>`; });
-  });
-  return `${seg}${nav}<div class="tw-tc">${cells}</div>`;
+  return `${seg}${nav}${twWeekGrid(Array.from({ length:7 }, (x, i) => addDays(weeks[wi], i)), by, {})}`;
 }
-// one of the staff in "הסידור": when two weeks are open for hand-in, a line and the way to them (before 22.11 the screen of the open two weeks said so)
-const twDeadlineOpenHtml = () => { const o = TW.periods.filter(p => p.status === 'open' && (!p.deadline || new Date(p.deadline) > new Date())).sort((a, b) => a.start < b.start ? -1 : 1)[0]; return o ? `<div class="pnote tw-open-line">ההגשה לשבועיים ${twL(twPeriodLabel(o.start))} פתוחה.</div><div class="tw-actions"><button type="button" class="btn ghost" data-tw-tab="mine">להעדפות שלי</button></div>` : ''; };
+// one of the staff in "הסידור": when two weeks are open for hand-in, a line and the way to them
+const twDeadlineOpenHtml = () => { if(!TW.me) return ''; const o = TW.periods.filter(p => p.status === 'open' && (!p.deadline || new Date(p.deadline) > new Date())).sort((a, b) => a.start < b.start ? -1 : 1)[0]; return o ? `<div class="pnote tw-open-line">ההגשה לשבועיים ${twL(twPeriodLabel(o.start))} פתוחה.</div><div class="tw-actions"><button type="button" class="btn ghost" data-tw-tab="mine">להעדפות שלי</button></div>` : ''; };
 function twTeamCalWire(box){
   box.querySelectorAll('[data-tw-tcv]').forEach(b => b.addEventListener('click', () => { TW.teamView = b.dataset.twTcv; twRender(); }));
   box.querySelectorAll('[data-tw-tcw]').forEach(b => b.addEventListener('click', () => { TW.teamWk = Number(b.dataset.twTcw); twRender(); }));
 }
 function twSchedHtml(){
-  const p = twPeriodRow(), builder = twIsBuilder(), card = twBuildCardHtml() + twNoticesHtml();
-  // one of the staff (Guy 21.11, as the instructor's screen in the first site): inner cards, folded at first: "המשמרות שלי" and "הצוות כולו";
-  // (Guy 22.11) not bound to one two weeks: "הצוות כולו" shows the published weeks from this week on
-  if(TW.me && !builder){
-    const fold = (k, title, inner) => `<details class="tw-fixed-box tw-sfold" data-tw-sfold="${k}"${(TW.sfolds || {})[k] ? ' open' : ''}><summary>${title}</summary>${inner}</details>`;
-    const mine = twMyShiftsHtml(true);
-    return `${card}${fold('mine', `המשמרות שלי${TW.myCount ? ` <span class="tw-sfold-n">${TW.myCount}</span>` : ''}${TW.myNext ? `<small class="tw-sfold-s">הבאה: ${twNoBreak(TW.myNext)}</small>` : ''}`, mine)}
-      ${fold('all', 'הצוות כולו', twTeamCalHtml())}${twDeadlineOpenHtml()}`;
-  }
-  if(p.status !== 'published' && !builder) return `${card}<div class="pnote">הסידור של השבועיים האלה עדיין לא פורסם.${p.builder ? ` בונה אותו הפעם: ${pEsc(twName(p.builder))}.` : ''}</div>${twDeadlineHtml()}${TW.me && p.status === 'open' ? '<div class="tw-actions"><button type="button" class="btn" data-tw-tab="mine">להעדפות שלי</button></div>' : ''}`;
-  if(!TW.asg.length) return `${card}<div class="pnote">עדיין אין סידור לשבועיים האלה.${builder ? ' בונים אותו בכרטיס "בניית הסידור" למעלה.' : ''}</div>`;
-  const head = p.status === 'published' ? '' : '<div class="pstatus bad">טיוטה: רק מי שבונה את הסידור רואה אותה. הצוות יראה אחרי הפרסום.</div>';
-  const whole = builder || TW.full || !TW.me;
-  // here the schedule is for reading, also for the builder; changes are made in step 3 of the building (the review agents 2026-11-14)
-  const tools = builder && p.status === 'published' && typeof twPendingHtml === 'function' ? `${twPendingHtml()}<div class="tw-actions"><button type="button" class="btn ghost" id="tw-share">שיתוף תמונת הסידור</button></div>` : '';
-  return `${card}${head}${tools}${twMyShiftsHtml()}
-    ${whole ? `${TW.me ? '<h3 class="tw-h">הסידור המלא</h3>' : ''}${twGridLegend()}${twGridHtml(false)}`
-      : '<div class="tw-actions"><button type="button" class="btn ghost" id="tw-full">הסידור המלא של כל הצוות</button></div>'}`;
+  if(TW.board && twCoordOk()) return twBoardViewHtml();
+  TW.board = false;
+  const coord = twCoordOk();
+  const top = twBuildCardHtml() + twNoticesHtml() + (coord ? twPendingHtml() : '')
+    + (coord ? '<div class="tw-actions tw-coord-row"><button type="button" class="btn tw-coord-btn" id="tw-coord">רכזת</button></div>' : '');
+  if(!TW.me) return `${top}<h3 class="tw-h">הצוות כולו</h3>${twTeamCalHtml()}`;          // (a system admin who is not on the list: no shifts of her own)
+  const fold = (k, title, inner) => `<details class="tw-fixed-box tw-sfold" data-tw-sfold="${k}"${(TW.sfolds || {})[k] ? ' open' : ''}><summary>${title}</summary>${inner}</details>`;
+  const mine = twMyShiftsHtml(true);
+  return `${top}${fold('mine', `המשמרות שלי${TW.myCount ? ` <span class="tw-sfold-n">${TW.myCount}</span>` : ''}${TW.myNext ? `<small class="tw-sfold-s">הבאה: ${twNoBreak(TW.myNext)}</small>` : ''}`, mine)}
+    ${fold('all', 'הצוות כולו', twTeamCalHtml())}${twDeadlineOpenHtml()}`;
+}
+// the coordinator's view ("רכזת")
+function twBoardViewHtml(){
+  const pers = twBoardPers(), open = twOpenPer(), p = twPeriodRow();
+  const top = '<div class="tw-build-top"><button type="button" class="btn ghost small" data-tw-back-sched>→ חזרה לסידור</button><b>רכזת</b></div>';
+  const os = TW.openSubs && open && TW.openSubs.start === open.start ? TW.openSubs : null;
+  const openLine = open ? `<div class="pstatus ok tw-open-sum"><span>ההגשה לשבועיים ${twL(twPeriodLabel(open.start))} פתוחה${os ? ` · הגישו <b>${os.n}</b> מתוך ${os.of}` : ''}</span>
+    <button type="button" class="btn ghost small" data-tw-open-build="${open.start}">מי הגישה</button></div>` : '';
+  if(!p || !pers.some(x => x.start === p.start)) return `${top}${openLine}<div class="pnote">עוד אין סידור שנבנה.</div>`;
+  const today = twToday();
+  const seg = pers.length > 1 ? `<div class="tw-tc-weeks tw-board-pers" role="group" aria-label="איזה סידור">${pers.slice().reverse().map(x => `<button type="button" data-tw-bper="${x.start}" aria-pressed="${x.start === p.start}"${x.start === p.start ? ' class="on"' : ''}><b>${x.start <= today ? 'השבועיים האלה' : 'השבועיים הבאים'}</b><small>${twL(twPeriodLabel(x.start))}</small></button>`).join('')}</div>` : '';
+  const at = p.published_at ? new Date(p.published_at) : null, left = at ? 60 - Math.floor((Date.now() - at) / 60000) : 0;
+  const state = p.status === 'published'
+    ? `<div class="pstatus ok">הסידור של ${twL(twPeriodLabel(p.start))} פורסם${at ? ` ב-${at.toLocaleString('he-IL', { day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit' })}` : ''}. כל הצוות רואה אותו, ושינוי כאן מופיע אצלן מיד.</div>`
+    : `<div class="pstatus bad">הסידור של ${twL(twPeriodLabel(p.start))} עוד לא פורסם: רק מי שבונה רואה אותו. מפרסמים בכרטיס "בניית הסידור".</div>`;
+  // (Guy 23.11: "ביטול הפרסום" only in the first hour after publishing)
+  const acts = p.status === 'published' ? `<div class="tw-actions">${typeof twShareAsk === 'function' ? '<button type="button" class="btn ghost" id="tw-share">שיתוף תמונת הסידור</button>' : ''}${left > 0 ? `<button type="button" class="btn ghost tw-danger" id="tw-unpublish">ביטול הפרסום <small>(עוד ${left} דק׳)</small></button>` : ''}</div>` : '';
+  return `${top}${openLine}${seg}${state}${twPendingHtml()}${acts}${typeof twAttentionHtml === 'function' ? twAttentionHtml() : ''}${twBoardHtml()}`;
+}
+// both weeks of the schedule as the coordinator's board, with the folded list of the staff at its left
+function twBoardHtml(){
+  const days = twDays(TW.period), by = {};
+  TW.asg.forEach(a => { (by[twKey(a.day, a.shift)] = by[twKey(a.day, a.shift)] || []).push(a); });
+  const o = { edit:true, sel:TW.boardSel || null };
+  const weeks = [0, 1].map(w => `<section class="tw-board-week"><h3 class="tw-h">שבוע ${w + 1} <span class="tw-wk-range">${twL(twShort(days[w * 7]) + '–' + twShort(days[w * 7 + 6]))}</span></h3>${twWeekGrid(days.slice(w * 7, w * 7 + 7), by, o)}</section>`).join('');
+  return `<div class="tw-board"><div class="tw-board-main">${weeks}<div class="pnote">לחיצה על משבצת פותחת אותה: הוספה, החלפה, הסרה ושעות. במחשב אפשר לגרור שם מהרשימה, או ממשבצת למשבצת.</div></div>${twSideHtml()}</div>`;
+}
+function twSideHtml(){
+  if(!TW.sideOpen) return `<button type="button" class="tw-side-tab" id="tw-side-open" aria-expanded="false"><span class="tw-side-tab-t">המדריכות</span>${twLv4Key('tw-lv4-tab')}</button>`;
+  const act = TW.people.filter(p => p.active), sel = TW.boardSel;
+  return `<aside class="tw-side" aria-label="המדריכות"><div class="tw-side-top"><b>המדריכות</b><button type="button" class="tw-side-x" id="tw-side-close" aria-label="קיפול">✕</button></div>
+    ${twLv4Key()}<small class="tw-side-say">גוררים שם למשבצת. בזמן הגרירה המשבצות נצבעות לפי מה שהיא סימנה.</small>
+    <div class="tw-side-names">${act.map(p => { const n = TW.asg.filter(a => a.person === p.id).length, q = p.per_week * 2, sub = TW.subs.some(s => s.person === p.id);
+      return `<button type="button" class="tw-side-name${sel === p.id ? ' on' : ''}${sub ? '' : ' missing'}" draggable="true" data-tw-drag="${p.id}" title="${sub ? 'הגישה' : 'לא הגישה'}"><span>${twU(twDisp(p))}</span><small class="${n === q ? 'ok' : n > q ? 'over' : 'low'}">${n}/${q}</small></button>`; }).join('')}</div>
+    <div class="pnote">לחיצה על שם מסמנת את המשמרות שלה בסידור.</div></aside>`;
+}
+function twBoardWire(box){
+  const side = box.querySelector('#tw-side-open'); if(side) side.addEventListener('click', () => { TW.sideOpen = true; twKeepScroll(); });
+  const sx = box.querySelector('#tw-side-close'); if(sx) sx.addEventListener('click', () => { TW.sideOpen = false; TW.boardSel = null; twKeepScroll(); });
+  box.querySelectorAll('.tw-side-name').forEach(b => b.addEventListener('click', () => { TW.boardSel = TW.boardSel === b.dataset.twDrag ? null : b.dataset.twDrag; twKeepScroll(); }));
+  box.querySelectorAll('.tw-board [data-tw-cell]').forEach(c => { const go = () => twCellSheet(c.dataset.twCell); c.addEventListener('click', go); c.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } }); });
+  const paint = pid => box.querySelectorAll('.tw-board [data-tw-cell]').forEach(c => { if(!pid){ delete c.dataset.dragLv; return; } const [d, s] = c.dataset.twCell.split('|'); c.dataset.dragLv = twLvlOf(pid, d, s); });
+  const end = () => { TW.dragging = null; paint(null); box.querySelectorAll('.tw-drop').forEach(c => c.classList.remove('tw-drop')); };
+  box.querySelectorAll('.tw-board [data-tw-drag]').forEach(ch => {
+    ch.addEventListener('dragstart', e => { TW.dragging = { pid:ch.dataset.twDrag }; e.dataTransfer.setData('text/plain', ch.dataset.twDrag); e.dataTransfer.effectAllowed = 'copy'; paint(ch.dataset.twDrag); });
+    ch.addEventListener('dragend', end);
+  });
+  box.querySelectorAll('.tw-board [data-tw-row]').forEach(n => {
+    n.addEventListener('dragstart', e => { e.stopPropagation(); const a = TW.asg.find(x => x.id === n.dataset.twRow); if(!a) return; TW.dragging = { pid:a.person, row:a.id }; e.dataTransfer.setData('text/plain', a.person); e.dataTransfer.effectAllowed = 'move'; paint(a.person); });
+    n.addEventListener('dragend', end);
+  });
+  box.querySelectorAll('.tw-board [data-tw-cell]').forEach(c => {
+    c.addEventListener('dragover', e => { if(!TW.dragging) return; e.preventDefault(); c.classList.add('tw-drop'); });
+    c.addEventListener('dragleave', () => c.classList.remove('tw-drop'));
+    c.addEventListener('drop', async e => {
+      e.preventDefault(); const dr = TW.dragging; end(); if(!dr) return;
+      const [day, shift] = c.dataset.twCell.split('|'), pid = dr.pid;
+      if(TW.asg.some(a => a.person === pid && a.day === day && a.shift === shift)){ toast(`${twName(pid)} כבר במשמרת הזו`, 4000); return; }
+      const others = TW.asg.filter(a => a.person === pid && a.id !== dr.row);
+      if(others.some(a => twHandPair(pid, a.day, a.shift, day, shift, a) === 'overlap')){ toast(`אי אפשר: ${twName(pid)} במשמרת חופפת בשעות`, 5000); return; }
+      const ks = others.map(a => twHandPair(pid, a.day, a.shift, day, shift, a)).reduce((w, x) => TW_HAND_RANK[x] > TW_HAND_RANK[w] ? x : w, '');
+      const warn = ks ? `. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב"` : '';
+      if(dr.row){          // a name moved from one box to another
+        const a = TW.asg.find(x => x.id === dr.row); if(!a) return;
+        const back = { day:a.day, shift:a.shift, by_hand:a.by_hand, fixed:a.fixed, from_time:a.from_time, to_time:a.to_time };
+        const r = await sbPersonal.from('tw_assignment').update({ day, shift, by_hand:true, fixed:false, from_time:null, to_time:null }).eq('id', a.id);
+        if(r.error){ console.error(r.error); toast('⚠ ההעברה לא נשמרה'); return; }
+        Object.assign(a, { day, shift, by_hand:true, fixed:false, from_time:null, to_time:null }); await twAfterChange();
+        twUndo(`${twName(pid)} הועברה ל${TW_SHIFT[shift]} ${twShort(day)}${warn}`, async () => { const u = await sbPersonal.from('tw_assignment').update(back).eq('id', a.id); if(u.error) return false; Object.assign(a, back); await twAfterChange(); return true; });
+        return;
+      }
+      const r = await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:pid, by_hand:true }).select();
+      if(r.error){ console.error(r.error); toast('⚠ השיבוץ לא נשמר'); return; }
+      TW.asg.push(r.data[0]); await twAfterChange();
+      twUndo(`${twName(pid)} נוספה ל${TW_SHIFT[shift]} ${twShort(day)}${warn}`, async () => { const u = await sbPersonal.from('tw_assignment').delete().eq('id', r.data[0].id); if(u.error) return false; TW.asg = TW.asg.filter(a => a.id !== r.data[0].id); await twAfterChange(); return true; });
+    });
+  });
+}
+// after a change in a published schedule "שליחת עדכונים" may appear: its count is asked again
+async function twAfterChange(){ if((twPeriodRow() || {}).status === 'published' && typeof twPendingLoad === 'function') await twPendingLoad(); twKeepScroll(); }
+// into the coordinator's view: the latest schedule that was built (or the one chosen), and how many handed in for the two weeks still open
+async function twEnterBoard(per){
+  const pers = twBoardPers(), to = per || (pers[0] || {}).start || null;
+  TW.board = true; TW.boardSel = null;
+  if(to && to !== TW.period){ TW.period = to; TW.week = 0; await twLoadPeriod(); }
+  const open = twOpenPer(); TW.openSubs = null;
+  if(open){ const r = await sbPersonal.from('tw_submission').select('person').eq('period', open.start); if(!r.error) TW.openSubs = { start:open.start, n:new Set((r.data || []).map(x => x.person)).size, of:TW.people.filter(p => p.active).length }; }
 }
 function twSchedWire(box){
   twTeamCalWire(box);
@@ -746,13 +818,16 @@ function twSchedWire(box){
   }));
   const all = box.querySelector('#tw-all-mine'); if(all) all.addEventListener('click', () => { TW.allMine = true; twKeepScroll(); });
   box.querySelectorAll('[data-tw-sfold]').forEach(d => d.addEventListener('toggle', () => { TW.sfolds = TW.sfolds || {}; TW.sfolds[d.dataset.twSfold] = d.open; }));
-  const full = box.querySelector('#tw-full'); if(full) full.addEventListener('click', () => twGo(() => { TW.full = true; }));
+  const co = box.querySelector('#tw-coord'); if(co) co.addEventListener('click', async () => { co.disabled = true; TW.nav.push({ tab:TW.tab, step:TW.step, week:TW.week, full:TW.full, board:false, period:TW.period }); if(twOwnSite()){ try { history.pushState({ tw:'nav' }, ''); } catch(e){} } await twEnterBoard(); twRender(); window.scrollTo(0, 0); });
+  box.querySelectorAll('[data-tw-bper]').forEach(b => b.addEventListener('click', async () => { if(b.dataset.twBper === TW.period) return; await twEnterBoard(b.dataset.twBper); twRender(); }));
+  twBtn(box, '#tw-unpublish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'built', published_at:null }).eq('start', TW.period); if(up.error) throw up.error; toast('הפרסום בוטל'); },
+    () => ({ title:'לבטל את הפרסום?', text:`${TW.people.filter(p => p.active).length} עובדות יפסיקו לראות את הסידור, עד שיפורסם שוב. הסידור עצמו נשמר כטיוטה.`, ok:'כן, לבטל את הפרסום', danger:true }));
+  if(TW.board) twBoardWire(box);
   twNoticesWire(box);
   if(typeof twPilotWire === 'function') twPilotWire(box);
 }
-function twCellWire(box){
-  box.querySelectorAll('[data-tw-cell]').forEach(td => { const go = () => twCellSheet(td.dataset.twCell); td.addEventListener('click', go); td.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } }); });
-}
+// a button with a question before it (heavy steps are never one tap: the review agents 2026-11-14); then everything is loaded again
+function twBtn(box, id, fn, ask){ const b = box.querySelector(id); if(b) b.addEventListener('click', async () => { if(TW.busy) return; if(ask && !(await twConfirm(ask()))) return; TW.busy = true; b.disabled = true; try { await fn(); } catch(e){ console.error(e); toast('⚠ הפעולה נכשלה'); } TW.busy = false; await twLoadBase(); await twLoadPeriod(); twRender(); }); }
 // the builder's sheet of one place: everybody, who offered it, who cannot (a pair she cannot do), tap to add or remove.
 // The pilot (Guy 19.11, taken from the first site): WhatsApp with a ready message next to whoever did not mark the shift; "✓ אישרה" after
 // a yes by WhatsApp; hours of its own for a placement; a close pair she agreed to is allowed, with a word about the short rest; the days
@@ -900,9 +975,12 @@ function twBuildHtml(){
   if(step === 1){
     const rows = act.map(x => ({ x, c:twCount(x), sub:TW.subs.find(s => s.person === x.id) || null }));
     const done = rows.filter(r => r.sub).length, low = rows.filter(r => r.sub && !r.c.ok).length;
-    body = `<p class="tw-step-say">${p.status === 'open' ? 'כאן רואים מי הגישה ומה פתחה. העדפות של עובדות בלי כניסה אישית מסמנים בלשונית "העדפות". כשמספיק עובדות הגישו, ממשיכים לבנייה.' : 'ההגשה נסגרה כשהסידור נבנה. אפשר לפתוח אותה מחדש, כדי שהצוות יוכל לשנות.'}</p>
+    const row = r => `<div class="tw-sub ${r.sub ? (r.c.ok ? 'ok' : 'low') : 'none'}"><b>${pEsc(twDisp(r.x))}</b><span>${r.sub ? `פתחה ${r.c.have} · צריך לפתוח ${r.c.need}${r.c.fixed ? ' (בלי המשמרות הקבועות)' : ''}${r.c.ok ? ' ✓' : ' · פחות ממה שצריך'}${r.c.weeks.some(x => x && x.need && x.eff < x.need && x.eff < x.have) ? ` · בגלל משמרות צמודות אפשר לשבץ בפועל פחות (שבוע 1: ${(r.c.weeks[0] || {}).eff || 0}, שבוע 2: ${(r.c.weeks[1] || {}).eff || 0})` : ''}` : (r.c.have ? `סומנו ${r.c.have} מתוך ${r.c.need}, בלי הגשה` : 'לא סומן כלום')}</span>${r.sub && r.sub.note ? `<small class="tw-sub-note">הערה: ${pEsc(r.sub.note)}</small>` : ''}</div>`;
+    // (Guy 23.11, as in the first site: folded, "הגישו" and "לא הגישו")
+    const grp = (k, title, list, empty) => `<details class="tw-fixed-box tw-subfold" data-tw-subfold="${k}"${(TW.subFolds || {})[k] ? ' open' : ''}><summary>${title} (${list.length})</summary>${list.length ? `<div class="tw-subs">${list.map(row).join('')}</div>` : `<div class="pnote">${empty}</div>`}</details>`;
+    body = `<p class="tw-step-say">${twOpenNow() ? 'כאן רואים מי הגישה ומה פתחה. את ההעדפות של מי שאין לה כניסה אישית ממלאים בלשונית "העדפות", בכפתור "מילוי בשביל מדריכה אחרת".' : p.status === 'open' ? 'ההגשה נסגרה. כאן רואים מי הגישה, ואז ממשיכים לבנייה.' : 'ההגשה נסגרה כשהסידור נבנה. אפשר לפתוח אותה מחדש, כדי שהצוות יוכל לשנות.'}</p>
       <div class="tw-step-sum">הגישו <b>${done}</b> מתוך ${act.length}${low ? ` · ${low} פתחו פחות ממה שכדאי` : ''}</div>
-      <div class="tw-subs">${rows.map(r => `<div class="tw-sub ${r.sub ? (r.c.ok ? 'ok' : 'low') : 'none'}"><b>${pEsc(twDisp(r.x))}</b><span>${r.sub ? `פתחה ${r.c.have} · צריך לפתוח ${r.c.need}${r.c.fixed ? ' (בלי המשמרות הקבועות)' : ''}${r.c.ok ? ' ✓' : ' · פחות ממה שצריך'}${r.c.weeks.some(x => x && x.need && x.eff < x.need && x.eff < x.have) ? ` · בגלל משמרות צמודות אפשר לשבץ בפועל פחות (שבוע 1: ${(r.c.weeks[0] || {}).eff || 0}, שבוע 2: ${(r.c.weeks[1] || {}).eff || 0})` : ''}` : (r.c.have ? `לא הוגש · סומנו ${r.c.have} מתוך ${r.c.need}` : 'לא הוגש')}</span>${r.sub && r.sub.note ? `<small class="tw-sub-note">הערה: ${pEsc(r.sub.note)}</small>` : ''}</div>`).join('')}</div>
+      ${grp('done', 'הגישו', rows.filter(r => r.sub), 'עוד אף אחת לא הגישה.')}${grp('miss', 'לא הגישו', rows.filter(r => !r.sub), 'כולן הגישו ✓')}
       <div class="tw-actions"><button type="button" class="btn" data-tw-step="2">המשך לבנייה ←</button>
         ${p.status === 'built' ? '<button type="button" class="btn ghost" id="tw-reopen">פתיחת ההגשה מחדש</button>' : ''}
         ${typeof liveCut === 'function' && !liveCut() && p.status === 'open' ? '<button type="button" class="btn ghost" id="tw-demo">הדגמה: מילוי העדפות למי שאין כניסה ולא הגישה</button>' : ''}</div>`;
@@ -913,22 +991,18 @@ function twBuildHtml(){
         : '<div class="tw-actions"><button type="button" class="btn" id="tw-build">בניית הסידור</button></div>'}`;
   } else if(step === 3){
     const rep = (p.report && p.report.lines) || [], miss = twMissingCount(), fresh = TW.justBuilt; TW.justBuilt = false;
-    body = `${fresh ? `<div class="pstatus ok" role="status">הסידור נבנה${miss ? '. המשבצות המסומנות "חסר שיבוץ" מחכות לך בטבלה.' : ', כל המשמרות מלאות.'}</div>` : ''}<p class="tw-step-say">לחיצה על משבצת פותחת את רשימת הצוות: מי סימנה "כן", מי "אפשרי", ומי צמודה למשמרת אחרת.</p>
-      ${twLvLegend()}
+    body = `${fresh ? `<div class="pstatus ok" role="status">הסידור נבנה${miss ? '. המשבצות המסומנות "חסר שיבוץ" מחכות לך בטבלה.' : ', כל המשמרות מלאות.'}</div>` : ''}<p class="tw-step-say">לחיצה על משבצת פותחת את רשימת הצוות: מי סימנה "כן", מי "יכול", ומי צמודה למשמרת אחרת. במחשב אפשר לגרור שמות מהרשימה שבצד.</p>
       <div class="tw-step-sum">${miss ? `חסרים <b>${miss}</b> שיבוצים` : 'כל המשמרות מלאות'} · ${TW.asg.length} שיבוצים${TW.asg.some(a => a.by_hand) ? `, ${TW.asg.filter(a => a.by_hand).length} מהם ביד` : ''}</div>
       ${typeof twAttentionHtml === 'function' ? twAttentionHtml() : ''}
       ${rep.length ? `<details class="tw-report"><summary>הערות מהבנייה (${rep.length})</summary><ul>${rep.map(l => `<li>${pEsc(l)}</li>`).join('')}</ul></details>` : ''}
-      ${typeof twPendingHtml === 'function' ? twPendingHtml() : ''}
-      <div class="tw-build-grid"><div>${twGridHtml(true)}</div>${typeof twDragHtml === 'function' ? twDragHtml() : ''}</div>
-      ${typeof twCountsHtml === 'function' ? twCountsHtml() : ''}
+      ${twBoardHtml()}
       <div class="tw-actions"><button type="button" class="btn" data-tw-step="4">המשך לפרסום ←</button></div>`;
   } else {
     const miss = twMissingCount();
     body = p.status === 'published'
-      ? `<div class="pstatus ok">הסידור פורסם ב-${new Date(p.published_at).toLocaleString('he-IL', { day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit' })}. כל הצוות רואה אותו.</div>
-        <p class="tw-step-say">שינויים אחרי הפרסום עושים בצעד 3, והם מופיעים לצוות מיד, עם הודעה למי שהמשמרת שלה השתנתה. בקשות החלפה מאשרים בלשונית "החלפות".</p>
-        ${typeof twPendingHtml === 'function' ? twPendingHtml() : ''}
-        <div class="tw-actions"><button type="button" class="btn ghost" data-tw-step="3">→ תיקונים</button>${typeof twShareAsk === 'function' ? '<button type="button" class="btn ghost" id="tw-share">שיתוף תמונת הסידור</button>' : ''}</div><div class="tw-actions tw-danger-zone"><button type="button" class="btn ghost tw-danger" id="tw-unpublish">ביטול הפרסום</button></div>`
+      ? `<div class="pstatus ok">הסידור פורסם${p.published_at ? ` ב-${new Date(p.published_at).toLocaleString('he-IL', { day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit' })}` : ''}. כל הצוות רואה אותו.</div>
+        <p class="tw-step-say">תיקונים, שיתוף התמונה ו"שליחת עדכונים" נמצאים מעכשיו בכפתור "רכזת" שבלשונית "הסידור".</p>
+        <div class="tw-actions"><button type="button" class="btn" id="tw-to-board">לתצוגת רכזת</button></div>`
       : `<p class="tw-step-say">בפרסום הסידור נפתח לכל הצוות, וכל אחת רואה בו את המשמרות שלה.</p>
         ${miss ? `<div class="pstatus bad">${miss === 1 ? 'חסר שיבוץ אחד' : `חסרים ${miss} שיבוצים`}. אפשר לפרסם בכל זאת ולהשלים אחר כך בצעד 3.</div>` : '<div class="pstatus ok">כל המשמרות מלאות.</div>'}
         <div class="tw-actions"><button type="button" class="btn" id="tw-publish">פרסום לצוות</button><button type="button" class="btn ghost" data-tw-step="3">→ חזרה לתיקונים</button></div>`;
@@ -947,27 +1021,35 @@ async function twNightHist(){
   } catch(e){}
   return out;
 }
-// who is the fixed person of each shift of the week (one per shift; the second place of the shift changes)
+// who is fixed in each shift of the week: two choices per shift (Guy 23.11). They are kept from schedule to schedule, so the fixed shifts of
+// the last schedule are already there, and are changed here
 function twFixedBoxHtml(){
   if(!twCanFix()) return '';
   const act = TW.people.filter(p => p.active), week = twDays(TW.period).slice(0, 7);
-  const pick = (dow, shift) => `<select data-tw-fix="${dow}|${shift}" aria-label="${DOW_NAMES[dow]} ${TW_SHIFT[shift]}"><option value="">אין</option>${act.map(p => `<option value="${p.id}"${twFixedOf(dow, shift) === p.id ? ' selected' : ''}>${pEsc(p.name)}</option>`).join('')}</select>`;
-  return `<details class="tw-fixed-box"${TW.fixedOpen ? ' open' : ''}><summary>משמרות קבועות${TW.fixed.length ? ` (${TW.fixed.length})` : ''}</summary>
-    <div class="pnote">בכל משמרת אפשר לקבוע אדם אחד קבוע. הבנייה משבצת אותו שם קודם, בכל שבוע, והמקום השני במשמרת מתחלף. משמרת קבועה נספרת בתוך המשמרות השבועיות.</div>
-    <div class="tw-fixed-grid">${week.map(day => `<div class="tw-fixed-day"><b>${DOW_NAMES[dowOf(day)]}</b>${twSlots(day).map(sl => `<label>${TW_SHIFT[sl.shift]} <small class="tw-fix-h">${sl.shift === 'W' ? 'שישי 14:00 עד שבת 20:30' : twL(sl.hours)}</small> ${pick(dowOf(day), sl.shift)}</label>`).join('')}</div>`).join('')}</div>
+  const pick = (dow, shift, i) => { const cur = twFixedOf(dow, shift)[i] || '';
+    return `<select data-tw-fix="${dow}|${shift}" aria-label="${DOW_NAMES[dow]} ${TW_SHIFT[shift]}, קבועה ${i + 1}"><option value="">אין</option>${act.map(p => `<option value="${p.id}"${cur === p.id ? ' selected' : ''}>${pEsc(twDisp(p))}</option>`).join('')}</select>`; };
+  return `<details class="tw-fixed-box tw-fixbox"${TW.fixedOpen ? ' open' : ''}><summary>משמרות קבועות${TW.fixed.length ? ` (${TW.fixed.length})` : ''}</summary>
+    <div class="pnote">בכל משמרת אפשר לקבוע עד שתי עובדות קבועות. הבנייה משבצת אותן שם קודם, בכל שבוע, ושאר המקומות במשמרת מתחלפים. הקבועות נשמרות מסידור לסידור, וכאן משנים אותן. משמרת קבועה נספרת בתוך המשמרות השבועיות.</div>
+    <div class="tw-fixed-grid">${week.map(day => `<div class="tw-fixed-day"><b>${DOW_NAMES[dowOf(day)]}</b>${twSlots(day).map(sl => `<div class="tw-fix-row"><span>${TW_SHIFT[sl.shift]} <small class="tw-fix-h">${sl.shift === 'W' ? `שישי ${twNice(twWeekend(day, 'start'))} עד שבת ${twNice(twWeekend(addDays(day, 1), 'end'))}` : twL(sl.hours)}</small></span>${pick(dowOf(day), sl.shift, 0)}${pick(dowOf(day), sl.shift, 1)}</div>`).join('')}</div>`).join('')}</div>
     <div class="pnote">שינוי כאן משפיע מהבנייה הבאה. כדי לעדכן סידור קיים לוחצים "בנייה מחדש".</div></details>`;
 }
 function twBuildWire(box){
   box.querySelectorAll('[data-tw-step]').forEach(b => b.addEventListener('click', () => { if(Number(b.dataset.twStep) !== TW.step) twGo(() => { TW.step = Number(b.dataset.twStep); }); }));
-  twCellWire(box);
+  twBoardWire(box);
   if(typeof twPilotWire === 'function') twPilotWire(box);
-  const fb = box.querySelector('.tw-fixed-box'); if(fb) fb.addEventListener('toggle', () => { TW.fixedOpen = fb.open; });
+  box.querySelectorAll('[data-tw-subfold]').forEach(d => d.addEventListener('toggle', () => { TW.subFolds = TW.subFolds || {}; TW.subFolds[d.dataset.twSubfold] = d.open; }));
+  const tb = box.querySelector('#tw-to-board'); if(tb) tb.addEventListener('click', async () => { await twEnterBoard(TW.period); twGo(() => { TW.tab = 'sched'; TW.step = null; }); });
+  const fb = box.querySelector('.tw-fixbox'); if(fb) fb.addEventListener('toggle', () => { TW.fixedOpen = fb.open; });
   box.querySelectorAll('[data-tw-fix]').forEach(sel => sel.addEventListener('change', async () => {
-    const [dow, shift] = sel.dataset.twFix.split('|'), person = sel.value;
-    const r = person ? await sbPersonal.from('tw_fixed').upsert({ dow:Number(dow), shift, person }) : await sbPersonal.from('tw_fixed').delete().eq('dow', Number(dow)).eq('shift', shift);
+    const [dow, shift] = sel.dataset.twFix.split('|');
+    const list = [...new Set([...box.querySelectorAll(`[data-tw-fix="${dow}|${shift}"]`)].map(x => x.value).filter(Boolean))];
+    if(list.length < [...box.querySelectorAll(`[data-tw-fix="${dow}|${shift}"]`)].filter(x => x.value).length) toast('אותה עובדת נבחרה פעמיים: נשמרה פעם אחת');
+    const del = await sbPersonal.from('tw_fixed').delete().eq('dow', Number(dow)).eq('shift', shift);
+    const r = del.error ? del : list.length ? await sbPersonal.from('tw_fixed').insert(list.map(person => ({ dow:Number(dow), shift, person }))) : del;
     if(r.error){ console.error(r.error); toast('⚠ השינוי לא נשמר'); } else toast('נשמר');
     await twLoadBase(); twRender();
   }));
+
   // (ask: a question before the step; heavy steps are never one tap: the review agents 2026-11-14)
   const on = (id, fn, ask) => { const b = box.querySelector(id); if(b) b.addEventListener('click', async () => { if(TW.busy) return; if(ask && !(await twConfirm(ask()))) return; TW.busy = true; b.disabled = true; try { await fn(); } catch(e){ console.error(e); toast('⚠ הפעולה נכשלה'); } TW.busy = false; await twLoadBase(); await twLoadPeriod(); twRender(); }); };
   on('#tw-build', async () => {
@@ -994,8 +1076,6 @@ function twBuildWire(box){
   on('#tw-publish', () => twPublishAsk());
   on('#tw-reopen', async () => { const up = await sbPersonal.from('tw_period').update({ status:'open' }).eq('start', TW.period); if(up.error) throw up.error; toast('ההגשה נפתחה מחדש'); TW.step = 1; },
     () => ({ title:'לפתוח את ההגשה מחדש?', text:'הצוות יוכל לשנות העדפות. הסידור שנבנה נשאר, ואפשר לבנות מחדש אחר כך.', ok:'כן, לפתוח' }));
-  on('#tw-unpublish', async () => { const up = await sbPersonal.from('tw_period').update({ status:'built', published_at:null }).eq('start', TW.period); if(up.error) throw up.error; toast('הפרסום בוטל'); },
-    () => ({ title:'לבטל את הפרסום?', text:`${TW.people.filter(p => p.active).length} עובדות יפסיקו לראות את הסידור, עד שיפורסם שוב. הסידור עצמו נשמר כטיוטה.`, ok:'כן, לבטל את הפרסום', danger:true }));
   // (the demo fill is not for somebody with a sign-in: they hand in themselves)
   on('#tw-demo', async () => {
     for(const p of TW.people.filter(x => x.active && !x.staff_id && !TW.subs.some(s => s.person === x.id))){ if(!(await twSaveOptions(p, twDemoOptions(p)))) throw new Error('demo options'); }
@@ -1028,11 +1108,11 @@ async function twPublish(confirm){
   let r = await sbPersonal.rpc('tw_publish', { p_period:TW.period, p_confirm:confirm });
   if(r.error && /PGRST202|Could not find the function/.test(JSON.stringify(r.error))){          // (a database before scheduling-v80.sql)
     r = await sbPersonal.from('tw_period').update({ status:'published', published_at:new Date().toISOString() }).eq('start', TW.period);
-    if(r.error) throw r.error; toast('הסידור פורסם לצוות'); TW.step = 4; return;
+    if(r.error) throw r.error; toast('הסידור פורסם לצוות'); TW.step = null; TW.tab = 'sched'; TW.board = true; return;
   }
   if(r.error) throw r.error;
   const d = r.data || {};
-  if(d.published){ toast('הסידור פורסם לצוות'); TW.step = 4; return; }
+  if(d.published){ toast('הסידור פורסם לצוות'); TW.step = null; TW.tab = 'sched'; TW.board = true; return; }
   const errs = d.errors || [], warns = d.warnings || [];
   const list = a => `<ul class="tw-chk">${a.slice(0, 30).map(x => `<li>${pEsc(x)}</li>`).join('')}${a.length > 30 ? `<li>ועוד ${a.length - 30}</li>` : ''}</ul>`;
   const sh = twSheet(errs.length
@@ -1083,15 +1163,16 @@ function twSolve({ start, people, options, fixed, hand, seed, hist }){
   const pairOf = (pid, a, b) => { const key = pid + a.k + '|' + b.k; if(!(key in pairMemo)) pairMemo[key] = twPair(pid, a.day, a.shift, b.day, b.shift, a.a, b.a); return pairMemo[key]; };
   const nightOffer = {};          // per person and week: was a night offered at all
   options.forEach(o => { if(o.shift === 'N' && o.day in di) (nightOffer[o.person] = nightOffer[o.person] || [false, false])[di[o.day] < 7 ? 0 : 1] = true; });
-  const fixedOf = {}; (fixed || []).forEach(f => { fixedOf[f.dow + '|' + f.shift] = f.person; });
+  const fixedOf = {}; (fixed || []).forEach(f => { (fixedOf[f.dow + '|' + f.shift] = fixedOf[f.dow + '|' + f.shift] || []).push(f.person); });
   const slotW = (day, shift) => ((twSlots(day).find(s => s.shift === shift) || {}).w || 1);
   // what is there before the automatic part: the builder's own placements, and then the fixed people of each shift (unless it clashes)
   const pre = hand.filter(a => a.day in di).map(a => ({ person:a.person, day:a.day, shift:a.shift, fixedRow:false, a }));
   days.forEach(day => twSlots(day).forEach(s => {
-    const pid = fixedOf[dowOf(day) + '|' + s.shift];
-    if(!pid || !people.some(p => p.id === pid)) return;
-    if(pre.some(a => a.person === pid && twPair(pid, a.day, a.shift, day, s.shift, a.a) === 'block')) return;
-    pre.push({ person:pid, day, shift:s.shift, fixedRow:true });
+    (fixedOf[dowOf(day) + '|' + s.shift] || []).forEach(pid => {
+      if(!people.some(p => p.id === pid) || pre.some(a => a.person === pid && a.day === day && a.shift === s.shift)) return;
+      if(pre.some(a => a.person === pid && twPair(pid, a.day, a.shift, day, s.shift, a.a) === 'block')) return;
+      pre.push({ person:pid, day, shift:s.shift, fixedRow:true });
+    });
   }));
   const places = [];          // one entry per place to fill
   days.forEach(day => twSlots(day).forEach(s => {
@@ -1127,7 +1208,7 @@ function twSolve({ start, people, options, fixed, hand, seed, hist }){
     const score = (p, pl) => {
       let s = rnd() * 3;
       s += (1 - load[p.id] / Math.max(1, quota(p))) * 10;                      // the one who is furthest from their shifts first
-      if(fixedOf[dowOf(pl.day) + '|' + pl.shift] === p.id) s += 50;             // the person's fixed shift
+      if((fixedOf[dowOf(pl.day) + '|' + pl.shift] || []).includes(p.id)) s += 50;             // the person's fixed shift
       if(pl.shift === 'N') s += nights[p.id][pl.week] === 0 ? 8 : -6 - (hist[p.id] || 0) * 4;          // a first night of the week; a second one by turn
       s -= Math.abs(wload[p.id][pl.week] + pl.w - p.per_week) * 1.5;            // close to the weekly number
       if(pl.shift === 'M' || pl.shift === 'A') s -= kinds[p.id][pl.shift] * 1.5;          // mornings and afternoons balanced
@@ -1232,8 +1313,7 @@ function twTeamHtml(){
       <label>מייל (לא חובה) <input type="email" id="tw-new-mail" maxlength="80" autocomplete="off" dir="ltr"></label>
       ${TW.prefsOn ? '<label>טלפון (לא חובה) <input type="tel" id="tw-new-phone" maxlength="20" autocomplete="off" dir="ltr"></label>' : ''}
       <label>משמרות בשבוע <select id="tw-new-pw">${[1, 2, 3, 4, 5].map(n => `<option${n === 3 ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
-      <label class="tw-chk-l"><input type="checkbox" id="tw-new-admin"> מנהלת מערכת</label>
-      <label class="tw-chk-l"><input type="checkbox" id="tw-new-sched" checked> משובצת בסידור ומגישה העדפות</label>
+      <label>תפקיד <select id="tw-new-role"><option value="staff" selected>מדריכה</option><option value="both">מנהלת מערכת ומדריכה</option><option value="admin">מנהלת מערכת בלבד</option></select></label>
       <button type="button" class="btn" id="tw-add-person">הוספה</button></div>
     <div class="pnote">מי שיש לה מייל מקבלת כניסה אישית מיד: בפעם הראשונה נכנסים עם קוד שמגיע למייל, ובוחרים סיסמה.</div></details>
     ${fold('team', `רשימת העובדות (${act.length})`, `${TW.people.length > 7 ? '<label class="tw-search">חיפוש <input type="search" id="tw-team-q" placeholder="שם" autocomplete="off"></label>' : ''}
@@ -1243,13 +1323,12 @@ function twTeamHtml(){
       ${TW.prefsOn && x.active ? `<button type="button" class="btn ghost small" data-tw-det="${x.id}">פרטים</button>` : `<button type="button" class="btn ghost small tw-rm" data-tw-act="${x.id}">${x.active ? 'הסרה מהצוות' : 'החזרה'}</button>`}</span></div>`).join('')}</div>`)}
 
     ${fold('queue', `מי בונה את הסידור${queue.length ? ` (תור של ${queue.length})` : ' (מנהלות המערכת)'}`, `
-    <p class="tw-step-say">כל שבועיים נפתחים לבד. בלי תור, מנהלות המערכת בונות את הסידור. עם תור, מי שבאה בתור בונה, ורואה את הכרטיס "בניית הסידור" עד היום האחרון של אותו סידור.</p>
-    ${queue.length ? `<ol class="tw-queue">${queue.map((id, i) => `<li><b>${i + 1}. ${pEsc(twName(id))}</b><span class="tw-btns">
+    ${queue.length ? `<ol class="tw-queue">${queue.map((id, i) => `<li><b>${i + 1}. ${pEsc(twName(id))}</b><small class="tw-q-dates">בונה את ${twL(twPeriodLabel(addDays(next, 14 * i)))}</small><span class="tw-btns">
       <button type="button" class="btn ghost small" data-tw-q-up="${i}"${i ? '' : ' disabled aria-hidden="true" tabindex="-1" style="visibility:hidden"'} aria-label="להקדים את ${pEsc(twName(id))}">↑</button>
       <button type="button" class="btn ghost small" data-tw-q-down="${i}"${i < queue.length - 1 ? '' : ' disabled aria-hidden="true" tabindex="-1" style="visibility:hidden"'} aria-label="לאחר את ${pEsc(twName(id))}">↓</button>
       <button type="button" class="btn ghost small" data-tw-q-del="${i}" aria-label="להוציא את ${pEsc(twName(id))} מהתור">✕</button></span></li>`).join('')}</ol>`
       : '<div class="pstatus ok">אין תור: מנהלות המערכת בונות כל סידור. אפשר להוסיף עובדות לתור, ואז כל שבועיים בונה הבאה בתור.</div>'}
-    ${act.some(p => !queue.includes(p.id)) ? `<div class="tw-form"><label>הוספה לתור <select id="tw-q-add"><option value="">(לבחור)</option>${act.filter(p => !queue.includes(p.id)).map(p => `<option value="${p.id}">${pEsc(p.name)}</option>`).join('')}</select></label></div>` : ''}
+    ${act.some(p => !queue.includes(p.id)) ? `<div class="tw-form"><label>מי בונה את הסידור של ${twL(twPeriodLabel(addDays(next, 14 * queue.length)))}? <select id="tw-q-add"><option value="">(לבחור)</option>${act.filter(p => !queue.includes(p.id)).map(p => `<option value="${p.id}">${pEsc(p.name)}</option>`).join('')}</select></label></div>` : ''}
     <div class="tw-form tw-days">ההגשה נפתחת ${sel('tw-open-days', [5, 7, 10, 14, 17, 21, 28], od)} ימים לפני שהשבועיים מתחילים, ונסגרת ${sel('tw-close-days', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14], cd)} ימים לפני, בלילה שאחרי, ב-${twL('05:00')}.</div>`)}
 
     ${fold('periods', 'השבועיים', `
@@ -1262,11 +1341,18 @@ function twTeamHtml(){
     <div class="pnote">מנהלות מערכת מוסיפות צוות, קובעות מכסות ואת התור של מי בונה את הסידור. כאן מופיעות מי שלא משובצות לסידור. מוסיפים אותן בטופס ההוספה למעלה.</div>
     ${admins.length ? `<div class="tw-list">${admins.map(s => `<div class="tw-row"><b>${pEsc(s.display_name)}</b><span class="tw-row-sub">${(TW.priv[s.id] || {}).auth_user_id ? '<span class="tw-ok">יש כניסה אישית</span>' : (TW.priv[s.id] || {}).email ? `<span dir="ltr">${pEsc(TW.priv[s.id].email)}</span> <button type="button" class="btn small" data-tw-login="${s.id}">יצירת כניסה</button>` : ''}</span></div>`).join('')}</div>` : ''}`)}
     ${typeof twViewAsPickHtml === 'function' ? twViewAsPickHtml(fold) : ''}
+    ${fold('wa', 'קבוצת הוואטסאפ של הצוות', `<p class="tw-step-say">הקישור לקבוצה (בוואטסאפ: פרטי הקבוצה, ואז "הזמנה באמצעות קישור"). כשיש קישור, ליד כפתור השליחה ב"הודעות" מופיע כפתור שפותח את הקבוצה.</p>
+      <div class="tw-form"><label>קישור <input type="url" id="tw-wa-link" dir="ltr" maxlength="200" placeholder="https://chat.whatsapp.com/..." value="${pEsc(String(twSetting('wa_group', '') || ''))}"></label></div>
+      <div class="tw-actions"><button type="button" class="btn" id="tw-wa-save">שמירה</button></div>`)}
     ${fold('weekend', 'שעות סוף השבוע', (() => { const wh = twSetting('weekend_hours', null) || {}, g = (k, part, d) => ((wh[k] || {})[part]) || d;
       return `<p class="tw-step-say">משמרת סוף השבוע מתחילה בשישי (או בערב חג) ומסתיימת במוצאי שבת (או חג). השעות שונות בחורף ובקיץ.</p>
       ${[['winter', 'חורף'], ['summer', 'קיץ']].map(([k, w]) => `<div class="tw-form"><b>${w}</b><label>מתחילה <input type="text" inputmode="numeric" maxlength="5" dir="ltr" data-tw-wh="${k}|start" value="${g(k, 'start', '14:00')}"></label><label>מסתיימת <input type="text" inputmode="numeric" maxlength="5" dir="ltr" data-tw-wh="${k}|end" value="${g(k, 'end', '20:30')}"></label></div>`).join('')}
-      <div class="tw-actions"><button type="button" class="btn" id="tw-wh-save">שמירת השעות</button></div>
-      <div class="pnote">הקיץ והחורף לפי שעון הקיץ בישראל. השינוי חל על סידורים שנבנים מעכשיו.</div>`; })())}
+      <h4 class="tw-h">מתי עוברים לשעות הקיץ ובחזרה</h4>
+      <div class="pnote">התאריכים נקבעים לבד לפי שעון הקיץ בישראל. אפשר לשנות אותם, אם השעות של המשמרות מתחלפות ביום אחר.</div>
+      ${[0, 1].map(k => { const y0 = new Date().getFullYear(), y = (twToday() >= twSummerAuto(y0).end ? y0 + 1 : y0) + k, dd = twSummerDates(y), auto = twSummerAuto(y), own = dd.start !== auto.start || dd.end !== auto.end;
+        return `<div class="tw-form tw-dst"><b>${y}</b><label>שעות הקיץ מ- <input type="date" data-tw-dst="${y}|start" value="${dd.start}"></label><label>עד <input type="date" data-tw-dst="${y}|end" value="${dd.end}"></label>${own ? `<small>(שעון הקיץ עצמו: ${twShort(auto.start)} עד ${twShort(auto.end)})</small>` : ''}</div>`; }).join('')}
+      <div class="tw-actions"><button type="button" class="btn" id="tw-wh-save">שמירה</button></div>
+      <div class="pnote">השינוי חל על סידורים שנבנים מעכשיו.</div>`; })())}
     ${twIsAdmin() ? fold('cfg', 'הגדרות המוסד (צפייה)', twCfgHtml()) : ''}`;
 }
 // ---- 8. the organisation's settings, read only (stage 1, scheduling-v83.sql; editing comes with the setup flow, stage 3 — Guy 2026-11-17)
@@ -1301,7 +1387,7 @@ function twCfgHtml(){
     return `<h4 class="tw-h">${pEsc(h.name)} <small>(${twL(h.people)} עובדות${h.extra_week_cap != null ? ` · עד ${twL(h.extra_week_cap)} מקומות נוספים בשבוע` : ''})</small></h4>
       ${groups.map(([dt, l]) => `<div class="tw-cfg-day">${TW_DAY_TYPE[dt]}</div><div class="tw-scroll"><table class="tw-cfg-table"><thead><tr><th>משמרת</th><th>שעות</th><th>כמה צריך</th><th>נספרת במכסה</th></tr></thead><tbody>${l.map(shiftRow).join('')}</tbody></table></div>`).join('')}`;
   }).join('');
-  const rules = Object.keys(TW_RULE_KIND).map(k => [k, (v.rules || []).filter(r => r.kind === k)]).filter(([, l]) => l.length).map(([k, l]) =>
+  const rules = Object.keys(TW_RULE_KIND).map(k => [k, (v.rules || []).filter(r => r.kind === k && r.on)]).filter(([, l]) => l.length).map(([k, l]) =>
     `<div class="tw-cfg-day">${TW_RULE_KIND[k]}</div><ul class="tw-cfg-rules">${l.map(r => `<li class="${r.on ? 'on' : 'off'}"><span aria-hidden="true">${r.on ? '✓' : '–'}</span> ${pEsc(r.label)}${Object.entries(r.params || {}).map(([p, n]) => ` <small>· ${TW_PARAM[p] ? TW_PARAM[p](twL(n)) : twL(n)}</small>`).join('')}${r.on ? '' : ' <small>(כבוי)</small>'}</li>`).join('')}</ul>`).join('');
   const hol = (v.holidays || []).filter(h => h.day >= isoDate(new Date())).slice(0, 6);
   return `${head}${houses}<h4 class="tw-h">כללים</h4>${rules}
@@ -1337,8 +1423,16 @@ function twTeamWire(box){
   const whs = box.querySelector('#tw-wh-save');
   if(whs) whs.addEventListener('click', () => {
     const v = {}; box.querySelectorAll('[data-tw-wh]').forEach(i => { const [k, part] = i.dataset.twWh.split('|'); (v[k] = v[k] || {})[part] = i.value || (part === 'start' ? '14:00' : '20:30'); });
-    run(() => sbPersonal.from('tw_settings').upsert({ key:'weekend_hours', value:v }), 'השעות נשמרו');
+    const dst = Object.assign({}, twSetting('summer_dates', null) || {});
+    box.querySelectorAll('[data-tw-dst]').forEach(i => { const [y, part] = i.dataset.twDst.split('|'); if(i.value) (dst[y] = Object.assign({}, dst[y] || {}))[part] = i.value; });
+    if(Object.values(dst).some(x => x.start && x.end && x.start >= x.end)){ toast('תאריך הסיום צריך להיות אחרי תאריך ההתחלה'); return; }
+    Object.keys(dst).forEach(y => { const a = twSummerAuto(Number(y)); if(dst[y].start === a.start && dst[y].end === a.end) delete dst[y]; });          // (the clock's own dates are not kept)
+    run(async () => { const r = await sbPersonal.from('tw_settings').upsert({ key:'weekend_hours', value:v }); if(r.error) return r; return sbPersonal.from('tw_settings').upsert({ key:'summer_dates', value:dst }); }, 'נשמר');
   });
+  const was = box.querySelector('#tw-wa-save');
+  if(was) was.addEventListener('click', () => { const v = box.querySelector('#tw-wa-link').value.trim();
+    if(v && !/^https:\/\/chat\.whatsapp\.com\/\S+$/.test(v)){ toast('צריך קישור הזמנה לקבוצה, שמתחיל ב-https://chat.whatsapp.com/', 5000); return; }
+    run(() => sbPersonal.from('tw_settings').upsert({ key:'wa_group', value:v }), v ? 'הקישור נשמר' : 'הקישור נמחק'); });
   const np = box.querySelector('#tw-new-period');
   if(np) np.addEventListener('click', () => {
     const b = box.querySelector('#tw-new-builder').value || null, st = np.dataset.start, cd = Number(twSetting('close_days', 5)), [y, m, d] = addDays(st, 1 - cd).split('-').map(Number);
@@ -1395,8 +1489,8 @@ function twTeamWire(box){
   }));
   box.querySelector('#tw-add-person').addEventListener('click', () => {
     const v = id => { const el = box.querySelector(id); return el ? el.value.trim() : ''; };
-    const name = v('#tw-new-name'), last = v('#tw-new-last'), mail = v('#tw-new-mail'), phone = v('#tw-new-phone'), pw = Number(box.querySelector('#tw-new-pw').value), admin = box.querySelector('#tw-new-admin').checked;
-    const sched = !admin || box.querySelector('#tw-new-sched').checked;          // (Guy 19.11: the local admin is also one of the staff)
+    const name = v('#tw-new-name'), last = v('#tw-new-last'), mail = v('#tw-new-mail'), phone = v('#tw-new-phone'), pw = Number(box.querySelector('#tw-new-pw').value), role = box.querySelector('#tw-new-role').value;
+    const admin = role !== 'staff', sched = role !== 'admin';          // (Guy 19.11: the local admin may be one of the staff too; 23.11: one choice of the role)
     if(!name){ toast('צריך שם פרטי'); return; }
     if(admin && !mail){ toast('למנהלת מערכת צריך מייל'); return; }
     if(phone && !/^[0-9+\- ]{7,20}$/.test(phone)){ toast('מספר טלפון לא תקין'); return; }
@@ -1457,7 +1551,7 @@ async function twRpc(name, args, okMsg){
 function twMyShiftsHtml(bare){
   if(!TW.me) return '';
   TW.myNext = ''; TW.myCount = 0;
-  const p = twPeriodRow(), today = twToday();
+  const p = twPeriodRow() || {}, today = twToday();
   const pubOf = per => (TW.periods.find(x => x.start === per) || {}).status === 'published';
   const seen = new Set(), mine = [];
   TW.asg.filter(a => a.person === TW.me.id && (a.day >= today || p.status === 'published')).forEach(a => { seen.add(a.id); mine.push(a); });
@@ -1530,7 +1624,9 @@ function twSwapsHtml(){
 function twSwapsWire(box){
   const sw = id => (TW.swaps || []).find(s => s.id === id) || {};
   box.querySelectorAll('[data-tw-take]').forEach(b => b.addEventListener('click', async () => { const s = sw(b.dataset.twTake);
-    if(await twConfirm({ title:'לקחת את המשמרת?', text:`${twShiftLine(s.day, s.shift)}. אחרי האישור של מי שבנתה את הסידור, המשמרת תעבור אליך.`, ok:'כן, לקחת' })) twRpc('tw_swap_take', { p_swap:b.dataset.twTake }, 'נרשם. ממתין לאישור של מי שבנתה את הסידור'); }));
+    const per = TW.periods.find(x => x.start === s.period) || {}, self = !!TW.me && ((per.builder && per.builder === TW.me.id) || (!per.builder && TW.boss));
+    if(await twConfirm({ title:'לקחת את המשמרת?', text:`${twShiftLine(s.day, s.shift)}. ${self ? 'את בונה את השבועיים האלה, ולכן ההחלפה מאושרת מיד והמשמרת עוברת אליך.' : 'אחרי האישור של מי שבנתה את הסידור, המשמרת תעבור אליך.'}`, ok:'כן, לקחת' }))
+      twRpc('tw_swap_take', { p_swap:b.dataset.twTake }, self ? 'המשמרת עברה אליך והסידור עודכן' : 'נרשם. ממתין לאישור של מי שבנתה את הסידור'); }));
   box.querySelectorAll('[data-tw-cancel]').forEach(b => b.addEventListener('click', async () => { const s = sw(b.dataset.twCancel), giveUp = TW.me && s.taker === TW.me.id;
     if(await twConfirm(giveUp ? { title:'לוותר על המשמרת?', text:'הבקשה תחזור להיות פתוחה, ומישהי אחרת תוכל לקחת אותה.', ok:'כן, לוותר' } : { title:'לבטל את הבקשה?', text:'המשמרת נשארת שלך, והבקשה תיעלם מהצוות.', ok:'כן, לבטל' })) twRpc('tw_swap_cancel', { p_swap:b.dataset.twCancel }, 'בוטל'); }));
   box.querySelectorAll('[data-tw-decide]').forEach(b => b.addEventListener('click', async () => { const s = sw(b.dataset.twDecide), ok = !!b.dataset.ok;
@@ -1538,10 +1634,12 @@ function twSwapsWire(box){
       : { title:'לא לאשר את ההחלפה?', text:`המשמרת נשארת של ${twName(s.from_person)}.`, ok:'כן, לא לאשר' };
     if(await twConfirm(q)) twRpc('tw_swap_decide', { p_swap:b.dataset.twDecide, p_approve:ok }, ok ? 'ההחלפה אושרה והסידור עודכן' : 'ההחלפה לא אושרה'); }));
 }
+// the link of the team's WhatsApp group (tw_settings 'wa_group', set in "ניהול"): a full link, or only the code of the invitation
+function twWaGroup(){ const v = String(twSetting('wa_group', '') || '').trim(); if(!v) return ''; return /^https:\/\//.test(v) ? v : 'https://chat.whatsapp.com/' + v.replace(/^.*\//, ''); }
 function twInboxHtml(){
   if(TW.socialOff) return '<div class="pnote">ההודעות עוד לא הופעלו במסד הזה.</div>';
   const who = m => { const p = TW.people.find(x => x.staff_id && x.staff_id === m.from_staff); return p ? p.name : 'הנהלה'; };
-  const write = twBuilderNow() ? `<div class="tw-compose"><label class="tw-note-l">הודעה לכל הצוות<textarea id="tw-msg" rows="3" maxlength="1000"></textarea></label><div class="pnote tw-privacy">${twT('privacy')}</div><button type="button" class="btn" id="tw-msg-send">שליחה</button></div>` : '';
+  const write = twBuilderNow() ? `<div class="tw-compose"><label class="tw-note-l">הודעה לכל הצוות<textarea id="tw-msg" rows="3" maxlength="1000"></textarea></label><div class="pnote tw-privacy">${twT('privacy')}</div><div class="tw-actions tw-send-row"><button type="button" class="btn" id="tw-msg-send">שליחה</button>${twWaGroup() ? `<a class="btn ghost tw-wa-group" href="${pEsc(twWaGroup())}" target="_blank" rel="noopener">קבוצת הוואטסאפ</a>` : ''}</div></div>` : '';
   const list = (TW.msgs || []).map(m => `<div class="tw-msg"><small>${twU(who(m))} · ${new Date(m.created_at).toLocaleString('he-IL', { day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit' })}</small><p data-u>${pEsc(m.body)}</p>
     ${TW.boss || m.from_staff === srv.me ? `<button type="button" class="tw-x" data-tw-msg-del="${m.id}" aria-label="מחיקת ההודעה">✕</button>` : ''}</div>`).join('');
   return write + (list ? `<div class="tw-list">${list}</div>` : '<div class="pnote">כאן יופיעו הודעות ממי שבונה את הסידור ומההנהלה.</div>');
@@ -1588,7 +1686,7 @@ TW.nav = [];
 const twOwnSite = () => document.body.classList.contains('product-shibutz');
 function twGo(fn){
   if(twUndoEl){ twUndoEl.remove(); twUndoEl = null; }
-  TW.nav.push({ tab:TW.tab, step:TW.step, week:TW.week, full:TW.full });
+  TW.nav.push({ tab:TW.tab, step:TW.step, week:TW.week, full:TW.full, board:!!TW.board, period:TW.period });
   if(TW.nav.length > 40) TW.nav.shift();
   if(twOwnSite()){ try { history.pushState({ tw:'nav' }, ''); } catch(e){} }
   fn(); twRender(); window.scrollTo(0, 0);
@@ -1601,7 +1699,10 @@ window.addEventListener('popstate', () => {
   const top = twTopSheet();
   if(top){ top._byBack = true; top.remove(); return; }
   const s = TW.nav.pop(); if(!s) return;
-  Object.assign(TW, s); twRender(); window.scrollTo(0, 0);
+  const per = s.period; delete s.period;
+  Object.assign(TW, s);
+  if(per && per !== TW.period){ TW.period = per; twLoadPeriod().then(() => { twRender(); window.scrollTo(0, 0); }); return; }
+  twRender(); window.scrollTo(0, 0);
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && twOwnSite()){ const top = twTopSheet(); if(top && top.classList.contains('mx-sheet')) top.remove(); } });
 // every window: one step in the history (in the own site), the focus inside it, and its own closing work (_onClose)

@@ -53,138 +53,108 @@ function twAttentionHtml(){
   const act = miss.length + rest.length;
   const infoBox = info.length ? `<details class="tw-fixed-box tw-info"><summary>לידיעה (${info.length})</summary>${info.map(x => `<div class="pstatus tw-soft tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`).join('')}</details>` : '';
   if(!act) return '<div class="pstatus ok">אין דברים שדורשים תשומת לב.</div>' + infoBox;
-  return `<details class="tw-fixed-box tw-attn"${TW.attnClosed ? '' : ' open'}><summary>דורש תשומת לב (${act})</summary>
+  return `<details class="tw-fixed-box tw-attn"${TW.attnOpen ? ' open' : ''}><summary>דורש תשומת לב (${act})</summary>
     ${miss.length ? `<div class="pstatus bad tw-attn-row"><b>משבצות חסרות (${miss.length})</b><span class="tw-attn-chips">${miss.map(x => `<button type="button" class="btn ghost small" data-tw-goto="${x.go}">${pEsc(x.t)}${/^חסרים/.test(x.x) ? ' (' + x.x.replace(/\D/g, '') + ')' : ''}</button>`).join('')}</span></div>` : ''}
     ${shown.map(row).join('')}
     ${!TW.attnAll && rest.length > MAX ? `<div class="tw-actions"><button type="button" class="btn ghost small" id="tw-attn-all">עוד ${rest.length - MAX}</button></div>` : ''}
     <div class="pnote">לחיצה על משבצת פותחת אותה.</div></details>${infoBox}`;
 }
-// ---- 2. "כמה משמרות לכל אחת": the weeks, the two weeks against the least, nights (and who had two), mornings / afternoons / nights
-function twCountsHtml(){
-  if(!TW.asg.length) return '';
-  const act = TW.people.filter(p => p.active), wk = (p, w) => TW.asg.filter(a => a.person === p.id && twWeekOf(TW.period, a.day) === w).length;
-  const rows = act.map(p => {
-    const all = TW.asg.filter(a => a.person === p.id), q = p.per_week * 2, n = all.length, k = sh => all.filter(a => a.shift === sh).length;
-    const nw = [0, 1].map(w => all.filter(a => a.shift === 'N' && twWeekOf(TW.period, a.day) === w).length);
-    const st = n === q ? 'ok' : n > q ? 'over' : 'low';
-    return { st, html:`<div class="tw-cnt ${st}"><b>${pEsc(twDisp(p))}</b> · ${n} מתוך ${q}${st === 'ok' ? ' ✓' : st === 'over' ? ` · מעל המינימום (+${n - q})` : ` · חסרות ${q - n}`}
-      <small>שבוע 1: ${wk(p, 0)} · שבוע 2: ${wk(p, 1)} · לילות ${nw[0] + nw[1]}${nw.some(x => x >= 2) ? ' (שני לילות בשבוע אחד)' : ''} · בוקר ${k('M')}, צהריים ${k('A')}, לילה ${k('N')}, סוף שבוע ${k('W')}</small></div>` };
-  });
-  const off = rows.filter(r => r.st !== 'ok'), ok = rows.filter(r => r.st === 'ok');
-  return `<details class="tw-fixed-box"${TW.countsOpen === false ? '' : ' open'} data-tw-counts><summary>כמה משמרות לכל אחת${off.length ? ` (${off.length === 1 ? 'אחת לא במספר המדויק' : `${off.length} לא במספר המדויק`})` : ''}</summary>
-    ${off.map(r => r.html).join('')}${ok.length ? `<details class="tw-cnt-ok"><summary>במספר המדויק (${ok.length})</summary>${ok.map(r => r.html).join('')}</details>` : ''}</details>`;
-}
-
 // ---- 3. "שליחת עדכונים" (the first site): changes after publishing reach the staff's e-mail together, when the builder presses
 // (each person sees her own changes on the site at once, with "הבנתי"; scheduling-v82.sql). The count comes from the database (v86).
+// (Guy 23.11) for all the published schedules the coordinator may change, so the line shows in her "הסידור" and in "רכזת" alike, and only
+// when there are changes
 async function twPendingLoad(){
-  TW.pending = null;
-  const p = twPeriodRow(); if(!p || p.status !== 'published' || !twIsBuilder()) return;
-  try { const r = await sbPersonal.rpc('tw_send_updates', { p_period:TW.period, p_send:false }); if(!r.error) TW.pending = r.data || 0; } catch(e){}
+  TW.pend = {};
+  if(typeof twCoordOk !== 'function' || !twCoordOk()) return;
+  await Promise.all(twBoardPers().filter(p => p.status === 'published').map(async p => {
+    try { const r = await sbPersonal.rpc('tw_send_updates', { p_period:p.start, p_send:false }); if(!r.error && r.data) TW.pend[p.start] = r.data; } catch(e){}
+  }));
 }
+const twPendN = () => Object.values(TW.pend || {}).reduce((a, b) => a + b, 0);
 function twPendingHtml(){
-  if(!TW.pending) return '';
-  return `<div class="pstatus bad tw-pending">${TW.pending === 1 ? 'לעובדת אחת יש שינויים' : `ל-${TW.pending} עובדות יש שינויים`} שעוד לא נשלחו במייל. <button type="button" class="btn small" id="tw-send-updates">שליחת עדכונים</button></div>`;
+  const n = twPendN(); if(!n) return '';
+  return `<div class="pstatus bad tw-pending"><span>${n === 1 ? 'לעובדת אחת יש שינויים' : `ל-${n} עובדות יש שינויים`} בסידור שעוד לא נשלחו במייל.</span> <button type="button" class="btn small" id="tw-send-updates">שליחת עדכונים</button></div>`;
 }
 function twPendingWire(box){
   const b = box.querySelector('#tw-send-updates'); if(!b) return;
   b.addEventListener('click', async () => {
     if(!(await twConfirm({ title:'לשלוח את העדכונים?', text:'כל מי שהמשמרות שלה השתנו מאז הפרסום תקבל מייל אחד עם השינויים (מי שבחרה לקבל).', ok:'כן, לשלוח' }))) return;
     b.disabled = true;
-    let r; try { r = await sbPersonal.rpc('tw_send_updates', { p_period:TW.period, p_send:true }); } catch(e){ r = { error:e }; }
-    if(r.error){ console.error(r.error); toast('⚠ השליחה נכשלה'); b.disabled = false; return; }
-    toast('העדכונים נשלחו'); TW.pending = 0; twRender();
+    for(const per of Object.keys(TW.pend || {})){
+      let r; try { r = await sbPersonal.rpc('tw_send_updates', { p_period:per, p_send:true }); } catch(e){ r = { error:e }; }
+      if(r.error){ console.error(r.error); toast('⚠ השליחה נכשלה'); b.disabled = false; return; }
+    }
+    toast('העדכונים נשלחו'); TW.pend = {}; twRender();
   });
 }
 
-// ---- 4. a picture of the published schedule, a week at a time, to send in WhatsApp (the first site, Guy 2026-11-03): names and hours
-// only; with changes that were not mailed yet it asks to send them first
-function twShareAsk(){
+// ---- 4. a picture of the published schedule to send in WhatsApp (the first site, Guy 2026-11-03). Guy 23.11: both weeks of the schedule
+// in ONE picture, the days side by side as in "הצוות כולו" (Sunday on the right), names and hours only, nobody highlighted. With changes
+// that were not mailed yet it asks to send them first.
+async function twShareAsk(){
   const p = twPeriodRow(); if(!p || p.status !== 'published'){ toast('אפשר לשתף רק סידור שפורסם'); return; }
-  if(TW.pending){ toast('יש שינויים שעוד לא נשלחו. קודם "שליחת עדכונים", ואז שיתוף.', 5000); return; }
-  const days = twDays(TW.period);
-  const sh = twSheet(`<h2>שיתוף תמונת הסידור</h2><div class="pnote">בטלפון התמונה נפתחת לשיתוף, ובוחרים למי לשלוח. במחשב היא נשמרת כקובץ, ומצרפים אותה בוואטסאפ.</div>
-    <div class="tw-actions">${[0, 1].map(w => `<button type="button" class="btn" data-tw-img="${w}">שבוע ${w + 1} <small>${twL(twShort(days[w * 7]) + '–' + twShort(days[w * 7 + 6]))}</small></button>`).join('')}</div>
-    <div class="confirm-actions" style="grid-template-columns:1fr"><button type="button" class="btn ghost" data-tw-close>סגירה</button></div>`);
-  sh.querySelectorAll('[data-tw-img]').forEach(b => b.addEventListener('click', async () => { sh.remove(); await twShareImage(Number(b.dataset.twImg)); }));
+  if((TW.pend || {})[p.start]){ toast('יש שינויים שעוד לא נשלחו. קודם "שליחת עדכונים", ואז שיתוף.', 5000); return; }
+  await twShareImage();
 }
-async function twShareImage(w){
-  const days = twDays(TW.period).slice(w * 7, w * 7 + 7), cols = [['M', 'בוקר'], ['A', 'צהריים / סוף שבוע'], ['N', 'לילה']];
-  const W = 1080, headH = 150, lineH = 34, pad = 22, colW = (W - 80 - 170) / 3, c = document.createElement('canvas'), g = c.getContext('2d');
-  const names = (day, code) => {
-    const sh = code === 'A' && twKind(day) === 'fri' ? 'W' : code;
-    if(!twSlots(day).some(s => s.shift === sh)) return null;
-    return TW.asg.filter(a => a.day === day && a.shift === sh).map(a => twName(a.person) + (a.from_time && a.to_time ? ` ${twNice(twHm(a.from_time))} עד ${twNice(twHm(a.to_time))}` : '')).sort((x, y) => x.localeCompare(y, 'he'));
+async function twShareImage(){
+  const days = twDays(TW.period), W = 1600, side = 150, pad = 30, colW = (W - side - pad * 2) / 7, lineH = 30, F = '400 23px Assistant, Arial';
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const list = (day, sh) => TW.asg.filter(a => a.day === day && a.shift === sh).map(a => twName(a.person) + (a.from_time && a.to_time ? ` ${twNice(twHm(a.from_time))}–${twNice(twHm(a.to_time))}` : '')).sort((x, y) => x.localeCompare(y, 'he'));
+  const need = (day, sh) => ((twSlots(day).find(s => s.shift === sh) || {}).need || 0);
+  // the boxes of one day: [row, rows it spans, names, how many are needed, a line above the names, the long weekend shift]
+  const dayBoxes = d => {
+    const sl = {}; twSlots(d).forEach(s => { sl[s.shift] = s; }); const pv = addDays(d, -1), out = [];
+    if(sl.W){ if(sl.M) out.push([0, 1, list(d, 'M'), need(d, 'M')]); out.push([1, 2, list(d, 'W'), need(d, 'W'), `סוף שבוע · מ-${twNice(twWeekend(d, 'start'))}`, true]); return out; }
+    if(!sl.M && !sl.A && twSlots(pv).some(s => s.shift === 'W')){ out.push([0, 2, list(pv, 'W'), 0, `נמשך, עד ${twNice(twWeekend(d, 'end'))}`, true]); if(sl.N) out.push([2, 1, list(d, 'N'), need(d, 'N')]); return out; }
+    TW_ROWS.forEach((k, r) => { if(sl[k]) out.push([r, 1, list(d, k), need(d, k)]); });
+    return out;
   };
-  const F = '400 25px Assistant, Arial';
-  const wrapN = list => { g.font = F; const out = []; let cur = '';
-    list.forEach(n => { const t = cur ? cur + ', ' + n : n; if(cur && g.measureText(t).width > colW - 16){ out.push(cur + ','); cur = n; } else cur = t; });
-    if(cur) out.push(cur); return out; };
-  const rows = days.map(d => { const cs = cols.map(([code]) => { const l = names(d, code); return l === null ? null : wrapN(l); });
-    return { d, cs, h:Math.max(74, pad * 2 + (Math.max(1, ...cs.map(x => x ? x.length : 1)) + 1) * lineH - 6) }; });
-  const H = headH + rows.reduce((t, r) => t + r.h, 0) + 40; c.width = W; c.height = H;
+  const heights = boxes => { const h = [2, 2, 2];
+    boxes.forEach(day => day.forEach(([r, span, names, nd, label]) => { const lines = names.length + (nd > names.length ? 1 : 0) + (label ? 1 : 0);
+      if(span === 1) h[r] = Math.max(h[r], lines); else { const per = Math.ceil(lines / span); for(let i = 0; i < span; i++) h[r + i] = Math.max(h[r + i], per); } }));
+    return h.map(n => n * lineH + 20); };
+  const weeks = [0, 1].map(w => { const wd = days.slice(w * 7, w * 7 + 7), boxes = wd.map(dayBoxes); return { wd, boxes, rh:heights(boxes) }; });
+  const headH = 130, weekHead = 92;
+  const H = headH + weeks.reduce((t, x) => t + weekHead + x.rh.reduce((a, b) => a + b, 0) + 26, 0) + 20;
+  c.width = W; c.height = H;
   g.direction = 'rtl'; g.textAlign = 'right'; g.fillStyle = '#FAF7F2'; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#2D2A24'; g.font = '600 44px Rubik, Assistant, Arial'; g.fillText(`סידור העבודה · שבוע ${w + 1}`, W - 40, 64);
-  g.font = '400 30px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(`${twShort(days[0])} עד ${twShort(days[6])}`, W - 40, 108);
-  g.font = '700 26px Assistant, Arial'; g.fillStyle = '#5C6F52'; cols.forEach(([, t], i) => g.fillText(t, W - 40 - 170 - i * colW, headH - 8));
+  g.fillStyle = '#2D2A24'; g.font = '600 46px Rubik, Assistant, Arial'; g.fillText('סידור העבודה', W - pad, 62);
+  g.font = '400 30px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(`${twShort(days[0])} עד ${twShort(days[13])}`, W - pad, 104);
   let y = headH;
-  const cR = ci => W - 40 - 170 - ci * colW + 10, cL = ci => cR(ci) - colW + 4;
-  const isW = d => twSlots(d).some(s => s.shift === 'W'), goesOn = (d, i) => i > 0 && isW(rows[i - 1].d) && !twSlots(d).some(s => s.shift === 'M' || s.shift === 'A');
-  rows.forEach((r, i) => {
-    g.fillStyle = i % 2 ? '#FFFFFF' : '#F4EFE7'; g.fillRect(30, y + 4, W - 60, r.h - 6);
-    // (Guy 21.11: one block for the long weekend shift)
-    if(isW(r.d)){ g.fillStyle = '#E3ECDB'; g.fillRect(cL(2), y + 4, cR(1) - cL(2), r.h - 4); r.cs[2] = []; r.cs[2].wSkip = true; }
-    if(goesOn(r.d, i)){ g.fillStyle = '#E3ECDB'; g.fillRect(cL(1), y, cR(0) - cL(1), r.h - 2); r.cs[0] = ['סוף שבוע, נמשך משישי']; r.cs[0].cont = true; r.cs[1] = []; r.cs[1].wSkip = true; }
-    g.fillStyle = '#2D2A24'; g.font = '700 28px Assistant, Arial'; g.fillText(`${DOW_NAMES[dowOf(r.d)]} ${twShort(r.d)}`, W - 44, y + pad + 24);
-    r.cs.forEach((x, ci) => { const xr = W - 40 - 170 - ci * colW; let ly = y + pad + 24; g.font = F; g.fillStyle = '#2D2A24';
-      if(x && x.wSkip) return;
-      if(x && x.cont){ g.fillStyle = '#5C6F52'; g.fillText(x[0], xr, ly); return; }
-      if(!x || !x.length){ g.fillStyle = '#9A9286'; g.fillText(x ? 'חסר שיבוץ' : '—', xr, ly); return; }
-      x.forEach(t => { g.fillText(t, xr, ly); ly += lineH; });
-      const sh = cols[ci][0] === 'A' && twKind(r.d) === 'fri' ? 'W' : cols[ci][0], sl = twSlots(r.d).find(s => s.shift === sh), n = sl ? sl.need - TW.asg.filter(a => a.day === r.d && a.shift === sh).length : 0;
-      if(n > 0){ g.fillStyle = '#B5502F'; g.fillText(`חסר ${n}`, xr, ly); } });
-    y += r.h;
+  const colR = i => W - pad - side - i * colW;
+  weeks.forEach((wk, w) => {
+    g.textAlign = 'right'; g.fillStyle = '#5C6F52'; g.font = '700 28px Assistant, Arial'; g.fillText(`שבוע ${w + 1}`, W - pad, y + 34);
+    g.textAlign = 'center';
+    wk.wd.forEach((d, i) => { g.fillStyle = '#2D2A24'; g.font = '700 25px Assistant, Arial'; g.fillText(DOW_NAMES[dowOf(d)], colR(i) - colW / 2, y + 36); g.font = '400 21px Assistant, Arial'; g.fillStyle = '#6E675C'; g.fillText(twShort(d), colR(i) - colW / 2, y + 64); });
+    y += weekHead;
+    const top = []; let t = y; wk.rh.forEach(h => { top.push(t); t += h; });
+    const usualDay = wk.wd.find(d => twKind(d) === 'weekday') || wk.wd[0];
+    TW_ROWS.forEach((k, r) => { g.textAlign = 'right'; g.fillStyle = '#2D2A24'; g.font = '700 24px Assistant, Arial'; g.fillText(TW_SHIFT[k], W - pad - 6, top[r] + 34);
+      const hrs = (twSlots(usualDay).find(s => s.shift === k) || {}).hours; if(hrs){ g.font = '400 18px Assistant, Arial'; g.fillStyle = '#6E675C'; g.direction = 'ltr'; g.fillText(hrs, W - pad - 6, top[r] + 60); g.direction = 'rtl'; } });          // (the hours left to right)
+    wk.boxes.forEach((day, i) => day.forEach(([r, span, names, nd, label, long]) => {
+      const x1 = colR(i) - colW + 4, x2 = colR(i) - 4, y1 = top[r] + 3, y2 = top[r + span - 1] + wk.rh[r + span - 1] - 3, mid = (x1 + x2) / 2;
+      g.fillStyle = long ? '#E3ECDB' : (i % 2 ? '#FFFFFF' : '#F4EFE7'); g.fillRect(x1, y1, x2 - x1, y2 - y1);
+      g.textAlign = 'center'; let ly = y1 + 30;
+      if(label){ g.font = '400 18px Assistant, Arial'; g.fillStyle = '#5C6F52'; g.fillText(label, mid, ly); ly += lineH; }
+      g.font = F; g.fillStyle = '#2D2A24';
+      names.forEach(n => { let t2 = n; while(g.measureText(t2).width > colW - 14 && t2.length > 3) t2 = t2.slice(0, -1); g.fillText(t2, mid, ly); ly += lineH; });
+      const miss = Math.max(0, nd - names.length); if(miss){ g.fillStyle = '#B5502F'; g.fillText(`חסר ${miss}`, mid, ly); }
+    }));
+    y = t + 26;
   });
   const blob = await new Promise(res => c.toBlob(res, 'image/png'));
-  const file = new File([blob], `schedule-${TW.period}-w${w + 1}.png`, { type:'image/png' });
+  const file = new File([blob], `schedule-${TW.period}.png`, { type:'image/png' });
   try { if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'סידור העבודה' }); return; } } catch(e){ if(e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); toast('התמונה נשמרה. אפשר לצרף אותה בוואטסאפ.');
-}
-
-// ---- 5. dragging a name into the table, on a computer (Guy 19.11: as in the first site); on a phone a tap on the place does it
-function twDragHtml(){
-  return `<aside class="tw-drag" aria-label="גרירת שמות לטבלה"><b>גרירה לטבלה</b><small>גוררים שם למשבצת כדי לשבץ.</small>
-    ${TW.people.filter(p => p.active).map(p => { const n = TW.asg.filter(a => a.person === p.id).length, q = p.per_week * 2;
-      return `<span class="pchip tw-drag-chip${n === q ? ' full' : n > q ? ' over' : ''}" draggable="true" data-tw-drag="${p.id}">${twU(twDisp(p))} <small>${n} מתוך ${q}${n > q ? ` (+${n - q})` : ''}</small></span>`; }).join('')}</aside>`;
-}
-function twDragWire(box){
-  const paint = pid => box.querySelectorAll('td[data-tw-cell]').forEach(td => { if(!pid){ delete td.dataset.dragLv; return; } const [d, s] = td.dataset.twCell.split('|'); td.dataset.dragLv = twLvl(pid, d, s); });
-  box.querySelectorAll('[data-tw-drag]').forEach(ch => { ch.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', ch.dataset.twDrag); e.dataTransfer.effectAllowed = 'copy'; paint(ch.dataset.twDrag); }); ch.addEventListener('dragend', () => paint(null)); });
-  box.querySelectorAll('td[data-tw-cell]').forEach(td => {
-    td.addEventListener('dragover', e => { e.preventDefault(); td.classList.add('tw-drop'); });
-    td.addEventListener('dragleave', () => td.classList.remove('tw-drop'));
-    td.addEventListener('drop', async e => {
-      e.preventDefault(); td.classList.remove('tw-drop');
-      const pid = e.dataTransfer.getData('text/plain'), [day, shift] = td.dataset.twCell.split('|'); if(!pid || !twPerson(pid)) return;
-      if(TW.asg.some(a => a.person === pid && a.day === day && a.shift === shift)){ toast(`${twName(pid)} כבר במשמרת הזו`, 4000); return; }
-      const ks = TW.asg.filter(a => a.person === pid).map(a => twHandPair(pid, a.day, a.shift, day, shift, a)).reduce((w, x) => TW_HAND_RANK[x] > TW_HAND_RANK[w] ? x : w, '');
-      const r = await sbPersonal.from('tw_assignment').insert({ period:TW.period, day, shift, person:pid, by_hand:true }).select();
-      if(r.error){ console.error(r.error); toast('⚠ השיבוץ לא נשמר'); return; }
-      TW.asg.push(r.data[0]); twKeepScroll();
-      twUndo(`${twName(pid)} נוספה ל${TW_SHIFT[shift]} ${twShort(day)}` + (ks ? `. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב"` : ''), async () => { const u = await sbPersonal.from('tw_assignment').delete().eq('id', r.data[0].id); if(u.error) return false; TW.asg = TW.asg.filter(a => a.id !== r.data[0].id); twKeepScroll(); return true; });
-    });
-  });
 }
 
 // the extras of step 3 and of a published schedule, wired once for the screen
 function twPilotWire(box){
   box.querySelectorAll('[data-tw-goto]').forEach(b => b.addEventListener('click', () => twCellSheet(b.dataset.twGoto)));
-  const at = box.querySelector('.tw-attn'); if(at) at.addEventListener('toggle', () => { TW.attnClosed = !at.open; });
+  const at = box.querySelector('.tw-attn'); if(at) at.addEventListener('toggle', () => { TW.attnOpen = at.open; });          // (folded at first, as in the first site: Guy 23.11)
   const aa = box.querySelector('#tw-attn-all'); if(aa) aa.addEventListener('click', () => { TW.attnAll = true; twKeepScroll(); });
-  const cn = box.querySelector('[data-tw-counts]'); if(cn) cn.addEventListener('toggle', () => { TW.countsOpen = cn.open; });
   const sh = box.querySelector('#tw-share'); if(sh) sh.addEventListener('click', () => twShareAsk());
   twPendingWire(box);
-  if(box.querySelector('.tw-drag')) twDragWire(box);
 }
 
 // ---- 6. my own settings, inside "הגדרות" of the product (Guy 19.11): the close pairs I agree to, the days I never come, how a new

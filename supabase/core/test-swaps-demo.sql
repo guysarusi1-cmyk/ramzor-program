@@ -20,7 +20,14 @@ begin
   from public.tw_people p join public.staff s on s.id = p.staff_id join public.staff_private sp on sp.staff_id = p.staff_id join auth.users u on u.id = sp.auth_user_id
   where p.active and s.active and s.kind = 'staff'
   order by u.last_sign_in_at desc nulls last limit 1;
-  if me.id is null then raise exception 'לא נמצאה מדריכה עם כניסה במסד הזה. לא שונה דבר.'; end if;
+  -- (nobody signed in as an instructor, e.g. only the coordinator: then any active person with a shift ahead in a published schedule)
+  if me.id is null then
+    select p.id, p.org_id, p.staff_id, p.name into me
+    from public.tw_people p join public.tw_assignment x on x.person = p.id and x.org_id = p.org_id join public.tw_period pr on pr.org_id = x.org_id and pr.start = x.period
+    where p.active and pr.status = 'published' and x.day > current_date
+    order by p.sort, p.name limit 1;
+  end if;
+  if me.id is null then raise exception 'לא נמצאה מדריכה עם משמרת בסידור שפורסם. לא שונה דבר.'; end if;
 
   -- א. somebody else's shift that she can take
   select x.* into a from public.tw_assignment x join public.tw_period pr on pr.org_id = x.org_id and pr.start = x.period
