@@ -90,7 +90,7 @@ function showAppHome(){
     more.addEventListener('click', () => { const on = !w.classList.contains('open'); w.classList.toggle('open', on); more.setAttribute('aria-expanded', String(on)); });
     w.appendChild(more);
   });
-  document.getElementById('apphome-ramzor').addEventListener('click', showHub);
+  document.getElementById('apphome-ramzor').addEventListener('click', async () => { if(typeof ramzorLoading !== 'undefined' && ramzorLoading) await ramzorLoading; showHub(); });          // (right after opening the Ramzor's data may still be on its way: personalEnter, Guy 22.11)
   { const oc1 = document.getElementById('apphome-oncall'); if(oc1) oc1.addEventListener('click', () => showOncallScreen()); }
   { const vt1 = document.getElementById('apphome-vt'); if(vt1) vt1.addEventListener('click', () => showVaryingScreen()); }          // ("משימות משתנות": 14zr-varying-tasks.js)
   { const tw1 = document.getElementById('apphome-tw'); if(tw1) tw1.addEventListener('click', () => showTwoWeek()); }          // (the two-week schedule of the second pilot, 14zq-twoweek.js)

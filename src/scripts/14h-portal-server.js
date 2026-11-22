@@ -449,6 +449,7 @@ const personalIsTherapistOnly = () => (portalMe() || {}).role === 'therapist' ||
 // (supabase/scheduling-v15.sql lets an active instructor / coordinator / admin read and work with the Ramzor's data)
 let ramzorPersonal = false;
 const personalRamzorKind = () => !!(srv.profile && ['instructor', 'coordinator', 'admin', 'therapist', 'manager', 'secretary'].includes(srv.profile.kind)) || ['instructor', 'coordinator', 'manager', 'secretary'].includes((portalMe() || {}).role);
+let ramzorLoading = null;          // (the Ramzor's data on its way after opening: see personalEnter)
 async function personalEnter(){
   portalServerOn = true; portalUi.viewAs = null; portalUi.actAs = false; portalUi.editPrefs = false; portalUi.manager = false;          // (a new sign-in never keeps somebody else's view)
   if(!(await srvLoadFirst())) return false;
@@ -457,8 +458,11 @@ async function personalEnter(){
   document.getElementById('protected-app').style.display = '';
   if(!personalRamzorKind()){ srvOpenPortal(); return true; }          // (service girls and teachers: only the portal)
   sb = sbPersonal; ramzorPersonal = true;
-  try { await initRoster(); await initMiniLists(); renderManageRoster(); } catch(e){ /* the Ramzor data loads again on the next screen */ }
+  // (Guy 22.11: on opening, the Ramzor showed for a few seconds and then the home came: the home is drawn at once, and the Ramzor's data
+  // loads behind it; a tap on "הרמזור" before it arrived waits for it: ramzorLoading)
   showAppHome();
+  ramzorLoading = (async () => { try { await initRoster(); await initMiniLists(); renderManageRoster(); } catch(e){ /* the Ramzor data loads again on the next screen */ } })();
+  await ramzorLoading; ramzorLoading = null;
   return true;
 }
 function srvOpenPortal(){ portalUi.persona = srv.me; portalUi.tab = null; portalUi.pmonth = null; if(srv.meRow && srv.meRow.role === 'coordinator') portalUi.manager = !!srv.meRow.admin; showPortal(); }
