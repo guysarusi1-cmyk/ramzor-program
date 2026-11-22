@@ -435,6 +435,7 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 #view-tw .tw-tc-weeks button small{ font-size:12px; color:var(--p-muted, var(--muted)); }
 #view-tw .tw-tc-weeks button.on{ background:var(--gold); border-color:var(--gold); color:#1C1A17; }
 #view-tw .tw-tc-weeks button.on small{ color:#1C1A17; }
+#view-tw .portal-shell[data-ptheme=light] .tw-tc-weeks button.on, #view-tw .portal-shell[data-ptheme=light] .tw-tc-weeks button.on small{ color:#fff; }          /* (Guy 23.11: black on the green of the light look was hard to read) */
 #view-tw .tw-tc{ display:grid; grid-template-columns:auto repeat(7, minmax(0, 1fr)); grid-template-rows:auto; gap:3px; padding:6px 4px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); }
 #view-tw .tw-tc-head{ text-align:center; line-height:1.15; padding:2px 0 4px; }
 #view-tw .tw-tc-head b{ display:block; font-size:14px; }
