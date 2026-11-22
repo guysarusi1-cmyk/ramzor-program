@@ -1272,6 +1272,8 @@
   .pshift{ min-height:30px; border-radius:8px; border:1px solid var(--p-line); background:var(--p-panel2); color:var(--p-text); font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; }
   .pprefs-actions{ display:flex; align-items:center; gap:12px; margin:14px 0 8px; }
   .plevelbar{ position:fixed; left:0; right:0; bottom:0; z-index:300; display:flex; gap:6px; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); background:var(--panel); border-top:1px solid var(--line); box-shadow:0 -6px 20px rgba(0,0,0,.35); }
+  /* iPhone (Guy 22.11, a video): after the keyboard closed Safari kept a shorter screen, and the bar at the bottom hung in the middle; --vv-down (14e) moves it back to the real bottom */
+  .plevelbar, .bottom-nav{ translate:0 var(--vv-down, 0px); }
   .lvbtn{ flex:1; min-height:48px; border-radius:12px; border:2px solid var(--line); background:var(--panel-2); color:var(--text); font-family:'Rubik', sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
   .lvbtn.lv-clear{ background:var(--panel-2); }
   /* each level keeps its own colour at all times; the chosen one is filled with it (and lifted a little), the others are outlined */
@@ -7931,6 +7933,18 @@ function queueEmail(to, subject, body){
   portalSave();
 }
 
+// ---- iPhone (Guy 22.11, a friend's video, the app from the home screen): the bar at the bottom went up with the scrolling, stopped in
+// the middle, and came back down when scrolling back: the screen seen (the visual viewport) moved inside the screen the bar is fixed to
+// (the layout viewport). The bars follow the bottom of the screen seen: the difference goes to --vv-down (14-portal.css). Where the two
+// screens are the same (Android, a computer, most of the time on an iPhone) it is 0 and nothing moves. While a text field is in use the
+// bars only go down, never up over the keyboard and the field.
+(function(){
+  const vv = window.visualViewport; if(!vv) return;
+  const typing = () => { const a = document.activeElement; return !!a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !['button', 'checkbox', 'radio', 'submit'].includes(a.type)) || a.isContentEditable); };
+  const upd = () => { let d = Math.round(vv.offsetTop + vv.height - window.innerHeight); if(Math.abs(d) <= 1 || (d < 0 && typing())) d = 0; document.documentElement.style.setProperty('--vv-down', d + 'px'); };
+  const q = upd;          // (cheap: one number; no requestAnimationFrame, which waits while the page is in the background)
+  vv.addEventListener('resize', q); vv.addEventListener('scroll', q); window.addEventListener('scroll', q, { passive:true }); window.addEventListener('resize', q); document.addEventListener('focusin', q); document.addEventListener('focusout', () => setTimeout(q, 50)); q();
+})();
 // ---- the first screen after login: two cards
 function showAppHome(){
   stopCarousel(); document.body.classList.remove('leopard-bg');
