@@ -455,7 +455,7 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 #view-tw .tw-tc-miss{ font-size:10px; color:var(--p-muted, var(--muted)); border:1px dashed currentColor; border-radius:6px; padding:0 3px; }
 #view-tw .tw-tc-day{ border:1px solid var(--p-line, var(--line)); border-radius:12px; background:var(--p-panel, var(--panel)); padding:8px 10px; }
 #view-tw .tw-tc-dhead{ margin-bottom:6px; }
-#view-tw .tw-tc-drow{ display:flex; gap:10px; align-items:flex-start; padding:6px 0; border-top:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-tc-drow{ display:flex; gap:10px; align-items:center; padding:6px 0; border-top:1px solid var(--p-line, var(--line)); }
 #view-tw .tw-tc-dlbl{ min-width:92px; display:flex; flex-direction:column; }
 #view-tw .tw-tc-dlbl small{ color:var(--p-muted, var(--muted)); font-size:12px; }
 #view-tw .tw-tc-dnames{ display:flex; flex-wrap:wrap; gap:4px 10px; }
