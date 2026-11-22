@@ -203,9 +203,7 @@ function twMySettingsHtml(){
 `)}
     ${fold('mail', 'התראות במייל', `<div class="sb-help">הכול דלוק מההתחלה. אפשר לכבות.</div>
     ${TW_NOTIFY.map(([k, w]) => `<div class="sb-set-row"><span>${w}</span>${seg(k, nt[k])}</div>`).join('')}`)}
-    ${fold('me', 'הפרטים שלי ותקלות', `<div class="sb-set-row"><b>הטלפון שלי</b><div class="tw-form"><input type="tel" id="tw-my-phone" dir="ltr" maxlength="20" autocomplete="tel" value="${pEsc(TW.phones[TW.me.id] || '')}" aria-label="הטלפון שלי"></div>
-      <div class="sb-help">רק מי שבונה את הסידור והנהלה רואים אותו, כדי לשאול בוואטסאפ.</div></div>
-    <div class="sb-set-row"><b>משהו לא עובד?</b><button type="button" class="btn ghost" id="tw-problem">דיווח על תקלה</button></div>`)}`;
+    ${''/* (Guy 22.11: no "הפרטים שלי ותקלות" here: the phone is entered by the admin in the staff list; "דיווח על תקלה" is a small link at the bottom of every screen, as in the first site) */}`;
 }
 async function twSavePref(patch){
   const cur = twPrefOf(TW.me.id) || { person:TW.me.id, combos:[], days_off:[], copy_last:false, notify:{ reminder:true, published:true, changed:true, swap:true } };
@@ -253,8 +251,8 @@ function twMySettingsInto(wrap){
 function twProblemSheet(){
   const sh = twSheet(`<h2>דיווח על תקלה</h2><div class="pnote">מה קרה? כמה מילים מספיקות. הדיווח מגיע להנהלה ולתמיכה.</div>
     <label class="tw-note-l">מה לא עבד<textarea id="tw-prob" rows="4" maxlength="1000"></textarea></label><div class="pnote tw-privacy">${twT('privacy')}</div>
-    <div class="confirm-actions"><button type="button" class="btn" id="tw-prob-go">שליחה</button><button type="button" class="btn ghost" id="tw-prob-back">חזרה להגדרות</button></div>`);
-  sh.querySelector('#tw-prob-back').addEventListener('click', () => { sh.remove(); if(typeof sbSettings === 'function') sbSettings(); });
+    <div class="confirm-actions"><button type="button" class="btn" id="tw-prob-go">שליחה</button><button type="button" class="btn ghost" id="tw-prob-back">חזרה</button></div>`);
+  sh.querySelector('#tw-prob-back').addEventListener('click', () => sh.remove());
   sh.querySelector('#tw-prob-go').addEventListener('click', async () => {
     const text = sh.querySelector('#tw-prob').value.trim(); if(!text){ toast('צריך לכתוב מה קרה'); return; }
     const info = { tab:TW.tab || '', step:TW.step || null, period:TW.period || null, width:window.innerWidth, ua:navigator.userAgent.slice(0, 160), at:new Date().toISOString() };

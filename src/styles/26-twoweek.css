@@ -442,3 +442,48 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 /* check of 21.11: in a window (outside the screen) the buttons in a row had no space between them, as in the share picture window */
 .sheet .tw-actions{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }
 .sheet .tw-actions .btn{ min-height:48px; }
+
+/* "הצוות כולו" of one of the staff (Guy 22.11, as in the first site): "היום | חודש"; one week at a time, the days side by side, a row per
+   kind of shift; the choice of the published weeks above it. Seven columns fit a phone: short day letters, small names that wrap */
+#view-tw .tw-tc-view{ margin:4px 0 8px; }
+#view-tw .tw-tc-weeks{ display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:6px; margin:0 0 8px; }
+#view-tw .tw-tc-weeks button{ min-height:48px; padding:4px 2px; border:1px solid var(--p-line, var(--line)); border-radius:12px; background:transparent; color:var(--p-text, var(--text)); font:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.2; }
+#view-tw .tw-tc-weeks button b{ font-size:14px; }
+#view-tw .tw-tc-weeks button small{ font-size:12px; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-tc-weeks button.on{ background:var(--gold); border-color:var(--gold); color:#1C1A17; }
+#view-tw .tw-tc-weeks button.on small{ color:#1C1A17; }
+#view-tw .tw-tc{ display:grid; grid-template-columns:auto repeat(7, minmax(0, 1fr)); grid-template-rows:auto; gap:3px; padding:6px 4px; border-radius:12px; background:var(--p-panel, var(--panel)); border:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-tc-head{ text-align:center; line-height:1.15; padding:2px 0 4px; }
+#view-tw .tw-tc-head b{ display:block; font-size:14px; }
+#view-tw .tw-tc-head small{ font-size:11px; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-tc-head.today b, #view-tw .tw-tc-head.today small{ color:var(--gold); }
+#view-tw .tw-tc-lbl{ display:flex; flex-direction:column; justify-content:center; padding:0 2px 0 4px; line-height:1.15; }
+#view-tw .tw-tc-lbl b{ font-size:12px; }
+#view-tw .tw-tc-lbl small{ font-size:9px; color:var(--p-muted, var(--muted)); white-space:nowrap; direction:ltr; unicode-bidi:isolate; }
+#view-tw .tw-tc-cell{ min-width:0; min-height:44px; padding:3px 1px; border-radius:8px; background:color-mix(in srgb, var(--p-text, var(--text)) 5%, transparent); display:flex; flex-direction:column; align-items:center; gap:2px; overflow-wrap:anywhere; }
+#view-tw .tw-tc-cell.none{ background:transparent; }
+#view-tw .tw-tc-cell.today{ box-shadow:inset 0 0 0 1px var(--gold); }
+#view-tw .tw-tc-w{ background:color-mix(in srgb, var(--gold) 12%, transparent); }
+#view-tw .tw-tc-h{ font-size:9px; line-height:1.1; color:var(--p-muted, var(--muted)); text-align:center; }
+#view-tw .tw-tc-name{ font-size:11px; line-height:1.15; text-align:center; max-width:100%; }
+#view-tw .tw-tc-name small{ display:block; font-size:9px; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-tc-name.me{ font-weight:800; color:var(--gold); }
+#view-tw .tw-tc-miss{ font-size:10px; color:var(--p-muted, var(--muted)); border:1px dashed currentColor; border-radius:6px; padding:0 3px; }
+#view-tw .tw-tc-day{ border:1px solid var(--p-line, var(--line)); border-radius:12px; background:var(--p-panel, var(--panel)); padding:8px 10px; }
+#view-tw .tw-tc-dhead{ margin-bottom:6px; }
+#view-tw .tw-tc-drow{ display:flex; gap:10px; align-items:flex-start; padding:6px 0; border-top:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-tc-dlbl{ min-width:92px; display:flex; flex-direction:column; }
+#view-tw .tw-tc-dlbl small{ color:var(--p-muted, var(--muted)); font-size:12px; }
+#view-tw .tw-tc-dnames{ display:flex; flex-wrap:wrap; gap:4px 10px; }
+#view-tw .tw-tc-dnames .tw-tc-name{ font-size:15px; }
+@media (min-width:700px){ #view-tw .tw-tc{ gap:6px; padding:10px; } #view-tw .tw-tc-name{ font-size:14px; } #view-tw .tw-tc-lbl b{ font-size:14px; } #view-tw .tw-tc-lbl small{ font-size:11px; } #view-tw .tw-tc-head b{ font-size:16px; } #view-tw .tw-tc-cell{ min-height:56px; } }
+
+/* "העדפות" after the hand-in closed (Guy 22.11): what she handed in, for reading only, without colours: the same plain cell for every mark,
+   the mark in words under the kind of shift ("לא" faded); nothing looks like a button */
+#view-tw .tw-ro-head{ display:flex; flex-direction:column; gap:4px; padding:12px 14px; margin:4px 0 10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); }
+#view-tw .tw-ro-head b{ font-size:16px; line-height:1.35; }
+#view-tw .tw-ro-head small{ font-size:14px; color:var(--p-muted, var(--muted)); }
+#view-tw .tw-ro .tw-pref, #view-tw .tw-ro .tw-pref[data-lv]{ background:transparent; border:1px solid var(--p-line, var(--line)); color:var(--p-text, var(--text)); cursor:default; opacity:1; }
+#view-tw .tw-ro .tw-pref b{ font-weight:600; opacity:1; }
+#view-tw .tw-ro .tw-pref small.tw-plv{ font-size:11px; font-weight:700; opacity:1; color:var(--p-text, var(--text)); }
+#view-tw .tw-ro .tw-pref[data-lv=no] small.tw-plv, #view-tw .tw-ro .tw-pref[data-lv=no] b{ opacity:.45; font-weight:400; }
