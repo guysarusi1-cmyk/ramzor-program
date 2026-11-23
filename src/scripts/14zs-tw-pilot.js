@@ -173,7 +173,13 @@ function twPrint(){
 
 // the extras of step 3 and of a published schedule, wired once for the screen
 function twPilotWire(box){
-  box.querySelectorAll('[data-tw-goto]').forEach(b => b.addEventListener('click', () => twCellSheet(b.dataset.twGoto)));
+  // (Guy 23.11) a place of "דורש תשומת לב" moves the screen to that shift in the board and lights it for a moment; a tap on the shift opens it
+  box.querySelectorAll('[data-tw-goto]').forEach(b => b.addEventListener('click', () => {
+    const c = box.querySelector(`.tw-board [data-tw-cell="${b.dataset.twGoto}"]`);
+    if(!c){ twCellSheet(b.dataset.twGoto); return; }
+    c.scrollIntoView({ block:'center', behavior:'smooth' });
+    c.classList.remove('tw-flash'); void c.offsetWidth; c.classList.add('tw-flash'); setTimeout(() => c.classList.remove('tw-flash'), 2600);
+  }));
   box.querySelectorAll('[data-tw-done]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); b.disabled = true; twAttnMark(b.dataset.twDone.split('\n')); }));
   const at = box.querySelector('.tw-attn'); if(at) at.addEventListener('toggle', () => { TW.attnOpen = at.open; });          // (folded at first, as in the first site: Guy 23.11)
   const aa = box.querySelector('#tw-attn-all'); if(aa) aa.addEventListener('click', () => { TW.attnAll = true; twKeepScroll(); });
