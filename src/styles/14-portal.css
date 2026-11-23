@@ -575,3 +575,10 @@
 .mcal-name.part-night{ box-shadow:inset 0 -3px 0 #C98A1B; }          /* (not the dashed edge: that one is "waits for שליחת עדכונים") */
 /* the Friday night of a chosen long weekend (Guy 21.11): a plain "no" with its letter, not the dashed look of the package */
 .pshift.in-long.long-n{ opacity:1; border-style:solid; font-size:inherit; }
+/* ---- Guy 24.11 (the coordinator and the social workers): the ahmash of a shift, own hours in the on-call panel, the other people in a shift's window */
+.oc-lead, .pedit-lead{ display:inline-block; font-size:11px; font-weight:800; padding:0 6px; border-radius:8px; background:var(--gold, #e8b94a); color:#1C1A17; vertical-align:middle; }
+.mcal-name .oc-own-h{ font-size:11px; opacity:.85; margin-inline-start:3px; }
+.oc-lead-now{ margin:6px 0 8px; padding:8px 12px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel2, var(--panel)); }
+.pedit-mklead{ margin-inline-start:6px; }
+.oth-add{ flex-wrap:wrap; gap:6px; align-items:center; }
+.oth-add select{ min-height:40px; }

@@ -265,6 +265,9 @@ function ahmashPicks(table, ctx, rank){
   table.forEach(r => r.cells.forEach((c, i) => {
     const s = ctx.shiftTypes[i]; if(!c.slot || !s || !ahmashInCharge(s.id, r.date)) return;
     const cand = c.people.filter(p => (rank[p.iid] || 0) > 0); if(!cand.length) return;
+    // (Guy 24.11) the coordinator chose the ahmash of this shift (the flag 'lead' on her row): she is the one, and the turn counts her
+    const forced = typeof ahmashForced === 'function' ? ahmashForced(c.slot.key) : null;
+    if(forced && cand.some(p => p.iid === forced)){ picks[c.slot.key] = forced; count[forced] = (count[forced] || 0) + 1; (was[forced] = was[forced] || new Set()).add(r.date); return; }
     const best = Math.min(...cand.map(p => rank[p.iid]));
     let pool = cand.filter(p => rank[p.iid] === best);
     const fresh = pool.filter(p => !(was[p.iid] && was[p.iid].has(addDays(r.date, -1)))); if(fresh.length) pool = fresh;

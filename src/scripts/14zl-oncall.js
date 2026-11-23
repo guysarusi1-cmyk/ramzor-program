@@ -75,9 +75,11 @@ async function ocLoad(){
     sbPersonal.from('assignment').select('id,staff_id,day,shift,from_time,to_time').gte('day', lo).lte('day', hi),
     sbPersonal.from('oncall_trip').select('*').eq('period_key', oc.key),
     sbPersonal.from('oncall_event').select('*').eq('period_key', oc.key).order('at', { ascending:false }).limit(40)]);
+  const today2 = isoDate(new Date()), aFrom = [ws, addDays(fri, -1), today2].sort()[0], aTo = [addDays(ws, 6), addDays(fri, 2), today2].sort()[2];
+  let ahm = {}; try { const ar = await sbPersonal.rpc('oncall_ahmash', { p_from:aFrom, p_to:aTo }); if(!ar.error && ar.data) ahm = ar.data; } catch(e){}
   const names = {}; (staff.data || []).forEach(s => { names[s.id] = s; });
   const addr = {}; (adr.error ? [] : adr.data || []).forEach(a => { addr[a.staff_id] = a.address; });
-  return { periods, period:p, names, rows:asg.data || [], trips:trips.data || [], events:ev.data || [], may:!may.error && may.data === true, from, to, addr, addrOn:!adr.error };
+  return { periods, period:p, names, rows:asg.data || [], trips:trips.data || [], events:ev.data || [], may:!may.error && may.data === true, from, to, addr, addrOn:!adr.error, ahm };
 }
 
 async function ocEnsurePeriod(p){          // a weekend's row is made the first time something is kept for it
@@ -123,8 +125,13 @@ function ocPaint(box, d){
   // what "הוזמן לכולם" marks: who needs a taxi in this list, on this period, and is not marked yet
   d.waiting = []; list.forEach(r => ['in', 'out'].forEach(dir => { const t = tripOf(r, dir); if(t.need === 'need' && !t.ordered) d.waiting.push({ r, dir, t }); }));
   const undoAll = oc.undoAll && oc.undoAll.key === p.key && oc.undoAll.trips.some(t => t.need === 'need' && t.ordered);          // (pressed again: what that press marked, and only that, is taken back)
+  const isLead = r => { const a = (d.ahm || {})[r.day] || {}, prev = (d.ahm || {})[addDays(r.day, 1)] || {};
+    if(r.shift === 'A') return a.A === r.staff_id; if(r.shift === 'L') return a.A === r.staff_id || prev.A === r.staff_id || prev.M === r.staff_id;
+    return (r.shift === 'M' || r.shift === 'S') && [5, 6].includes(dowOf(r.day)) && a.M === r.staff_id; };
+  const nameHtml = r => `<span class="mcal-name${isLead(r) ? ' oc-lead-name' : ''}">${pEsc(nm(r.staff_id))}${r.from_time && r.to_time && ocHours(r) !== OC_STD_HOURS[r.shift] ? ` <small class="oc-own-h"><bdi dir="ltr">${ocHours(r)}</bdi></small>` : ''}${isLead(r) ? ' <b class="oc-lead">אחמ"ש</b>' : ''}</span>`;
+  d.nameHtml = nameHtml;
   const cellIn = (day, s, rs) => { const can = d.may && ocInWindow(day, s);
-    return `${rs.map(r => `<span class="mcal-name">${pEsc(nm(r.staff_id))}${d.may && ocInWindow(day, r.shift) ? ` <button type="button" class="oc-x" data-oc-un="${r.id}" aria-label="הסרת ${pEsc(nm(r.staff_id))} מ${ocShiftWord(r.shift)} ${ocShort(day)}">×</button>` : ''}</span>`).join('')}${can ? `<button type="button" class="oc-add" data-oc-add="${day}|${s}" aria-label="הוספת מדריך ל${ocShiftWord(s)} ${ocShort(day)}">+</button>` : ''}`; };
+    return `${rs.map(nameHtml).join('')}${can ? `<button type="button" class="oc-add" data-oc-cell="${day}|${s}" aria-label="עריכת ${ocShiftWord(s)} ${ocShort(day)}">✎</button>` : ''}`; };
   const dayRow = (day, keep) => {
     const byShift = ['M', 'S', 'A', 'L', 'N'].map(s => [s, d.rows.filter(r => r.day === day && r.shift === s)]).filter(([s, rs]) => (rs.length || ['M', 'A', 'N'].includes(s)) && (!keep || keep(s)));
     return `<div class="mcal-wrow${[5, 6].includes(dowOf(day)) ? ' weekend' : ''}${day === isoDate(new Date()) ? ' today' : ''}"><div class="mcal-wrow-day"><b>${DOW_SHORT[dowOf(day)]}</b><span>${ocShort(day)}</span></div><div class="mcal-wrow-cells">${byShift.map(([s, rs]) => `<div class="mcal-wrow-shift"><span class="mcal-wrow-lbl">${ocShiftWord(s)}</span><div class="mcal-cell oc-cell">${cellIn(day, s, rs)}</div></div>`).join('')}</div></div>`; };
@@ -132,11 +139,11 @@ function ocPaint(box, d){
   const phoneSched = () => {
     const today = isoDate(new Date()), ws = oc.wkStart || ocSunday(p.from_day), week = [0, 1, 2, 3, 4, 5, 6].map(i => addDays(ws, i)), fri = ocFridayOf(today), end = oc.schedView === 'weekend';
     const seg = `<div class="mx-seg oc-sv" role="group" aria-label="תצוגת הסידור"><button type="button" data-oc-sv="week" aria-pressed="${!end}">שבוע</button><button type="button" data-oc-sv="weekend" aria-pressed="${end}">סוף השבוע הקרוב</button></div>`;
-    const note = d.may ? '<div class="pnote">אפשר להוסיף או להסיר מדריך במשמרות שבין חמישי 22:00 לראשון 11:00.</div>' : '';
+    const note = (d.may ? '<div class="pnote">במשמרות שבין חמישי 22:00 לראשון 11:00 אפשר להוסיף, להסיר, להחליף ולשנות שעות.</div>' : '') + ocLeadNowHtml(d, nm);
     if(end) return `${seg}${note}<div class="oc-wk-title"><bdi dir="ltr">${ocShort(addDays(fri, -1))}–${ocShort(addDays(fri, 2))}</bdi></div><div class="mcal mcal-wrows">${[-1, 0, 1, 2].map(i => { const day = addDays(fri, i); return dayRow(day, s => ocInWindow(day, s)); }).join('')}</div>`;
     return `${seg}<div class="mcal-weeknav oc-wk-nav"><button type="button" class="mcal-wk" data-oc-wk="-7" aria-label="השבוע הקודם"><bdi dir="ltr">›</bdi></button><b><bdi dir="ltr">${ocShort(week[0])}–${ocShort(week[6])}</bdi></b><button type="button" class="mcal-wk" data-oc-wk="7" aria-label="השבוע הבא"><bdi dir="ltr">‹</bdi></button></div>${note}
       <div class="oc-wk">${week.map(day => `<div class="oc-wk-day${day === today ? ' today' : ''}"><b>${DOW_SHORT[dowOf(day)]}</b><span>${ocShort(day)}</span></div>`).join('')}
-      ${[['M', 'S'], ['A', 'L'], ['N']].map(([s, s2]) => `<div class="oc-wk-band">${ocShiftWord(s)} <bdi dir="ltr">${OC_STD_HOURS[s]}</bdi></div>${week.map(day => { const rs = d.rows.filter(r => r.day === day && (r.shift === s || r.shift === s2)), can = d.may && ocInWindow(day, s), names = rs.map(r => `<span class="mcal-name">${pEsc(nm(r.staff_id))}</span>`).join(''), cls = `oc-wk-cell${[5, 6].includes(dowOf(day)) ? ' weekend' : ''}`;
+      ${[['M', 'S'], ['A', 'L'], ['N']].map(([s, s2]) => `<div class="oc-wk-band">${ocShiftWord(s)} <bdi dir="ltr">${OC_STD_HOURS[s]}</bdi></div>${week.map(day => { const rs = d.rows.filter(r => r.day === day && (r.shift === s || r.shift === s2)), can = d.may && ocInWindow(day, s), names = rs.map(nameHtml).join(''), cls = `oc-wk-cell${[5, 6].includes(dowOf(day)) ? ' weekend' : ''}`;
         return can ? `<button type="button" class="${cls} can" data-oc-cell="${day}|${s}" aria-label="עריכת ${ocShiftWord(s)} ${ocShort(day)}">${names}<i aria-hidden="true">✎</i></button>` : `<div class="${cls}">${names}</div>`; }).join('')}`).join('')}</div>`; };
   d.cellIn = cellIn;
   box.innerHTML = `<div class="oc">
@@ -263,12 +270,8 @@ function ocWire(box, d){
   }));
   };
   wireEdit(box);
-  // the week on a phone is narrow: a tap on a shift opens its names, with the same add and remove
-  box.querySelectorAll('[data-oc-cell]').forEach(b => b.addEventListener('click', () => {
-    const [day, s] = b.dataset.ocCell.split('|'), s2 = ({ M:'S', A:'L' })[s], rs = d.rows.filter(r => r.day === day && (r.shift === s || r.shift === s2));
-    const sh = portalSheet(`<h2>${ocShiftWord(s)} ${ocShort(day)}</h2><div class="mcal-cell oc-cell oc-edit">${d.cellIn(day, s, rs)}</div><div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button></div>`);
-    wireEdit(sh); sh.addEventListener('click', e => { if(e.target.closest('[data-oc-add], [data-oc-un]')) setTimeout(() => sh.close(), 0); });
-  }));
+  // a tap on a shift of the window opens its window: who is on it (hours, replace, remove) and adding with hours (Guy 24.11)
+  box.querySelectorAll('[data-oc-cell]').forEach(b => b.addEventListener('click', () => { const [day, s] = b.dataset.ocCell.split('|'); ocShiftSheet(d, day, s, nm, again); }));
   const hol = box.querySelector('[data-oc-holiday]');
   if(hol) hol.addEventListener('click', () => {          // the admin sets a holiday range of shifts by hand (the Hebrew calendar: later)
     const sh = portalSheet(`<h2>כוננות חג</h2><label class="pfield">שם<input type="text" id="oc-h-title" maxlength="40" placeholder="למשל ראש השנה"></label><label class="pfield">מיום<input type="date" id="oc-h-from"></label><label class="pfield">עד יום<input type="date" id="oc-h-to"></label><div class="confirm-actions"><button type="button" class="btn ghost" data-close>ביטול</button><button type="button" class="btn" id="oc-h-go">שמירה</button></div>`);
@@ -281,4 +284,53 @@ function ocWire(box, d){
       sh.close(); oc.key = 'h:' + id; again();
     });
   });
+}
+
+// "אחמ"ש עכשיו" above the schedule of the panel (Guy 24.11): the ahmash of the shift going on now — the afternoon, and on Friday and
+// Saturday also the morning (as ahmashInCharge); at other hours, the ahmash of today's afternoon
+function ocLeadNowHtml(d, nm){
+  const now = new Date(), today = isoDate(now), h = now.getHours(), a = (d.ahm || {})[today] || {};
+  const code = h >= 14 && h < 22 ? 'A' : [5, 6].includes(dowOf(today)) && h >= 7 && h < 15 ? 'M' : null;
+  const who = code ? a[code] : a.A;
+  if(!who) return Object.keys(d.ahm || {}).length ? '<div class="oc-lead-now"><span>היום אין אחמ"ש בסידור</span></div>' : '';
+  return `<div class="oc-lead-now"><span>${code ? 'אחמ"ש עכשיו' : 'אחמ"ש היום (צהריים)'}: <b>${pEsc(nm(who))}</b></span></div>`;
+}
+function ocShiftSheet(d, day, s, nm, again){
+  const s2 = ({ M:'S', A:'L' })[s], rowsOf = () => d.rows.filter(r => r.day === day && (r.shift === s || r.shift === s2)).sort((a, b) => nm(a.staff_id).localeCompare(nm(b.staff_id), 'he'));
+  const std = (OC_STD_HOURS[s] || '07:00–15:00').split('–'), times = sel => Array.from({ length:48 }, (x, i) => { const v = String(Math.floor(i / 2)).padStart(2, '0') + (i % 2 ? ':30' : ':00'); return `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`; }).join('');
+  let editing = null, replacing = null;
+  const sh = portalSheet('<div id="oc-sh-body"></div>');
+  const err = e => toast(/published/.test(e.message) ? 'החודש עוד לא פורסם' : /already/.test(e.message) ? 'כבר משובץ/ת במשמרת הזו' : /window/.test(e.message) ? 'מחוץ לחלון של סוף השבוע' : 'אין הרשאה: רק הכוננית הפעילה, הרכזת והמנהל');
+  const done = async msg => { toast(msg); await again(); if(oc.data) d = oc.data; draw(); };          // (the panel is drawn again behind, then this window from the new data)
+  const draw = () => {
+    if(!sh.isConnected) return;
+    const rs = rowsOf(), taken = new Set(rs.map(r => r.staff_id));
+    const free = Object.values(d.names).filter(x => x.active && x.kind === 'instructor' && !taken.has(x.id)).sort((a, b) => a.display_name.localeCompare(b.display_name, 'he'));
+    sh.querySelector('#oc-sh-body').innerHTML = `<h2>${ocShiftWord(s)} ${ocShort(day)} <small><bdi dir="ltr">${OC_STD_HOURS[s] || ''}</bdi></small></h2>
+      <div class="pedit-list">${rs.length ? rs.map(r => r.id === editing
+        ? `<div class="pedit-row editing"><span>${pEsc(nm(r.staff_id))}</span><span class="phours-edit"><select data-ohf aria-label="משעה">${times((ocHours(r).split('–')[0] || std[0]).slice(0, 5))}</select><span>עד</span><select data-oht aria-label="עד שעה">${times((ocHours(r).split('–')[1] || std[1]).slice(0, 5))}</select></span><span class="pedit-btns"><button type="button" class="btn small" data-ohsave="${r.id}">שמירה</button><button type="button" class="btn ghost small" data-ohx>ביטול</button></span></div>`
+        : `<div class="pedit-row"><span>${pEsc(nm(r.staff_id))}</span><em><bdi dir="ltr">${ocHours(r)}</bdi></em><span class="pedit-btns">${r.shift === 'L' ? '' : `<button type="button" class="btn ghost small" data-ohrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-orep="${r.id}">החלפה</button>`}<button type="button" class="btn ghost small" data-orm="${r.id}">הסרה</button></span></div>
+          ${replacing === r.id ? `<div class="cs-pick-list cs-repl-list"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff_id))}:</span></div>${free.map(x => `<div class="cs-pick-row"><button type="button" class="cs-pick-item" data-oreto="${x.id}">${pEsc(x.display_name)}</button></div>`).join('')}<button type="button" class="btn ghost small" data-orepx>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין מדריכים במשמרת הזו.</div>'}</div>
+      ${replacing || editing ? '' : `<h3 class="psec">הוספת מדריך/ה</h3><div class="phours-row"><select id="oc-add-who" aria-label="מי"><option value="">בחרו מדריך/ה</option>${free.map(x => `<option value="${x.id}">${pEsc(x.display_name)}</option>`).join('')}</select></div>
+        <div class="phours-row"><select id="oc-add-from" aria-label="משעה">${times(std[0])}</select><span>עד</span><select id="oc-add-to" aria-label="עד שעה">${times(std[1])}</select></div>`}
+      <div class="confirm-actions"><button type="button" class="btn ghost" data-close>סגירה</button>${replacing || editing ? '' : '<button type="button" class="btn" id="oc-add-go">הוספה</button>'}</div>`;
+    const q = (sel, fn) => sh.querySelectorAll(sel).forEach(b => b.addEventListener('click', () => fn(b)));
+    q('[data-ohrs]', b => { editing = b.dataset.ohrs; replacing = null; draw(); });
+    q('[data-ohx]', () => { editing = null; draw(); });
+    q('[data-orep]', b => { replacing = replacing === b.dataset.orep ? null : b.dataset.orep; editing = null; draw(); });
+    q('[data-orepx]', () => { replacing = null; draw(); });
+    q('[data-ohsave]', async b => { const f = sh.querySelector('[data-ohf]').value, t = sh.querySelector('[data-oht]').value; if(f === t){ toast('בדקו את השעות'); return; }
+      b.disabled = true; const r = await sbPersonal.rpc('oncall_set_hours', { p_id:b.dataset.ohsave, p_from:f, p_to:t }); if(r.error){ b.disabled = false; err(r.error); return; } editing = null; done('השעות עודכנו'); });
+    q('[data-oreto]', async b => { b.disabled = true; const r = await sbPersonal.rpc('oncall_replace', { p_id:replacing, p_staff:b.dataset.oreto }); if(r.error){ b.disabled = false; err(r.error); return; } replacing = null; done('ההחלפה נשמרה'); });
+    q('[data-orm]', async b => { const r0 = d.rows.find(x => x.id === b.dataset.orm); if(!r0) return;
+      if(!(await confirmSheet({ title:`להסיר את ${nm(r0.staff_id)}?`, text:`${DOW_NAMES[dowOf(day)]} ${ocShort(day)}, ${ocShiftWord(r0.shift)}.`, okLabel:'כן, להסיר', cancelLabel:'חזרה' }))) return;
+      const r = await sbPersonal.rpc('oncall_unassign', { p_id:r0.id }); if(r.error){ err(r.error); return; } done('הוסר/ה'); });
+    const go = sh.querySelector('#oc-add-go');
+    if(go) go.addEventListener('click', async () => { const who = sh.querySelector('#oc-add-who').value, f = sh.querySelector('#oc-add-from').value, t = sh.querySelector('#oc-add-to').value;
+      if(!who){ toast('בחרו מדריך/ה'); return; } if(f === t){ toast('בדקו את השעות'); return; }
+      const own = !(f === std[0] && t === std[1]); go.disabled = true;
+      const r = own ? await sbPersonal.rpc('oncall_assign_hours', { p_day:day, p_shift:s, p_staff:who, p_from:f, p_to:t }) : await sbPersonal.rpc('oncall_assign', { p_day:day, p_shift:s, p_staff:who });
+      if(r.error){ go.disabled = false; err(r.error); return; } done('נוסף/ה לסידור'); });
+  };
+  draw();
 }

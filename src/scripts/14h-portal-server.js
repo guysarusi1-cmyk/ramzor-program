@@ -157,6 +157,13 @@ async function srvLoadPhotos(){
 }
 // one row of the schedule -> the list of rows (for "my shifts") and the team board (instructors only; short / long / custom-hours shifts carry a note)
 const SRV_STD = { M:['07:00', '15:00'], A:['14:00', '22:00'], N:['22:00', '08:00'], S:['07:00', '11:00'] };
+// the ahmash the coordinator chose for a shift (flag 'lead'), or null (Guy 24.11)
+function ahmashForced(key){
+  if(typeof portalState === 'undefined' || !portalState || !portalState.rows) return null;
+  const { date, shiftId } = splitKey(key), code = (typeof SRV_SHIFT_DB !== 'undefined' && SRV_SHIFT_DB[shiftId]) || '';
+  const r = portalLoad().rows.find(x => (x.flags || []).includes('lead') && ((x.day === date && (x.shift === code || (code === 'M' && x.shift === 'S'))) || (x.shift === 'L' && ((code === 'A' && (x.day === date || addDays(x.day, 1) === date)) || (code === 'M' && addDays(x.day, 1) === date)))));
+  return r ? r.staff : null;
+}
 function srvDropRow(st, id){
   const r = st.rows.find(x => x.id === id); if(!r) return;
   st.rows = st.rows.filter(x => x.id !== id);

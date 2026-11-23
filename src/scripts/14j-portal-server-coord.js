@@ -519,7 +519,9 @@ function srvOpenSlot(mk, key, body){
   const nm = id => { const p = portalPerson(id); return p ? instrName(p, portalLoad().instructors) : '?'; };
   const wrap = portalSheet('<div id="slot-body"></div>');
   wrap.classList.add('psheet-center');          // (a demo for Guy, this window only: on a computer in the middle of the screen, its buttons always in sight — 20-mercury.css)
-  let editing = null, replacing = null;                          // (the row whose hours are being changed by hand; the row whose person is being replaced)
+  let editing = null, replacing = null, oReplacing = null;          // (the row whose hours are being changed by hand; the row whose person is being replaced; the same for a service girl or a teacher)
+  // the ahmash of this shift as the schedule shows it now (Guy 24.11: the coordinator may choose the other one)
+  const leadNow = () => { try { const mk2 = monthKeyOf(date), ctx2 = portalCtx(mk2); return ahmashPicks(scheduleTable(ctx2, portalMonth(mk2).assignments), ctx2, srv.ahmash || {})[key] || null; } catch(e){ return null; } };
   const timeOpts = sel => Array.from({ length:48 }, (_, i) => { const v = String(Math.floor(i / 2)).padStart(2, '0') + (i % 2 ? ':30' : ':00'); return `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`; }).join('');
   const draw = () => {
     if(!wrap.isConnected) return;                                   // (the sheet was closed while the data was reloading)
@@ -537,8 +539,16 @@ function srvOpenSlot(mk, key, body){
       <div class="pedit-list">${rows.length ? rows.map(r => r.id === editing
         ? `<div class="pedit-row editing"><span>${pEsc(nm(r.staff))}</span><span class="phours-edit"><select data-hfrom aria-label="משעה">${timeOpts((r.from || sh.start).slice(0, 5))}</select><span>עד</span><select data-hto aria-label="עד שעה">${timeOpts((r.to || sh.end).slice(0, 5))}</select></span><span class="pedit-btns"><button type="button" class="btn small" data-hsave="${r.id}">שמירה</button><button type="button" class="btn ghost small" data-hcancel>ביטול</button></span></div><div id="hrs-warn" class="pwarn" aria-live="polite"></div>`
         : r.shift === 'L' ? `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>סופ"ש ארוך (שישי ושבת)</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה מהסופ"ש הארוך</button></span></div>`
-        : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns">${(r.flags || []).includes('ok') ? `<button type="button" class="btn ghost small" data-ok="${r.id}" title="ביטול האישור">ביטול ✓</button>` : ['no', 'none'].includes(levelFor(r.staff)) ? `<button type="button" class="btn ghost small pedit-ok" data-ok="${r.id}" title="אישר/ה (למשל בוואטסאפ): השם יהיה ירוק">✓ אישר/ה</button>` : ''}<button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-repl="${r.id}">החלפה</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>${replacing === r.id ? `<div class="cs-pick-list cs-repl-list" role="listbox"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff))}:</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-repl-to="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}${midTag(p.id)}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('') || '<div class="pnote">אין מדריך פנוי.</div>'}<button type="button" class="btn ghost small" data-repl-cancel>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
-      ${others().length ? `<div class="pnote">בנות שירות ומורות במשמרת: ${others().map(r => pEsc(nm(r.staff)) + ' ' + (r.from || '') + '–' + (r.to || '')).join(', ')}</div>` : ''}
+        : `<div class="pedit-row"><span>${pEsc(nm(r.staff))}${ahmashInCharge(shiftId, date) && (srv.ahmash || {})[r.staff] > 0 ? (leadNow() === r.staff ? ' <b class="pedit-lead">אחמ"שית</b>' : ` <button type="button" class="btn ghost small pedit-mklead" data-lead="${r.id}">לעשות אחמ"שית</button>`) : ''}</span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}${(r.flags || []).map(f => SRV_FLAG_WORD[f]).filter(Boolean).map(w => ' · ' + w).join('')}</em><span class="pedit-btns">${(r.flags || []).includes('ok') ? `<button type="button" class="btn ghost small" data-ok="${r.id}" title="ביטול האישור">ביטול ✓</button>` : ['no', 'none'].includes(levelFor(r.staff)) ? `<button type="button" class="btn ghost small pedit-ok" data-ok="${r.id}" title="אישר/ה (למשל בוואטסאפ): השם יהיה ירוק">✓ אישר/ה</button>` : ''}<button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-repl="${r.id}">החלפה</button><button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>${replacing === r.id ? `<div class="cs-pick-list cs-repl-list" role="listbox"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff))}:</span><span class="cs-pick-key">${mcalKeyChips()}</span></div>${ranked.map(({ p, lv }) => `<div class="cs-pick-row"><button type="button" class="cs-pick-item opt-${LV[lv][0]}" role="option" data-repl-to="${p.id}">${pEsc(instrName(p, portalLoad().instructors))}${midTag(p.id)}</button>${lv === 'no' || lv === 'none' ? waButtonHtml(p.id, key) : ''}</div>`).join('') || '<div class="pnote">אין מדריך פנוי.</div>'}<button type="button" class="btn ghost small" data-repl-cancel>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין עדיין מדריכים במשמרת הזו.</div>'}</div>
+      ${(() => { const oth = others(), free = portalLoad().instructors.filter(p => p.active && ['service', 'teacher'].includes(p.role) && !oth.some(r => r.staff === p.id));
+        if(!oth.length && !free.length) return '';
+        const role = id => { const p = portalLoad().instructors.find(x => x.id === id); return p && p.role === 'teacher' ? 'מורה' : 'בת שירות'; };
+        return `<h3 class="psec">בנות שירות ומורות</h3><div class="pedit-list">${oth.length ? oth.map(r => r.id === editing
+          ? `<div class="pedit-row editing"><span>${pEsc(nm(r.staff))}</span><span class="phours-edit"><select data-hfrom aria-label="משעה">${timeOpts((r.from || sh.start).slice(0, 5))}</select><span>עד</span><select data-hto aria-label="עד שעה">${timeOpts((r.to || sh.end).slice(0, 5))}</select></span><span class="pedit-btns"><button type="button" class="btn small" data-hsave="${r.id}">שמירה</button><button type="button" class="btn ghost small" data-hcancel>ביטול</button></span></div>`
+          : `<div class="pedit-row"><span>${pEsc(nm(r.staff))} <small>${role(r.staff)}</small></span><em>${r.from && r.to ? rangeHtml(r.from, r.to) : ''}</em><span class="pedit-btns"><button type="button" class="btn ghost small" data-hrs="${r.id}">שינוי שעות</button>${free.length ? `<button type="button" class="btn ghost small" data-orepl="${r.id}">החלפה</button>` : ''}<button type="button" class="btn ghost small" data-rm="${r.id}">הסרה</button></span></div>
+            ${oReplacing === r.id ? `<div class="cs-pick-list cs-repl-list" role="listbox"><div class="cs-pick-head"><span class="cs-pick-title">במקום ${pEsc(nm(r.staff))}:</span></div>${free.map(p => `<div class="cs-pick-row"><button type="button" class="cs-pick-item" role="option" data-orepl-to="${p.id}">${pEsc(instrName(p, portalLoad().instructors))} <small>${role(p.id)}</small></button></div>`).join('')}<button type="button" class="btn ghost small" data-orepl-x>ביטול</button></div>` : ''}`).join('') : '<div class="pnote">אין במשמרת הזו.</div>'}</div>
+          ${free.length ? `<div class="phours-row oth-add"><select id="oth-who" aria-label="מי"><option value="">הוספת בת שירות / מורה</option>${free.map(p => `<option value="${p.id}">${pEsc(instrName(p, portalLoad().instructors))} (${role(p.id)})</option>`).join('')}</select>
+            <select id="oth-from" aria-label="משעה">${timeOpts(sh.start.slice(0, 5))}</select><span>עד</span><select id="oth-to" aria-label="עד שעה">${timeOpts(sh.end.slice(0, 5))}</select><button type="button" class="btn small" id="oth-add">הוספה</button></div>` : ''}`; })()}
       <h3 class="psec">הוספת מדריך/ה</h3>
       <div class="phours-row"><div class="cs-pick cs-pick-main">
         <select id="add-who" hidden aria-label="מי">${'<option value="">בחרו מדריך/ה</option>' + ranked.map(({ p, lv }) => `<option value="${p.id}" class="opt-${LV[lv][0]}">${pEsc(instrName(p, portalLoad().instructors))}</option>`).join('')}</select>
@@ -615,6 +625,35 @@ function srvOpenSlot(mk, key, body){
     // replacing: another instructor takes this row (the same hours); the list is ordered by her wish for this shift, then by the priority list
     wrap.querySelectorAll('[data-repl]').forEach(b => b.addEventListener('click', () => { replacing = replacing === b.dataset.repl ? null : b.dataset.repl; editing = null; draw(); }));
     wrap.querySelectorAll('[data-repl-cancel]').forEach(b => b.addEventListener('click', () => { replacing = null; draw(); }));
+    // the ahmash of this shift: the one chosen here (flag 'lead'), instead of the one the turn chose (Guy 24.11; scheduling-v91.sql: the kids' TV too)
+    wrap.querySelectorAll('[data-lead]').forEach(b => b.addEventListener('click', async () => {
+      const r = portalLoad().rows.find(x => x.id === b.dataset.lead); if(!r) return; b.disabled = true;
+      for(const o of rowsHere().filter(x => x.id !== r.id && (x.flags || []).includes('lead'))){ const f2 = (o.flags || []).filter(f => f !== 'lead'); const u2 = await asgWrite(monthKeyOf(o.day), 'update', o.id, { flags:f2 }, false); if(!u2.error) o.flags = f2; }
+      const flags = Array.from(new Set((r.flags || []).concat('lead')));
+      const u = await asgWrite(monthKeyOf(r.day), 'update', r.id, { flags }, false);
+      if(u.error){ b.disabled = false; toast('השינוי נכשל'); return; }
+      r.flags = flags; draw(); srvRenderCoordSchedule(body); toast(`${nm(r.staff)} האחמ"שית במשמרת הזו`);
+    }));
+    // the service girls and the teachers: replace, add (remove and hours: the same buttons as the instructors)
+    wrap.querySelectorAll('[data-orepl]').forEach(b => b.addEventListener('click', () => { oReplacing = oReplacing === b.dataset.orepl ? null : b.dataset.orepl; editing = null; draw(); }));
+    wrap.querySelectorAll('[data-orepl-x]').forEach(b => b.addEventListener('click', () => { oReplacing = null; draw(); }));
+    wrap.querySelectorAll('[data-orepl-to]').forEach(b => b.addEventListener('click', async () => {
+      const r = portalLoad().rows.find(x => x.id === oReplacing); if(!r) return; const nw = b.dataset.oreplTo, was = nm(r.staff);
+      const u = await asgWrite(monthKeyOf(r.day), 'update', r.id, { staff_id:nw, flags:Array.from(new Set((r.flags || []).concat('manual'))), from_time:r.from || sh.start, to_time:r.to || sh.end });
+      if(u.error){ toast('ההחלפה נכשלה'); return; }
+      const st2 = portalLoad(); srvDropRow(st2, r.id); srvAddRow(st2, { id:r.id, staff_id:nw, day:r.day, shift:r.shift, from_time:r.from || sh.start, to_time:r.to || sh.end, flags:['manual'] });
+      oReplacing = null; draw(); srvRenderCoordSchedule(body); toast(`${nm(nw)} במקום ${was}.`);
+      srvReloadSafe().then(() => srvLoadCoord()).then(() => { draw(); if(body.isConnected) srvRenderCoordSchedule(body); }).catch(() => {});
+    }));
+    const oa = wrap.querySelector('#oth-add');
+    if(oa) oa.addEventListener('click', async () => {
+      const who = wrap.querySelector('#oth-who').value, f = wrap.querySelector('#oth-from').value, t = wrap.querySelector('#oth-to').value;
+      if(!who){ toast('בחרו בת שירות או מורה'); return; } if(f === t){ toast('בדקו את השעות'); return; }
+      oa.disabled = true;
+      const ins = await asgWrite(monthKeyOf(date), 'insert', null, { month:firstOf(monthKeyOf(date)), staff_id:who, day:date, shift:code, from_time:f, to_time:t, flags:['manual'] });
+      if(ins.error){ oa.disabled = false; toast('ההוספה נכשלה'); return; }
+      await srvReloadSafe(); await srvLoadCoord(); draw(); srvRenderCoordSchedule(body); toast(`${nm(who)} נוספה למשמרת`);
+    });
     wrap.querySelectorAll('[data-repl-to]').forEach(b => b.addEventListener('click', async () => {
       const r = portalLoad().rows.find(x => x.id === replacing); if(!r) return;
       const nw = b.dataset.replTo; let from = r.from || sh.start, to = r.to || sh.end;
