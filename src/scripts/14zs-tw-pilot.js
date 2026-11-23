@@ -30,9 +30,9 @@ function twAttentionAll(){
     TW.asg.filter(b => b.person === a.person && b !== a && b.day >= a.day).forEach(b => {
       if(b.day === a.day && twSpan(b.day, b.shift, b)[0] < twSpan(a.day, a.shift, a)[0]) return;          // (each pair once, the earlier first)
       const k = twHandPair(a.person, a.day, a.shift, b.day, b.shift, a, b);
-      if(k === 'overlap') out.push({ cls:'warn', t:`${twDisp(p)} · משמרות חופפות`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: חופפות בשעות. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
+      if(k === 'overlap') out.push({ cls:'warn', t:`${twDisp(p)} · משמרת כפולה`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: חופפות בשעות. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
       else if(k === 'short') out.push({ cls:'warn', t:`${twDisp(p)} · מנוחה קצרה`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: פחות מ-${twRest()} שעות. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
-      else if(k) out.push({ cls:'warn', t:`${twDisp(p)} · ${k === 'row' ? 'כפולה ברצף' : 'צירוף שלא סומן'}`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: ${twHandWord(k)}. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
+      else if(k) out.push({ cls:'warn', t:`${twDisp(p)} · ${k === 'row' ? 'משמרת כפולה' : 'צירוף שלא סומן'}`, x:`${word(a.day, a.shift)} ו${word(b.day, b.shift)}: ${twHandWord(k)}. ההחלטה שלך.`, go:twKey(b.day, b.shift) });
     });
   });
   // a night beyond the turn (Guy 20.11: "כן, עם הערה בדברים שדורשים תשומת לב"): the turn gives two nights in a week to two people in the

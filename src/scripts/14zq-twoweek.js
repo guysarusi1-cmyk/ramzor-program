@@ -141,7 +141,7 @@ function twHandPair(pid, d1, s1, d2, s2, a1, a2){
   return gap < twRest() * 60 ? 'short' : '';
 }
 const TW_HAND_RANK = { overlap:4, row:3, combo:2, short:1, '':0 };
-const twHandWord = k => ({ overlap:'חופפת בשעות למשמרת אחרת שלה', row:'כפולה ברצף, בלי הפסקה', combo:'צירוף שלא סומן בהגדרות שלה', short:`פחות מ-${twRest()} שעות מנוחה` })[k] || '';
+const twHandWord = k => ({ overlap:'משמרת כפולה (חופפת בשעות למשמרת אחרת שלה)', row:'משמרת כפולה (ברצף, בלי הפסקה)', combo:'צירוף שלא סומן בהגדרות שלה', short:`פחות מ-${twRest()} שעות מנוחה` })[k] || '';
 
 // ---- may this person see the module at all? (asked once after the sign-in; the home card appears when the answer is yes)
 function twCardHtml(){
@@ -803,7 +803,6 @@ function twBoardWire(box){
       const [day, shift] = c.dataset.twCell.split('|'), pid = dr.pid;
       if(TW.asg.some(a => a.person === pid && a.day === day && a.shift === shift)){ toast(`${twName(pid)} כבר במשמרת הזו`, 4000); return; }
       const others = TW.asg.filter(a => a.person === pid && a.id !== dr.row);
-      if(others.some(a => twHandPair(pid, a.day, a.shift, day, shift, a) === 'overlap')){ toast(`אי אפשר: ${twName(pid)} במשמרת חופפת בשעות`, 5000); return; }
       const ks = others.map(a => twHandPair(pid, a.day, a.shift, day, shift, a)).reduce((w, x) => TW_HAND_RANK[x] > TW_HAND_RANK[w] ? x : w, '');
       const warn = ks ? `. שימו לב: ${twHandWord(ks)}. זה יופיע ב"דורש תשומת לב"` : '';
       if(!(await twAskBeforePlacing(pid, day, shift))) return;
@@ -881,7 +880,7 @@ function twAskBeforePlacing(pid, day, shift){
 // the window of one shift, as the coordinator's window of the first site (Guy 23.11): who is on it, each with "שינוי שעות", "החלפה",
 // "הסרה" (and "✓ אישר/ה" for who did not mark it); below, "הוספת מדריך/ה": a folded list coloured by what each one marked (כן, יכול,
 // לא, לא סומן, the key at its top, names only), WhatsApp beside who did not mark it, then the hours and the button. By hand nothing is
-// refused but an overlap in hours (scheduling-v88.sql); the other pairs are said as a warning before adding.
+// refused, not even an overlap in hours (Guy 23.11); the pairs are said as a warning before adding, and show in "דורש תשומת לב".
 function twCellSheet(key){
   const [day, shift] = key.split('|'), there = () => TW.asg.filter(a => a.day === day && a.shift === shift);
   const wrap = document.createElement('div'); wrap.className = 'sheet confirm-sheet mx-sheet tw-ed-sheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
@@ -919,8 +918,8 @@ function twCellSheet(key){
       <div class="tw-ed-pick"><button type="button" class="tw-ed-btn${picked ? ' sel' : ''}" id="tw-ed-open" aria-haspopup="listbox" aria-expanded="${open}"${picked ? ` data-lv="${twLvlOf(picked, day, shift)}"` : ''}><span>${picked ? twU(twName(picked)) : 'בחרו מדריך/ה'}</span><i aria-hidden="true">⌄</i></button>
         ${open ? list('data-tw-add') : ''}</div>
       ${picked ? `<div class="tw-ed-hrs tw-ed-addhrs"><select id="tw-af" aria-label="משעה">${times(hm(sp[0]))}</select><span>עד</span><select id="tw-at" aria-label="עד שעה">${times(hm(sp[1]))}</select></div>
-        ${pw ? `<div class="pwarn">⚠ ${twHandWord(pw)}${pw === 'overlap' ? '. אי אפשר לשבץ.' : '. אפשר לשבץ בכל זאת.'}</div>` : ''}` : ''}`}
-      <div class="confirm-actions tw-ed-actions">${replacing ? '<button type="button" class="btn ghost" data-tw-repx>ביטול ההחלפה</button>' : `<button type="button" class="btn ghost" data-tw-x>סגירה</button>${picked && pw !== 'overlap' ? `<button type="button" class="btn" id="tw-ed-add">הוספת ${twU(twName(picked))}</button>` : ''}`}</div></div>`;
+        ${pw ? `<div class="pwarn">⚠ ${twHandWord(pw)}. אפשר לשבץ בכל זאת.</div>` : ''}` : ''}`}
+      <div class="confirm-actions tw-ed-actions">${replacing ? '<button type="button" class="btn ghost" data-tw-repx>ביטול ההחלפה</button>' : `<button type="button" class="btn ghost" data-tw-x>סגירה</button>${picked ? `<button type="button" class="btn" id="tw-ed-add">הוספת ${twU(twName(picked))}</button>` : ''}`}</div></div>`;
     wrap.querySelectorAll('[data-tw-x]').forEach(b => b.addEventListener('click', () => wrap.remove()));
     const eo = wrap.querySelector('#tw-ed-open'); if(eo) eo.addEventListener('click', () => { open = !open; draw(); if(open){ const l = wrap.querySelector('.tw-ed-pick .tw-ed-list'); if(l) l.scrollIntoView({ block:'nearest', behavior:'smooth' }); } });
     wrap.querySelectorAll('[data-tw-add]').forEach(b => b.addEventListener('click', () => { picked = b.dataset.twAdd; open = false; draw(); }));
@@ -948,7 +947,6 @@ function twCellSheet(key){
     wrap.querySelectorAll('[data-tw-repx]').forEach(b => b.addEventListener('click', () => { replacing = null; draw(); }));
     wrap.querySelectorAll('[data-tw-repto]').forEach(b => b.addEventListener('click', async () => {
       const old = TW.asg.find(a => a.id === replacing), nw = b.dataset.twRepto; if(!old) return;
-      if(pairOf(nw, null) === 'overlap'){ toast(`אי אפשר: ${twName(nw)} במשמרת חופפת בשעות`, 5000); return; }
       if(!(await twAskBeforePlacing(nw, day, shift))) return;
       const w = pairOf(nw, null), back = backOf(old);
       const d = await sbPersonal.from('tw_assignment').delete().eq('id', old.id); if(d.error){ console.error(d.error); toast('⚠ השינוי לא נשמר'); return; }
