@@ -81,7 +81,9 @@ async function twPendingLoad(){
 const twPendN = () => Object.values(TW.pend || {}).reduce((a, b) => a + b, 0);
 function twPendingHtml(){
   const n = twPendN(); if(!n) return '';
-  return `<div class="pstatus bad tw-pending"><span>${n === 1 ? 'לעובדת אחת יש שינויים' : `ל-${n} עובדות יש שינויים`} בסידור שעוד לא נשלחו במייל.</span> <button type="button" class="btn small" id="tw-send-updates">שליחת עדכונים</button></div>`;
+  // (Guy 24.11: the button green with the soft blink of "something to send", the first time it shows)
+  const blink = !TW.pendBlinked; TW.pendBlinked = true;
+  return `<div class="pstatus bad tw-pending"><span>${n === 1 ? 'לעובדת אחת יש שינויים' : `ל-${n} עובדות יש שינויים`} בסידור שעוד לא נשלחו במייל.</span> <button type="button" class="btn small tw-ready${blink ? ' tw-ready-blink' : ''}" id="tw-send-updates">שליחת עדכונים</button></div>`;
 }
 function twPendingWire(box){
   const b = box.querySelector('#tw-send-updates'); if(!b) return;
@@ -92,7 +94,7 @@ function twPendingWire(box){
       let r; try { r = await sbPersonal.rpc('tw_send_updates', { p_period:per, p_send:true }); } catch(e){ r = { error:e }; }
       if(r.error){ console.error(r.error); toast('⚠ השליחה נכשלה'); b.disabled = false; return; }
     }
-    toast('העדכונים נשלחו'); TW.pend = {}; twRender();
+    toast('העדכונים נשלחו'); TW.pend = {}; TW.pendBlinked = false; twRender();
   });
 }
 

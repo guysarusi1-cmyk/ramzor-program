@@ -249,7 +249,10 @@ function twRender(){
   // over what was published, "רכזת" shows the latest schedule built, and the card "בניית הסידור" opens the two weeks in building)
   // (Guy 22.11: "דיווח על תקלה" small at the bottom of every screen of the staff, as in the first site, instead of a part of the settings)
   const problem = (TW.me || TW.boss) && typeof twProblemSheet === 'function' ? '<button type="button" class="portal-problem" id="tw-problem-link">משהו לא עובד? דיווח על תקלה</button>' : '';
-  box.innerHTML = (typeof twViewAsBar === 'function' ? twViewAsBar() : '') + tabs + inner + problem;
+  // (Guy 24.11) "שליחת עדכונים" also above "העדפות", "החלפות" and "הודעות", for whoever builds and the system admins ("הסידור" has it already)
+  const pend = ['mine', 'swaps', 'inbox'].includes(TW.tab) && twCoordOk() && typeof twPendingHtml === 'function' ? twPendingHtml() : '';
+  box.innerHTML = (typeof twViewAsBar === 'function' ? twViewAsBar() : '') + tabs + pend + inner + problem;
+  if(pend && typeof twPendingWire === 'function') twPendingWire(box);
   TW.cameFromBoard = TW.tab === 'build' ? TW.cameFromBoard : !!TW.board;
   const pl = box.querySelector('#tw-problem-link'); if(pl) pl.addEventListener('click', () => twProblemSheet());
   box.querySelectorAll('[data-tw-tab]').forEach(b => b.addEventListener('click', async () => { if(b.dataset.twTab === TW.tab && !TW.board) return; TW.board = false; if(b.dataset.twTab === 'mine'){ TW.as = null; await twToOpenPeriod(); } else if(b.dataset.twTab === 'sched') await twToSchedPeriod(); twGo(() => { TW.tab = b.dataset.twTab; TW.full = false; TW.step = null; }); }));
