@@ -5,7 +5,7 @@
 // calling, and a few small helpers that the big site has elsewhere. Nothing of the Ramzor or of the therapy portal is in this site.
 const ORG_NAME = '@config(orgName)';
 const DEMO_TOOLS = '@config(demoTools)' === 'True';          // (the "sample options" button: a demo database only)
-const SB_VERSION = '1.0';          // (the product's version, under the logo: raise it with every release of this site)
+const SB_VERSION = '1.3';          // (the product's version, under the logo: raise it with every release of this site)
 const ORG_SLUG = '@config(orgSlug)';          // (one database, many organisations: every call says which one; the database checks the caller works there)
 const sbPersonal = supabase.createClient('@config(supabaseUrl)', '@config(anonKey)', { auth:{ storageKey:'mercury-shibutz-auth', persistSession:true, autoRefreshToken:true }, global:{ headers:{ 'x-org':ORG_SLUG } } });
 const srv = { me:null, profile:null, meRow:null, portalTheme:null };
@@ -31,8 +31,8 @@ function showAppHome(){ sbOpen(); }          // (this site has one screen)
 function sbDecorate(){
   const shell = document.querySelector('#view-tw .portal-shell'); if(!shell) return;
   const top = shell.querySelector('.portal-top'); if(top) top.classList.add('sb-hide-top');
-  if(!shell.querySelector('.sb-top')){
-    shell.insertAdjacentHTML('afterbegin', `<div class="sb-top">${sbBrandHtml(true)}<span class="sb-top-org">${pEsc((srv.profile && srv.profile.org && srv.profile.org.name) || ORG_NAME)}</span>
+  if(!shell.querySelector('.sb-top')){          // (Guy 23.11: only the logo, Mercury and the version at the top, no name of the place)
+    shell.insertAdjacentHTML('afterbegin', `<div class="sb-top">${sbBrandHtml(true)}<span class="sb-top-org" aria-hidden="true"></span>
       <button type="button" class="portal-theme sb-look" id="sb-look" aria-label="החלפה בין מצב כהה לבהיר">${sbTheme() === 'dark' ? '☀️' : '🌙'}</button>
       <button type="button" class="btn ghost small" id="sb-theme" aria-label="הגדרות">⚙<span class="sb-set-w"> הגדרות</span></button></div>`);
     shell.querySelector('#sb-theme').addEventListener('click', sbSettings);

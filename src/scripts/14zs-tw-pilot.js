@@ -96,7 +96,8 @@ async function twShareAsk(){
   if((TW.pend || {})[p.start]){ toast('יש שינויים שעוד לא נשלחו. קודם "שליחת עדכונים", ואז שיתוף.', 5000); return; }
   await twShareImage();
 }
-async function twShareImage(){
+// the picture itself: both weeks, the days side by side (for sharing and for printing)
+function twScheduleCanvas(){
   const days = twDays(TW.period), W = 1600, side = 150, pad = 30, colW = (W - side - pad * 2) / 7, lineH = 30, F = '400 23px Assistant, Arial';
   const c = document.createElement('canvas'), g = c.getContext('2d');
   const list = (day, sh) => TW.asg.filter(a => a.day === day && a.shift === sh).map(a => twName(a.person) + (a.from_time && a.to_time ? ` ${twNice(twHm(a.from_time))}–${twNice(twHm(a.to_time))}` : '')).sort((x, y) => x.localeCompare(y, 'he'));
@@ -142,10 +143,24 @@ async function twShareImage(){
     }));
     y = t + 26;
   });
+  return c;
+}
+async function twShareImage(){
+  const c = twScheduleCanvas();
   const blob = await new Promise(res => c.toBlob(res, 'image/png'));
   const file = new File([blob], `schedule-${TW.period}.png`, { type:'image/png' });
   try { if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'סידור העבודה' }); return; } } catch(e){ if(e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); toast('התמונה נשמרה. אפשר לצרף אותה בוואטסאפ.');
+}
+
+// printing (Guy 23.11): the same picture, both weeks on one page across; the browser's printing also saves a PDF
+function twPrint(){
+  const url = twScheduleCanvas().toDataURL('image/png'), w = window.open('', '_blank');
+  if(!w){ toast('הדפדפן חסם את חלון ההדפסה. אפשר לאשר חלונות קופצים לאתר ולנסות שוב.', 6000); return; }
+  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>סידור העבודה</title><style>@page{ size:A4 landscape; margin:8mm; } html,body{ margin:0; } img{ display:block; width:100%; height:auto; max-height:100vh; object-fit:contain; }</style></head><body><img src="${url}" alt="סידור העבודה"></body></html>`);
+  w.document.close();
+  const go = () => { w.focus(); w.print(); };
+  const im = w.document.querySelector('img'); if(im.complete) setTimeout(go, 100); else im.onload = () => setTimeout(go, 100);
 }
 
 // the extras of step 3 and of a published schedule, wired once for the screen

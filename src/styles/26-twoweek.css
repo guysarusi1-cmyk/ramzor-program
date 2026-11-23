@@ -451,7 +451,6 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 #view-tw .tw-tc-h{ font-size:9px; line-height:1.1; color:var(--p-muted, var(--muted)); text-align:center; }
 #view-tw .tw-tc-name{ font-size:11px; line-height:1.15; text-align:center; max-width:100%; }
 #view-tw .tw-tc-name small{ display:block; font-size:9px; color:var(--p-muted, var(--muted)); }
-#view-tw .tw-tc-name.me{ font-weight:800; color:var(--gold); }
 #view-tw .tw-tc-miss{ font-size:10px; color:var(--p-muted, var(--muted)); border:1px dashed currentColor; border-radius:6px; padding:0 3px; }
 #view-tw .tw-tc-day{ border:1px solid var(--p-line, var(--line)); border-radius:12px; background:var(--p-panel, var(--panel)); padding:8px 10px; }
 #view-tw .tw-tc-dhead{ margin-bottom:6px; }
@@ -534,3 +533,85 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 #view-tw .tw-q-dates{ display:block; color:var(--p-muted, var(--muted)); font-size:13px; font-weight:400; }
 #view-tw .tw-dst small{ color:var(--p-muted, var(--muted)); }
 #view-tw .tw-dst input[type=date]{ min-height:40px; }
+
+/* ---- round 2 of the coordinator (Guy 23.11) */
+/* the light look: on the green, white (the scan of 23.11: "המשמרת הבאה", the number of "המשמרות שלי", the chosen tab or step, "היום") */
+#view-tw .portal-shell[data-ptheme=light] .tw-next, #view-tw .portal-shell[data-ptheme=light] .tw-sfold-n, #view-tw .portal-shell[data-ptheme=light] .tw-tab.on,
+#view-tw .portal-shell[data-ptheme=light] .tw-step.on, #view-tw .portal-shell[data-ptheme=light] .tw-opt.on, #view-tw .portal-shell[data-ptheme=light] .tw-dcard-h .tw-today,
+#view-tw .portal-shell[data-ptheme=light] .tw-days-off [aria-pressed=true]{ color:#fff; }
+/* small grey text that was too faint on the light look ("יחד עם: ...") */
+#view-tw .portal-shell[data-ptheme=light] .tw-shift small{ color:color-mix(in srgb, var(--p-text, var(--text)) 78%, transparent); }
+/* the faded "לא" of preferences that closed: still faded, but readable; full in high contrast */
+#view-tw .tw-ro .tw-pref[data-lv=no] small.tw-plv, #view-tw .tw-ro .tw-pref[data-lv=no] b{ opacity:.72; }
+#view-tw .tw-pref[data-lv=no] b{ opacity:.72; }
+[data-contrast=high] #view-tw .tw-ro .tw-pref[data-lv=no] small.tw-plv, [data-contrast=high] #view-tw .tw-ro .tw-pref[data-lv=no] b{ opacity:1; }
+/* "הצוות כולו": her own shifts on a full background, as in the first site */
+#view-tw .tw-tc-name.me{ background:var(--gold); color:#1C1A17; border-radius:7px; padding:2px 5px; font-weight:800; }
+#view-tw .tw-tc-name.me small{ color:inherit; opacity:.85; }
+#view-tw .portal-shell[data-ptheme=light] .tw-tc-name.me{ color:#fff; }
+#view-tw button.tw-tc-name{ border:0; font:inherit; cursor:pointer; line-height:1.15; }
+#view-tw .tw-tc-dnames .tw-tc-name.me{ padding:3px 8px; }
+#view-tw .tw-ask-hint{ margin:4px 0 8px; }
+#view-tw .tw-ask-row{ margin:4px 0 8px; }
+.tw-ask-list{ display:grid; gap:6px; margin:10px 0; }
+.tw-ask-list .btn{ min-height:46px; justify-content:flex-start; text-align:start; }
+/* the open list of the staff, as in the first site: the key in coloured words, the names as pills */
+#view-tw .tw-side{ flex:0 0 300px; }
+#view-tw .tw-side-top{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+#view-tw .tw-side-top h3{ margin:0; font-size:17px; }
+#view-tw .tw-lv4-words{ margin:0; gap:8px; flex:1; }
+#view-tw .tw-lv4-words .tw-lv4-w{ background:transparent !important; box-shadow:none !important; padding:0; font-size:14px; }
+#view-tw .tw-side-sort{ margin:8px 0 2px; }
+#view-tw .tw-side-names{ flex-direction:row; flex-wrap:wrap; gap:6px; }
+#view-tw .tw-side-name{ min-height:38px; padding:4px 14px; border-radius:999px; width:auto; justify-content:center; gap:8px; background:color-mix(in srgb, var(--p-text, var(--text)) 6%, transparent); }
+#view-tw .tw-side-name.missing{ border-style:dashed; }
+#view-tw .tw-side-name.missing span{ opacity:1; }
+#view-tw .tw-side-n{ font-size:13px; }
+#view-tw .tw-req{ display:grid; gap:5px; margin:10px 0; padding:10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-req b{ font-size:15px; }
+#view-tw .tw-req-r{ display:block; padding:5px 10px; border-radius:8px; font-size:15px; }
+#view-tw .tw-req-r[data-lv=yes]{ background:var(--p-yes-bg, #123322); color:var(--p-yes, #7be0a0); box-shadow:inset 0 0 0 1px var(--p-yes, #7be0a0); }
+#view-tw .tw-req-r[data-lv=can]{ background:var(--p-can-bg, #14263f); color:var(--p-can, #8ec0ff); box-shadow:inset 0 0 0 1px var(--p-can, #8ec0ff); }
+#view-tw .tw-req-r[data-lv=no]{ background:var(--p-no-bg, #3a1a18); color:var(--p-no, #ff8a80); box-shadow:inset 0 0 0 1px var(--p-no, #ff8a80); }
+#view-tw .tw-req-r[data-lv=none]{ background:var(--p-none-bg, #3d2a0e); color:var(--p-none, #ffb347); box-shadow:inset 0 0 0 1px var(--p-none, #ffb347); }
+#view-tw .portal-shell[data-ptheme=light] .tw-req-r[data-lv=yes]{ background:#e3f4e8; color:#1d6b38; box-shadow:inset 0 0 0 1px #1d6b38; }
+#view-tw .portal-shell[data-ptheme=light] .tw-req-r[data-lv=can]{ background:#e4eefc; color:#1f4f99; box-shadow:inset 0 0 0 1px #1f4f99; }
+#view-tw .portal-shell[data-ptheme=light] .tw-req-r[data-lv=no]{ background:#fbe6e3; color:#a3322a; box-shadow:inset 0 0 0 1px #a3322a; }
+#view-tw .portal-shell[data-ptheme=light] .tw-req-r[data-lv=none]{ background:#fdf0dc; color:#8a5300; box-shadow:inset 0 0 0 1px #8a5300; }
+#view-tw .tw-attn-card{ margin-top:10px; padding:10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); }
+#view-tw .tw-attn-top{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+#view-tw .tw-attn-top small{ color:var(--p-muted, var(--muted)); }
+#view-tw .tw-attn-nav{ margin-inline-start:auto; display:flex; gap:4px; }
+#view-tw .tw-attn-nav .btn{ min-width:36px; min-height:36px; padding:0 8px; }
+#view-tw .tw-attn-item{ display:block; width:100%; text-align:start; font:inherit; color:inherit; background:transparent; border:0; padding:4px 0; line-height:1.45; }
+#view-tw button.tw-attn-item{ cursor:pointer; }
+/* the window of one shift, as in the first site: light rows with a thin frame, white buttons with a frame */
+.tw-ed .tw-sheet-head h2 small{ font-size:15px; font-weight:400; color:var(--p-muted, var(--muted)); }
+.tw-ed .tw-ed-warn{ margin:6px 0; }
+.tw-ed-rows{ display:grid; gap:8px; margin:10px 0; }
+.tw-ed-row{ display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; padding:10px 12px; border-radius:14px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); }
+.tw-ed-name{ font-weight:800; font-size:17px; }
+.tw-ed-info{ font-style:normal; font-size:14px; color:var(--p-muted, var(--muted)); }
+.tw-ed-btns{ display:flex; gap:6px; flex-wrap:wrap; margin-inline-start:auto; }
+.tw-ed-btns .btn, .tw-ed-row .btn{ min-height:40px; background:var(--p-panel, var(--panel)) !important; color:var(--p-text, var(--text)) !important; border:1px solid var(--p-line, var(--line)) !important; }
+.tw-ed-btns .btn:hover{ border-color:var(--gold) !important; }
+.tw-ed-btns .btn[aria-pressed=true]{ border-color:var(--gold) !important; box-shadow:inset 0 0 0 1px var(--gold); }
+.tw-ed-hrs{ display:flex; align-items:center; gap:6px; }
+.tw-ed-hrs select{ min-height:40px; border-radius:10px; }
+.tw-ed-h{ margin:14px 0 6px; font-size:16px; }
+.tw-ed-btn{ display:flex; justify-content:space-between; align-items:center; width:100%; min-height:46px; padding:6px 14px; border-radius:12px; border:1px solid var(--p-line, var(--line)); background:var(--p-panel, var(--panel)); color:var(--p-text, var(--text)); font:inherit; cursor:pointer; }
+.tw-ed-list{ margin:6px 0; padding:8px; border-radius:12px; border:1px solid var(--p-line, var(--line)); max-height:46vh; overflow:auto; display:grid; gap:6px; }
+.tw-ed-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; position:sticky; top:-8px; background:var(--p-panel, var(--panel)); padding:4px 0; z-index:1; }
+.tw-ed-key{ display:flex; gap:6px; margin:0; }
+.tw-ed-pickrow{ display:flex; gap:6px; align-items:center; }
+.tw-ed-item{ flex:1; min-height:46px; padding:6px 14px; border-radius:12px; border:0; text-align:start; font:inherit; font-size:17px; cursor:pointer; }
+.tw-ed .tw-lv4-w{ font-size:13px; font-weight:700; border-radius:6px; padding:1px 6px; }
+.tw-ed-item[data-lv=yes], .tw-ed .tw-lv4-w[data-lv=yes], .tw-ed-btn[data-lv=yes]{ background:var(--p-yes-bg, #123322); color:var(--p-yes, #7be0a0); box-shadow:inset 0 0 0 1px var(--p-yes, #7be0a0); }
+.tw-ed-item[data-lv=can], .tw-ed .tw-lv4-w[data-lv=can], .tw-ed-btn[data-lv=can]{ background:var(--p-can-bg, #14263f); color:var(--p-can, #8ec0ff); box-shadow:inset 0 0 0 1px var(--p-can, #8ec0ff); }
+.tw-ed-item[data-lv=no], .tw-ed .tw-lv4-w[data-lv=no], .tw-ed-btn[data-lv=no]{ background:var(--p-no-bg, #3a1a18); color:var(--p-no, #ff8a80); box-shadow:inset 0 0 0 1px var(--p-no, #ff8a80); }
+.tw-ed-item[data-lv=none], .tw-ed .tw-lv4-w[data-lv=none], .tw-ed-btn[data-lv=none]{ background:var(--p-none-bg, #3d2a0e); color:var(--p-none, #ffb347); box-shadow:inset 0 0 0 1px var(--p-none, #ffb347); }
+.sheet[data-ptheme=light] .tw-ed-item[data-lv=yes], .sheet[data-ptheme=light] .tw-ed .tw-lv4-w[data-lv=yes], .sheet[data-ptheme=light] .tw-ed-btn[data-lv=yes]{ background:#e3f4e8; color:#1d6b38; box-shadow:inset 0 0 0 1px #1d6b38; }
+.sheet[data-ptheme=light] .tw-ed-item[data-lv=can], .sheet[data-ptheme=light] .tw-ed .tw-lv4-w[data-lv=can], .sheet[data-ptheme=light] .tw-ed-btn[data-lv=can]{ background:#e4eefc; color:#1f4f99; box-shadow:inset 0 0 0 1px #1f4f99; }
+.sheet[data-ptheme=light] .tw-ed-item[data-lv=no], .sheet[data-ptheme=light] .tw-ed .tw-lv4-w[data-lv=no], .sheet[data-ptheme=light] .tw-ed-btn[data-lv=no]{ background:#fbe6e3; color:#a3322a; box-shadow:inset 0 0 0 1px #a3322a; }
+.sheet[data-ptheme=light] .tw-ed-item[data-lv=none], .sheet[data-ptheme=light] .tw-ed .tw-lv4-w[data-lv=none], .sheet[data-ptheme=light] .tw-ed-btn[data-lv=none]{ background:#fdf0dc; color:#8a5300; box-shadow:inset 0 0 0 1px #8a5300; }
+@media (max-width:560px){ .tw-ed-btns{ margin-inline-start:0; width:100%; } .tw-ed-btns .btn{ flex:1 1 auto; } }
