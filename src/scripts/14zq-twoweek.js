@@ -761,7 +761,7 @@ function twSideHtml(){
   const act = TW.people.filter(p => p.active).sort((a, b) => (byCount ? cnt(a.id) - cnt(b.id) : 0) || twDisp(a).localeCompare(twDisp(b), 'he'));
   const mine = sel ? TW.asg.filter(a => a.person === sel) : [], by = { yes:0, can:0, no:0, none:0 };
   mine.forEach(a => { by[twLvlOf(a.person, a.day, a.shift)]++; });
-  const req = sel ? `<div class="tw-req"><b>שובצו ${mine.length} משמרות</b>${TW_LV4.map(([k, w]) => `<span class="tw-req-r" data-lv="${k}">${w} ${by[k]}</span>`).join('')}</div>` : '<div class="pnote">לחיצה על שם מסמנת את המשמרות שלה בסידור, ומראה כמה שובצה.</div>';
+  const req = sel ? `<div class="tw-req"><b>שובצו ${mine.length} משמרות</b>${[0, 2, 1, 3].map(i => TW_LV4[i]).map(([k, w]) => `<span class="tw-req-r" data-lv="${k}">${w} ${by[k]}</span>`).join('')}</div>` : '<div class="pnote">לחיצה על שם מסמנת את המשמרות שלה בסידור, ומראה כמה שובצה.</div>';
   return `<aside class="tw-side" aria-label="המדריכות"><div class="tw-side-top"><h3>המדריכות</h3>${twLv4Key('tw-lv4-words')}<button type="button" class="tw-side-x" id="tw-side-close" aria-label="קיפול">✕</button></div>
     <button type="button" class="btn ghost small tw-side-sort" id="tw-side-sort" aria-pressed="${byCount}">${byCount ? 'לפי שם' : 'לפי מספר משמרות'}</button>
     <div class="tw-side-names">${act.map(p => { const sub = TW.subs.some(s => s.person === p.id);
