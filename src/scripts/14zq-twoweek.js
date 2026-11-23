@@ -99,7 +99,7 @@ function twUndo(msg, onUndo){
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'toast-undo-btn'; btn.textContent = 'ביטול';
   btn.addEventListener('click', async () => { btn.disabled = true; let ok = false; try { ok = await onUndo(); } catch(e){ console.error(e); } t.remove(); if(twUndoEl === t) twUndoEl = null; toast(ok ? 'הפעולה בוטלה' : '⚠ לא הצלחנו לבטל. בדקו חיבור'); });
   t.append(text, btn); document.body.appendChild(t); twUndoEl = t;
-  setTimeout(() => { t.remove(); if(twUndoEl === t) twUndoEl = null; }, /שימו לב/.test(msg) ? 12000 : 9000);
+  setTimeout(() => { t.remove(); if(twUndoEl === t) twUndoEl = null; }, 6000);          // (Guy 23.11: 6 seconds are enough, also with a warning)
 }
 // two shifts of one person (Guy 19.11): never two that overlap or come one right after the other ("a double in a row"); the three close
 // pairs (morning and night the same day, afternoon and the next morning, night and the next afternoon) only if she agreed to that pair in
