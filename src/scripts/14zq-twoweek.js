@@ -521,6 +521,16 @@ function twMineWire(box){
   go('#tw-other', async () => { if(await forOk()) twOtherSheet(person); });
   go('#tw-submit', () => twBeforeSubmit(person));
 }
+// "יש כאן משהו לשמור": the save button turns green and blinks softly when something changed (Guy 24.11), the same in every screen of
+// the coordinator. inputs: the fields that it saves; the button is "ready" when one of them differs from how it was
+function twReadyOn(btn, inputs){
+  if(!btn || !inputs || !inputs.length) return;
+  const start = inputs.map(i => i.type === 'checkbox' ? i.checked : i.value);
+  const upd = () => { const ch = inputs.some((i, k) => (i.type === 'checkbox' ? i.checked : i.value) !== start[k]);
+    if(ch && !btn.classList.contains('tw-ready')){ btn.classList.add('tw-ready'); btn.classList.remove('tw-ready-blink'); void btn.offsetWidth; btn.classList.add('tw-ready-blink'); }
+    else if(!ch) btn.classList.remove('tw-ready', 'tw-ready-blink'); };
+  inputs.forEach(i => { i.addEventListener('input', upd); i.addEventListener('change', upd); });
+}
 function twSheet(html){
   const wrap = document.createElement('div'); wrap.className = 'sheet confirm-sheet mx-sheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
   wrap.dataset.ptheme = (document.querySelector('#view-tw .portal-shell[data-ptheme]') || { dataset:{} }).dataset.ptheme || 'dark';
@@ -904,25 +914,27 @@ function twCellSheet(key){
     const row = a => {
       const lv = twLvlOf(a.person, day, shift), pr = pairOf(a.person, a), hrs = a.from_time && a.to_time ? twL(twHm(a.from_time) + '–' + twHm(a.to_time)) : '';
       if(editing === a.id) return `<div class="tw-ed-row editing"><span class="tw-ed-name">${twU(twName(a.person))}</span><span class="tw-ed-hrs"><select data-tw-hf aria-label="משעה">${times(a.from_time ? twHm(a.from_time) : hm(sp[0]))}</select><span>עד</span><select data-tw-ht aria-label="עד שעה">${times(a.to_time ? twHm(a.to_time) : hm(sp[1]))}</select></span>
-        <span class="tw-ed-btns"><button type="button" class="btn small" data-tw-hsave="${a.id}">שמירה</button>${a.from_time ? `<button type="button" class="btn ghost small" data-tw-hclear="${a.id}">שעות המשמרת</button>` : ''}<button type="button" class="btn ghost small" data-tw-hcancel>ביטול</button></span></div>`;
+        ${a.from_time ? `<span class="tw-ed-btns"><button type="button" class="btn ghost small" data-tw-hclear="${a.id}">חזרה לשעות המשמרת</button></span>` : ''}</div>`;
       return `<div class="tw-ed-row"><span class="tw-ed-name">${twU(twName(a.person))}</span><em class="tw-ed-info">${[hrs, a.ok ? 'אישר/ה ✓' : '', pr ? `⚠ ${twHandWord(pr)}` : ''].filter(Boolean).join(' · ')}</em>
         <span class="tw-ed-btns">${a.ok ? `<button type="button" class="btn ghost small" data-tw-ok="${a.id}" title="ביטול האישור">ביטול ✓</button>` : lv === 'no' || lv === 'none' ? `<button type="button" class="btn ghost small" data-tw-ok="${a.id}" title="אישר/ה (למשל בוואטסאפ)">✓ אישר/ה</button>` : ''}
         <button type="button" class="btn ghost small" data-tw-hrs="${a.id}">שינוי שעות</button><button type="button" class="btn ghost small" data-tw-rep="${a.id}" aria-pressed="${replacing === a.id}">החלפה</button><button type="button" class="btn ghost small" data-tw-rm="${a.id}">הסרה</button></span></div>
         ${replacing === a.id ? list('data-tw-repto', `במקום ${pEsc(twName(a.person))}:`) : ''}`;
     };
     const pw = picked ? pairOf(picked, null) : '';
-    wrap.innerHTML = `<div class="sheet-card tw-sheet tw-ed"><div class="tw-sheet-head"><h2>${DOW_NAMES[dowOf(day)]} ${twShort(day)} · ${TW_SHIFT[shift]} <small>${shift === 'W' ? `שישי ${twNice(twWeekend(day, 'start'))} עד שבת ${twNice(twWeekend(addDays(day, 1), 'end'))}` : twL(slot.hours || '')}</small></h2><button type="button" class="btn ghost small" data-tw-x aria-label="סגירה">✕</button></div>
+    wrap.innerHTML = `<div class="sheet-card tw-sheet tw-ed"><div class="tw-sheet-head"><h2>${DOW_NAMES[dowOf(day)]} ${twShort(day)} · ${TW_SHIFT[shift]} <small class="tw-ed-hours">${shift === 'W' ? `שישי ${twNice(twWeekend(day, 'start'))} עד שבת ${twNice(twWeekend(addDays(day, 1), 'end'))}` : twL(twNoBreak(slot.hours || ''))}</small></h2><button type="button" class="btn ghost small" data-tw-x aria-label="סגירה">✕</button></div>
       ${miss ? `<div class="pwarn tw-ed-warn">⚠ ${miss === 1 ? 'חסר שיבוץ אחד' : `חסרים ${miss} שיבוצים`} במשמרת הזו</div>` : ''}
-      <div class="tw-ed-rows">${rows.length ? (replacing ? rows.filter(a => a.id === replacing) : rows).map(row).join('') : '<div class="pnote">אין עדיין מדריכות במשמרת הזו.</div>'}</div>
-      ${replacing ? '' : `<h3 class="tw-ed-h">הוספת מדריך/ה</h3>
+      ${open || picked ? '' : `<div class="tw-ed-rows">${rows.length ? (replacing ? rows.filter(a => a.id === replacing) : editing ? rows.filter(a => a.id === editing) : rows).map(row).join('') : '<div class="pnote">אין עדיין מדריכות במשמרת הזו.</div>'}</div>`}
+      ${replacing || editing ? '' : `<h3 class="tw-ed-h">הוספת מדריך/ה</h3>
       <div class="tw-ed-pick"><button type="button" class="tw-ed-btn${picked ? ' sel' : ''}" id="tw-ed-open" aria-haspopup="listbox" aria-expanded="${open}"${picked ? ` data-lv="${twLvlOf(picked, day, shift)}"` : ''}><span>${picked ? twU(twName(picked)) : 'בחרו מדריך/ה'}</span><i aria-hidden="true">⌄</i></button>
         ${open ? list('data-tw-add') : ''}</div>
       ${picked ? `<div class="tw-ed-hrs tw-ed-addhrs"><select id="tw-af" aria-label="משעה">${times(hm(sp[0]))}</select><span>עד</span><select id="tw-at" aria-label="עד שעה">${times(hm(sp[1]))}</select></div>
         ${pw ? `<div class="pwarn">⚠ ${twHandWord(pw)}. אפשר לשבץ בכל זאת.</div>` : ''}` : ''}`}
-      <div class="confirm-actions tw-ed-actions">${replacing ? '<button type="button" class="btn ghost" data-tw-repx>ביטול ההחלפה</button>' : `<button type="button" class="btn ghost" data-tw-x>סגירה</button>${picked ? `<button type="button" class="btn" id="tw-ed-add">הוספת ${twU(twName(picked))}</button>` : ''}`}</div></div>`;
+      <div class="confirm-actions tw-ed-actions">${editing ? `<button type="button" class="btn ghost" data-tw-hcancel>ביטול</button><button type="button" class="btn" data-tw-hsave="${editing}">שמירה</button>` : replacing ? '<button type="button" class="btn ghost" data-tw-repx>ביטול ההחלפה</button>' : open ? '<button type="button" class="btn ghost" data-tw-addx>ביטול</button>' : `<button type="button" class="btn ghost" data-tw-x>סגירה</button>${picked ? `<button type="button" class="btn tw-ready" id="tw-ed-add">הוספת ${twU(twName(picked))}</button>` : ''}`}</div></div>`;
     wrap.querySelectorAll('[data-tw-x]').forEach(b => b.addEventListener('click', () => wrap.remove()));
     const eo = wrap.querySelector('#tw-ed-open'); if(eo) eo.addEventListener('click', () => { open = !open; draw(); if(open){ const l = wrap.querySelector('.tw-ed-pick .tw-ed-list'); if(l) l.scrollIntoView({ block:'nearest', behavior:'smooth' }); } });
-    wrap.querySelectorAll('[data-tw-add]').forEach(b => b.addEventListener('click', () => { picked = b.dataset.twAdd; open = false; draw(); }));
+    wrap.querySelectorAll('[data-tw-add]').forEach(b => b.addEventListener('click', () => { picked = b.dataset.twAdd; open = false; draw(); const ad = wrap.querySelector('#tw-ed-add'); if(ad){ ad.classList.remove('tw-ready-blink'); void ad.offsetWidth; ad.classList.add('tw-ready-blink'); } }));
+    wrap.querySelectorAll('[data-tw-addx]').forEach(b => b.addEventListener('click', () => { open = false; picked = null; draw(); }));
+    const hs = wrap.querySelector('[data-tw-hsave]'); if(hs) twReadyOn(hs, [...wrap.querySelectorAll('[data-tw-hf], [data-tw-ht]')]);
     const ins = async (pid, from, to) => { const row = Object.assign({ period:TW.period, day, shift, person:pid, by_hand:true }, from ? { from_time:from, to_time:to } : {}); return sbPersonal.from('tw_assignment').insert(row).select(); };
     const backOf = a => ({ period:a.period, day:a.day, shift:a.shift, person:a.person, third:a.third, fixed:a.fixed, by_hand:a.by_hand, from_time:a.from_time, to_time:a.to_time, note:a.note, ok:!!a.ok });
     const after = () => { if(typeof twAfterChange === 'function') twAfterChange(); draw(); };
@@ -967,7 +979,10 @@ function twCellSheet(key){
       a.ok = next; draw(); toast(next ? `${twName(a.person)} סומנה כמאשרת ✓` : 'האישור בוטל');
     }));
     wrap.querySelectorAll('[data-tw-hrs]').forEach(b => b.addEventListener('click', () => { editing = b.dataset.twHrs; replacing = null; draw(); }));
-    wrap.querySelectorAll('[data-tw-hcancel]').forEach(b => b.addEventListener('click', () => { editing = null; draw(); }));
+    wrap.querySelectorAll('[data-tw-hcancel]').forEach(b => b.addEventListener('click', async () => {
+      const sv = wrap.querySelector('[data-tw-hsave]');
+      if(sv && sv.classList.contains('tw-ready') && !(await twConfirm({ title:'לצאת בלי לשמור?', text:'שינוי השעות לא יישמר.', ok:'לצאת בלי לשמור', cancel:'חזרה' }))) return;
+      editing = null; draw(); }));
     const saveH = async (id, from, to) => { const a = TW.asg.find(x => x.id === id); if(!a) return;
       const r = await sbPersonal.from('tw_assignment').update({ from_time:from, to_time:to }).eq('id', id);
       if(r.error){ console.error(r.error); toast('⚠ השעות לא נשמרו'); return; }
@@ -1450,6 +1465,9 @@ function twTeamWire(box){
   const qa = box.querySelector('#tw-q-add'); if(qa) qa.addEventListener('change', () => { if(qa.value) saveQueue(queue().concat(qa.value)); });
   [['#tw-open-days', 'open_days'], ['#tw-close-days', 'close_days']].forEach(([id, k]) => { const s = box.querySelector(id); if(s) s.addEventListener('change', () => run(() => sbPersonal.from('tw_settings').upsert({ key:k, value:Number(s.value) }), 'נשמר')); });
   box.querySelectorAll('[data-tw-pb]').forEach(s => s.addEventListener('change', () => run(() => sbPersonal.from('tw_period').update({ builder:s.value || null }).eq('start', s.dataset.twPb), 'נשמר')));
+  twReadyOn(box.querySelector('#tw-wh-save'), [...box.querySelectorAll('[data-tw-wh], [data-tw-dst]')]);
+  twReadyOn(box.querySelector('#tw-wa-save'), [...box.querySelectorAll('#tw-wa-link')]);
+  twReadyOn(box.querySelector('#tw-add-person'), [...box.querySelectorAll('#tw-new-name, #tw-new-last, #tw-new-mail, #tw-new-phone')]);
   const whs = box.querySelector('#tw-wh-save');
   if(whs) whs.addEventListener('click', () => {
     const v = {}; box.querySelectorAll('[data-tw-wh]').forEach(i => { const [k, part] = i.dataset.twWh.split('|'); (v[k] = v[k] || {})[part] = i.value || (part === 'start' ? '14:00' : '20:30'); });
@@ -1485,6 +1503,7 @@ function twTeamWire(box){
       <div class="pnote">בסידור מופיע השם הפרטי. כששתיים עם אותו שם, מופיעה גם האות הראשונה של שם המשפחה.</div>
       <div class="confirm-actions"><button type="button" class="btn" id="tw-d-save">שמירה</button><button type="button" class="btn ghost" data-tw-close>ביטול</button></div>
       <div class="tw-actions tw-danger-zone"><button type="button" class="btn ghost small tw-danger" data-tw-act="${x.id}">הסרה מהצוות</button></div>`);
+    twReadyOn(sh.querySelector('#tw-d-save'), [...sh.querySelectorAll('#tw-d-name, #tw-d-last, #tw-d-phone')]);
     sh.querySelector('[data-tw-mail]').addEventListener('click', () => { sh.remove(); const b2 = box.querySelector(`[data-tw-mail="${x.id}"]`); if(b2) b2.click(); else toast('למי שכבר יש כניסה אישית, מייל משנים דרך התמיכה', 5000); });
     sh.querySelector('[data-tw-act]').addEventListener('click', async () => {
       sh.remove();
@@ -1509,6 +1528,7 @@ function twTeamWire(box){
     const sh = twSheet(`<h2>המייל של ${pEsc(x.name)}</h2><div class="pnote">לכתובת הזו יגיע הקוד של הכניסה הראשונה. הכניסה נוצרת מיד עם השמירה.</div>
       <div class="tw-form tw-form-col"><label>כתובת מייל <input type="email" id="tw-m" value="${pEsc(cur)}" dir="ltr" autocomplete="off"></label></div>
       <div class="confirm-actions"><button type="button" class="btn" id="tw-m-save">שמירה</button><button type="button" class="btn ghost" data-tw-close>ביטול</button></div>`);
+    twReadyOn(sh.querySelector('#tw-m-save'), [sh.querySelector('#tw-m')]);
     sh.querySelector('#tw-m-save').addEventListener('click', () => { const mail = sh.querySelector('#tw-m').value.trim(); sh.remove();
       run(async () => {
         let sid = x.staff_id;
@@ -1626,14 +1646,14 @@ function twAskSheet(asgId){
   sh.querySelector('#tw-ask-go').addEventListener('click', async () => {
     const note = sh.querySelector('#tw-ask-note').value.trim();
     sh.remove();
-    if(await twRpc('tw_swap_ask', { p_assignment:a.id, p_note:note || null }, 'הבקשה נשלחה לצוות')) twShareSheet(a);
+    if(await twRpc('tw_swap_ask', { p_assignment:a.id, p_note:note || null }, 'הבקשה נשלחה לצוות')) twShareSheet(a, note);
   });
 }
 // after asking: a ready WhatsApp message for the staff's group
-function twShareSheet(a){
-  const text = `מחפשים החלפה: ${twShiftLine(a.day, a.shift)}. מי שיכולה לקחת, מסמנים באתר בלשונית "החלפות": ${location.origin}${location.pathname}`;
+function twShareSheet(a, note){
+  const text = `מחפשים החלפה: ${twShiftLine(a.day, a.shift)}${note ? `\n${note}` : ''}`;
   twSheet(`<h2>הבקשה נשלחה</h2><div class="pnote">אפשר גם לשלוח הודעה מוכנה לקבוצת הצוות:</div><div class="tw-share">${pEsc(text)}</div>
-    <div class="confirm-actions"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}" data-tw-close>שליחה בוואטסאפ</a><button type="button" class="btn ghost" data-tw-close>סגירה</button></div>`);
+    <div class="confirm-actions"><a class="btn tw-wa-send" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}" data-tw-close>שליחה בוואטסאפ</a><button type="button" class="btn ghost" data-tw-close>סגירה</button></div>`);
 }
 function twSwapsHtml(){
   if(TW.socialOff) return '<div class="pnote">ההחלפות עוד לא הופעלו במסד הזה.</div>';

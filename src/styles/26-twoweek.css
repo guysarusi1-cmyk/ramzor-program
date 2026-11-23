@@ -629,3 +629,19 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 /* the shift that "דורש תשומת לב" moved to: lit for a moment (Guy 23.11) */
 @keyframes tw-flash{ 0%, 60%{ box-shadow:inset 0 0 0 3px var(--gold), 0 0 0 4px color-mix(in srgb, var(--gold) 45%, transparent); } 100%{ box-shadow:none; } }
 #view-tw .tw-tc-cell.tw-flash{ animation:tw-flash 2.5s ease-out; }
+/* ---- the phone round (Guy 24.11) */
+/* something to save: green, and a soft blink when it becomes ready (everywhere) */
+@keyframes tw-ready-blink{ 0%, 100%{ box-shadow:0 0 0 0 rgba(37, 160, 90, 0); } 50%{ box-shadow:0 0 0 6px rgba(37, 160, 90, .35); } }
+.tw-ready{ background:#2f8f55 !important; border-color:#2f8f55 !important; color:#fff !important; }
+.tw-ready-blink{ animation:tw-ready-blink .9s ease-in-out 3; }
+@media (prefers-reduced-motion:reduce){ .tw-ready-blink{ animation:none; } }
+.tw-ed-hours{ white-space:nowrap; }
+@media (max-width:560px){
+  /* her own name in "הצוות כולו": the size of the other names, never broken inside a word */
+  #view-tw .tw-tc-name.me, #view-tw button.tw-tc-name{ font-size:11px; padding:2px 3px; }
+  #view-tw .tw-tc-name{ overflow-wrap:normal; word-break:keep-all; hyphens:none; max-width:100%; }
+  /* "שליחה בוואטסאפ": one line */
+  .tw-wa-send{ white-space:nowrap; font-size:15px; padding-inline:8px; }
+  .tw-ed .tw-sheet-head h2{ font-size:19px; }
+}
+.tw-share{ white-space:pre-line; }          /* (her note on a line of its own in the ready message) */
