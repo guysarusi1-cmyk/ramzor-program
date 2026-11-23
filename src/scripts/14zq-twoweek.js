@@ -1451,7 +1451,10 @@ async function twCfgLoad(){
 function twTeamWire(box){
   const run = async (fn, okMsg) => { if(TW.busy) return; TW.busy = true; let r; try { r = await fn(); } catch(e){ r = { error:e }; } TW.busy = false; if(r && r.error){ console.error(r.error); toast('⚠ ' + (twErrWord(r.error) || 'השינוי לא נשמר')); } else if(okMsg) toast(okMsg); await twLoadBase(); await twLoadPeriod(); twRender(); };
   // the sign-in is made at once for whoever has an e-mail (the review agents: "what the system knows, it does not ask")
-  const makeLogin = async staffId => { const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:staffId } }); if(r.error || (r.data && r.data.error)) return { error:r.error || r.data.error }; return {}; };
+  // (24.11: the reason of a failure goes to the browser's console only, for support; the screen still says "השינוי לא נשמר")
+  const makeLogin = async staffId => { const r = await sbPersonal.functions.invoke('create-staff-user', { body:{ staff_id:staffId } });
+    if(r.error || (r.data && r.data.error)){ let why = r.data && r.data.error; try { if(r.error && r.error.context && r.error.context.text) why = await r.error.context.text(); } catch(e){} console.error('create-staff-user:', why || r.error); return { error:r.error || r.data.error }; }
+    return {}; };
   const saveQueue = q => run(() => sbPersonal.from('tw_settings').upsert({ key:'queue', value:q }), 'התור נשמר');
   const queue = () => (twSetting('queue', []) || []).filter(id => TW.people.some(p => p.id === id && p.active));
   box.querySelectorAll('[data-tw-fold]').forEach(d => d.addEventListener('toggle', () => { TW.folds = TW.folds || {}; TW.folds[d.dataset.twFold] = d.open; if(d.dataset.twFold === 'cfg' && d.open && TW.cfgView === undefined) twCfgLoad(); }));
