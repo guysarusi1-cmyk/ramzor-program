@@ -645,7 +645,7 @@ function twWeekGrid(wd, by, o){
   o = o || {};
   const today = twToday();
   const usual = {}; wd.forEach(d => { if(twKind(d) === 'weekday') twSlots(d).forEach(s => { if(!usual[s.shift]) usual[s.shift] = s.hours; }); });
-  const nm = (a, day, sh) => { const lv = o.edit ? twLvlOf(a.person, day, sh) : '';
+  const nm = (a, day, sh) => { const lv = o.edit ? (a.ok ? 'yes' : twLvlOf(a.person, day, sh)) : '';          // ("✓ אישר/ה": green, as in the first site — Guy 23.11)
     if(o.ask && TW.me && a.person === TW.me.id && a.day >= today && !TW.socialOff && !(TW.swaps || []).some(s => s.assignment === a.id && (s.status === 'open' || s.status === 'taken')))
       return `<button type="button" class="tw-tc-name me" data-tw-ask="${a.id}" title="בקשת החלפה">${twU(twName(a.person))}${a.from_time && a.to_time ? `<small>${twL(twHm(a.from_time) + '–' + twHm(a.to_time))}</small>` : ''}</button>`;
     return `<span class="tw-tc-name${!o.edit && TW.me && a.person === TW.me.id ? ' me' : ''}${o.sel && o.sel === a.person ? ' sel' : ''}"${lv ? ` data-lv="${lv}"` : ''}${o.edit && a.id ? ` draggable="true" data-tw-row="${a.id}"` : ''}>${o.edit && a.fixed ? '📌 ' : ''}${twU(twName(a.person))}${o.edit && a.ok ? ' ✓' : ''}${a.from_time && a.to_time ? `<small>${twL(twHm(a.from_time) + '–' + twHm(a.to_time))}</small>` : ''}</span>`; };
