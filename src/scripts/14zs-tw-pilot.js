@@ -6,7 +6,18 @@
 // Everything works on a database before v86 too: the parts that need it say nothing or stay hidden.
 
 // ---- 1. "דורש תשומת לב" (the builder, step 3): everything that waits for her, a tap opens the place
-function twAttention(){
+const twAttnKey = x => x.t + '|' + x.x;
+const twAttnDone = () => (((twPeriodRow() || {}).report || {}).done) || [];
+function twAttention(){ const done = twAttnDone(); return twAttentionAll().filter(x => !done.includes(twAttnKey(x))); }
+async function twAttnMark(keys){
+  const p = twPeriodRow(); if(!p) return;
+  const before = twAttnDone(), rep = Object.assign({}, p.report || {}, { done:[...new Set(before.concat(keys))] });
+  const r = await sbPersonal.from('tw_period').update({ report:rep }).eq('start', p.start);
+  if(r.error){ console.error(r.error); toast('⚠ לא נשמר'); return; }
+  p.report = rep; twKeepScroll();
+  twUndo(keys.length > 1 ? `${keys.length} סומנו כטופל` : 'סומן כטופל', async () => { const back = Object.assign({}, p.report, { done:before }); const u = await sbPersonal.from('tw_period').update({ report:back }).eq('start', p.start); if(u.error) return false; p.report = back; twKeepScroll(); return true; });
+}
+function twAttentionAll(){
   const out = [], days = twDays(TW.period), act = TW.people.filter(p => p.active);
   const word = (day, shift) => `${DOW_NAMES[dowOf(day)]} ${twShort(day)} · ${TW_SHIFT[shift]}`;
   days.forEach(day => twSlots(day).forEach(s => {
@@ -47,14 +58,14 @@ function twAttentionHtml(){
   const list = twAttention();
   // the empty places together, one short line with a button per place; then the rest, six at first
   const miss = list.filter(x => x.cls === 'bad' && x.go && /^חס/.test(x.x)), info = list.filter(x => x.cls === 'info' || x.cls === 'note'), rest = list.filter(x => !miss.includes(x) && !info.includes(x)), MAX = 6;
-  const row = x => x.go ? `<button type="button" class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>`
-    : `<div class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`;
+  const done = x => `<button type="button" class="btn ghost small tw-attn-done" data-tw-done="${pEsc(twAttnKey(x))}">טופל</button>`;
+  const row = x => `<div class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row tw-attn-line">${x.go ? `<button type="button" class="tw-attn-go" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>` : `<span><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</span>`}${done(x)}</div>`;
   const shown = TW.attnAll ? rest : rest.slice(0, MAX);
   const act = miss.length + rest.length;
   const infoBox = info.length ? `<details class="tw-fixed-box tw-info"><summary>לידיעה (${info.length})</summary>${info.map(x => `<div class="pstatus tw-soft tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`).join('')}</details>` : '';
   if(!act) return '<div class="pstatus ok">אין דברים שדורשים תשומת לב.</div>' + infoBox;
   return `<details class="tw-fixed-box tw-attn"${TW.attnOpen ? ' open' : ''}><summary>דורש תשומת לב (${act})</summary>
-    ${miss.length ? `<div class="pstatus bad tw-attn-row"><b>משבצות חסרות (${miss.length})</b><span class="tw-attn-chips">${miss.map(x => `<button type="button" class="btn ghost small" data-tw-goto="${x.go}">${pEsc(x.t)}${/^חסרים/.test(x.x) ? ' (' + x.x.replace(/\D/g, '') + ')' : ''}</button>`).join('')}</span></div>` : ''}
+    ${miss.length ? `<div class="pstatus bad tw-attn-row"><b>משבצות חסרות (${miss.length})</b> <button type="button" class="btn ghost small tw-attn-done" data-tw-done="${pEsc(miss.map(twAttnKey).join('\n'))}">טופל</button><span class="tw-attn-chips">${miss.map(x => `<button type="button" class="btn ghost small" data-tw-goto="${x.go}">${pEsc(x.t)}${/^חסרים/.test(x.x) ? ' (' + x.x.replace(/\D/g, '') + ')' : ''}</button>`).join('')}</span></div>` : ''}
     ${shown.map(row).join('')}
     ${!TW.attnAll && rest.length > MAX ? `<div class="tw-actions"><button type="button" class="btn ghost small" id="tw-attn-all">עוד ${rest.length - MAX}</button></div>` : ''}
     <div class="pnote">לחיצה על משבצת פותחת אותה.</div></details>${infoBox}`;
@@ -166,6 +177,7 @@ function twPrint(){
 // the extras of step 3 and of a published schedule, wired once for the screen
 function twPilotWire(box){
   box.querySelectorAll('[data-tw-goto]').forEach(b => b.addEventListener('click', () => twCellSheet(b.dataset.twGoto)));
+  box.querySelectorAll('[data-tw-done]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); b.disabled = true; twAttnMark(b.dataset.twDone.split('\n')); }));
   const at = box.querySelector('.tw-attn'); if(at) at.addEventListener('toggle', () => { TW.attnOpen = at.open; });          // (folded at first, as in the first site: Guy 23.11)
   const aa = box.querySelector('#tw-attn-all'); if(aa) aa.addEventListener('click', () => { TW.attnAll = true; twKeepScroll(); });
   const sh = box.querySelector('#tw-share'); if(sh) sh.addEventListener('click', () => twShareAsk());

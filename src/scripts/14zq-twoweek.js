@@ -774,7 +774,8 @@ function twAttnCardHtml(){
   const i = Math.min(Math.max(TW.attnIdx || 0, 0), list.length - 1), x = list[i];
   return `<div class="tw-attn-card"><div class="tw-attn-top"><b>דורש תשומת לב</b><small>${i + 1} מתוך ${list.length}</small>
       <span class="tw-attn-nav"><button type="button" class="btn ghost small" data-tw-ai="${i - 1}"${i ? '' : ' disabled'} aria-label="הקודם">→</button><button type="button" class="btn ghost small" data-tw-ai="${i + 1}"${i < list.length - 1 ? '' : ' disabled'} aria-label="הבא">←</button></span></div>
-    ${x.go ? `<button type="button" class="tw-attn-item" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>` : `<div class="tw-attn-item"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`}</div>`;
+    ${x.go ? `<button type="button" class="tw-attn-item" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>` : `<div class="tw-attn-item"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`}
+    <div class="tw-actions tw-attn-card-act"><button type="button" class="btn ghost small" data-tw-done="${pEsc(twAttnKey(x))}">טופל</button></div></div>`;
 }
 function twBoardWire(box){
   const side = box.querySelector('#tw-side-open'); if(side) side.addEventListener('click', () => { TW.sideOpen = true; twKeepScroll(); });

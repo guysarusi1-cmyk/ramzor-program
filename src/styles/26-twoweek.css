@@ -567,8 +567,8 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 #view-tw .tw-side-name.missing{ border-style:dashed; }
 #view-tw .tw-side-name.missing span{ opacity:1; }
 #view-tw .tw-side-n{ font-size:13px; }
-#view-tw .tw-req{ display:grid; gap:5px; margin:10px 0; padding:10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); }
-#view-tw .tw-req b{ font-size:15px; }
+#view-tw .tw-req{ display:grid; grid-template-columns:1fr 1fr; gap:5px; margin:10px 0; padding:10px; border-radius:12px; border:1px solid var(--p-line, var(--line)); }
+#view-tw .tw-req b{ font-size:15px; grid-column:1 / -1; }          /* (Guy 23.11: two in a row, yes beside can, no beside nothing marked) */
 #view-tw .tw-req-r{ display:block; padding:5px 10px; border-radius:8px; font-size:15px; }
 #view-tw .tw-req-r[data-lv=yes]{ background:var(--p-yes-bg, #123322); color:var(--p-yes, #7be0a0); box-shadow:inset 0 0 0 1px var(--p-yes, #7be0a0); }
 #view-tw .tw-req-r[data-lv=can]{ background:var(--p-can-bg, #14263f); color:var(--p-can, #8ec0ff); box-shadow:inset 0 0 0 1px var(--p-can, #8ec0ff); }
@@ -615,3 +615,8 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 .sheet[data-ptheme=light] .tw-ed-item[data-lv=no], .sheet[data-ptheme=light] .tw-ed .tw-lv4-w[data-lv=no], .sheet[data-ptheme=light] .tw-ed-btn[data-lv=no]{ background:#fbe6e3; color:#a3322a; box-shadow:inset 0 0 0 1px #a3322a; }
 .sheet[data-ptheme=light] .tw-ed-item[data-lv=none], .sheet[data-ptheme=light] .tw-ed .tw-lv4-w[data-lv=none], .sheet[data-ptheme=light] .tw-ed-btn[data-lv=none]{ background:#fdf0dc; color:#8a5300; box-shadow:inset 0 0 0 1px #8a5300; }
 @media (max-width:560px){ .tw-ed-btns{ margin-inline-start:0; width:100%; } .tw-ed-btns .btn{ flex:1 1 auto; } }
+/* "טופל" beside each thing of "דורש תשומת לב" (Guy 23.11, as in the first site) */
+#view-tw .tw-attn-line{ display:flex; align-items:center; gap:10px; }
+#view-tw .tw-attn-go{ flex:1; text-align:start; font:inherit; color:inherit; background:transparent; border:0; padding:0; cursor:pointer; }
+#view-tw .tw-attn-done{ flex:none; }
+#view-tw .tw-attn-card-act{ margin:6px 0 0; justify-content:flex-start; }
