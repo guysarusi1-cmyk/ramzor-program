@@ -1360,14 +1360,14 @@ function twTeamHtml(){
       ${TW.prefsOn ? '<label>שם משפחה <input type="text" id="tw-new-last" maxlength="40" autocomplete="off"></label>' : ''}
       <label>מייל (לא חובה) <input type="email" id="tw-new-mail" maxlength="80" autocomplete="off" dir="ltr"></label>
       ${TW.prefsOn ? '<label>טלפון (לא חובה) <input type="tel" id="tw-new-phone" maxlength="20" autocomplete="off" dir="ltr"></label>' : ''}
-      <label>משמרות בשבוע <select id="tw-new-pw">${[1, 2, 3, 4, 5].map(n => `<option${n === 3 ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label>משמרות בשבוע <select id="tw-new-pw">${[1, 2, 3, 4, 5, 6, 7].map(n => `<option${n === 3 ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
       <label>תפקיד <select id="tw-new-role"><option value="staff" selected>מדריכה</option><option value="both">מנהלת מערכת ומדריכה</option><option value="admin">מנהלת מערכת בלבד</option></select></label>
       <button type="button" class="btn" id="tw-add-person">הוספה</button></div>
     <div class="pnote">מי שיש לה מייל מקבלת כניסה אישית מיד: בפעם הראשונה נכנסים עם קוד שמגיע למייל, ובוחרים סיסמה.</div></details>
     ${fold('team', `רשימת העובדות (${act.length})`, `${TW.people.length > 7 ? '<label class="tw-search">חיפוש <input type="search" id="tw-team-q" placeholder="שם" autocomplete="off"></label>' : ''}
     <div class="tw-list" id="tw-team-list">${TW.people.map(x => `<div class="tw-row${x.active ? '' : ' off'}" data-name="${pEsc(x.name + ' ' + (x.last_name || ''))}"><b>${pEsc(x.name)}${x.last_name ? ' ' + pEsc(x.last_name) : ''}</b>
       <span class="tw-row-sub">${x.active ? signin(x) : 'הוסרה מהרשימה'}</span>
-      <span class="tw-btns"><label class="tw-inline">משמרות בשבוע <select data-tw-pw="${x.id}">${[1, 2, 3, 4, 5].map(n => `<option${n === x.per_week ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+      <span class="tw-btns"><label class="tw-inline">משמרות בשבוע <select data-tw-pw="${x.id}">${[1, 2, 3, 4, 5, 6, 7].map(n => `<option${n === x.per_week ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
       ${TW.prefsOn && x.active ? `<button type="button" class="btn ghost small" data-tw-det="${x.id}">פרטים</button>` : `<button type="button" class="btn ghost small tw-rm" data-tw-act="${x.id}">${x.active ? 'הסרה מהצוות' : 'החזרה'}</button>`}</span></div>`).join('')}</div>`)}
 
     ${fold('queue', `מי בונה את הסידור${queue.length ? ` (תור של ${queue.length})` : ' (מנהלות המערכת)'}`, `
