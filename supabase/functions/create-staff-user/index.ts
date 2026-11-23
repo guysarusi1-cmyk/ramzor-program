@@ -21,12 +21,12 @@ Deno.serve(async (req) => {
     const { staff_id } = await req.json();
     if (!staff_id) return reply({ error: 'staff_id is missing' }, 400);
     // the caller sees this person's private row only if the person is in the caller's organisation and the caller may manage it
-    const mine = await asUser.from('staff_private').select('staff_id').eq('staff_id', staff_id).maybeSingle();
-    if (mine.error || !mine.data) return reply({ error: 'not allowed' }, 403);
-    // 2. the address that the coordinator wrote for that person
+    // 2. the address that the coordinator wrote for that person, read with the caller's own rights (24.11: on the pilot's database
+    //    the service key could not read it, "no e-mail address for this person"; the caller may read it anyway)
+    const row = await asUser.from('staff_private').select('email, auth_user_id').eq('staff_id', staff_id).maybeSingle();
+    if (row.error || !row.data) return reply({ error: 'not allowed', detail: row.error?.message }, 403);
+    if (!row.data.email) return reply({ error: 'no e-mail address for this person' }, 400);
     const admin = createClient(url, service, { auth: { persistSession: false } });
-    const row = await admin.from('staff_private').select('email, auth_user_id').eq('staff_id', staff_id).single();
-    if (row.error || !row.data?.email) return reply({ error: 'no e-mail address for this person' }, 400);
     if (row.data.auth_user_id) return reply({ ok: true, already: true });
     // 3. create (or find) the account, with the address confirmed, and link it
     const email = String(row.data.email).trim().toLowerCase();
@@ -35,10 +35,12 @@ Deno.serve(async (req) => {
     if (created.error) {
       const list = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       userId = list.data?.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null;
-      if (!userId) return reply({ error: created.error.message }, 400);
+      if (!userId) return reply({ error: 'the account was not created', detail: created.error.message }, 400);
     } else userId = created.data.user.id;
-    const link = await admin.from('staff_private').update({ auth_user_id: userId }).eq('staff_id', staff_id);
-    if (link.error) return reply({ error: link.error.message }, 400);
+    // the link, with the caller's rights too (an admin may set a sign-in: guard_admin_rights); the service key only if that fails
+    let link = await asUser.from('staff_private').update({ auth_user_id: userId }).eq('staff_id', staff_id).select('staff_id');
+    if (link.error || !link.data?.length) link = await admin.from('staff_private').update({ auth_user_id: userId }).eq('staff_id', staff_id).select('staff_id');
+    if (link.error || !link.data?.length) return reply({ error: 'the sign-in was made but not linked', detail: link.error?.message }, 400);
     return reply({ ok: true });
   } catch (e) {
     return reply({ error: String(e) }, 500);
