@@ -620,3 +620,9 @@ body.product-shibutz .toast-undo.toast-long > span{ flex:1 1 auto; min-width:0; 
 #view-tw .tw-attn-go{ flex:1; text-align:start; font:inherit; color:inherit; background:transparent; border:0; padding:0; cursor:pointer; }
 #view-tw .tw-attn-done{ flex:none; }
 #view-tw .tw-attn-card-act{ margin:6px 0 0; justify-content:flex-start; }
+/* round 3 (Guy 23.11): the window of a shift in the middle of a computer's screen, its buttons always seen at its bottom (as the first site) */
+@media (min-width:700px){ .sheet.tw-ed-sheet{ align-items:center; } .sheet.tw-ed-sheet .sheet-card{ border-radius:18px; max-height:85vh; max-height:85dvh; } }
+.tw-ed .tw-ed-actions{ position:sticky; bottom:-20px; margin-bottom:-20px; padding:10px 0 20px; background:var(--p-panel, var(--panel)); z-index:2; border-top:1px solid var(--p-line, var(--line)); }
+.sheet[data-ptheme] .tw-ed .tw-ed-actions{ background:var(--p-panel, var(--color-surface-raised, var(--panel))); }
+.tw-wa-ask{ display:grid; gap:8px; margin:12px 0 4px; }
+.tw-wa-go{ display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#25d366 !important; color:#fff !important; border-color:#25d366 !important; }

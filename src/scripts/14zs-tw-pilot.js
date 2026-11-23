@@ -47,10 +47,7 @@ function twAttentionAll(){
   if(dbl.length > 2) out.push({ cls:'warn', t:'לילה נוסף מעבר לתור', x:`${dbl.length} עובדות עם שני לילות בשבוע (${dbl.map(twDisp).join(', ')}). בתור יש שתיים בשבועיים. ההחלטה שלך.` });
   act.forEach(p => {
     const n = TW.asg.filter(a => a.person === p.id).length, q = p.per_week * 2;
-    if(TW.asg.length && n > q) out.push({ cls:'info', t:`${twDisp(p)} · מעל המינימום`, x:`${n} משמרות בשבועיים (המינימום ${q}), כי חסרו עובדות שסימנו.` });
-    const c = twCount(p), sub = TW.subs.some(s => s.person === p.id);
-    const short = c.weeks.map((w, i) => (sub && w && w.need && w.eff < w.need && w.eff < w.have) ? `בשבוע ${i + 1} פתחה ${w.have} ואפשר לשבץ בפועל ${w.eff}` : '').filter(Boolean);
-    if(short.length) out.push({ cls:'note', t:`${twDisp(p)} · הגשה עם משמרות צמודות`, x:`${short.join('; ')}. הוגש בכל זאת.` });
+    if(TW.asg.length && n > q) out.push({ cls:'info', t:twDisp(p), x:`שובצה ${n} | המינימום ${q}` });          // (Guy 23.11: short, and only this one in "לידיעה")
   });
   return out;
 }
@@ -62,7 +59,7 @@ function twAttentionHtml(){
   const row = x => `<div class="pstatus ${x.cls === 'info' ? 'ok' : 'bad'} tw-attn-row tw-attn-line">${x.go ? `<button type="button" class="tw-attn-go" data-tw-goto="${x.go}"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</button>` : `<span><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</span>`}${done(x)}</div>`;
   const shown = TW.attnAll ? rest : rest.slice(0, MAX);
   const act = miss.length + rest.length;
-  const infoBox = info.length ? `<details class="tw-fixed-box tw-info"><summary>לידיעה (${info.length})</summary>${info.map(x => `<div class="pstatus tw-soft tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`).join('')}</details>` : '';
+  const infoBox = info.length ? `<details class="tw-fixed-box tw-info"><summary>לידיעה: מעל המינימום (${info.length})</summary>${info.map(x => `<div class="pstatus tw-soft tw-attn-row"><b>${pEsc(x.t)}</b> · ${pEsc(x.x)}</div>`).join('')}</details>` : '';
   if(!act) return '<div class="pstatus ok">אין דברים שדורשים תשומת לב.</div>' + infoBox;
   return `<details class="tw-fixed-box tw-attn"${TW.attnOpen ? ' open' : ''}><summary>דורש תשומת לב (${act})</summary>
     ${miss.length ? `<div class="pstatus bad tw-attn-row"><b>משבצות חסרות (${miss.length})</b> <button type="button" class="btn ghost small tw-attn-done" data-tw-done="${pEsc(miss.map(twAttnKey).join('\n'))}">טופל</button><span class="tw-attn-chips">${miss.map(x => `<button type="button" class="btn ghost small" data-tw-goto="${x.go}">${pEsc(x.t)}${/^חסרים/.test(x.x) ? ' (' + x.x.replace(/\D/g, '') + ')' : ''}</button>`).join('')}</span></div>` : ''}
