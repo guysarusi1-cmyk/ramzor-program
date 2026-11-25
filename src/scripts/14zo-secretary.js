@@ -1,6 +1,6 @@
 
 // ---------- THE SECRETARY (Alex card c36860ff, Guy's answers of 5 Nov; supabase/scheduling-v62.sql) ----------
-// Her home: הרמזור, לו"ז, חונכויות והתנדבויות. The admin has all of her new abilities too. The rules are kept in the database, not only here.
+// Her home: הרמזור, צוות ההדרכה, לו"ז, חונכויות והתנדבויות. The admin has all of her new abilities too. The rules are kept in the database, not only here.
 //   * the stars: lower, reset or set one child's stars, reset everybody's; a way back for 5 seconds that never overwrites what others did since
 //   * mentoring and volunteering next to the timetable: right the timetable, left the events, one row per hour — on the kids' TV (a day with events only) and on the staff's screens
 //   * the contact page: a person kept once, linked to many events; phones never reach the kids' TV
@@ -33,10 +33,11 @@ const secApi = {
 // ---- the home cards
 function secHomeCards(){
   const card = (id, ico, title, sub) => `<button type="button" class="home-card" id="${id}"><span class="apphome-emoji apphome-ico">${psIco(ico)}</span><span class="home-card-title">${title}</span><span class="home-card-sub">${sub}</span></button>`;
-  return (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '')
+  return (secIsMe() ? card('apphome-secteam', 'people', 'צוות ההדרכה', 'מי במשמרת, היום ובחודש') : '') + (secIsMe() ? card('apphome-sectt', 'schedule', 'לו"ז', 'הלו"ז של היום, של השבוע ועריכה') : '') + (secEventsOk() ? card('apphome-secev', 'people', 'חונכויות והתנדבויות', 'אירועים ודף קשר') : '')
     + (typeof kidsOk === 'function' && kidsOk() ? card('apphome-kidstv', 'tv', 'מסך הילדים', 'מה מוצג, ימי הולדת וחיבור מסכים') : '');          // (the admin and the secretary: Guy 2026-11-08, 14zp-tv-display.js)
 }
 function secHomeWire(){
+  { const b = document.getElementById('apphome-secteam'); if(b) b.addEventListener('click', () => { sec.team = null; showSecScreen('team'); }); }
   { const b = document.getElementById('apphome-sectt'); if(b) b.addEventListener('click', () => showSecScreen('tt')); }
   { const b = document.getElementById('apphome-secev'); if(b) b.addEventListener('click', () => showSecScreen('ev')); }
   { const b = document.getElementById('apphome-kidstv'); if(b) b.addEventListener('click', () => showSecScreen('kids')); }
@@ -64,7 +65,7 @@ function showSecScreen(mode, from){
   portalActivateView('view-sec');
   let look = 'dark';
   try { look = (srv.portalTheme && srv.portalTheme !== 'leopard' ? srv.portalTheme : portalLoad().settings.theme) || 'dark'; } catch(e){}
-  const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות', kids:'מסך הילדים' }[sec.mode];
+  const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות', kids:'מסך הילדים', team:'צוות ההדרכה' }[sec.mode];
   document.getElementById('view-sec').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc(look)}">
     <div class="portal-top"><button type="button" class="back-btn portal-back" id="sec-back">→ ${sec.mode === 'stars' || sec.from === 'control' ? 'חזרה' : 'מסך ראשי'}</button><h1 class="portal-title">${title}</h1><span class="portal-top-actions"></span></div>
     <div id="sec-screen"><div class="pnote">רק רגע...</div></div></div>`;
@@ -72,8 +73,30 @@ function showSecScreen(mode, from){
   const box = document.getElementById('sec-screen');
   if(sec.mode === 'stars') return renderSecStars(box);
   if(sec.mode === 'tt') return mgrTimetable(box);
+  if(sec.mode === 'team') return showSecTeam(box);
   if(sec.mode === 'kids') return renderKidsScreen(box);
   return renderSecEvents(box);
+}
+
+// ---- "צוות ההדרכה" (Guy 2026-11-25): the published schedule as the staff see it in "הצוות כולו", to look at only ("היום" | "חודש", a week at a time).
+// The database lets her read the published schedule and change nothing in it (the rights matrix), so there is no SQL for this.
+async function showSecTeam(box){
+  renderSecTeam(box);
+  await srvReloadSafe();          // (what was loaded shows at once, then the newest)
+  if(box.isConnected && sec.mode === 'team') renderSecTeam(box);
+}
+function renderSecTeam(box){
+  const today = srvToday(), months = [-1, 0, 1, 2].map(n => addMonths(monthKeyOf(today), n));          // (the months that were loaded)
+  const t = sec.team || (sec.team = { day:true, mk:monthKeyOf(today), wk:mcalWeekOfDay(monthKeyOf(today), today) });
+  const m = portalMonth(t.mk), cal = { me:null, rows:true, ahmash:srv.ahmash, othersInCells:true };
+  const seg = `<div class="mcal-viewbar" id="sec-team-bar"><div class="mx-seg mcal-seg" role="group" aria-label="תצוגה"><button type="button" data-steam="day" aria-pressed="${t.day}">היום</button><button type="button" data-steam="month" aria-pressed="${!t.day}">חודש</button></div>${t.day ? '' : mcalWeekNavHtml(t.mk, t.wk)}</div>`;
+  box.innerHTML = `${t.day ? '' : monthNavHtml(t.mk)}${seg}${!m.published ? '<div class="pnote">הסידור עוד לא פורסם.</div>'
+    : monthCalHtml(portalCtx(t.mk), m.assignments, t.day ? Object.assign(cal, { week:mcalWeekOfDay(t.mk, today), day:today }) : { week:t.wk, me:null, ahmash:srv.ahmash, othersInCells:true })}`;
+  const go = (mk, wk) => { if(!months.includes(mk)) return; t.mk = mk; t.wk = wk; renderSecTeam(box); };
+  box.querySelectorAll('[data-steam]').forEach(b => b.addEventListener('click', () => { t.day = b.dataset.steam === 'day'; t.mk = monthKeyOf(today); t.wk = mcalWeekOfDay(t.mk, today); renderSecTeam(box); }));
+  box.querySelectorAll('[data-pmonth]').forEach(b => { const mk = addMonths(t.mk, Number(b.dataset.pmonth)); b.disabled = !months.includes(mk); b.addEventListener('click', () => go(mk, mk === monthKeyOf(today) ? mcalWeekOfDay(mk, today) : 0)); });
+  box.querySelectorAll('[data-mwk]').forEach(b => { const w = t.wk + Number(b.dataset.mwk), to = w < 0 ? [addMonths(t.mk, -1), mcalWeeksOf(addMonths(t.mk, -1)) - 1] : w >= mcalWeeksOf(t.mk) ? [addMonths(t.mk, 1), 0] : [t.mk, w];
+    b.disabled = !months.includes(to[0]); b.addEventListener('click', () => go(to[0], to[1])); });
 }
 
 // ---- the stars
