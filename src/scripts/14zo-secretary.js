@@ -66,7 +66,7 @@ function showSecScreen(mode, from){
   let look = 'dark';
   try { look = (srv.portalTheme && srv.portalTheme !== 'leopard' ? srv.portalTheme : portalLoad().settings.theme) || 'dark'; } catch(e){}
   const title = { stars:'ניהול כוכבים', tt:'לו"ז', ev:'חונכויות והתנדבויות', kids:'מסך הילדים', team:'צוות ההדרכה' }[sec.mode];
-  document.getElementById('view-sec').innerHTML = `<div class="portal-shell" data-ptheme="${pEsc(look)}">
+  document.getElementById('view-sec').innerHTML = `<div class="portal-shell${sec.mode === 'team' ? ' wide' : ''}" data-ptheme="${pEsc(look)}">
     <div class="portal-top"><button type="button" class="back-btn portal-back" id="sec-back">→ ${sec.mode === 'stars' || sec.from === 'control' ? 'חזרה' : 'מסך ראשי'}</button><h1 class="portal-title">${title}</h1><span class="portal-top-actions"></span></div>
     <div id="sec-screen"><div class="pnote">רק רגע...</div></div></div>`;
   document.getElementById('sec-back').addEventListener('click', () => { if(sec.from === 'control') showControl(); else if(sec.mode === 'stars') showHub(); else showAppHome(); });
