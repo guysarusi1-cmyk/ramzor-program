@@ -409,7 +409,10 @@ function srvShowLogin(step, email, again){
       if(a.length < 8){ err('הסיסמה צריכה להיות באורך 8 תווים לפחות.'); return; }
       if(a !== b){ err('שתי הסיסמאות לא זהות. אפשר להקליד שוב.'); return; }
       const { error } = await sbPersonal.auth.updateUser({ password:a, data:{ has_password:true } });
-      if(error){ err('לא הצלחנו לשמור את הסיסמה (' + (error.message || '') + '). אפשר להמשיך ולנסות שוב בפעם הבאה.'); return; }
+      // (Guy 26.11: after a code, many typed the password they already had; the server refuses "the same password" and the person stayed
+      //  on this screen, as if the sign-in failed. That password is hers already: she is in.)
+      if(error && (error.code === 'same_password' || /different from the old/i.test(error.message || ''))){ toast('זו כבר הסיסמה שלך. נכנסים.'); await enter(); return; }
+      if(error){ toast('הסיסמה לא נשמרה. נכנסים בכל זאת; אפשר לבחור סיסמה בכניסה הבאה עם קוד.', 6000); await enter(); return; }          // (the code already signed her in: never stuck here)
       toast('הסיסמה נשמרה. מהפעם הבאה נכנסים איתה.'); await enter();
     }));
     onEnter('plogin-new2', 'plogin-setpw');
